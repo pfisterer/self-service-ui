@@ -1,0 +1,17 @@
+vendor/
+*.exe
+*.DS_Store
+build/
+cmd/cmd
+*.log
+tmp/
+.env
+docs/client-typescript
+docs/
+.npm-temp
+node_modules/
+__*
+ansible-deployment-example/inventory.yaml
+kubeconfig-*.yaml
+web/config.js
+dist/
