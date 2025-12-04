@@ -191,7 +191,8 @@ export function ListZones() {
     if (error) return html`<a onClick=${() => setReloadTrigger(!reloadTrigger)}>Retry Load</a>`;
 
     return html`
-        <section class="section pt-4">
+        <section class="mt-5">
+            <div class="container">
             <h1 class="title is-3">Zone Management</h1>
             
             <div class="mb-5">
@@ -241,6 +242,7 @@ export function ListZones() {
                 <//>
 
                 <//>
+            </div>
         </section>
     `;
 }
