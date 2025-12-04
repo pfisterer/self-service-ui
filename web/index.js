@@ -14,6 +14,8 @@ import { ListZones } from './components/zones/zones.js';
 import { ListTokens } from './components/tokens/tokens.js';
 import { Documentation } from './components/documentation/documentation.js';
 
+import dhbwLogoUrl from '/img/DHBW-Logo.svg';
+
 
 function LoginLogoutButton() {
     const { user, login, logout } = useAuth()
@@ -30,10 +32,10 @@ export function Header() {
     const [currentPath] = useLocation();
 
     // Helper for complex active path checks (like checking prefixes for the zones section)
-    const getLinkClass = href => currentPath.startsWith(href) ? "is-active has-text-danger-dark" : "";
+    const getLinkClass = href => currentPath.startsWith(href) ? "is-active has-text-white has-background-grey" : "";
 
     // Use is-active class for Bulma component state, and has-text-danger-dark for visual emphasis
-    const activeLinkClass = isActive => isActive ? "is-active has-text-danger-dark" : "";
+    const activeLinkClass = isActive => isActive ? "is-active has-text-white has-background-grey" : "";
 
     // Handlers to support burger menu toggling and link clicks
     const burgerActiveClass = isBurgerActive ? "is-active" : "";
@@ -46,7 +48,7 @@ export function Header() {
                 <div class="navbar-brand">
                     <!-- Logo/Branding Section -->
                     <a class="navbar-item" href="#">
-                        <img src="img/DHBW-Logo.svg" alt="DHBW Logo" style="height: 2em; max-height: 2em;" />
+                        <img src="${dhbwLogoUrl}" alt="DHBW Logo" style="height: 2em; max-height: 2em;" />
                     </a>
                     
                     <!-- Burger Menu Icon for Mobile -->
@@ -116,13 +118,12 @@ export function Footer({ title, version }) {
 function Main() {
     const { user, login } = useAuth()
     const header = html`<${Header}/>`
-    const footer = html`<${Footer} title=${html`<b>dhbwCloud Self Service</b>`} version=${window.appconfig.appVersion} />`
-
+    const footer = html`<${Footer} title=${html`<b>dhbwCloud Self Service</b>`} version=${__APP_VERSION__} />`
 
     if (!user) {
         return html`
             ${header}
-            <main class="section pt-6">
+            <main class="section mt-5">
                 <div class="container">
                     <div class="box">Please <a onClick="${login}">log in</a> to access your data.</div>
                 </div>
