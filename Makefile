@@ -1,6 +1,6 @@
 
 # --- Project Configuration ---
-PROJECT_NAME := dynamic-zones-ui
+PROJECT_NAME := self-service-ui
 DOCKERFILE_NAME := Dockerfile
 
 # Extract version from package.json. Requires 'jq' utility.

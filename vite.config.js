@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
     root: 'web',
     build: {
       outDir: '../dist',
+      emptyOutDir: true,
     },
     server: {
       port: 8084
