@@ -12,7 +12,7 @@ import { useDynDnsClient } from '../../providers/dyndns-client.js';
 // Activate Zone
 // ----------------------------------------
 function ActivateZone({ zone, onChange }) {
-    const client = useDynDnsClient();
+    const { client, sdk } = useDynDnsClient();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -20,7 +20,7 @@ function ActivateZone({ zone, onChange }) {
         setLoading(true);
         setError(null);
         try {
-            const res = await window.dynamicZonesSdk.postV1ZonesByZone({ path: { zone }, client });
+            const res = await sdk.postV1ZonesByZone({ path: { zone }, client });
             if (res.response.status !== 201) throw new Error(res.response.statusText);
             onChange(zone);
         } catch (err) {
@@ -52,7 +52,7 @@ function ActiveDomain({ zone: zoneName, onChange }) {
     const [error, setError] = useState(null);
     const [message, setMessage] = useState("Loading zone details...");
     const [currentLocation] = useLocation()
-    const client = useDynDnsClient();
+    const { client, sdk } = useDynDnsClient();
 
     const tabs = [
         { name: "Manage", path: "/" },
@@ -66,7 +66,7 @@ function ActiveDomain({ zone: zoneName, onChange }) {
         setLoading(true);
         setError(null);
         try {
-            const res = await window.dynamicZonesSdk.getV1ZonesByZone({ path: { zone: zoneName }, client });
+            const res = await sdk.getV1ZonesByZone({ path: { zone: zoneName }, client });
             if (!res.data) throw new Error(`Zone ${zoneName} not found`);
             setZone(res.data);
         } catch (e) {
@@ -80,7 +80,7 @@ function ActiveDomain({ zone: zoneName, onChange }) {
         try {
             setLoading(true);
             setMessage("Deleting zone...");
-            const res = await window.dynamicZonesSdk.deleteV1ZonesByZone({ path: { zone: zone.zoneData.zone }, client });
+            const res = await sdk.deleteV1ZonesByZone({ path: { zone: zone.zoneData.zone }, client });
             if (res.response.status !== 204)
                 throw new Error(res.response.statusText);
             onChange();
@@ -164,7 +164,7 @@ export function ListZones() {
     const [match, params] = useRoute("/zone/:name/*?");
     const activeZoneName = match ? params.name : null;
     const [_, navigate] = useLocation()
-    const client = useDynDnsClient();
+    const { client, sdk } = useDynDnsClient();
 
     useEffect(() => {
         let cancelled = false;
@@ -173,7 +173,7 @@ export function ListZones() {
             setError(null);
 
             try {
-                const res = await window.dynamicZonesSdk.getV1Zones({ client });
+                const res = await sdk.getV1Zones({ client });
                 if (!res.data?.zones) throw new Error("Unable to load zones");
                 if (!cancelled) setZones(res.data.zones);
             } catch (e) {

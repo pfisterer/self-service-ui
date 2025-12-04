@@ -16,25 +16,13 @@
 </head>
 
 <body>
+    <!-- App root element -->
     <div id="app" class="container-fluid"></div>
 
+    <!-- Configuration (not processed by bundler) -->
     <script type="text/javascript" src="config.js"></script>
 
-    <script type="module" defer>
-        const modulesToLoad = [
-            { "url": "client/dist/client.gen.mjs", "property": "dynamicZonesClient" },
-            { "url": "client/dist/sdk.gen.mjs", "property": "dynamicZonesSdk" }
-        ];
-
-        for (const mod of modulesToLoad) {
-            const sourceUrl = new URL(mod.url, window.appconfig.dynamicZonesBaseUrl).toString();
-
-            import( /* @vite-ignore */ sourceUrl).then(module => {
-                window[mod.property] = module;
-            }).catch(err => alert("Failed to load SDK from " + sourceUrl + ": " + err));
-        }
-    </script>
-
+    <!-- Application logic -->
     <script src="/ui-logic.js" type="module" defer></script>
 </body>
 

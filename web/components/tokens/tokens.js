@@ -9,36 +9,34 @@ export function ListTokens() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [readOnly, setReadOnly] = useState(false);
-    const client = useDynDnsClient();
-
-    async function fetchTokens() {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await window.dynamicZonesSdk.getV1Tokens({ client });
-            setTokens(res?.data?.tokens || []);
-
-            // Set error when status code is not 2xx
-            if (res.response.status < 200 || res.response.status >= 300) {
-                setError(new Error(`Failed to fetch tokens: ${res.response.status} ${res.response.statusText} @ ${res.request.url}`));
-            }
-
-        } catch (e) {
-            setError(e);
-        } finally {
-            setLoading(false);
-        }
-    }
+    const { client, sdk } = useDynDnsClient();
 
     useEffect(() => {
-        fetchTokens();
+        (async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const res = await sdk.getV1Tokens({ client });
+                setTokens(res?.data?.tokens || []);
+
+                // Set error when status code is not 2xx
+                if (res.response.status < 200 || res.response.status >= 300) {
+                    setError(new Error(`Failed to fetch tokens: ${res.response.status} ${res.response.statusText} @ ${res.request.url}`));
+                }
+
+            } catch (e) {
+                setError(e);
+            } finally {
+                setLoading(false);
+            }
+        })();
     }, [client]);
 
     async function createToken() {
         setLoading(true);
         setError(null);
         try {
-            const res = await await window.dynamicZonesSdk.postV1Tokens({
+            const res = await await sdk.postV1Tokens({
                 client,
                 body: { read_only: readOnly },
                 headers: {
@@ -60,7 +58,7 @@ export function ListTokens() {
         setLoading(true);
         setError(null);
         try {
-            await await window.dynamicZonesSdk.deleteV1TokensById({ path: { id: tokenId }, client });
+            await await sdk.deleteV1TokensById({ path: { id: tokenId }, client });
             setTokens(prev => prev.filter(t => t.id !== tokenId));
         } catch (e) {
             setError(e);

@@ -11,12 +11,12 @@ import { Delayed } from '../helper/delayed.js';
 export function ExternalDnsConfig({ externalDnsValuesYaml, zone }) {
     const { user } = useAuth();
     const [token, setToken] = useState(null);
-    const client = useDynDnsClient();
+    const { client, sdk } = useDynDnsClient();
 
     useEffect(() => {
         (async () => {
             try {
-                const res = await window.dynamicZonesSdk.getV1Tokens({ client });
+                const res = await sdk.getV1Tokens({ client });
                 const tokens = res?.data?.tokens
                 if (tokens && tokens.length > 0) {
                     const readOnlyToken = tokens.find(t => t.read_only === true);

@@ -71,7 +71,7 @@ const SUPPORTED_TYPES = ["A", "AAAA"];
 
 export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
     const dynDnsConfig = useDynDnsConfig();
-    const client = useDynDnsClient();
+    const { client, sdk } = useDynDnsClient();
 
     const [editing, setEditing] = useState(false);
     const [fields, setFields] = useState({ ...record });
@@ -86,7 +86,7 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
         try {
             const normalizedName = normalizeRecordName(fields.name, zone);
 
-            const createRes = await window.dynamicZonesSdk.postV1DnsRecordsCreate({
+            const createRes = await sdk.postV1DnsRecordsCreate({
                 client,
                 body: {
                     ...fields,
@@ -117,7 +117,7 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
         try {
             const normalizedName = normalizeRecordName(fields.name, zone);
 
-            const res = await window.dynamicZonesSdk.postV1DnsRecordsDelete({
+            const res = await sdk.postV1DnsRecordsDelete({
                 client,
                 body: {
                     ...fields,
@@ -189,13 +189,13 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
     const [fields, setFields] = useState({ name: '', type: 'A', ttl: 300, value: '' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const client = useDynDnsClient();
+    const { client, sdk } = useDynDnsClient();
 
     async function handleAdd() {
         setLoading(true);
         setError(null);
         try {
-            const res = await window.dynamicZonesSdk.postV1DnsRecordsCreate({
+            const res = await sdk.postV1DnsRecordsCreate({
                 client,
                 body: {
                     ...fields,
@@ -242,13 +242,13 @@ export function DnsRecordsList({ zone, tsigKey }) {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const client = useDynDnsClient();
+    const { client, sdk } = useDynDnsClient();
 
     async function fetchRecords() {
         setLoading(true);
         setError(null);
         try {
-            const res = await window.dynamicZonesSdk.getV1DnsRecords({
+            const res = await sdk.getV1DnsRecords({
                 client,
                 query: { zone },
                 headers: {

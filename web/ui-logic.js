@@ -1,3 +1,4 @@
+import 'bulma/css/bulma.css';
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { Router, Route, Switch, Link, useLocation } from 'wouter-preact';
@@ -6,11 +7,12 @@ import { useHashLocation } from "wouter-preact/use-hash-location"
 import { DynDnsConfigProvider } from './providers/dyndns-config.js';
 import { DynDnsClientProvider } from './providers/dyndns-client.js';
 import { useAuth, AuthProvider } from './providers/auth.js';
+
 import { Home } from './components/home/home.js';
 import { ListZones } from './components/zones/zones.js';
 import { ListTokens } from './components/tokens/tokens.js';
 import { Documentation } from './components/documentation/documentation.js';
-import 'bulma/css/bulma.css';
+
 
 function LoginLogoutButton() {
     const { user, login, logout } = useAuth()
