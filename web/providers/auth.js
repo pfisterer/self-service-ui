@@ -34,7 +34,8 @@ export function AuthProvider({ children }) {
                     post_logout_redirect_uri: myUrl,
                     response_type: 'code',
                     scope: 'openid profile email',
-                    loadUserInfo: true
+                    loadUserInfo: true,
+                    //automaticSilentRenew: true,
                 };
 
                 const um = new UserManager(config);
@@ -53,6 +54,10 @@ export function AuthProvider({ children }) {
 
                 um.events.addUserLoaded(setUser);
                 um.events.addUserUnloaded(() => setUser(null));
+                um.events.addAccessTokenExpired(() => setUser(null));
+                um.events.addSilentRenewError((error) => {
+                    console.error("Silent renew failed:", error);
+                });
 
             } catch (err) {
                 console.error(err);

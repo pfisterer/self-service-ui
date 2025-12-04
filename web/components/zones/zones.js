@@ -9,6 +9,114 @@ import { Delayed } from '../helper/delayed.js';
 import { useDynDnsClient } from '../../providers/dyndns-client.js';
 
 // ----------------------------------------
+// List Zones
+// ----------------------------------------
+export function ListZones() {
+    const [zones, setZones] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [reloadTrigger, setReloadTrigger] = useState(true);
+    const [match, params] = useRoute("/zone/:name/*?");
+    const activeZoneName = match ? params.name : null;
+    const [_, navigate] = useLocation()
+    const { client, sdk } = useDynDnsClient();
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setLoading(true);
+            setError(null);
+
+            try {
+                const res = await sdk.getV1Zones({ client });
+                if (!res.data?.zones) throw new Error("Unable to load zones");
+                if (!cancelled) setZones(res.data.zones);
+            } catch (e) {
+                if (!cancelled) setError(e);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        })();
+
+        //Add cleanup function to prevent state updates after unmount
+        return () => { cancelled = true; };
+    }, [client, reloadTrigger]);
+
+    if (loading) return html`<${Delayed}><p>Loading zones...</p><//>`;
+    if (error) return html`<a onClick=${() => setReloadTrigger(!reloadTrigger)}>Retry Load</a>`;
+
+    return html`
+        <section class="mt-5">
+            <div class="container">
+            <h1 class="title is-3">Zone Management</h1>
+            
+            <div class="mb-5">
+                <nav class="panel">
+                    <p class="panel-heading">
+                        Available Zones (${zones.length})
+                    </p>
+                    ${zones.map(zone => html`
+                        <${Link} 
+                            to=${"/zone/" + zone.name} 
+                            class="panel-block ${activeZoneName === zone.name ? 'has-background-grey-light has-text-white-ter' : ''}"
+                        >
+                            <span class="panel-icon">
+                                <i class="fas fa-globe"></i>
+                            </span>
+                            ${zone.name}
+                        <//> 
+                    `)}
+                    ${zones.length === 0 && html`
+                        <div class="panel-block">
+                            No zones available.
+                        </div>
+                    `}
+                </nav>
+            </div>
+
+            <${Switch}>
+                <!-- Show the currently selected zone -->
+                <${Route} path="/zone/:name" nest>
+                    ${param => {
+            const zone = zones.find(z => z.name === param.name)
+            return zone ?
+                html`<${AvailableDomain} zone=${zone} onChange=${() => setReloadTrigger(!reloadTrigger)} />` :
+                html`<${RouteNotFound}>`
+        }
+
+        }
+                <//>
+
+                <!-- Redirect to the first zone if available -->
+                <${Route} path="/">
+                    ${() => zones.length > 0 ? (navigate(`/zone/${zones[0].name}`, { replace: true }), null) : html`
+                        <div class="content has-text-centered p-6">
+                                <h3 class="subtitle is-5">⬆️ Select a zone above to manage its DNS records.</h3>
+                        </div>
+                    `}  
+                <//>
+
+                <//>
+            </div>
+        </section>
+    `;
+}
+
+// ----------------------------------------
+// Available Domain List
+// ----------------------------------------
+function AvailableDomain({ zone, onChange }) {
+    return html`
+        <nav class="panel">
+            <div class="panel-heading">Zone: ${zone.name}</div>
+            ${zone.exists
+            ? html`<${ActiveDomain} zone=${zone.name} onChange=${onChange} />`
+            : html`<div class="panel-block"><${ActivateZone} zone=${zone.name} onChange=${onChange} /></div>`}
+        </nav>
+    `;
+}
+
+// ----------------------------------------
 // Activate Zone
 // ----------------------------------------
 function ActivateZone({ zone, onChange }) {
@@ -129,20 +237,6 @@ function ActiveDomain({ zone: zoneName, onChange }) {
     `;
 }
 
-// ----------------------------------------
-// Available Domain List
-// ----------------------------------------
-function AvailableDomain({ zone, onChange }) {
-    return html`
-        <nav class="panel">
-            <div class="panel-heading">Zone: ${zone.name}</div>
-            ${zone.exists
-            ? html`<${ActiveDomain} zone=${zone.name} onChange=${onChange} />`
-            : html`<div class="panel-block"><${ActivateZone} zone=${zone.name} onChange=${onChange} /></div>`}
-        </nav>
-    `;
-}
-
 function RouteNotFound() {
     return html`
         <section class="mt-3">
@@ -152,97 +246,4 @@ function RouteNotFound() {
             </div>
         </section>
     `
-}
-// ----------------------------------------
-// List Zones
-// ----------------------------------------
-export function ListZones() {
-    const [zones, setZones] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [reloadTrigger, setReloadTrigger] = useState(true);
-    const [match, params] = useRoute("/zone/:name/*?");
-    const activeZoneName = match ? params.name : null;
-    const [_, navigate] = useLocation()
-    const { client, sdk } = useDynDnsClient();
-
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            setLoading(true);
-            setError(null);
-
-            try {
-                const res = await sdk.getV1Zones({ client });
-                if (!res.data?.zones) throw new Error("Unable to load zones");
-                if (!cancelled) setZones(res.data.zones);
-            } catch (e) {
-                if (!cancelled) setError(e);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        })();
-
-        //Add cleanup function to prevent state updates after unmount
-        return () => { cancelled = true; };
-    }, [client, reloadTrigger]);
-
-    if (loading) return html`<${Delayed}><p>Loading zones...</p><//>`;
-    if (error) return html`<a onClick=${() => setReloadTrigger(!reloadTrigger)}>Retry Load</a>`;
-
-    return html`
-        <section class="mt-5">
-            <div class="container">
-            <h1 class="title is-3">Zone Management</h1>
-            
-            <div class="mb-5">
-                <nav class="panel">
-                    <p class="panel-heading">
-                        Available Zones (${zones.length})
-                    </p>
-                    ${zones.map(zone => html`
-                        <${Link} 
-                            to=${"/zone/" + zone.name} 
-                            class="panel-block ${activeZoneName === zone.name ? 'has-background-grey-light has-text-white-ter' : ''}"
-                        >
-                            <span class="panel-icon">
-                                <i class="fas fa-globe"></i>
-                            </span>
-                            ${zone.name}
-                        <//> 
-                    `)}
-                    ${zones.length === 0 && html`
-                        <div class="panel-block">
-                            No zones available.
-                        </div>
-                    `}
-                </nav>
-            </div>
-
-            <${Switch}>
-                <!-- Show the currently selected zone -->
-                <${Route} path="/zone/:name" nest>
-                    ${param => {
-            const zone = zones.find(z => z.name === param.name)
-            return zone ?
-                html`<${AvailableDomain} zone=${zone} onChange=${() => setReloadTrigger(!reloadTrigger)} />` :
-                html`<${RouteNotFound}>`
-        }
-
-        }
-                <//>
-
-                <!-- Redirect to the first zone if available -->
-                <${Route} path="/">
-                    ${() => zones.length > 0 ? (navigate(`/zone/${zones[0].name}`, { replace: true }), null) : html`
-                        <div class="content has-text-centered p-6">
-                                <h3 class="subtitle is-5">⬆️ Select a zone above to manage its DNS records.</h3>
-                        </div>
-                    `}  
-                <//>
-
-                <//>
-            </div>
-        </section>
-    `;
 }

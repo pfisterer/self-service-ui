@@ -9,8 +9,10 @@
         "clean": "rm -rf dist-ui"
     },
     "dependencies": {
+        "@preact/signals": "^2.5.1",
         "bulma": "^1.0.4",
         "htm": "^3.1.1",
+        "lucide-preact": "^0.555.0",
         "oidc-client-ts": "^3.4.1",
         "preact": "^10.28.0",
         "wouter-preact": "^3.8.1"
