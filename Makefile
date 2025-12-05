@@ -15,7 +15,7 @@ DOCKER_PLATFORMS ?= linux/amd64,linux/arm64
 # Alias for the primary build target
 all: docker-build
 
-dev: 
+dev:
 	@echo "🚀 Starting development server..."
 	npm run dev
 
@@ -29,7 +29,7 @@ docker-build:
 		-t "$(DOCKER_REPO):$(DOCKER_TAG)" \
 		.
 	@echo "✅ Docker image $(DOCKER_REPO):$(DOCKER_TAG) built."
-	@echo "To run locally: docker run -p 8084:80 -e "DYNAMIC_ZONE_BASE_URL=https://your-host.com/" $(DOCKER_REPO):$(DOCKER_TAG)"
+	@echo "To run locally: docker run -p 8084:8080 -e "DYNAMIC_ZONE_BASE_URL=https://your-host.com/" $(DOCKER_REPO):$(DOCKER_TAG)"
 
 # Docker Login (Placeholder for standard workflow)
 docker-login:
