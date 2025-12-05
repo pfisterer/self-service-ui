@@ -2,7 +2,6 @@ import 'bulma/css/bulma.css';
 import { render } from 'preact';
 import { html } from 'htm/preact';
 import { Router, Route, Switch } from 'wouter-preact';
-import { useHashLocation } from "wouter-preact/use-hash-location"
 
 import { DynDnsConfigProvider } from './providers/dyndns-config.js';
 import { DynDnsClientProvider } from './providers/dyndns-client.js';
@@ -49,21 +48,27 @@ function Main() {
     }
 
     return html`
-        <${Router} hook=${useHashLocation}>
+        <${Router}>
+        
+        <main class="section mt-5">
+            <!--  {Header}/> -->
             <${Header}/>
-            <main class="section mt-5">
-                <${Switch}>
-                    <${Route} path="/" component=${Home}/>
-                    <${Route} path="/documentation" component=${Documentation} />
-                    <${Route} path="/dyndns/zones" component=${ListZones} nest/>
-                    <${Route} path="/dyndns/tokens" component=${ListTokens} />
-                    <${Route} path="/dyndns/api-doc" component=${DynamicZonesApiSwagger} />
-                    <${Route} component=${NotFound} />
-                <//>
-                ${footer}
-            </main>
-            <div class="mb-6"></div>
-        `
+
+            <!-- Router -->
+            <${Switch}>
+                <${Route} path="/" component=${Home}/>
+                <${Route} path="/documentation" component=${Documentation} />
+                <${Route} path="/dyndns/zones" component=${ListZones} nest/>
+                <${Route} path="/dyndns/tokens" component=${ListTokens} />
+                <${Route} path="/dyndns/api-doc" component=${DynamicZonesApiSwagger} />
+                <${Route} component=${NotFound} />
+            <//>
+
+            <!-- Footer -->
+            ${footer}
+        </main>
+        <div class="mb-6"></div>
+    `
 }
 
 function NotFound() {
