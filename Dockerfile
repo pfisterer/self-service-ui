@@ -19,6 +19,9 @@ RUN npm run build
 # --- Stage 2: Runner (Caddy) ---
 FROM caddy:alpine AS runner
 
+# Copy the Caddyfile configuration
+COPY Caddyfile /etc/caddy/Caddyfile
+
 # This script reads DYNAMIC_ZONE_BASE_URL and writes it to /srv/www/config.js,
 # then executes the main container command (CMD).
 COPY docker-entrypoint.sh /docker-entrypoint.sh
@@ -27,9 +30,9 @@ RUN chmod +x /docker-entrypoint.sh
 # Copy the static production build files from the builder stage
 COPY --from=builder /app/dist /srv/www
 
-# Caddy exposes port 80 by default.
-EXPOSE 80
+# Caddy exposes port 8080 by default.
+EXPOSE 8080
 
 # 3. Set the ENTRYPOINT to the script, and the main Caddy command to CMD
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["caddy", "file-server", "--root", "/srv/www", "--listen", ":80"]
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--resume"]

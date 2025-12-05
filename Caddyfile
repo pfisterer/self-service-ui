@@ -1,0 +1,27 @@
+:8080 {
+    # Base Setup
+    root * /srv/www
+    
+    # SPA Fallback, serve requested file or fall back to index.html
+    try_files {path} /index.html
+
+    # Enable compression
+    encode zstd gzip
+
+    # Security and Cache Headers
+    header {
+        # Prevent content sniffing and enforce MIME types
+        # This reduces XSS attack vectors.
+        X-Content-Type-Options nosniff
+        
+        # Prevent your site from being loaded in an iframe (Clickjacking protection)
+        X-Frame-Options DENY
+        
+        # Cache control for static assets (CSS, JS, images)
+        # $7 days \times 24 \ hours  x 60 minutes x 60 seconds = 604,800 seconds
+        Cache-Control max-age=604800
+    }
+
+    # Act as a File Server
+    file_server
+}
