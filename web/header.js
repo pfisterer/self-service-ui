@@ -79,11 +79,14 @@ export function Header() {
                             </a>
 
                             <div class="navbar-dropdown">
-                                <${Link} href="/dyndns/tokens" className=${`navbar-item ${getLinkClass("/dyndns/tokens")}`} onClick=${handleLinkClick}>
-                                    API Tokens
-                                <//>
                                 <${Link} href="/dyndns/zones" className=${`navbar-item ${getLinkClass("/dyndns/zones")}`} onClick=${handleLinkClick}>
                                     Zone Management
+                                <//>
+                                <${Link} href="/dyndns/tokens" className=${`navbar-item ${getLinkClass("/dyndns/tokens")}`} onClick=${handleLinkClick}>
+                                        API Tokens
+                                <//>
+                                <${Link} href="/dyndns/api-doc" className=${`navbar-item ${getLinkClass("/dyndns/api-doc")}`} onClick=${handleLinkClick}>
+                                        API Documentation
                                 <//>
                             </div>
                         </div>

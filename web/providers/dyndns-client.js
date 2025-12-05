@@ -28,8 +28,8 @@ export function DynDnsClientProvider({ children }) {
 
         (async () => {
             const baseUrl = window.appconfig.dynamicZonesBaseUrl;
-            const clientSourceUrl = new URL("client/dist/client.gen.mjs", baseUrl).toString();
-            const sdkSourceUrl = new URL("client/dist/sdk.gen.mjs", baseUrl).toString();
+            const clientSourceUrl = new URL("client/client.gen.mjs", baseUrl).toString();
+            const sdkSourceUrl = new URL("client/sdk.gen.mjs", baseUrl).toString();
 
             try {
                 // Load sdk and client modules
@@ -56,7 +56,7 @@ export function DynDnsClientProvider({ children }) {
                 return () => { myClient.interceptors.request.eject(authInterceptorId); };
             } catch (e) {
                 setError({
-                    message: `Unable to load Client and/or SDK modules`,
+                    message: html`Unable to load <a href=${clientSourceUrl}>Client</a> and/or <a href=${sdkSourceUrl}>SDK</a> modules`,
                     details: e.message || String(e)
                 });
                 return;

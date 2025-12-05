@@ -106,6 +106,6 @@ export function ListTokens() {
                     `)}
                 </div>
             </div>
-        </div>
+        </section>
     `;
 }

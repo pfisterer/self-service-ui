@@ -14,6 +14,7 @@ import { Home } from './components/home/home.js';
 import { ListZones } from './components/zones/zones.js';
 import { ListTokens } from './components/tokens/tokens.js';
 import { Documentation } from './components/documentation/documentation.js';
+import { DynamicZonesApiSwagger } from './components/swagger/swagger.js';
 
 render(
     html`<${App} name="Dynamic Zones DNS API" />`, document.getElementById('app')
@@ -56,6 +57,7 @@ function Main() {
                     <${Route} path="/documentation" component=${Documentation} />
                     <${Route} path="/dyndns/zones" component=${ListZones} nest/>
                     <${Route} path="/dyndns/tokens" component=${ListTokens} />
+                    <${Route} path="/dyndns/api-doc" component=${DynamicZonesApiSwagger} />
                     <${Route} component=${NotFound} />
                 <//>
                 ${footer}
