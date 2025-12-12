@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
-import { useAuth, authHeaders } from '../../providers/auth.js';
+import { useAuth, authHeaders } from '/providers/auth.js';
 import { generateNsUpdate } from './dns-update-cmd.js';
-import { useDynDnsClient } from '../../providers/dyndns-client.js';
-import { useDynDnsConfig } from '../../providers/dyndns-config.js';
+import { useDynDnsClient } from '/providers/dyndns-client.js';
+import { useDynDnsConfig } from '/providers/dyndns-config.js';
 
 function normalizeRecordName(name, zone) {
     if (!name) return '';
@@ -70,8 +70,8 @@ const SUPPORTED_TYPES = ["A", "AAAA"];
 
 
 export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
-    const dynDnsConfig = useDynDnsConfig();
-    const { client, sdk } = useDynDnsClient();
+    const { config: dynDnsConfig } = useDynDnsConfig();
+    const { client, sdk, } = useDynDnsClient();
 
     const [editing, setEditing] = useState(false);
     const [fields, setFields] = useState({ ...record });

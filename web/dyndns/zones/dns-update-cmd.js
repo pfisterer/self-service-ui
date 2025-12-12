@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { html } from 'htm/preact';
-import { CodeBlock } from '../helper/codeblock.js';
-import { useDynDnsConfig } from '../../providers/dyndns-config.js';
+import { CodeBlock } from '/helper/codeblock.js';
+import { useDynDnsConfig } from '/providers/dyndns-config.js';
 
 // ----------------------------------------
 // Shared NSUPDATE command generator
@@ -27,7 +27,7 @@ export function generateNsUpdate(record, zone, tsigKey, appConfig) {
 // DNS Update Command Component 
 // ----------------------------------------
 export function DnsUpdateCommand({ zone }) {
-    const dynDnsConfig = useDynDnsConfig();
+    const { config: dynDnsConfig } = useDynDnsConfig();
 
     // Local editable state for the form fields
     const [form, setForm] = useState({

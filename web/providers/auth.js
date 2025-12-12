@@ -2,7 +2,6 @@ import { useState, useEffect, useContext } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { createContext } from 'preact';
 import { UserManager } from 'oidc-client-ts';
-import { useDynDnsConfig } from './dyndns-config.js';
 
 export const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -15,21 +14,16 @@ export function AuthProvider({ children }) {
     const [userManager, setUserManager] = useState(null);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const dynDnsConfig = useDynDnsConfig();
 
     useEffect(() => {
         (async () => {
-            if (!dynDnsConfig) {
-                console.error('DynDnsConfig is not available for AuthProvider');
-                return;
-            }
 
             try {
                 const myUrl = new URL(window.location.href).toString();
 
                 const config = {
-                    authority: dynDnsConfig.auth.issuer_url,
-                    client_id: dynDnsConfig.auth.client_id,
+                    authority: window.appconfig.oidc.issuer_url,
+                    client_id: window.appconfig.oidc.client_id,
                     redirect_uri: myUrl,
                     post_logout_redirect_uri: myUrl,
                     response_type: 'code',
@@ -65,7 +59,7 @@ export function AuthProvider({ children }) {
                 setLoading(false);
             }
         })();
-    }, [dynDnsConfig]);
+    }, [window?.appconfig?.oidc]);
 
     const login = () => userManager?.signinRedirect();
     const logout = () => userManager?.signoutRedirect();

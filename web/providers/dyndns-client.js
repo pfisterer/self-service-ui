@@ -1,7 +1,6 @@
 import { useState, useEffect, useContext } from 'preact/hooks';
 import { createContext } from 'preact';
 import { html } from 'htm/preact';
-import { Delayed } from '../components/helper/delayed.js';
 import { useAuth } from './auth.js';
 
 export const DynDnsClientContext = createContext(null);
@@ -65,41 +64,8 @@ export function DynDnsClientProvider({ children }) {
         })();
     }, [auth?.loading, auth?.user]);
 
-    // Provide error feedback if module loading failed
-    if (error) {
-        return html`
-            <div class="container is-max-desktop pt-6">
-                <div class="notification is-danger has-text-white">
-                    <h3 class="title is-4 has-text-white">❌ Client Setup Failed</h3>
-                    <p>${error.message}</p>
-                    <div class="content mt-3">
-                        <p class="is-size-7"><strong>Details:</strong> ${error.details}</p>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    if (!client || !sdk) {
-        return html`
-            <${Delayed}>
-                <div class="container is-max-desktop pt-6">
-                    <div class="box is-loading-box">
-                        <p class="is-size-5 has-text-centered has-text-grey">
-                            ⚙️ Initializing API Client...
-                        </p>
-                        <progress class="progress is-small is-link" max="100"></progress>
-                        <p class="has-text-centered has-text-grey is-size-7">
-                            Loading SDK modules and configuring authorization.
-                        </p>
-                    </div>
-                </div>
-            <//>
-        `;
-    }
-
     return html`
-        <${DynDnsClientContext.Provider} value=${{ client, sdk }}>
+        <${DynDnsClientContext.Provider} value=${{ client, sdk, error }}>
             ${children}
         <//>
     `;

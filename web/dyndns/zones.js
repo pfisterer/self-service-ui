@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { Route, Switch, Link, useRoute, useLocation } from 'wouter-preact';
-import { ShowKeys } from './keys.js';
-import { ExternalDnsConfig } from './external-dns.js';
-import { DnsUpdateCommand } from './dns-update-cmd.js';
-import { DnsRecordsList } from './dns-record-list.js';
-import { Delayed } from '../helper/delayed.js';
-import { useDynDnsClient } from '../../providers/dyndns-client.js';
+import { Delayed } from '/helper/delayed.js';
+import { useDynDnsClient } from '/providers/dyndns-client.js';
+import { ShowKeys } from '/dyndns/zones/keys.js';
+import { ExternalDnsConfig } from '/dyndns/zones/external-dns.js';
+import { DnsUpdateCommand } from '/dyndns/zones/dns-update-cmd.js';
+import { DnsRecordsList } from '/dyndns/zones/dns-record-list.js';
+
 
 // ----------------------------------------
-// List Zones
+// DynDnsZones
 // ----------------------------------------
-export function ListZones() {
+export function DynDnsZones() {
+    const { client, sdk } = useDynDnsClient();
     const [zones, setZones] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -19,7 +21,6 @@ export function ListZones() {
     const [match, params] = useRoute("/zone/:name/*?");
     const activeZoneName = match ? params.name : null;
     const [_, navigate] = useLocation()
-    const { client, sdk } = useDynDnsClient();
 
     useEffect(() => {
         let cancelled = false;

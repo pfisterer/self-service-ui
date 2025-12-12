@@ -1,5 +1,5 @@
 import { html } from 'htm/preact';
-import { CodeBlock } from '../helper/codeblock.js';
+import { CodeBlock } from '/helper/codeblock.js';
 
 // ----------------------------------------
 // Show Keys

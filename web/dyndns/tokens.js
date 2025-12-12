@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
-import { FetchModal } from './modal-fetch.js';
+import { useDynDnsClient } from '/providers/dyndns-client.js';
+import { FetchModal } from './tokens/modal-fetch.js';
 import { Delayed } from '../helper/delayed.js';
-import { useDynDnsClient } from '../../providers/dyndns-client.js';
 
-export function ListTokens() {
+export function Tokens() {
+    const { client, sdk } = useDynDnsClient();
     const [tokens, setTokens] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [readOnly, setReadOnly] = useState(false);
-    const { client, sdk } = useDynDnsClient();
 
     useEffect(() => {
         (async () => {

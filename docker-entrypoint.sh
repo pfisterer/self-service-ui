@@ -2,23 +2,24 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-# Determine the final base URL, defaulting to 'http://example.com/' if the ENV var is empty.
-BASE_URL="${DYNAMIC_ZONE_BASE_URL:-http://localhost:8082}"
+# Check if all required environment variables are set, otherwise exit with an error.
+required_vars="BASE_URL OIDC_CLIENT_ID OIDC_ISSUER_URL"
 
-# Conditional Warning: Output a warning if DYNAMIC_ZONE_BASE_URL was NOT explicitly set.
-# The variable is considered unset if its length is zero after substitution.
-if [ -z "${DYNAMIC_ZONE_BASE_URL}" ]; then
-  echo "WARNING: DYNAMIC_ZONE_BASE_URL environment variable is not set. Defaulting to: ${BASE_URL}"
-  echo "WARNING: To set a custom API base URL, set the DYNAMIC_ZONE_BASE_URL environment variable."
-else
-  # Debug output: Let the user know the determined URL when it was explicitly provided.
-  echo "INFO: Using DYNAMIC_ZONE_BASE_URL: ${BASE_URL}"
-fi
+for var in $required_vars; do
+  if [ -z "$(eval echo \$$var)" ]; then
+    echo "Error: $var environment variable is not set."
+    exit 1
+  fi
+done
 
-# Write the config file. Note: Quotes around EOF are removed to allow BASE_URL variable substitution.
+# Dynamically generate the config file
 cat > /srv/www/config.js << EOF
 window.appconfig = {
-  dynamicZonesBaseUrl: "${BASE_URL}"
+  dynamicZonesBaseUrl: "${BASE_URL}",
+  "oidc": {
+    "client_id": "${OIDC_CLIENT_ID}",
+    "issuer_url": "${OIDC_ISSUER_URL}",
+  }
 };
 EOF
 

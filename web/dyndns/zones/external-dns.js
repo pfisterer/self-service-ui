@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
-import { useAuth } from '../../providers/auth.js';
-import { useDynDnsClient } from '../../providers/dyndns-client.js';
-import { CodeBlock } from '../helper/codeblock.js';
-import { Delayed } from '../helper/delayed.js';
+import { useAuth } from '/providers/auth.js';
+import { useDynDnsClient } from '/providers/dyndns-client.js';
+import { CodeBlock } from '/helper/codeblock.js';
+import { Delayed } from '/helper/delayed.js';
 
 // ----------------------------------------
 // External DNS config display
