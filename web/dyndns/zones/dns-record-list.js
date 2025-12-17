@@ -2,7 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { useAuth, authHeaders } from '/providers/auth.js';
 import { generateNsUpdate } from './dns-update-cmd.js';
-import { useDynDnsClient } from '/providers/dyndns-client.js';
+import { useClient } from '/providers/client.js';
 import { useDynDnsConfig } from '/providers/dyndns-config.js';
 
 function normalizeRecordName(name, zone) {
@@ -71,7 +71,7 @@ const SUPPORTED_TYPES = ["A", "AAAA"];
 
 export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
     const { config: dynDnsConfig } = useDynDnsConfig();
-    const { client, sdk, } = useDynDnsClient();
+    const { client, sdk, } = useClient('dyndns');
 
     const [editing, setEditing] = useState(false);
     const [fields, setFields] = useState({ ...record });
@@ -189,7 +189,7 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
     const [fields, setFields] = useState({ name: '', type: 'A', ttl: 300, value: '' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const { client, sdk } = useDynDnsClient();
+    const { client, sdk } = useClient('dyndns');
 
     async function handleAdd() {
         setLoading(true);
@@ -242,7 +242,7 @@ export function DnsRecordsList({ zone, tsigKey }) {
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const { client, sdk } = useDynDnsClient();
+    const { client, sdk } = useClient('dyndns');
 
     async function fetchRecords() {
         setLoading(true);

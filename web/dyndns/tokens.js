@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
-import { useDynDnsClient } from '/providers/dyndns-client.js';
+import { useClient } from '/providers/client.js';
 import { FetchModal } from './tokens/modal-fetch.js';
 import { Delayed } from '../helper/delayed.js';
 
 export function Tokens() {
-    const { client, sdk } = useDynDnsClient();
+    const { client, sdk } = useClient('dyndns');
     const [tokens, setTokens] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);

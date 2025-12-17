@@ -15,7 +15,16 @@ export function useDynDnsConfig() {
 export function DynDnsConfigProvider({ children }) {
     const [config, setConfig] = useState();
     const [error, setError] = useState();
-    const configUrl = new URL('config.json', window.appconfig.dynamicZonesBaseUrl).toString();
+    const configUrl = new URL('config.json', window?.appconfig?.dynamicZonesBaseUrl).toString();
+
+    // configUrl for base URL configuration
+    if (!configUrl) {
+        setError({
+            message: 'Dynamic Zones base URL is not configured.',
+            details: 'Please set it in window.appconfig.dynamicZonesBaseUrl.'
+        });
+        return;
+    }
 
     useEffect(() => {
         (async () => {

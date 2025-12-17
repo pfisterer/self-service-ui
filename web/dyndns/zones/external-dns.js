@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { useAuth } from '/providers/auth.js';
-import { useDynDnsClient } from '/providers/dyndns-client.js';
+import { useClient } from '/providers/client.js';
 import { CodeBlock } from '/helper/codeblock.js';
 import { Delayed } from '/helper/delayed.js';
 
@@ -11,7 +11,7 @@ import { Delayed } from '/helper/delayed.js';
 export function ExternalDnsConfig({ externalDnsValuesYaml, zone }) {
     const { user } = useAuth();
     const [token, setToken] = useState(null);
-    const { client, sdk } = useDynDnsClient();
+    const { client, sdk } = useClient('dyndns');
 
     useEffect(() => {
         (async () => {

@@ -75,7 +75,7 @@ export function Header() {
                              onMouseLeave=${handleDyndnsLeave}>
                             
                             <a class="navbar-link ${isDyndnsActive ? 'is-active has-text-white has-background-grey' : ''}" href="#">
-                                DNS Management
+                                DNS Zones
                             </a>
 
                             <div class="navbar-dropdown">
@@ -83,14 +83,18 @@ export function Header() {
                                     Zone Management
                                 <//>
                                 <${Link} href="/dyndns/tokens" className=${`navbar-item ${getLinkClass("/dyndns/tokens")}`} onClick=${handleLinkClick}>
-                                        API Tokens
+                                    API Tokens
                                 <//>
                                 <${Link} href="/dyndns/api-doc" className=${`navbar-item ${getLinkClass("/dyndns/api-doc")}`} onClick=${handleLinkClick}>
-                                        API Documentation
+                                    API Documentation
                                 <//>
                             </div>
                         </div>
                         
+                        <${Link} href="/dns-policy" className=${(active) => `navbar-item ${activeLinkClass(active)}`} onClick=${handleLinkClick}>
+                            DNS Policy
+                        <//>
+
                         <${Link} href="/documentation" className=${(active) => `navbar-item ${activeLinkClass(active)}`} onClick=${handleLinkClick}>
                             Documentation
                         <//>

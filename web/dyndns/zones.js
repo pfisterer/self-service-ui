@@ -2,7 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { Route, Switch, Link, useRoute, useLocation } from 'wouter-preact';
 import { Delayed } from '/helper/delayed.js';
-import { useDynDnsClient } from '/providers/dyndns-client.js';
+import { useClient } from '/providers/client.js';
 import { ShowKeys } from '/dyndns/zones/keys.js';
 import { ExternalDnsConfig } from '/dyndns/zones/external-dns.js';
 import { DnsUpdateCommand } from '/dyndns/zones/dns-update-cmd.js';
@@ -13,7 +13,7 @@ import { DnsRecordsList } from '/dyndns/zones/dns-record-list.js';
 // DynDnsZones
 // ----------------------------------------
 export function DynDnsZones() {
-    const { client, sdk } = useDynDnsClient();
+    const { client, sdk } = useClient('dyndns');
     const [zones, setZones] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -121,7 +121,7 @@ function AvailableDomain({ zone, onChange }) {
 // Activate Zone
 // ----------------------------------------
 function ActivateZone({ zone, onChange }) {
-    const { client, sdk } = useDynDnsClient();
+    const { client, sdk } = useClient('dyndns');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -161,7 +161,7 @@ function ActiveDomain({ zone: zoneName, onChange }) {
     const [error, setError] = useState(null);
     const [message, setMessage] = useState("Loading zone details...");
     const [currentLocation] = useLocation()
-    const { client, sdk } = useDynDnsClient();
+    const { client, sdk } = useClient('dyndns');
 
     const tabs = [
         { name: "Manage", path: "/" },
