@@ -16,7 +16,7 @@ done
 cat > /srv/www/config.js << EOF
 window.appconfig = {
   dynamicZonesBaseUrl: "${DYN_ZONES_BASE_URL}",
-  CLOUD_SELF_SERVICE_BASE_URL: "${CLOUD_SELF_SERVICE_BASE_URL}",
+  cloudSelfServiceBaseUrl: "${CLOUD_SELF_SERVICE_BASE_URL}",
   "oidc": {
     "client_id": "${OIDC_CLIENT_ID}",
     "issuer_url": "${OIDC_ISSUER_URL}",
