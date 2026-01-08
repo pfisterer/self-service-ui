@@ -15,7 +15,7 @@ import { Tokens } from '/dyndns/tokens.js';
 import { Documentation } from '/documentation/documentation.js';
 import { DynamicZonesApiSwagger } from '/swagger/swagger.js';
 import { DynDnsLoadState } from '/dyndns/dyndns-load-state.js';
-import { DnsPolicy } from '/dns-policy/dns-policy.js';
+import { DnsPolicy } from '/dyndns/policy.js';
 import { ClientProvider } from './providers/client.js';
 
 render(
@@ -27,9 +27,7 @@ function App() {
         <${DynDnsConfigProvider}>
             <${AuthProvider}>
                 <${ClientProvider} name="dyndns" baseURL=${window?.appconfig?.dynamicZonesBaseUrl}>
-                    <${ClientProvider} name="selfService" baseURL=${window?.appconfig?.cloudSelfServiceBaseUrl}>
-                        <${Main} />
-                    <//>
+                    <${Main} />
                 <//>
             <//>
         <//>
@@ -75,9 +73,7 @@ function Main() {
                 <${Route} path="/dyndns/zones" component=${dynamicZonesLoaded ? DynDnsZones : dynDnsLoadState} nest/>
                 <${Route} path="/dyndns/tokens" component=${dynamicZonesLoaded ? Tokens : dynDnsLoadState}  />
                 <${Route} path="/dyndns/api-doc" component=${dynamicZonesLoaded ? DynamicZonesApiSwagger : dynDnsLoadState} />
-
-                <!-- DNS Policy Routes -->
-                <${Route} path="/dns-policy/" component=${DnsPolicy} />
+                <${Route} path="/dyndns/policy" component=${dynamicZonesLoaded ? DnsPolicy : dynDnsLoadState} />
 
                 <!-- 404 Route -->
                 <${Route} component=${NotFound} />

@@ -85,15 +85,15 @@ export function Header() {
                                 <${Link} href="/dyndns/tokens" className=${`navbar-item ${getLinkClass("/dyndns/tokens")}`} onClick=${handleLinkClick}>
                                     API Tokens
                                 <//>
+                                <${Link} href="/dyndns/policy" className=${`navbar-item ${getLinkClass("/dyndns/policy")}`} onClick=${handleLinkClick}>
+                                    DNS Policy
+                                <//>
                                 <${Link} href="/dyndns/api-doc" className=${`navbar-item ${getLinkClass("/dyndns/api-doc")}`} onClick=${handleLinkClick}>
                                     API Documentation
                                 <//>
                             </div>
                         </div>
                         
-                        <${Link} href="/dns-policy" className=${(active) => `navbar-item ${activeLinkClass(active)}`} onClick=${handleLinkClick}>
-                            DNS Policy
-                        <//>
 
                         <${Link} href="/documentation" className=${(active) => `navbar-item ${activeLinkClass(active)}`} onClick=${handleLinkClick}>
                             Documentation

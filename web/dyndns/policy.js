@@ -6,7 +6,7 @@ import { Trash2, Edit } from 'lucide-preact';
 
 // --- Main Component: DnsPolicy ---
 export function DnsPolicy() {
-    const { client, sdk } = useClient('selfService');
+    const { client, sdk } = useClient('dyndns');
     const [rules, setRules] = useState([]);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -151,7 +151,7 @@ function RuleFilter({ searchFilter, onSearchChange, filteredCount, totalCount })
 // --- Rule List Component (Uses SDK for delete) ---
 
 function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
-    const { client, sdk } = useClient('selfService');
+    const { client, sdk } = useClient('dyndns');
     const [deleteLoading, setDeleteLoading] = useState(null);
 
     const handleDelete = async (ruleId) => {
@@ -247,7 +247,7 @@ function SingleRule({ rule, isSuperAdmin, isDeleting, onEdit, onDelete }) {
 // --- Rule Form Modal (Uses SDK for create and update) ---
 
 function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
-    const { client, sdk } = useClient('selfService');
+    const { client, sdk } = useClient('dyndns');
     const isEditMode = ruleToEdit !== null;
 
     const initialRuleState = {
