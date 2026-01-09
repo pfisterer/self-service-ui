@@ -37,7 +37,7 @@ docker-login:
 	docker login "$(DOCKER_REPO)"
 
 # Multi-Architecture Docker Build and Push (Requires 'docker buildx' and 'docker-login')
-multi-arch-build: docker-login
+docker-multi-arch-build: docker-login
 	@echo "🏗️ Building multi-architecture Docker image for $(DOCKER_PLATFORMS)..."
 	@echo "🏷️ Tags: $(DOCKER_REPO):latest, $(DOCKER_REPO):$(DOCKER_TAG)"
 	docker buildx build \
@@ -59,9 +59,8 @@ clean:
 # Help
 help:
 	@echo "Usage: make <target>"
-	@echo "  dev                 → Start the development server."
-	@echo "  docker-build        → Build the local Docker image tagged with the version from package.json."
-	@echo "  multi-arch-build    → Build and push multi-arch images (latest & version tag). Requires 'docker-login'."
-	@echo "  docker-login        → Log into the Docker registry."
-	@echo "  clean               → Remove local build output (the 'dist' folder)."
-
+	@echo "  dev                      → Start the development server."
+	@echo "  docker-build             → Build the local Docker image tagged with the version from package.json."
+	@echo "  docker-multi-arch-build  → Build and push multi-arch images (latest & version tag). Requires 'docker-login'."
+	@echo "  docker-login             → Log into the Docker registry."
+	@echo "  clean                    → Remove local build output (the 'dist' folder)."

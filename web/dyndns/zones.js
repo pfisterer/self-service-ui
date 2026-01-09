@@ -107,12 +107,20 @@ export function DynDnsZones() {
 // Available Domain List
 // ----------------------------------------
 function AvailableDomain({ zone, onChange }) {
+    let response;
+
+    if (zone.already_taken_by_someone_else) {
+        response = html`<div class="panel-block has-text-danger">This zone is already taken by someone else.</div>`
+    } else if (zone.exists) {
+        response = html`<${ActiveDomain} zone=${zone.name} onChange=${onChange} />`
+    } else {
+        response = html`<div class="panel-block"><${ActivateZone} zone=${zone.name} onChange=${onChange} /></div>`
+    }
+
     return html`
         <nav class="panel">
             <div class="panel-heading">Zone: ${zone.name}</div>
-            ${zone.exists
-            ? html`<${ActiveDomain} zone=${zone.name} onChange=${onChange} />`
-            : html`<div class="panel-block"><${ActivateZone} zone=${zone.name} onChange=${onChange} /></div>`}
+            ${response}
         </nav>
     `;
 }
