@@ -3,7 +3,7 @@
 set -e
 
 # Check if all required environment variables are set, otherwise exit with an error.
-required_vars="DYN_ZONES_BASE_URL CLOUD_SELF_SERVICE_BASE_URL OIDC_CLIENT_ID OIDC_ISSUER_URL"
+required_vars="DYN_ZONES_BASE_URL OIDC_CLIENT_ID OIDC_ISSUER_URL"
 
 for var in $required_vars; do
   if [ -z "$(eval echo \$$var)" ]; then
@@ -16,7 +16,6 @@ done
 cat > /srv/www/config.js << EOF
 window.appconfig = {
   dynamicZonesBaseUrl: "${DYN_ZONES_BASE_URL}",
-  cloudSelfServiceBaseUrl: "${CLOUD_SELF_SERVICE_BASE_URL}",
   "oidc": {
     "client_id": "${OIDC_CLIENT_ID}",
     "issuer_url": "${OIDC_ISSUER_URL}",
