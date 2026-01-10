@@ -10,7 +10,7 @@ DOCKER_PLATFORMS ?= linux/amd64,linux/arm64
 
 # --- Targets ---
 .DEFAULT_GOAL := docker-build
-.PHONY: all clean docker-build multi-arch-build docker-login help dev
+.PHONY: all clean docker-build multi-arch-build docker-login help dev helm-update
 
 # Alias for the primary build target
 all: docker-build
@@ -37,7 +37,7 @@ docker-login:
 	docker login "$(DOCKER_REPO)"
 
 # Multi-Architecture Docker Build and Push (Requires 'docker buildx' and 'docker-login')
-docker-multi-arch-build: docker-login
+docker-multi-arch-build: docker-login helm-update
 	@echo "🏗️ Building multi-architecture Docker image for $(DOCKER_PLATFORMS)..."
 	@echo "🏷️ Tags: $(DOCKER_REPO):latest, $(DOCKER_REPO):$(DOCKER_TAG)"
 	docker buildx build \
@@ -49,6 +49,22 @@ docker-multi-arch-build: docker-login
 		--push \
 		.
 	@echo "✅ Multi-architecture image built and pushed."
+
+# Update helm chart version from VERSION file
+helm-update:
+	helm lint helm-chart/
+	echo "✅ Helm chart linted successfully."
+
+	@VERSION=$$(cat VERSION | tr -d '\n'); \
+	sed -i '' "s/^version: .*/version: $$VERSION/" helm-chart/Chart.yaml; \
+	sed -i '' "s/^appVersion: .*/appVersion: \"$$VERSION\"/" helm-chart/Chart.yaml; \
+	echo "✅ Updated helm-chart/Chart.yaml to version $$VERSION"
+
+	helm package helm-chart
+	mkdir -p docs/helm-repo
+	mv cloud-self-service*.tgz docs/helm-repo/
+	helm repo index docs/helm-repo --url https://pfisterer.github.io/dynamic-zones/helm-repo
+	echo "✅ Helm chart linted successfully."
 
 # Cleanup target (removed local artifacts like the 'dist' folder)
 clean:
@@ -64,3 +80,4 @@ help:
 	@echo "  docker-multi-arch-build  → Build and push multi-arch images (latest & version tag). Requires 'docker-login'."
 	@echo "  docker-login             → Log into the Docker registry."
 	@echo "  clean                    → Remove local build output (the 'dist' folder)."
+	@echo "  helm-update              → Update Helm chart"

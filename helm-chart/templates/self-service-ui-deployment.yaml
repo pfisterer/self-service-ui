@@ -1,0 +1,90 @@
+{{- $comp := dict "context" . "component" "self-service-ui" -}}
+{{- $uiName := include "cloud-self-service.componentName" $comp -}}
+{{- $labels := include "cloud-self-service.labels" $comp -}}
+{{- $selectors := include "cloud-self-service.selectorLabels" $comp -}}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $uiName }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    keel.sh/policy: all
+    keel.sh/trigger: poll
+    keel.sh/pollSchedule: "@every 60m"
+  labels:
+    {{- $labels | nindent 4 }}
+spec:
+  replicas: {{ .Values.selfServiceUI.replicas }}
+  selector:
+    matchLabels:
+      {{- $selectors | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- include "cloud-self-service.rolloutAnnotations" . | nindent 8 }}
+      labels:
+        {{- $selectors | nindent 8 }}
+    spec:
+      containers:
+        - name: self-service-ui
+          image: {{ .Values.selfServiceUI.image }}:{{ .Values.selfServiceUI.version }}
+          imagePullPolicy: {{ .Values.selfServiceUI.imagePullPolicy | default "Always" }}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DYN_ZONES_BASE_URL
+              value: "{{ .Values.selfServiceUI.dynamicZonesBaseUrl }}"
+            - name: OIDC_ISSUER_URL
+              value: "{{ .Values.auth.oidc.issuerUrl  }}"
+            - name: OIDC_CLIENT_ID
+              value: "{{ .Values.auth.oidc.clientId }}"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $uiName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- $labels | nindent 4 }}
+spec:
+  selector:
+    {{- $selectors | nindent 4 }}
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+
+# enable if ingress.enabled is true
+{{- if .Values.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $uiName }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- range $key, $value := .Values.ingress.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.selfServiceUI.hostname | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $uiName }}
+                port:
+                  number: 8080
+  tls:
+    - hosts:
+        - {{ .Values.selfServiceUI.hostname | quote }}
+      secretName: {{ include "cloud-self-service.resourceName" (dict "context" . "component" "self-service-ui" "name" "tls") }}
+{{- end }}

@@ -1,0 +1,9 @@
+apiVersion: v2
+name: self-service-ui
+description: Self-Service UI Deployment for OpenStack environments
+type: application
+version: 0.3.1-alpha
+appVersion: "0.3.1-alpha"
+maintainers:
+  - name: Dennis Pfisterer
+    email: dennis.pfisterer@dhbw.de

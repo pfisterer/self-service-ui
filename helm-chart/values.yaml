@@ -1,0 +1,31 @@
+---
+#------------------------------------
+# Self-Service UI Configuration
+#------------------------------------
+
+selfServiceUI:
+  hostname: "self-service-ui.example.com"
+  replicas: 1
+  imagePullPolicy: "Always"
+  image: "ghcr.io/pfisterer/self-service-ui"
+  version: "latest"
+  dynamicZonesBaseUrl: https://dyndnsapi.example.com
+
+#------------------------------------
+# OIDC/Auth Configuration
+#------------------------------------
+auth:
+  oidc:
+    issuerUrl: https://sso.example.cloud/realms/example
+    clientId: example-cloud-dns
+
+#------------------------------------
+# Ingress Configuration
+#------------------------------------
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-production"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
