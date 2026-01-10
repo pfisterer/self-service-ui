@@ -1,0 +1,17 @@
+apiVersion: v1
+entries:
+  self-service-ui:
+  - apiVersion: v2
+    appVersion: 0.3.1-alpha
+    created: "2026-01-10T20:45:48.317271+01:00"
+    description: Self-Service UI Deployment for OpenStack environments
+    digest: eab369df0654bcb1ff18bd32bc70a87ba1b0c58b4413c76bef17ca5654ade7ce
+    maintainers:
+    - email: dennis.pfisterer@dhbw.de
+      name: Dennis Pfisterer
+    name: self-service-ui
+    type: application
+    urls:
+    - https://pfisterer.github.io/dynamic-zones/helm-repo/self-service-ui-0.3.1-alpha.tgz
+    version: 0.3.1-alpha
+generated: "2026-01-10T20:45:48.317073+01:00"

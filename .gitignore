@@ -7,7 +7,6 @@ cmd/cmd
 tmp/
 .env
 docs/client-typescript
-docs/
 .npm-temp
 node_modules/
 __*

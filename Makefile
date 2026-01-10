@@ -1,4 +1,3 @@
-
 # --- Project Configuration ---
 PROJECT_NAME := self-service-ui
 DOCKERFILE_NAME := Dockerfile
@@ -52,17 +51,18 @@ docker-multi-arch-build: docker-login helm-update
 
 # Update helm chart version from VERSION file
 helm-update:
-	helm lint helm-chart/
-	echo "✅ Helm chart linted successfully."
 
-	@VERSION=$$(cat VERSION | tr -d '\n'); \
+	@VERSION=$$(jq -r .version package.json); \
 	sed -i '' "s/^version: .*/version: $$VERSION/" helm-chart/Chart.yaml; \
 	sed -i '' "s/^appVersion: .*/appVersion: \"$$VERSION\"/" helm-chart/Chart.yaml; \
 	echo "✅ Updated helm-chart/Chart.yaml to version $$VERSION"
 
+	helm lint helm-chart/
+	echo "✅ Helm chart linted successfully."
+
 	helm package helm-chart
 	mkdir -p docs/helm-repo
-	mv cloud-self-service*.tgz docs/helm-repo/
+	mv self-service-ui*.tgz docs/helm-repo/
 	helm repo index docs/helm-repo --url https://pfisterer.github.io/dynamic-zones/helm-repo
 	echo "✅ Helm chart linted successfully."
 
