@@ -31,7 +31,7 @@ export function DnsUpdateCommand({ zone }) {
 
     // Local editable state for the form fields
     const [form, setForm] = useState({
-        name: zone.zone,
+        name: "testname",
         type: "A",
         ttl: 60,
         value: "127.1.2.3"
