@@ -26,10 +26,28 @@ function App() {
     return html`
         <${DynDnsConfigProvider}>
             <${AuthProvider}>
-                <${ClientProvider} name="dyndns" baseURL=${window?.appconfig?.dynamicZonesBaseUrl}>
-                    <${Main} />
-                <//>
+                <${Main} />
             <//>
+        <//>
+    `
+}
+
+function DynamicDnsRoutes() {
+    const { config: dynDnsConfig, error: configLoadError } = useDynDnsConfig();
+    const { client, sdk, error: clientLoadError } = useClient('dyndns');
+
+    const dynamicZonesLoaded = dynDnsConfig && client && sdk
+
+    const dynDnsLoadState = function () {
+        return html`<${DynDnsLoadState} clientLoadError=${clientLoadError} configLoadError=${configLoadError} client=${client} sdk=${sdk} />`;
+    }
+
+    return html`
+        <${Switch}>
+            <${Route} path="/dyndns/zones" component=${dynamicZonesLoaded ? DynDnsZones : dynDnsLoadState} nest/>
+            <${Route} path="/dyndns/tokens" component=${dynamicZonesLoaded ? Tokens : dynDnsLoadState}  />
+            <${Route} path="/dyndns/api-doc" component=${dynamicZonesLoaded ? DynamicZonesApiSwagger : dynDnsLoadState} />
+            <${Route} path="/dyndns/policy" component=${dynamicZonesLoaded ? DnsPolicy : dynDnsLoadState} />
         <//>
     `
 }
@@ -37,12 +55,6 @@ function App() {
 function Main() {
     const { user, login } = useAuth()
     const footer = html`<${Footer} title=${html`<b>dhbwCloud Self Service</b>`} version=${__APP_VERSION__} />`
-    const { client, sdk, error: clientLoadError } = useClient('dyndns');
-    const { config: dynDnsConfig, error: configLoadError } = useDynDnsConfig();
-    const dynamicZonesLoaded = dynDnsConfig && client && sdk
-    const dynDnsLoadState = function () {
-        return html`<${DynDnsLoadState} clientLoadError=${clientLoadError} configLoadError=${configLoadError} client=${client} sdk=${sdk} />`;
-    }
 
     if (!user) {
         return html`
@@ -70,10 +82,9 @@ function Main() {
                 <${Route} path="/documentation" component=${Documentation} />
 
                 <!-- Dynamic DNS Routes -->
-                <${Route} path="/dyndns/zones" component=${dynamicZonesLoaded ? DynDnsZones : dynDnsLoadState} nest/>
-                <${Route} path="/dyndns/tokens" component=${dynamicZonesLoaded ? Tokens : dynDnsLoadState}  />
-                <${Route} path="/dyndns/api-doc" component=${dynamicZonesLoaded ? DynamicZonesApiSwagger : dynDnsLoadState} />
-                <${Route} path="/dyndns/policy" component=${dynamicZonesLoaded ? DnsPolicy : dynDnsLoadState} />
+                <${ClientProvider} name="dyndns" baseURL=${window?.appconfig?.dynamicZonesBaseUrl}>
+                    <${DynamicDnsRoutes} />
+                <//>
 
                 <!-- 404 Route -->
                 <${Route} component=${NotFound} />
