@@ -1,20 +1,25 @@
 import { html } from 'htm/preact';
+import { Box, Text, Anchor, Group } from '@mantine/core';
 
 export function Footer({ title, version }) {
     return html`
-        <footer class="footer has-background-white-bis py-4 mt-5">
-            <div class="content has-text-centered is-size-7 has-text-grey-dark">
+        <${Box} component="div" py="xs" style=${{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <${Box} ta="center">
                 <!-- Top Line: Project Name and Version -->
-                <p class="mb-1">
+                <${Text} size="sm" c="dimmed" mb="xs">
                     ${title} — Version ${version}
-                </p>
+                <//>
                 
-                <p class="mb-0">
-                    <a href="https://github.com/pfisterer/self-service-ui">Source Code</a> 
-                    <span class="has-text-grey-dark mx-2">|</span>
-                    <a href="https://dennis-pfisterer.de">© Dennis Pfisterer, DHBW</a>
-                </p>
-            </div>
-        </footer>
+                <${Group} justify="center" gap="xs">
+                    <${Anchor} href="https://github.com/pfisterer/self-service-ui" size="sm" target="_blank">
+                        Source Code
+                    <//>
+                    <${Text} size="sm" c="dimmed">|<//>
+                    <${Anchor} href="https://dennis-pfisterer.de" size="sm" target="_blank">
+                        © Dennis Pfisterer, DHBW
+                    <//>
+                <//>
+            <//>
+        <//>
     `;
 }

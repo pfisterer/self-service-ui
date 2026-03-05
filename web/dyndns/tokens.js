@@ -3,6 +3,8 @@ import { html } from 'htm/preact';
 import { useClient } from '/providers/client.js';
 import { FetchModal } from './tokens/modal-fetch.js';
 import { Delayed } from '../helper/delayed.js';
+import { Container, Title, Button, Checkbox, Stack, Group, Paper, Text, Loader, Alert, Divider } from '@mantine/core';
+import { AlertCircle } from 'lucide-preact';
 
 export function Tokens() {
     const { client, sdk } = useClient('dyndns');
@@ -67,45 +69,51 @@ export function Tokens() {
         }
     }
 
-    if (loading) return html`<${Delayed}><p>Loading tokens...</p><//>`;
-    if (error) return html`<p>Error: ${error.message}</p>`;
+    if (loading) return html`<${Delayed}><${Loader} size="lg" /><//>`;
+    if (error) return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">${error.message}<//>`;
 
     const endpoint = new URL("/v1/zones/", window.appconfig.dynamicZonesBaseUrl).toString();
 
     return html`
-        <section class="mt-5">
-            <div class="container">
-                <h1 class="title">API Tokens</h1>
+        <${Container} size="lg" py="xl">
+            <${Stack} gap="lg">
+                <${Title} order=${2}>API Tokens<//>
 
-                <div class="panel">
-                    <div class="panel-heading">API Tokens</div>
+                <${Paper} shadow="sm" radius="md" withBorder>
+                    <${Stack} gap="md">
+                        <${Group} p="md" align="center">
+                            <${Button} onClick=${createToken}>Create Token<//>
+                            <${Checkbox} 
+                                label="Read-only" 
+                                checked=${readOnly}
+                                onChange=${e => setReadOnly(e.currentTarget.checked)}
+                            />
+                        <//>
 
-                    <div class="panel-block" style="gap: 10px; align-items: center;">
-                        <button class="button is-primary" onClick=${createToken}>Create Token</button>
-                        <label>
-                            <input type="checkbox" checked=${readOnly}
-                                onChange=${e => setReadOnly(e.target.checked)} />
-                            Read-only
-                        </label>
-                    </div>
+                        ${tokens.length === 0 && html`
+                            <${Text} p="md" c="dimmed">No tokens found.<//>
+                        `}
 
-                    ${tokens.length === 0 && html`<div class="panel-block">No tokens found.</div>`}
-
-                    ${tokens.map(t => html`
-                        <div class="panel-block">
-                            <div style="display:flex; justify-content: space-between; width:100%;">
-                                <div>
-                                    <strong>${t.token_string}</strong> (ID: ${t.id})<br/>
-                                    Expires: ${t.expires_at}<br/>
-                                    Mode: ${t.read_only ? "🔒 read-only" : "✏️ read-write"}
-                                </div>
-                                <${FetchModal} endpoint=${endpoint} token=${t.token_string} />
-                                <button class="button is-danger is-small" onClick=${() => deleteToken(t.id)}>Delete</button>
+                        ${tokens.map(t => html`
+                            <div>
+                                <${Divider} />
+                                <${Group} p="md" justify="space-between" align="flex-start">
+                                    <${Stack} gap="xs" style=${{ flex: 1 }}>
+                                        <${Text} fw=${600}>${t.token_string}<//>
+                                        <${Text} size="sm" c="dimmed">ID: ${t.id}<//>
+                                        <${Text} size="sm" c="dimmed">Expires: ${t.expires_at}<//>
+                                        <${Text} size="sm">Mode: ${t.read_only ? "🔒 read-only" : "✏️ read-write"}<//>
+                                    <//>
+                                    <${Group} gap="xs">
+                                        <${FetchModal} endpoint=${endpoint} token=${t.token_string} />
+                                        <${Button} color="red" size="sm" onClick=${() => deleteToken(t.id)}>Delete<//>
+                                    <//>
+                                <//>
                             </div>
-                        </div>
-                    `)}
-                </div>
-            </div>
-        </section>
+                        `)}
+                    <//>
+                <//>
+            <//>
+        <//>
     `;
 }

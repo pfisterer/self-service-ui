@@ -2,7 +2,9 @@ import { useState, useEffect, useMemo } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { useClient } from '/providers/client.js';
 import { Delayed } from '/helper/delayed.js';
-import { Trash2, Edit } from 'lucide-preact';
+import { Trash2, Edit, Plus, Search, X } from 'lucide-preact';
+import { Container, Title, Text, Button, Group, Stack, TextInput, SimpleGrid, Card, Modal, Alert, Loader, ActionIcon, Paper } from '@mantine/core';
+import { AlertCircle } from 'lucide-preact';
 
 // --- Main Component: DnsPolicy ---
 export function DnsPolicy() {
@@ -69,37 +71,33 @@ export function DnsPolicy() {
 
     // Render loading and errors
     if (loading || !client)
-        return html`<${Delayed}><p>Loading Policy Management data...</p><//>`;
+        return html`<${Delayed}><${Loader} size="lg" /><//>`;
 
     if (error)
-        return html`<p class="has-text-danger">Error: ${error.message}</p>`;
+        return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">${error.message}<//>`;
 
     // Use the flag retrieved from the API response
     const isSuperAdmin = isEditAllowed;
 
     return html`
-        <section class="section">
-            <div class="container">
-                <div class="columns is-vcentered mb-3">
-                    <div class="column">
-                        <h1 class="title is-3">DNS Policy Management</h1>
-
-                        <p class="subtitle is-6 mt-4">
+        <${Container} fluid py="md" px="xl">
+            <${Stack} gap="lg">
+                <${Group} justify="space-between" align="flex-start">
+                    <div>
+                        <${Title} order=${2}>DNS Policy Management<//>
+                        <${Text} size="sm" c="dimmed" mt="xs">
                             ${isSuperAdmin
             ? 'Manage who may create which zones. Policy changes apply to new zones. Existing zones stay as they are, so plan any follow-up updates.'
             : 'Read-only view of the DNS access rules that are currently active.'}
-                        </p>
+                        <//>
                     </div>
 
                     ${isSuperAdmin && html`
-                        <div class="column is-narrow has-text-left has-text-right-tablet">
-                            <button class="button is-primary" onClick=${() => setIsModalOpen(true)}>
-                                <span class="icon is-small"> <span>➕</span> </span>
-                                <span>New Rule</span>
-                            </button>
-                        </div>
+                        <${Button} leftSection=${html`<${Plus} size="16" />`} onClick=${() => setIsModalOpen(true)}>
+                            New Rule
+                        <//>
                     `}
-                </div>
+                <//>
 
                 <${RuleFilter}
                     searchFilter=${searchFilter}
@@ -119,43 +117,35 @@ export function DnsPolicy() {
                         onClose=${() => { setIsModalOpen(false); setEditingRule(null); }}
                     />
                 `}
-            </div>
-        </section>
+            <//>
+        <//>
     `;
 }
 
-// --- Rule Filter Component (No change) ---
-
+// --- Rule Filter Component ---
 function RuleFilter({ searchFilter, onSearchChange, filteredCount, totalCount }) {
     return html`
-        <div class="mb-4">
-            <div class="field">
-                <label class="label">Filter Rules</label>
-                <div class="control has-icons-right">
-                    <input class="input" type="text" 
-                        placeholder="Search by zone pattern, user filter, or description..." 
-                        value=${searchFilter}
-                        onInput=${(e) => onSearchChange(e.target.value)} />
-                    ${searchFilter && html`
-                        <span class="icon is-right is-clickable" onClick=${() => onSearchChange('')} style="cursor: pointer;">
-                            <span>✕</span>
-                        </span>
-                    `}
-                </div>
-                <p class="help">Showing ${filteredCount} of ${totalCount} rules</p>
-            </div>
-        </div>
+        <${TextInput}
+            placeholder="Search by zone pattern, user filter, or description..."
+            value=${searchFilter}
+            onChange=${(e) => onSearchChange(e.target.value)}
+            leftSection=${html`<${Search} size="16" />`}
+            rightSection=${searchFilter && html`
+                <${ActionIcon} variant="subtle" onClick=${() => onSearchChange('')}>
+                    <${X} size="16" />
+                <//>
+            `}
+            description=${`Showing ${filteredCount} of ${totalCount} rules`}
+        />
     `;
 }
 
-// --- Rule List Component (Uses SDK for delete) ---
-
+// --- Rule List Component ---
 function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
     const { client, sdk } = useClient('dyndns');
     const [deleteLoading, setDeleteLoading] = useState(null);
 
     const handleDelete = async (ruleId) => {
-        if (!confirm("Are you sure you want to delete this rule?")) return;
         setDeleteLoading(ruleId);
         try {
             await sdk.deleteV1PoliciesRulesById({ client, path: { id: ruleId } });
@@ -171,15 +161,17 @@ function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
 
     if (rules.length === 0) {
         return html`
-            <div class="box has-text-centered has-text-grey">
-                <p class="is-size-5">📭 No rules found.</p>
-                ${isSuperAdmin && html`<p class="mt-2">Create the first rule to grant users access to DNS zones.</p>`}
-            </div>
+            <${Paper} p="xl" withBorder>
+                <${Stack} align="center" gap="sm">
+                    <${Text} size="lg" c="dimmed">📭 No rules found.<//>
+                    ${isSuperAdmin && html`<${Text} size="sm" c="dimmed">Create the first rule to grant users access to DNS zones.<//>"`}
+                <//>
+            <//>
         `;
     }
 
     return html`
-        <div class="columns is-multiline">
+        <${SimpleGrid} cols=${{ base: 1, sm: 2, lg: 3 }}>
             ${rules.map(rule => html`
                 <${SingleRule}
                     rule=${rule}
@@ -189,63 +181,56 @@ function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
                     onDelete=${() => handleDelete(rule.id)}
                 />
             `)}
-        </div>
+        <//>
     `;
 }
 
-// --- Single Rule Component (No change) ---
-
+// --- Single Rule Component ---
 function SingleRule({ rule, isSuperAdmin, isDeleting, onEdit, onDelete }) {
     return html`
-        <div class="column is-full-mobile is-half-tablet is-one-third-desktop">
-            <div class="box" style="height: 100%; display: flex; flex-direction: column;">
-                <div class="is-flex is-justify-content-space-between is-align-items-start mb-4">
-                    <div style="flex-grow: 1;">
-                        <p class="heading is-size-7 has-text-grey">Zone Pattern</p>
-                        <p class="title is-5" style="margin-top: 0.25rem;">
-                            <code>${rule.zone_pattern}</code>
-                        </p>
+        <${Card} shadow="sm" padding="md" radius="md" withBorder>
+            <${Stack} gap="sm">
+                <${Group} justify="space-between" align="flex-start">
+                    <div style=${{ flexGrow: 1 }}>
+                        <${Text} size="xs" c="dimmed" tt="uppercase">Zone Pattern<//>
+                        <${Text} fw=${600} size="sm" mt="4">
+                            <code style=${{ fontSize: '0.85em' }}>${rule.zone_pattern}</code>
+                        <//>
                     </div>
                     ${isSuperAdmin && html`
-                        <div class="buttons is-flex-wrap-nowrap ml-2">
-                            <button class="button is-small is-info is-light" onClick=${onEdit} title="Edit">
-                                <span class="icon is-small"> <${Edit} size="18" /> </span>
-                            </button>
-                            <button class="button is-small is-danger is-light ${isDeleting ? 'is-loading' : ''}" 
-                                    onClick=${onDelete}
-                                    disabled=${isDeleting}
-                                    title="Delete">
-                                <span class="icon is-small">
-                                    <${Trash2} size="18" />
-                                </span>
-                            </button>
-                        </div>
+                        <${Group} gap="4">
+                            <${ActionIcon} size="sm" variant="light" color="blue" onClick=${onEdit} title="Edit">
+                                <${Edit} size="16" />
+                            <//>
+                            <${ActionIcon} size="sm" variant="light" color="red" onClick=${onDelete} loading=${isDeleting} disabled=${isDeleting} title="Delete">
+                                <${Trash2} size="16" />
+                            <//>
+                        <//>
                     `}
+                <//>
+
+                <div>
+                    <${Text} size="xs" c="dimmed" tt="uppercase">Zone SOA<//>
+                    <${Text} size="xs" mt="4"><code style=${{ fontSize: '0.85em' }}>${rule.zone_soa}</code><//>
                 </div>
 
-                <div class="mb-3">
-                    <p class="heading is-size-7 has-text-grey">Zone SOA</p>
-                    <p class="mt-1"><code>${rule.zone_soa}</code></p>
-                </div>
-
-                <div class="mb-3" style="flex-grow: 1;">
-                    <p class="heading is-size-7 has-text-grey">Applies To</p>
-                    <p class="mt-1"><code>${rule.target_user_filter}</code></p>
+                <div>
+                    <${Text} size="xs" c="dimmed" tt="uppercase">Applies To<//>
+                    <${Text} size="xs" mt="4"><code style=${{ fontSize: '0.85em' }}>${rule.target_user_filter}</code><//>
                 </div>
 
                 ${rule.description && html`
                     <div>
-                        <p class="heading is-size-7 has-text-grey">Description</p>
-                        <p class="mt-1 is-size-7">${rule.description}</p>
+                        <${Text} size="xs" c="dimmed" tt="uppercase">Description<//>
+                        <${Text} size="xs" mt="4">${rule.description}<//>
                     </div>
                 `}
-            </div>
-        </div>
+            <//>
+        <//>
     `;
 }
 
-// --- Rule Form Modal (Uses SDK for create and update) ---
-
+// --- Rule Form Modal ---
 function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
     const { client, sdk } = useClient('dyndns');
     const isEditMode = ruleToEdit !== null;
@@ -300,116 +285,100 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
         setLoading(true);
         setMessage(null);
 
-        // Client-side validation check
         if (!isValidZonePattern(rule.zone_pattern) || !isValidDnsName(rule.zone_soa) || !isValidUserFilter(rule.target_user_filter)) {
-            setMessage(html`<div class="notification is-danger is-light"><p>❌ Please ensure Zone Pattern, Zone SOA, and User Filter are all valid.</p></div>`);
+            setMessage(html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Validation Error" color="red">Please ensure Zone Pattern, Zone SOA, and User Filter are all valid.</>`);
             setLoading(false);
             return;
         }
 
         try {
-            // Body matches the required `routes.PolicyRuleRequest` schema
             const body = {
                 zone_pattern: rule.zone_pattern,
                 zone_soa: rule.zone_soa,
                 target_user_filter: rule.target_user_filter,
-                // Only include description if it has a value, though the SDK will handle `undefined`
                 description: rule.description || undefined,
             };
 
             if (isEditMode) {
                 await sdk.putV1PoliciesRulesById({ client, path: { id: rule.id }, body: body });
-                setMessage(html`<div class="notification is-success is-light"><p>✅ Rule updated!</p></div>`);
+                setMessage(html`<${Alert} title="Success" color="green">✅ Rule updated!</>`);
             } else {
                 await sdk.postV1PoliciesRules({ client, body: body });
-                setMessage(html`<div class="notification is-success is-light"><p>✅ Rule created!</p></div>`);
+                setMessage(html`<${Alert} title="Success" color="green">✅ Rule created!</>`);
             }
             setTimeout(() => onFormSuccess(), 700);
         } catch (e) {
             const errorMessage = e.message || e.detail || JSON.stringify(e);
-            setMessage(html`<div class="notification is-danger is-light"><p>❌ Error: ${errorMessage}</p></div>`);
+            setMessage(html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">${errorMessage}</>`);
         } finally {
             setLoading(false);
         }
     };
 
     return html`
-        <div class="modal is-active">
-            <div class="modal-background" onClick=${onClose}></div>
-            <div class="modal-card">
-                <header class="modal-card-head">
-                    <p class="modal-card-title">${isEditMode ? '✏️ Edit Rule' : '➕ Create New Rule'}</p>
-                    <button class="delete" onClick=${onClose}></button>
-                </header>
+        <${Modal} opened=${true} onClose=${onClose} title=${isEditMode ? '✏️ Edit Rule' : '➕ Create New Rule'} size="lg">
+            <${Stack} gap="md">
+                ${message}
 
-                <section class="modal-card-body">
-                    ${message}
+                <form onSubmit=${handleSubmit}>
+                    <${Stack} gap="md">
+                        <${TextInput}
+                            label="Zone (Name or Pattern)"
+                            name="zone_pattern"
+                            value=${rule.zone_pattern}
+                            onChange=${handleChange}
+                            required
+                            placeholder="e.g. projekt1.example.com or %u.users.example.com"
+                            description="%u.users.example.com = %u will be replaced with username"
+                            error=${!zoneValid && "Enter a valid domain. Allowed: '%u' as a full label (not the TLD). Wildcards are not permitted."}
+                        />
 
-                    <form onSubmit=${handleSubmit}>
-                        <div class="field">
-                            <label class="label">Zone (Name or Pattern)</label>
-                            <div class="control">
-                                <input class="input ${!zoneValid ? 'is-danger' : ''}" name="zone_pattern" type="text" 
-                                    value=${rule.zone_pattern} onInput=${handleChange} required 
-                                    placeholder="e.g. projekt1.example.com or %u.users.example.com" />
-                            </div>
-                            <p class="help">
-                                <strong>%u.users.example.com</strong> = %u will be replaced with username
-                            </p>
-                            ${!zoneValid && html`<p class="help is-danger">Enter a valid domain. Allowed: '%u' as a full label (not the TLD). Wildcards are not permitted.</p>`}
-                        </div>
+                        <${TextInput}
+                            label="Zone SOA"
+                            name="zone_soa"
+                            value=${rule.zone_soa}
+                            onChange=${handleChange}
+                            required
+                            placeholder="e.g. users.example.com"
+                            description="The authoritative zone for this nameserver (e.g., users.example.com)"
+                            error=${!zoneSoaValid && "Enter a valid DNS domain name."}
+                        />
 
-                        <div class="field">
-                            <label class="label">Zone SOA</label>
-                            <div class="control">
-                                <input class="input ${!zoneSoaValid ? 'is-danger' : ''}" name="zone_soa" type="text" 
-                                    value=${rule.zone_soa} onInput=${handleChange} required 
-                                    placeholder="e.g. users.example.com" />
-                            </div>
-                            <p class="help">
-                                The authoritative zone for this nameserver (e.g., <strong>users.example.com</strong>)
-                            </p>
-                            ${!zoneSoaValid && html`<p class="help is-danger">Enter a valid DNS domain name.</p>`}
-                        </div>
+                        <${TextInput}
+                            label="User Filter"
+                            name="target_user_filter"
+                            value=${rule.target_user_filter}
+                            onChange=${handleChange}
+                            required
+                            placeholder="e.g. *@example.com or alice@example.com"
+                            description="*@example.com = All users with @example.com | alice@example.com = Only this specific user"
+                            error=${!userFilterValid && "Enter a valid user filter. Allowed: '*@example.com' or 'alice@example.com'."}
+                        />
 
-                        <div class="field">
-                            <label class="label">User Filter</label>
-                            <div class="control">
-                                <input class="input ${!userFilterValid ? 'is-danger' : ''}" name="target_user_filter" type="text" 
-                                    value=${rule.target_user_filter} onInput=${handleChange} required 
-                                    placeholder="e.g. *@example.com or alice@example.com" />
-                            </div>
-                            ${!userFilterValid && html`<p class="help is-danger">Enter a valid user filter. Allowed: '*@example.com' or 'alice@example.com'.</p>`}
-                            <p class="help">
-                                <strong>*@example.com</strong> = All users with @example.com<br/>
-                                <strong>alice@example.com</strong> = Only this specific user
-                            </p>
-                        </div>
+                        <${TextInput}
+                            label="Description (optional)"
+                            name="description"
+                            value=${rule.description || ''}
+                            onChange=${handleChange}
+                            placeholder="e.g. Project zone for student group A"
+                        />
 
-                        <div class="field">
-                            <label class="label">Description (optional)</label>
-                            <div class="control">
-                                <input class="input" name="description" type="text" 
-                                    value=${rule.description || ''} onChange=${handleChange}
-                                    placeholder="e.g. Project zone for student group A" />
-                            </div>
-                        </div>
-                    </form>
-                </section>
-
-                <footer class="modal-card-foot">
-                    <button class="button" onClick=${onClose}>Cancel</button>
-                    <button class="button is-primary" 
-                            onClick=${handleSubmit}
-                            disabled=${loading || !zoneValid || !zoneSoaValid || !userFilterValid}>
-                        ${loading ? html`<span class="icon"><span class="loader"></span></span>` : ''}
-                        <span>${isEditMode ? "Save Changes" : "Create Rule"}</span>
-                    </button>
-                </footer>
-            </div>
-        </div>
+                        <${Group} justify="flex-end" mt="md">
+                            <${Button} variant="default" onClick=${onClose}>Cancel<//>
+                            <${Button} 
+                                type="submit"
+                                loading=${loading}
+                                disabled=${!zoneValid || !zoneSoaValid || !userFilterValid}>
+                                ${isEditMode ? "Save Changes" : "Create Rule"}
+                            <//>
+                        <//>
+                    <//>
+                </form>
+            <//>
+        <//>
     `;
 }
+
 // --- Validation Helpers (Moved to use the provided functions) ---
 // I've kept your original validation functions here for completeness, 
 // though the component assumes they are provided by useDnsPolicyClient.

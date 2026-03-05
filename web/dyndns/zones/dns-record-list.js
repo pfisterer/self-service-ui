@@ -4,6 +4,8 @@ import { useAuth, authHeaders } from '/providers/auth.js';
 import { generateNsUpdate } from './dns-update-cmd.js';
 import { useClient } from '/providers/client.js';
 import { useDynDnsConfig } from '/providers/dyndns-config.js';
+import { Table, TextInput, Select, Button, Group, Alert, Loader, Stack, Text } from '@mantine/core';
+import { AlertCircle, Copy, Check } from 'lucide-preact';
 
 function normalizeRecordName(name, zone) {
     if (!name) return '';
@@ -111,7 +113,6 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
 
 
     async function handleDelete() {
-        if (!confirm(`Delete DNS record ${fields.name}?`)) return;
         setLoading(true);
         setError(null);
         try {
@@ -148,39 +149,44 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
     }
 
     return html`
-        <tr>
-            <td>
-                <input class="input" value=${fields.name} onInput=${e => setFields({ ...fields, name: e.target.value })} disabled=${loading || !editing || !isEditable} /> 
-            </td>
-            <td>
+        <${Table.Tr}>
+            <${Table.Td}>
+                <${TextInput} value=${fields.name} onInput=${e => setFields({ ...fields, name: e.target.value })} disabled=${loading || !editing || !isEditable} />
+            <//>
+            <${Table.Td}>
                 ${editing && isEditable ? html`
-                <div class="select">
-                    <select value=${fields.type} onChange=${e => setFields({ ...fields, type: e.target.value })} > ${SUPPORTED_TYPES.map(t => html`<option value=${t}>${t}</option>`)}
-                    </select>
-                </div>
-                ` : html`<input class="input" value=${fields.type} disabled=${true} />
-                `}
-            </td>
-            <td>
-                <input class="input" type="number" value=${fields.ttl} onInput=${e => setFields({ ...fields, ttl: e.target.value })} disabled=${loading || !editing || !isEditable} />
-            </td>
-            <td>
-                <input class="input" value=${fields.value} onInput=${e => setFields({ ...fields, value: e.target.value })} disabled=${loading || !editing || !isEditable} />
-            </td>
-            <td>
-                ${editing && isEditable ? html`
-                <button class="button is-success" onClick=${handleUpdate} disabled=${loading}>${loading ? "Saving..." : "Save"} </button>
+                    <${Select} 
+                        data=${SUPPORTED_TYPES.map(t => ({ value: t, label: t }))}
+                        value=${fields.type} 
+                        onChange=${e => setFields({ ...fields, type: e })} 
+                    />
                 ` : html`
-                <button class="button" onClick=${() => isEditable && setEditing(true)} disabled=${loading || !isEditable}> Edit </button> `}
-                <button class="button is-danger ml-1" onClick=${handleDelete} disabled=${loading || !isEditable} >
-                ${loading ? "Deleting..." : "Delete"}
-                </button>
-
-                <button class="button ml-1" onClick=${handleCopy}>Copy nsupdate</button>
-
-                ${error && html`<div class="has-text-danger">${error.message}</div>`}
-            </td>
-            </tr>
+                    <${TextInput} value=${fields.type} disabled />
+                `}
+            <//>
+            <${Table.Td}>
+                <${TextInput} type="number" value=${fields.ttl} onInput=${e => setFields({ ...fields, ttl: e.target.value })} disabled=${loading || !editing || !isEditable} />
+            <//>
+            <${Table.Td}>
+                <${TextInput} value=${fields.value} onInput=${e => setFields({ ...fields, value: e.target.value })} disabled=${loading || !editing || !isEditable} />
+            <//>
+            <${Table.Td}>
+                <${Stack} gap="xs">
+                    <${Group} gap="xs">
+                        ${editing && isEditable ? html`
+                            <${Button} color="green" size="xs" onClick=${handleUpdate} disabled=${loading}>${loading ? "Saving..." : "Save"}<//>
+                        ` : html`
+                            <${Button} size="xs" onClick=${() => isEditable && setEditing(true)} disabled=${loading || !isEditable}>Edit<//>
+                        `}
+                        <${Button} color="red" size="xs" onClick=${handleDelete} disabled=${loading || !isEditable}>
+                            ${loading ? "Deleting..." : "Delete"}
+                        <//>
+                        <${Button} size="xs" variant="light" onClick=${handleCopy}>Copy nsupdate<//>
+                    <//>
+                    ${error && html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">${error.message}</alert>`}
+                <//>
+            <//>
+        <//>
     `;
 }
 
@@ -217,25 +223,32 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
     }
 
     return html`
-        <tr>
-            <td><input class="input" placeholder="Name" value=${fields.name} onInput=${e => setFields({ ...fields, name: e.target.value })} /></td>
-            <td>
-            <div class="select">
-                <select value=${fields.type} onChange=${e => setFields({ ...fields, type: e.target.value })} >
-                ${SUPPORTED_TYPES.map(t => html`<option value=${t}>${t}</option>`)}
-                </select>
-            </div>
-            </td>            
-            <td><input class="input" type="number" value=${fields.ttl} onInput=${e => setFields({ ...fields, ttl: e.target.value })} /></td>
-            <td><input class="input" value=${fields.value} onInput=${e => setFields({ ...fields, value: e.target.value })} /></td>
-            <td>
-                <button class="button is-primary" onClick=${handleAdd} disabled=${loading}>${loading ? 'Adding...' : 'Add'}</button>
-                ${error && html`<div class="has-text-danger">${error.message}</div>`}
-            </td>
-        </tr>
+        <${Table.Tr}>
+            <${Table.Td}>
+                <${TextInput} placeholder="Name" value=${fields.name} onInput=${e => setFields({ ...fields, name: e.target.value })} />
+            <//>
+            <${Table.Td}>
+                <${Select} 
+                    data=${SUPPORTED_TYPES.map(t => ({ value: t, label: t }))}
+                    value=${fields.type} 
+                    onChange=${e => setFields({ ...fields, type: e })} 
+                />
+            <//>
+            <${Table.Td}>
+                <${TextInput} type="number" value=${fields.ttl} onInput=${e => setFields({ ...fields, ttl: e.target.value })} />
+            <//>
+            <${Table.Td}>
+                <${TextInput} value=${fields.value} onInput=${e => setFields({ ...fields, value: e.target.value })} />
+            <//>
+            <${Table.Td}>
+                <${Stack} gap="xs">
+                    <${Button} color="blue" size="xs" onClick=${handleAdd} disabled=${loading}>${loading ? 'Adding...' : 'Add'}<//>
+                    ${error && html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">${error.message}</alert>`}
+                <//>
+            <//>
+        <//>
     `;
 }
-
 
 export function DnsRecordsList({ zone, tsigKey }) {
     const { user } = useAuth();
@@ -275,20 +288,24 @@ export function DnsRecordsList({ zone, tsigKey }) {
 
     useEffect(() => { fetchRecords(); }, []);
 
-    if (loading) return html`<p>Loading DNS records...</p>`;
-    if (error) return html`<div class="has-text-danger">Error loading DNS records: ${error.message}</div>`;
+    if (loading) return html`<${Loader} size="sm" />`;
+    if (error) return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">Error loading DNS records: ${error.message}</alert>`;
 
     return html`
-        <table class="table is-fullwidth is-striped">
-            <thead>
-                <tr>
-                    <th>Name</th><th>Type</th><th>TTL</th><th>Value</th><th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
+        <${Table} striped highlightOnHover>
+            <${Table.Thead}>
+                <${Table.Tr}>
+                    <${Table.Th}>Name<//>
+                    <${Table.Th}>Type<//>
+                    <${Table.Th}>TTL<//>
+                    <${Table.Th}>Value<//>
+                    <${Table.Th}>Actions<//>
+                <//>
+            <//>
+            <${Table.Tbody}>
                 ${records.map(record => html`<${DnsRecordRow} zone=${zone} tsigKey=${tsigKey} record=${record} onChange=${fetchRecords} />`)}
                 <${AddDnsRecordRow} zone=${zone} tsigKey=${tsigKey} onAdd=${fetchRecords} />
-            </tbody>
-        </table>
+            <//>
+        <//>
     `;
 }

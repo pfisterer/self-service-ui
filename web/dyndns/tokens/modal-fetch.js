@@ -1,12 +1,13 @@
 import { useState } from 'preact/hooks';
 import { html } from 'htm/preact';
+import { Button, Modal, TextInput, Stack, Group, Box, Text, CopyButton, Loader, Alert } from '@mantine/core';
+import { AlertCircle, Copy, Check } from 'lucide-preact';
 
 export function FetchModal({ endpoint, token, method = "GET" }) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
   const [error, setError] = useState(null);
-  const [copied, setCopied] = useState(false);
 
   endpoint = new URL(endpoint).toString();
 
@@ -32,82 +33,57 @@ export function FetchModal({ endpoint, token, method = "GET" }) {
     }
   };
 
-  const copyCurlToClipboard = () => {
-    const curlCommand = `curl -H "Authorization: Bearer ${token}" ${endpoint}`;
-    navigator.clipboard.writeText(curlCommand)
-      .then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 3000);
-      })
-      .catch(err => console.error('Failed to copy:', err));
-  };
+  const curlCommand = `curl -H "Authorization: Bearer ${token}" ${endpoint}`;
 
   return html`
     <div>
-      <button
-        class="button is-primary"
-        onClick=${() => setIsOpen(true)}
-      >
+      <${Button} onClick=${() => setIsOpen(true)} color="blue">
         Open API Fetch Modal
-      </button>
+      <//>
 
-      <div class="modal ${isOpen ? 'is-active' : ''}">
-        <div class="modal-background" onClick=${() => setIsOpen(false)}></div>
-        <div class="modal-card">
-          <header class="modal-card-head">
-            <p class="modal-card-title">API Request</p>
-            <button class="delete" aria-label="close" onClick=${() => setIsOpen(false)}></button>
-          </header>
+      <${Modal} opened=${isOpen} onClose=${() => setIsOpen(false)} title="API Request" size="lg">
+        <${Stack} gap="md">
+          <${TextInput} label="Token" value=${token} readOnly />
+          <${TextInput} label="Endpoint" value=${endpoint} readOnly />
 
-          <section class="modal-card-body">
-            <div class="field">
-              <label class="label">Token</label>
-              <div class="control">
-                <input class="input" type="text" value=${token} readonly />
+          <${Button} onClick=${handleFetch} disabled=${loading} color="green">
+            ${loading ? html`<${Loader} size="xs" mr="xs" />` : ''}
+            ${loading ? "Fetching..." : "Fetch"}
+          <//>
+
+          <${Box} style=${{ maxHeight: '300px', overflowY: 'auto', backgroundColor: '#f5f5f5', padding: '12px', borderRadius: '4px' }}>
+            ${loading && html`<${Loader} size="sm" />`}
+            ${error && html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">${error}<//>}`}
+            
+            <${Stack} gap="sm">
+              <div>
+                <${Text} size="sm" fw=${600} mb="xs">cURL:<//>
+                <${Group} gap="xs">
+                  <code style=${{ backgroundColor: '#fff', padding: '8px', borderRadius: '4px', flex: 1, fontSize: '12px', whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                    ${curlCommand}
+                  </code>
+                  <${CopyButton} value=${curlCommand}>
+                    ${({ copied }) => html`
+                      <${Button} size="xs" color=${copied ? 'green' : 'blue'}>
+                        ${copied ? html`<${Check} size="14" />` : html`<${Copy} size="14" />`}
+                      <//>
+                    `}
+                  <//>
+                <//>
               </div>
-            </div>
 
-            <div class="field">
-              <label class="label">Endpoint</label>
-              <div class="control">
-                <input class="input" type="text" value=${endpoint} readonly />
-              </div>
-            </div>
-
-            <div class="field">
-              <div class="control">
-                <button
-                  class="button is-success"
-                  disabled=${loading}
-                  onClick=${handleFetch}
-                >
-                  ${loading ? "Fetching..." : "Fetch"}
-                </button>
-              </div>
-            </div>
-
-            <div class="box" style="max-height: 300px; overflow:auto;">
-              ${loading && html`<p>Loading...</p>`}
-              ${error && html`<p class="has-text-danger">${error}</p>`}
-              
-              <div class="field mt-3" style="display:flex; gap:6px; align-items:center;">
-              <strong>cURL:</strong>
-              <pre style="background:#f5f5f5; padding:4px; margin:0; margin-left: 10px; white-space: pre-wrap; word-wrap: break-word;">
-              curl -H "Authorization: Bearer ${token}" ${endpoint}</pre>
-              <button class="button is-small is-info" onClick=${copyCurlToClipboard}>
-              ${copied ? "Copied" : "Copy"}
-              </button>
-              </div>
-              
-              ${response && html`<pre style="white-space: pre-wrap; word-wrap: break-word;">${JSON.stringify(response, null, 2)}</pre>`}
-            </div>
-          </section>
-
-          <footer class="modal-card-foot">
-            <button class="button" onClick=${() => setIsOpen(false)}>Close</button>
-          </footer>
-        </div>
-      </div>
+              ${response && html`
+                <div>
+                  <${Text} size="sm" fw=${600} mb="xs">Response:<//>
+                  <pre style=${{ backgroundColor: '#fff', padding: '8px', borderRadius: '4px', fontSize: '12px', whiteSpace: 'pre-wrap', wordWrap: 'break-word', margin: 0 }}>
+                    ${JSON.stringify(response, null, 2)}
+                  </pre>
+                </div>
+              `}
+            <//>
+          <//>
+        <//>
+      <//>
     </div>
   `;
 }

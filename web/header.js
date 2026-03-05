@@ -1,146 +1,152 @@
 import { useState } from 'preact/hooks';
-import { useSignal, signal } from '@preact/signals';
 import { html } from 'htm/preact';
 import { Link, useLocation } from 'wouter-preact';
-import { useAuth } from './providers/auth.js';
-import { User } from "lucide-preact";
+import { useAuth } from '/providers/auth.js';
+import { User, ChevronDown } from "lucide-preact";
+import { Burger, Group, Button, Menu, Image, Container, Box } from '@mantine/core';
 
 import dhbwLogoUrl from '/img/DHBW-Logo.svg';
 
 export function Header() {
-    // Replaced useState with useSignal for all component state
-    const isBurgerActive = useSignal(false);
-    const isDyndnsDropdownActive = useSignal(false);
-    const hoverTimeout = useSignal(null); // Replaces the global let hoverTimeout;
+    const [opened, setOpened] = useState(false);
     const [currentPath] = useLocation();
+    const { user, login, logout } = useAuth();
 
-    // Helper functions
-    const getLinkClass = href => currentPath.startsWith(href) ? "is-active has-text-white has-background-grey" : "";
-    const activeLinkClass = isActive => isActive ? "is-active has-text-white has-background-grey" : "";
     const isDyndnsActive = currentPath.startsWith('/dyndns/');
+    const isActive = (path) => currentPath === path || currentPath.startsWith(path + '/');
 
-    // Handlers
-    const burgerActiveClass = isBurgerActive.value ? "is-active" : "";
-    const toggleBurger = () => isBurgerActive.value = !isBurgerActive.value;
-
-    // Uses Debounce/Timeout
-    const handleMouseEnter = () => {
-        clearTimeout(hoverTimeout.value);
-        isBurgerActive.value = true;
-    };
-
-    const handleMouseLeave = () => {
-        hoverTimeout.value = setTimeout(() => {
-            isBurgerActive.value = false;
-        }, 200);
-    };
-
-    // Dropdown hover logic
-    const handleDyndnsEnter = () => isDyndnsDropdownActive.value = true;
-    const handleDyndnsLeave = () => isDyndnsDropdownActive.value = false;
-
-    // Handler to close all menus on link click
     const handleLinkClick = () => {
-        clearTimeout(hoverTimeout.value);
-        isBurgerActive.value = false;
-        isDyndnsDropdownActive.value = false;
+        setOpened(false);
     };
 
     return html`
-        <nav class="navbar is-fixed-top has-shadow" role="navigation" aria-label="main navigation"
-        onMouseEnter=${handleMouseEnter} onMouseLeave=${handleMouseLeave}>
-            <div class="container">
-                <div class="navbar-brand">
-                    <a class="navbar-item" href="#">
-                        <img src="${dhbwLogoUrl}" alt="DHBW Logo" style="height: 2em; max-height: 2em;" />
-                    </a>
+        <${Box} component="header" style=${{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            backgroundColor: 'white',
+            borderBottom: '1px solid #dee2e6',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+        }}>
+            <${Container} size="xl">
+                <${Group} h=${60} px="md" justify="space-between">
+                    <${Group}>
+                        <${Burger} opened=${opened} onClick=${() => setOpened(!opened)} hiddenFrom="sm" size="sm" />
+                        <${Link} href="/" onClick=${handleLinkClick}>
+                            <${Image} src=${dhbwLogoUrl} alt="DHBW Logo" h=${28} w="auto" fit="contain" />
+                        <//>
+                    <//>
 
-                    <a role="button" className="navbar-burger ${burgerActiveClass}"
-                        aria-label="menu" aria-expanded=${isBurgerActive.value} onClick=${toggleBurger}>
-                        <span aria-hidden="true"></span>
-                        <span aria-hidden="true"></span>
-                        <span aria-hidden="true"></span>
-                    </a>
-                </div>
-
-                <div className="navbar-menu ${burgerActiveClass}">
-                    <div class="navbar-start">
-                        
-                        <${Link} href="/" className=${(active) => `navbar-item ${activeLinkClass(active)}`} onClick=${handleLinkClick}>
-                            Home
+                    <${Group} gap="xs" visibleFrom="sm">
+                        <${Link} href="/" onClick=${handleLinkClick}>
+                            <${Button} variant=${isActive('/') && !isDyndnsActive && !isActive('/cloudresources') && !isActive('/documentation') ? 'filled' : 'subtle'} size="sm">
+                                Home
+                            <//>
                         <//>
 
-                        <div class="navbar-item has-dropdown ${isDyndnsDropdownActive.value ? 'is-active' : ''}" 
-                             onMouseEnter=${handleDyndnsEnter}
-                             onMouseLeave=${handleDyndnsLeave}>
-                            
-                            <a class="navbar-link ${isDyndnsActive ? 'is-active has-text-white has-background-grey' : ''}" href="#">
-                                DNS Zones
-                            </a>
-
-                            <div class="navbar-dropdown">
-                                <${Link} href="/dyndns/zones" className=${`navbar-item ${getLinkClass("/dyndns/zones")}`} onClick=${handleLinkClick}>
-                                    Zone Management
+                        <${Menu} trigger="hover" openDelay=${100} closeDelay=${200}>
+                            <${Menu.Target}>
+                                <${Button} variant=${isDyndnsActive ? 'filled' : 'subtle'} size="sm" rightSection=${html`<${ChevronDown} size="16" />`}>
+                                    DNS Zones
                                 <//>
-                                <${Link} href="/dyndns/tokens" className=${`navbar-item ${getLinkClass("/dyndns/tokens")}`} onClick=${handleLinkClick}>
-                                    API Tokens
+                            <//>
+                            <${Menu.Dropdown}>
+                                <${Link} href="/dyndns/zones" onClick=${handleLinkClick}>
+                                    <${Menu.Item}>Zone Management<//>
                                 <//>
-                                <${Link} href="/dyndns/policy" className=${`navbar-item ${getLinkClass("/dyndns/policy")}`} onClick=${handleLinkClick}>
-                                    DNS Policy
+                                <${Link} href="/dyndns/tokens" onClick=${handleLinkClick}>
+                                    <${Menu.Item}>API Tokens<//>
                                 <//>
-                                <${Link} href="/dyndns/api-doc" className=${`navbar-item ${getLinkClass("/dyndns/api-doc")}`} onClick=${handleLinkClick}>
-                                    API Documentation
+                                <${Link} href="/dyndns/policy" onClick=${handleLinkClick}>
+                                    <${Menu.Item}>DNS Policy<//>
                                 <//>
-                            </div>
-                        </div>
-                        
-
-                        <${Link} href="/documentation" className=${(active) => `navbar-item ${activeLinkClass(active)}`} onClick=${handleLinkClick}>
-                            Documentation
+                                <${Link} href="/dyndns/api-doc" onClick=${handleLinkClick}>
+                                    <${Menu.Item}>API Documentation<//>
+                                <//>
+                            <//>
                         <//>
-                    </div>
 
-                    <div class="navbar-end">
-                        <div class="navbar-item">
-                            <${LoginLogoutButton} />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </nav>
-        `
-}
+                        <${Link} href="/cloudresources" onClick=${handleLinkClick}>
+                            <${Button} variant=${isActive('/cloudresources') ? 'filled' : 'subtle'} size="sm">
+                                Cloud Resources
+                            <//>
+                        <//>
 
-function LoginLogoutButton() {
-    const { user, login, logout } = useAuth()
-    const [isDropdownActive, setIsDropdownActive] = useState(false);
-    const handleMouseEnter = () => setIsDropdownActive(true);
-    const handleMouseLeave = () => setIsDropdownActive(false);
+                        <${Link} href="/documentation" onClick=${handleLinkClick}>
+                            <${Button} variant=${isActive('/documentation') ? 'filled' : 'subtle'} size="sm">
+                                Documentation
+                            <//>
+                        <//>
+                    <//>
 
-    if (!user) {
-        return html`<button class="button" onClick=${login}>Login</button>`
-    }
+                    <${Group}>
+                        ${user ? html`
+                            <${Menu} trigger="hover" openDelay=${100} closeDelay=${200}>
+                                <${Menu.Target}>
+                                    <${Button} variant="subtle" size="sm" leftSection=${html`<${User} size="16" />`}>
+                                        ${user.profile.name}
+                                    <//>
+                                <//>
+                                <${Menu.Dropdown}>
+                                    <${Menu.Label}>Hello, ${user.profile.name}!<//>
+                                    <${Menu.Divider} />
+                                    <${Menu.Item} color="red" onClick=${logout}>Logout<//>
+                                <//>
+                            <//>
+                        ` : html`
+                            <${Button} onClick=${login} size="sm">Login<//>
+                        `}
+                    <//>
+                <//>
 
-    return html`
-        <div class="dropdown is-right ${isDropdownActive ? 'is-active' : ''}" onMouseEnter=${handleMouseEnter} onMouseLeave=${handleMouseLeave}>
-                <div class="dropdown-trigger">
-                    <button class="button is-ghost" aria-haspopup="true" aria-controls="dropdown-menu">
-                        <${User} />
-                    </button>
-                </div>
-                
-                <div class="dropdown-menu" id="dropdown-menu" role="menu">
-                    <div class="dropdown-content">
-                        <div class="dropdown-item has-text-weight-bold">
-                            Hello, ${user.profile.name}!
-                        </div>
-                        
-                        <div class="dropdown-item">
-                            <button class="button is-danger is-fullwidth" onClick=${logout}>Logout</button>
-                        </div>
-                        
-                    </div>
-            </div>
-        </div>
+                ${opened && html`
+                    <${Box} pb="md" hiddenFrom="sm">
+                        <${Group} direction="column" gap="xs" align="stretch">
+                            <${Link} href="/" onClick=${handleLinkClick}>
+                                <${Button} variant=${isActive('/') ? 'filled' : 'subtle'} size="sm" fullWidth>
+                                    Home
+                                <//>
+                            <//>
+
+                            <${Menu} trigger="click">
+                                <${Menu.Target}>
+                                    <${Button} variant=${isDyndnsActive ? 'filled' : 'subtle'} size="sm" fullWidth rightSection=${html`<${ChevronDown} size="16" />`}>
+                                        DNS Zones
+                                    <//>
+                                <//>
+                                <${Menu.Dropdown}>
+                                    <${Link} href="/dyndns/zones" onClick=${handleLinkClick}>
+                                        <${Menu.Item}>Zone Management<//>
+                                    <//>
+                                    <${Link} href="/dyndns/tokens" onClick=${handleLinkClick}>
+                                        <${Menu.Item}>API Tokens<//>
+                                    <//>
+                                    <${Link} href="/dyndns/policy" onClick=${handleLinkClick}>
+                                        <${Menu.Item}>DNS Policy<//>
+                                    <//>
+                                    <${Link} href="/dyndns/api-doc" onClick=${handleLinkClick}>
+                                        <${Menu.Item}>API Documentation<//>
+                                    <//>
+                                <//>
+                            <//>
+
+                            <${Link} href="/cloudresources" onClick=${handleLinkClick}>
+                                <${Button} variant=${isActive('/cloudresources') ? 'filled' : 'subtle'} size="sm" fullWidth>
+                                    Cloud Resources
+                                <//>
+                            <//>
+
+                            <${Link} href="/documentation" onClick=${handleLinkClick}>
+                                <${Button} variant=${isActive('/documentation') ? 'filled' : 'subtle'} size="sm" fullWidth>
+                                    Documentation
+                                <//>
+                            <//>
+                        <//>
+                    <//>
+                `}
+            <//>
+        <//>
     `;
 }

@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import { writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
+import preact from '@preact/preset-vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -26,6 +27,15 @@ export default defineConfig(({ mode }) => {
 
   return {
     root: 'web',
+    plugins: [preact()],
+    resolve: {
+      alias: {
+        react: 'preact/compat',
+        'react-dom': 'preact/compat',
+        'react-dom/test-utils': 'preact/test-utils',
+        'react/jsx-runtime': 'preact/jsx-runtime',
+      }
+    },
     build: {
       outDir: '../dist',
       emptyOutDir: true,

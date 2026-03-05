@@ -7,6 +7,8 @@ import { ShowKeys } from '/dyndns/zones/keys.js';
 import { ExternalDnsConfig } from '/dyndns/zones/external-dns.js';
 import { DnsUpdateCommand } from '/dyndns/zones/dns-update-cmd.js';
 import { DnsRecordsList } from '/dyndns/zones/dns-record-list.js';
+import { Container, Title, Paper, Stack, NavLink, Tabs, Button, Text, Loader, Alert, Group } from '@mantine/core';
+import { AlertCircle, Globe } from 'lucide-preact';
 
 
 // ----------------------------------------
@@ -43,63 +45,55 @@ export function DynDnsZones() {
         return () => { cancelled = true; };
     }, [client, reloadTrigger]);
 
-    if (loading) return html`<${Delayed}><p>Loading zones...</p><//>`;
-    if (error) return html`<a onClick=${() => setReloadTrigger(!reloadTrigger)}>Retry Load</a>`;
+    if (loading) return html`<${Delayed}><${Loader} size="lg" /><//>`;
+    if (error) return html`<${Button} onClick=${() => setReloadTrigger(!reloadTrigger)}>Retry Load<//>`;
 
     return html`
-        <section class="mt-5">
-            <div class="container">
-            <h1 class="title is-3">Zone Management</h1>
-            
-            <div class="mb-5">
-                <nav class="panel">
-                    <p class="panel-heading">
-                        Available Zones (${zones.length})
-                    </p>
-                    ${zones.map(zone => html`
-                        <${Link} 
-                            to=${"/zone/" + zone.name} 
-                            class="panel-block ${activeZoneName === zone.name ? 'has-background-grey-light has-text-white-ter' : ''}"
-                        >
-                            <span class="panel-icon">
-                                <i class="fas fa-globe"></i>
-                            </span>
-                            ${zone.name}
-                        <//> 
-                    `)}
-                    ${zones.length === 0 && html`
-                        <div class="panel-block">
-                            No zones available.
-                        </div>
-                    `}
-                </nav>
-            </div>
+        <${Container} size="xl" py="md">
+            <${Stack} gap="lg">
+                <${Title} order=${2}>Zone Management<//>
+                
+                <${Paper} shadow="sm" radius="md" withBorder>
+                    <${Paper} p="md" withBorder style=${{ backgroundColor: '#f8f9fa' }}>
+                        <${Text} fw=${600}>Available Zones (${zones.length})<//>
+                    <//>
+                    
+                    <${Stack} gap=${0}>
+                        ${zones.map(zone => html`
+                            <${NavLink}
+                                component=${Link}
+                                to=${"/zone/" + zone.name}
+                                label=${zone.name}
+                                leftSection=${html`<${Globe} size="16" />`}
+                                active=${activeZoneName === zone.name}
+                            />
+                        `)}
+                        ${zones.length === 0 && html`
+                            <${Text} p="md" c="dimmed">No zones available.<//>
+                        `}
+                    <//>
+                <//>
 
-            <${Switch}>
-                <!-- Show the currently selected zone -->
-                <${Route} path="/zone/:name" nest>
-                    ${param => {
+                <${Switch}>
+                    <${Route} path="/zone/:name" nest>
+                        ${param => {
             const zone = zones.find(z => z.name === param.name)
             return zone ?
                 html`<${AvailableDomain} zone=${zone} onChange=${() => setReloadTrigger(!reloadTrigger)} />` :
-                html`<${RouteNotFound}>`
-        }
+                html`<${RouteNotFound} />`
+        }}
+                    <//>
 
-        }
+                    <${Route} path="/">
+                        ${() => zones.length > 0 ? (navigate(`/zone/${zones[0].name}`, { replace: true }), null) : html`
+                            <${Paper} p="xl" withBorder>
+                                <${Text} ta="center" size="lg">⬆️ Select a zone above to manage its DNS records.<//>
+                            <//>
+                        `}  
+                    <//>
                 <//>
-
-                <!-- Redirect to the first zone if available -->
-                <${Route} path="/">
-                    ${() => zones.length > 0 ? (navigate(`/zone/${zones[0].name}`, { replace: true }), null) : html`
-                        <div class="content has-text-centered p-6">
-                                <h3 class="subtitle is-5">⬆️ Select a zone above to manage its DNS records.</h3>
-                        </div>
-                    `}  
-                <//>
-
-                <//>
-            </div>
-        </section>
+            <//>
+        <//>
     `;
 }
 
@@ -110,18 +104,17 @@ function AvailableDomain({ zone, onChange }) {
     let response;
 
     if (zone.already_taken_by_someone_else) {
-        response = html`<div class="panel-block has-text-danger">This zone is already taken by someone else.</div>`
+        response = html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} color="red">This zone is already taken by someone else.</>`
     } else if (zone.exists) {
         response = html`<${ActiveDomain} zone=${zone.name} onChange=${onChange} />`
     } else {
-        response = html`<div class="panel-block"><${ActivateZone} zone=${zone.name} onChange=${onChange} /></div>`
+        response = html`<${Paper} p="md"><${ActivateZone} zone=${zone.name} onChange=${onChange} /></>`
     }
 
     return html`
-        <nav class="panel">
-            <div class="panel-heading">Zone: ${zone.name}</div>
+        <${Paper} shadow="sm" radius="md" withBorder>
             ${response}
-        </nav>
+        <//>
     `;
 }
 
@@ -147,16 +140,16 @@ function ActivateZone({ zone, onChange }) {
         }
     }
 
-    if (loading) return html`<${Delayed}><p>Activating zone ${zone}...</p><//>`;
+    if (loading) return html`<${Delayed}><${Loader} size="sm" /><//>`;
     if (error)
         return html`
-            <div class="block">
+            <${Stack} gap="sm">
                 <pre>${error.message}</pre>
-                <button class="button" onClick=${() => window.location.reload()}>Refresh</button>
-            </div>
+                <${Button} onClick=${() => window.location.reload()}>Refresh<//>
+            <//>
         `;
 
-    return html`<button class="button" onClick=${activate}>Activate</button>`;
+    return html`<${Button} onClick=${activate}>Activate<//>`;
 }
 
 
@@ -168,7 +161,7 @@ function ActiveDomain({ zone: zoneName, onChange }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [message, setMessage] = useState("Loading zone details...");
-    const [currentLocation] = useLocation()
+    const [currentLocation, navigate] = useLocation()
     const { client, sdk } = useClient('dyndns');
 
     const tabs = [
@@ -204,55 +197,52 @@ function ActiveDomain({ zone: zoneName, onChange }) {
         } catch (e) { setError(e); } finally { setLoading(false); }
     }
 
-    if (loading) return html`<${Delayed}><p>${message}</p><//>`;
-    if (error) return html`<p class="has-text-danger">${error.message}</p>`;
-    if (!zone || !zone.zoneData) return html`<p class="has-text-danger">Zone data corrupted.</p>`;
+    if (loading) return html`<${Delayed}><${Text}>${message}</><//>`;
+    if (error) return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} color="red">${error.message}<//>`;
+    if (!zone || !zone.zoneData) return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} color="red">Zone data corrupted.<//>`;
+
+    const activeTab = tabs.find(t => currentLocation === t.path)?.name || "Manage";
 
     return html`
-        <div class="active-domain-wrapper">
-            <p class="panel-tabs">
-                ${tabs.map(({ name, path }) => html`<${Link} to=${path} class=${path === currentLocation ? "is-active" : ""}>${name} <//>`)}
-            </p>
-
-            <${Switch}>
-                <${Route} path="/">
-                    ${html`
-                        <div class="panel-block">
-                            <button class="button is-danger" onClick=${handleDeleteClick}>Delete Zone</button>
-                        </div>
-                        <div class="panel-block">
-                            <${DnsRecordsList} zone=${zone.zoneData.zone} tsigKey=${zone.zoneData.zone_keys[0]} />
-                        </div>
-                    `}
-                <//>
-                
-                <${Route} path="/keys">
-                    ${html`<${ShowKeys} zone=${zone.zoneData} />`}
-                <//>
-
-                <${Route} path="/update">
-                    ${html`<${DnsUpdateCommand} zone=${zone.zoneData} />`}
-                <//>
-
-                <${Route} path="/config">
-                    ${html`<${ExternalDnsConfig} externalDnsValuesYaml=${zone.externalDnsValuesYaml} externalDnsSecretYaml=${zone.externalDnsSecretYaml} zone=${zone.zoneData} />`}
-                <//>
-                
-                <${Route}>
-                    <div class="panel-block has-text-danger">Tab not found.</div>
+        <${Stack} gap="md">
+            <${Paper} p="md" withBorder style=${{ backgroundColor: '#f8f9fa' }}>
+                <${Group} justify="space-between" align="center">
+                    <${Text} fw=${600}>Zone: ${zone.zoneData.zone}<//>
+                    <${Button} color="red" size="sm" onClick=${handleDeleteClick}>Delete Zone<//>
                 <//>
             <//>
-        </div>
+
+            <${Tabs} value=${activeTab} onChange=${(val) => navigate(tabs.find(t => t.name === val)?.path || '/')}>
+                <${Tabs.List}>
+                    ${tabs.map(({ name }) => html`<${Tabs.Tab} value=${name}>${name}<//>`)}
+                <//>
+            <//>
+
+            ${activeTab === "Manage" && html`
+                <${DnsRecordsList} zone=${zone.zoneData.zone} tsigKey=${zone.zoneData.zone_keys[0]} />
+            `}
+            
+            ${activeTab === "Keys" && html`
+                <${ShowKeys} zone=${zone.zoneData} />
+            `}
+
+            ${activeTab === "DNS Update Command" && html`
+                <${DnsUpdateCommand} zone=${zone.zoneData} />
+            `}
+
+            ${activeTab === "External DNS Config" && html`
+                <${ExternalDnsConfig} externalDnsValuesYaml=${zone.externalDnsValuesYaml} externalDnsSecretYaml=${zone.externalDnsSecretYaml} zone=${zone.zoneData} />
+            `}
+        <//>
     `;
 }
 
 function RouteNotFound() {
     return html`
-        <section class="mt-3">
-            <div class="container">
-                <h3 class="title is-4 has-text-danger">❌ Zone Not Found</h3>
-                <p>The zone specified in the URL could not be located in your account.</p>
-            </div>
-        </section>
+        <${Container} py="md">
+            <${Alert} icon=${html`<${AlertCircle} size="16" />`} title="❌ Zone Not Found" color="red">
+                The zone specified in the URL could not be located in your account.
+            <//>
+        <//>
     `
 }

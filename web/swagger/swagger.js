@@ -1,5 +1,6 @@
 import { html } from 'htm/preact';
 import { useEffect, useRef } from 'preact/hooks';
+import { Container, Title, Paper, Text, Anchor, Code, Stack, Box } from '@mantine/core';
 
 import SwaggerUIBundle from 'swagger-ui-dist/swagger-ui-bundle.js';
 import SwaggerUIStandalonePreset from 'swagger-ui-dist/swagger-ui-standalone-preset.js';
@@ -46,33 +47,33 @@ export function DynamicZonesApiSwagger() {
             }
         </style>
 
-        <section class="mt-5">
-            <div class="container">
-                <h1 class="title">API Documentation</h1>
+        <${Container} size="xl" py="md">
+            <${Stack} gap="lg">
+                <${Title} order=${2}>API Documentation<//>
 
+                <${Paper} shadow="sm" radius="md" withBorder>
+                    <${Stack} gap="md">
+                        <${Paper} p="md" withBorder style=${{ backgroundColor: '#f8f9fa' }}>
+                            <${Title} order=${4}>Dynamic Zones API<//>
+                        <//>
+                        
+                        <${Box} p="md">
+                            <${Text}>
+                                The API endpoint is available at <${Code}>${baseUrl}<//>.
+                                
+                                See <${Anchor} href=${swaggerJsonUrl} target="_blank">swagger.json</> for full API specification.
+                                
+                                JavaScript (<${Anchor} href=${jsClientUrl} target="_blank">Client</> and <${Anchor} href=${jsSdkUrl} target="_blank">SDKs</>) and ESM-Module (<${Anchor} href=${mjsClientUrl} target="_blank">Client</> and <${Anchor} href=${mjsSdkUrl} target="_blank">SDKs</>) clients are available for accessing the API.
+                            <//>
+                        <//>
 
-                <div class="panel">
-                    <div class="panel-heading">Dynamic Zones API</div>
-                    
-                    <div class="panel-block" style="gap: 10px; align-items: center;">
-                        <div>
-                            The API endpoint is available at <code>${baseUrl}</code>. 
-                            
-                            See <a href="${swaggerJsonUrl}">swagger.json</a> for full API specification. 
-                            
-                            JavaScript (<a href="${jsClientUrl}">Client</a> and <a href="${jsSdkUrl}">SDKs</a>) and ESM-Module (<a href="${mjsClientUrl}">Client</a> and <a href="${mjsSdkUrl}">SDKs</a>) clients are available for accessing the API.
-                        </div>
-                    </div>
-
-                    <!-- Main panel for Swagger UI -->
-                    <div class="panel-block" style="gap: 10px; align-items: center;">
-                        <div id="swagger-container" ref=${uiRef} style="width: 100%;">
-                        </div>
-                    </div>
-                    
-                </div>
-
-            </div>
-        </section>
+                        <!-- Main panel for Swagger UI -->
+                        <${Box} p="md">
+                            <div id="swagger-container" ref=${uiRef} style="width: 100%;"></div>
+                        <//>
+                    <//>
+                <//>
+            <//>
+        <//>
     `;
 }

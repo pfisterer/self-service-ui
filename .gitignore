@@ -14,3 +14,4 @@ ansible-deployment-example/inventory.yaml
 kubeconfig-*.yaml
 web/config.js
 dist/
+.vscode/settings.json
