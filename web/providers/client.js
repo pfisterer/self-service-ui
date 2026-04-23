@@ -21,8 +21,9 @@ export function ClientProvider({ children, name = 'dyndns', baseURL }) {
     const [state, setState] = useState({ client: null, sdk: null, error: null });
 
     useEffect(() => {
-        if (auth?.loading)
+        if (auth?.loading) {
             return;
+        }
 
         (async () => {
             if (!baseURL) {
@@ -43,6 +44,12 @@ export function ClientProvider({ children, name = 'dyndns', baseURL }) {
                 const interceptorId = myClient.interceptors.request.use(async (request) => {
                     const token = auth?.user?.access_token;
                     token ? request.headers.set('Authorization', `Bearer ${token}`) : request.headers.delete('Authorization');
+
+                    if (auth?.dev_user?.trim() !== "") {
+                        console.debug(`ClientProvider: Adding dummy auth header for user '${auth.dev_user}'`);
+                        request.headers.set('X-Dummy-Auth-User', auth.dev_user);
+                    }
+
                     return request;
                 });
 
@@ -53,9 +60,9 @@ export function ClientProvider({ children, name = 'dyndns', baseURL }) {
                 setState(s => ({ ...s, error: { message: 'Load failed', details: e.message } }));
             }
         })();
-    }, [auth?.loading, auth?.user, baseURL]);
+    }, [auth?.loading, auth?.user, baseURL, auth.dev_user]);
 
-    const newValue = { ...parentContext, [name]: state }
+    const newValue = { ...parentContext, [name]: state };
 
     return html`
         <${ClientContext.Provider} value=${newValue}>

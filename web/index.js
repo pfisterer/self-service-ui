@@ -8,21 +8,18 @@ import { Router, Route, Switch } from 'wouter-preact';
 import { MantineProvider, AppShell } from '@mantine/core';
 import { Container, Paper, Anchor } from '@mantine/core';
 
-import { DynDnsConfigProvider, useDynDnsConfig } from '/providers/dyndns-config.js';
+import { DynDnsConfigProvider } from '/providers/dyndns-config.js';
 import { useAuth, AuthProvider } from '/providers/auth.js';
-import { useClient } from '/providers/client.js';
+import { ErrorModalProvider } from '/providers/error-modal.js';
 
 import { Header } from '/header.js';
 import { Footer } from '/footer.js';
 import { Home } from '/home/home.js';
-import { DynDnsZones } from '/dyndns/zones.js';
-import { Tokens } from '/dyndns/tokens.js';
+import { Delayed } from '/helper/delayed.js';
 import { Documentation } from '/documentation/documentation.js';
-import { DynamicZonesApiSwagger } from '/swagger/swagger.js';
-import { DynDnsLoadState } from '/dyndns/dyndns-load-state.js';
-import { DnsPolicy } from '/dyndns/policy.js';
-import { ClientProvider } from './providers/client.js';
-import { CloudResourceManagement } from './cloudresources/resources.js';
+import { ClientProvider, useClient } from './providers/client.js';
+import { CloudProjectManagement } from './projects/projects.js';
+import { DynamicDnsManagement } from './dyndns/dyndns-routes.js';
 
 render(
     html`<${MantineProvider} theme=${{
@@ -42,32 +39,28 @@ render(
 
 function App() {
     return html`
-        <${DynDnsConfigProvider}>
-            <${AuthProvider}>
-                <${Main} />
+        <${ErrorModalProvider}>
+            <${DynDnsConfigProvider}>
+                <${AuthProvider}>
+                    <${Main} />
+                <//>
             <//>
         <//>
     `
 }
 
-function DynamicDnsRoutes() {
-    const { config: dynDnsConfig, error: configLoadError } = useDynDnsConfig();
-    const { client, sdk, error: clientLoadError } = useClient('dyndns');
-
-    const dynamicZonesLoaded = dynDnsConfig && client && sdk
-
-    const dynDnsLoadState = function () {
-        return html`<${DynDnsLoadState} clientLoadError=${clientLoadError} configLoadError=${configLoadError} client=${client} sdk=${sdk} />`;
-    }
+function AppRoutes() {
+    const { client: projectClient } = useClient('projects');
 
     return html`
         <${Switch}>
-            <${Route} path="/dyndns/zones" component=${dynamicZonesLoaded ? DynDnsZones : dynDnsLoadState} nest/>
-            <${Route} path="/dyndns/tokens" component=${dynamicZonesLoaded ? Tokens : dynDnsLoadState}  />
-            <${Route} path="/dyndns/api-doc" component=${dynamicZonesLoaded ? DynamicZonesApiSwagger : dynDnsLoadState} />
-            <${Route} path="/dyndns/policy" component=${dynamicZonesLoaded ? DnsPolicy : dynDnsLoadState} />
+            <${Route} path="/" component=${Home}/>
+            <${Route} path="/documentation" component=${Documentation} />
+            <${Route} path="/dyndns" component=${DynamicDnsManagement} nest/>
+            ${projectClient && html`<${Route} path="/projects" component=${CloudProjectManagement} nest/>`}
+            <${Route} component=${NotFound} />
         <//>
-    `
+    `;
 }
 
 function Main() {
@@ -82,27 +75,19 @@ function Main() {
             <${AppShell.Main}>
 
                 ${!user ? html`
-                    <${Container} size="md" py="xl">
-                        <${Paper} p="lg" withBorder>
-                            Please <${Anchor} onClick=${login} style=${{ cursor: 'pointer' }}>log in</> to access your data.
+                    <${Delayed} waitMs=${200}>
+                        <${Container} size="md" py="xl">
+                            <${Paper} p="lg" withBorder>
+                                Please <${Anchor} onClick=${login} style=${{ cursor: 'pointer' }}>log in</> to access your data.
+                            <//>
                         <//>
                     <//>
                 ` : html`
                     <${Router}>
-                        <!-- Router -->
-                        <${Switch}>
-                            <!-- Generic Routes -->
-                            <${Route} path="/" component=${Home}/>
-                            <${Route} path="/documentation" component=${Documentation} />
-                            
-                            <${Route} path="/cloudresources" component=${CloudResourceManagement} nest/>
-
-                            <!-- Dynamic DNS Routes -->
-                            <${ClientProvider} name="dyndns" baseURL=${window?.appconfig?.dynamicZonesBaseUrl}>
-                                <${DynamicDnsRoutes} />
+                        <${ClientProvider} name="dyndns" baseURL=${window?.appconfig?.dynamicZonesBaseUrl}>
+                            <${ClientProvider} name="projects" baseURL=${window?.appconfig?.cloudResourcesBaseUrl}>
+                                <${AppRoutes} />
                             <//>
-                            
-                            <${Route} component=${NotFound} />
                         <//>
                     <//>
                 `}

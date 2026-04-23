@@ -12,10 +12,14 @@ for var in $required_vars; do
   fi
 done
 
+
+
 # Dynamically generate the config file
 cat > /srv/www/config.js << EOF
 window.appconfig = {
   dynamicZonesBaseUrl: "${DYN_ZONES_BASE_URL}",
+  cloudResourcesBaseUrl: "${CLOUD_RESOURCES_BASE_URL}",
+  dummyAuth: ${DUMMY_AUTH:-false},
   "oidc": {
     "client_id": "${OIDC_CLIENT_ID}",
     "issuer_url": "${OIDC_ISSUER_URL}",

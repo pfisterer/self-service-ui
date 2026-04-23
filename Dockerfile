@@ -22,7 +22,7 @@ FROM caddy:alpine AS runner
 # Copy the Caddyfile configuration
 COPY Caddyfile /etc/caddy/Caddyfile
 
-# This script reads DYNAMIC_ZONE_BASE_URL and writes it to /srv/www/config.js,
+# This script reads some environment variables and writes them to /srv/www/config.js,
 # then executes the main container command (CMD).
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh

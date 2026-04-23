@@ -3,6 +3,7 @@ import { html } from 'htm/preact';
 import { Route, Switch, Link, useRoute, useLocation } from 'wouter-preact';
 import { Delayed } from '/helper/delayed.js';
 import { useClient } from '/providers/client.js';
+import { useErrorModal } from '/providers/error-modal.js';
 import { ShowKeys } from '/dyndns/zones/keys.js';
 import { ExternalDnsConfig } from '/dyndns/zones/external-dns.js';
 import { DnsUpdateCommand } from '/dyndns/zones/dns-update-cmd.js';
@@ -10,15 +11,17 @@ import { DnsRecordsList } from '/dyndns/zones/dns-record-list.js';
 import { Container, Title, Paper, Stack, NavLink, Tabs, Button, Text, Loader, Alert, Group } from '@mantine/core';
 import { AlertCircle, Globe } from 'lucide-preact';
 
+const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
 // ----------------------------------------
 // DynDnsZones
 // ----------------------------------------
 export function DynDnsZones() {
     const { client, sdk } = useClient('dyndns');
+    const { showError } = useErrorModal();
     const [zones, setZones] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [loadFailed, setLoadFailed] = useState(false);
     const [reloadTrigger, setReloadTrigger] = useState(true);
     const [match, params] = useRoute("/zone/:name/*?");
     const activeZoneName = match ? params.name : null;
@@ -28,16 +31,15 @@ export function DynDnsZones() {
         let cancelled = false;
         (async () => {
             setLoading(true);
-            setError(null);
+            setLoadFailed(false);
 
-            try {
-                const res = await sdk.getV1Zones({ client });
-                if (!res.data?.zones) throw new Error("Unable to load zones");
-                if (!cancelled) setZones(res.data.zones);
-            } catch (e) {
-                if (!cancelled) setError(e);
-            } finally {
-                if (!cancelled) setLoading(false);
+            const res = await sdk.listZones({ client });
+            const err = sdkError(res);
+            if (!cancelled) {
+                if (err) { showError(err); setLoadFailed(true); }
+                else if (!res.data?.zones) { showError("Unable to load zones"); setLoadFailed(true); }
+                else { setZones(res.data.zones); }
+                setLoading(false);
             }
         })();
 
@@ -46,7 +48,7 @@ export function DynDnsZones() {
     }, [client, reloadTrigger]);
 
     if (loading) return html`<${Delayed}><${Loader} size="lg" /><//>`;
-    if (error) return html`<${Button} onClick=${() => setReloadTrigger(!reloadTrigger)}>Retry Load<//>`;
+    if (loadFailed) return html`<${Button} onClick=${() => setReloadTrigger(!reloadTrigger)}>Retry Load<//>`;
 
     return html`
         <${Container} size="xl" py="md">
@@ -123,31 +125,18 @@ function AvailableDomain({ zone, onChange }) {
 // ----------------------------------------
 function ActivateZone({ zone, onChange }) {
     const { client, sdk } = useClient('dyndns');
+    const { showError } = useErrorModal();
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
 
     async function activate() {
         setLoading(true);
-        setError(null);
-        try {
-            const res = await sdk.postV1ZonesByZone({ path: { zone }, client });
-            if (res.response.status !== 201) throw new Error(res.response.statusText);
-            onChange(zone);
-        } catch (err) {
-            setError(err);
-        } finally {
-            setLoading(false);
-        }
+        const res = await sdk.createZone({ path: { zone }, client });
+        const err = sdkError(res) ?? (res.response.status !== 201 ? res.response.statusText : null);
+        if (err) { showError(err); } else { onChange(zone); }
+        setLoading(false);
     }
 
     if (loading) return html`<${Delayed}><${Loader} size="sm" /><//>`;
-    if (error)
-        return html`
-            <${Stack} gap="sm">
-                <pre>${error.message}</pre>
-                <${Button} onClick=${() => window.location.reload()}>Refresh<//>
-            <//>
-        `;
 
     return html`<${Button} onClick=${activate}>Activate<//>`;
 }
@@ -159,10 +148,11 @@ function ActivateZone({ zone, onChange }) {
 function ActiveDomain({ zone: zoneName, onChange }) {
     const [zone, setZone] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [loadFailed, setLoadFailed] = useState(false);
     const [message, setMessage] = useState("Loading zone details...");
     const [currentLocation, navigate] = useLocation()
     const { client, sdk } = useClient('dyndns');
+    const { showError } = useErrorModal();
 
     const tabs = [
         { name: "Manage", path: "/" },
@@ -172,33 +162,29 @@ function ActiveDomain({ zone: zoneName, onChange }) {
     ];
 
     // Fetch zone data
-    useEffect(async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await sdk.getV1ZonesByZone({ path: { zone: zoneName }, client });
-            if (!res.data) throw new Error(`Zone ${zoneName} not found`);
-            setZone(res.data);
-        } catch (e) {
-            setError(e);
-        } finally {
+    useEffect(() => {
+        (async () => {
+            setLoading(true);
+            setLoadFailed(false);
+            const res = await sdk.getZone({ path: { zone: zoneName }, client });
+            const err = sdkError(res);
+            if (err) { showError(err); setLoadFailed(true); }
+            else if (!res.data) { showError(`Zone ${zoneName} not found`); setLoadFailed(true); }
+            else { setZone(res.data); }
             setLoading(false);
-        }
+        })();
     }, [client, zoneName, currentLocation]);
 
     async function handleDeleteClick() {
-        try {
-            setLoading(true);
-            setMessage("Deleting zone...");
-            const res = await sdk.deleteV1ZonesByZone({ path: { zone: zone.zoneData.zone }, client });
-            if (res.response.status !== 204)
-                throw new Error(res.response.statusText);
-            onChange();
-        } catch (e) { setError(e); } finally { setLoading(false); }
+        setLoading(true);
+        setMessage("Deleting zone...");
+        const res = await sdk.deleteZone({ path: { zone: zone.zoneData.zone }, client });
+        const err = sdkError(res) ?? (res.response.status !== 204 ? res.response.statusText : null);
+        if (err) { showError(err); setLoading(false); } else { onChange(); }
     }
 
     if (loading) return html`<${Delayed}><${Text}>${message}</><//>`;
-    if (error) return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} color="red">${error.message}<//>`;
+    if (loadFailed) return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} color="red">Failed to load zone. Check the error dialog for details.<//>`;
     if (!zone || !zone.zoneData) return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} color="red">Zone data corrupted.<//>`;
 
     const activeTab = tabs.find(t => currentLocation === t.path)?.name || "Manage";
@@ -219,7 +205,7 @@ function ActiveDomain({ zone: zoneName, onChange }) {
             <//>
 
             ${activeTab === "Manage" && html`
-                <${DnsRecordsList} zone=${zone.zoneData.zone} tsigKey=${zone.zoneData.zone_keys[0]} />
+                <${DnsRecordsList} zone=${zone.zoneData.zone} tsigKey=${zone.zoneData.zone_keys?.[0]} />
             `}
             
             ${activeTab === "Keys" && html`

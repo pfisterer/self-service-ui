@@ -1,16 +1,19 @@
 import { useState, useEffect, useMemo } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { useClient } from '/providers/client.js';
+import { useErrorModal } from '/providers/error-modal.js';
 import { Delayed } from '/helper/delayed.js';
-import { Trash2, Edit, Plus, Search, X } from 'lucide-preact';
+import { Trash2, Edit, Plus, Search, X, AlertCircle } from 'lucide-preact';
 import { Container, Title, Text, Button, Group, Stack, TextInput, SimpleGrid, Card, Modal, Alert, Loader, ActionIcon, Paper } from '@mantine/core';
-import { AlertCircle } from 'lucide-preact';
+
+const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
 // --- Main Component: DnsPolicy ---
 export function DnsPolicy() {
     const { client, sdk } = useClient('dyndns');
+    const { showError } = useErrorModal();
     const [rules, setRules] = useState([]);
-    const [error, setError] = useState(null);
+    const [loadFailed, setLoadFailed] = useState(false);
     const [loading, setLoading] = useState(true);
     const [reloadTrigger, setReloadTrigger] = useState(true);
     const [editingRule, setEditingRule] = useState(null);
@@ -20,32 +23,27 @@ export function DnsPolicy() {
 
     // Fetch rules on load and when reloadTrigger changes
     useEffect(() => {
-        if (!sdk || !client)
-            return;
-
         (async () => {
-            try {
-                setLoading(true);
-                setError(null);
-
-                const res = (await sdk.getV1PoliciesRules({ client })).data;
-
-                console.log("Fetched DNS Policy Rules:", res);
-                if (res && Array.isArray(res.rules)) {
-                    setRules(res.rules);
-                } else {
-                    throw new Error("Invalid response format: 'rules' array missing.");
-                }
-
-                setIsEditAllowed(!!res.edit_allowed);
-
-            } catch (e) {
-                // If the error object has a 'message' (standard error) or 'detail' (common API error)
-                const errorMessage = e.message || e.detail || JSON.stringify(e);
-                setError(new Error(errorMessage));
-            } finally {
+            setLoading(true);
+            setLoadFailed(false);
+            const fullRes = await sdk.listPolicyRules({ client });
+            const err = sdkError(fullRes);
+            if (err) {
+                showError(err);
+                setLoadFailed(true);
                 setLoading(false);
+                return;
             }
+            const res = fullRes.data;
+            if (!res || !Array.isArray(res.rules)) {
+                showError("Invalid response format: 'rules' array missing.");
+                setLoadFailed(true);
+                setLoading(false);
+                return;
+            }
+            setRules(res.rules);
+            setIsEditAllowed(!!res.edit_allowed);
+            setLoading(false);
         })();
     }, [sdk, reloadTrigger]);
 
@@ -69,12 +67,11 @@ export function DnsPolicy() {
         });
     }, [rules, searchFilter]);
 
-    // Render loading and errors
-    if (loading || !client)
+    if (loading)
         return html`<${Delayed}><${Loader} size="lg" /><//>`;
 
-    if (error)
-        return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">${error.message}<//>`;
+    if (loadFailed)
+        return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">Failed to load rules. See the error dialog for details.<//>`;
 
     // Use the flag retrieved from the API response
     const isSuperAdmin = isEditAllowed;
@@ -143,20 +140,15 @@ function RuleFilter({ searchFilter, onSearchChange, filteredCount, totalCount })
 // --- Rule List Component ---
 function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
     const { client, sdk } = useClient('dyndns');
+    const { showError } = useErrorModal();
     const [deleteLoading, setDeleteLoading] = useState(null);
 
     const handleDelete = async (ruleId) => {
         setDeleteLoading(ruleId);
-        try {
-            await sdk.deleteV1PoliciesRulesById({ client, path: { id: ruleId } });
-            onDeleteSuccess();
-        } catch (e) {
-            // Handle error response from SDK request
-            const errorMessage = e.message || e.detail || JSON.stringify(e);
-            alert(`Error deleting rule: ${errorMessage}`);
-        } finally {
-            setDeleteLoading(null);
-        }
+        const res = await sdk.deletePolicyRule({ client, path: { id: ruleId } });
+        const err = sdkError(res);
+        if (err) { showError(`Error deleting rule: ${err}`); } else { onDeleteSuccess(); }
+        setDeleteLoading(null);
     }
 
     if (rules.length === 0) {
@@ -233,6 +225,7 @@ function SingleRule({ rule, isSuperAdmin, isDeleting, onEdit, onDelete }) {
 // --- Rule Form Modal ---
 function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
     const { client, sdk } = useClient('dyndns');
+    const { showError } = useErrorModal();
     const isEditMode = ruleToEdit !== null;
 
     const initialRuleState = {
@@ -291,28 +284,23 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
             return;
         }
 
-        try {
-            const body = {
-                zone_pattern: rule.zone_pattern,
-                zone_soa: rule.zone_soa,
-                target_user_filter: rule.target_user_filter,
-                description: rule.description || undefined,
-            };
-
-            if (isEditMode) {
-                await sdk.putV1PoliciesRulesById({ client, path: { id: rule.id }, body: body });
-                setMessage(html`<${Alert} title="Success" color="green">✅ Rule updated!</>`);
-            } else {
-                await sdk.postV1PoliciesRules({ client, body: body });
-                setMessage(html`<${Alert} title="Success" color="green">✅ Rule created!</>`);
-            }
+        const body = {
+            zone_pattern: rule.zone_pattern,
+            zone_soa: rule.zone_soa,
+            target_user_filter: rule.target_user_filter,
+            description: rule.description || undefined,
+        };
+        const res = isEditMode
+            ? await sdk.updatePolicyRule({ client, path: { id: rule.id }, body })
+            : await sdk.createPolicyRule({ client, body });
+        const err = sdkError(res);
+        if (err) {
+            showError(err);
+        } else {
+            setMessage(html`<${Alert} title="Success" color="green">${isEditMode ? '✅ Rule updated!' : '✅ Rule created!'}</>`);
             setTimeout(() => onFormSuccess(), 700);
-        } catch (e) {
-            const errorMessage = e.message || e.detail || JSON.stringify(e);
-            setMessage(html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">${errorMessage}</>`);
-        } finally {
-            setLoading(false);
         }
+        setLoading(false);
     };
 
     return html`
@@ -379,9 +367,9 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
     `;
 }
 
-// --- Validation Helpers (Moved to use the provided functions) ---
-// I've kept your original validation functions here for completeness, 
-// though the component assumes they are provided by useDnsPolicyClient.
+// --- Validation Helpers ---
+
+function isAlphaNum(ch) { return /[A-Za-z0-9]/.test(ch); }
 
 // Allow RFC-compliant domain labels with '%u' as part of labels (e.g., student-%u.users.example.com). No wildcards or TLD as %u.
 function isValidZonePattern(value) {
@@ -391,33 +379,15 @@ function isValidZonePattern(value) {
     const parts = s.split('.');
     if (parts.length < 2) return false;
 
-    // Helper function to check if a character is alphanumeric (A-Z, a-z, 0-9)
-    function isAlphaNum(ch) { return /[A-Za-z0-9]/.test(ch); }
-
-    //Validates a single DNS-style label, allowing the custom '%u' sequence.
     function isValidLabel(label) {
-        // Check length constraints
-        if (label.length < 1 || label.length > 63) {
-            return false;
-        }
-
-        // Allowed characters: alphanumeric and hyphen (test with regex)
-        if (!/^[A-Za-z0-9-]+$/.test(label)) {
-            return false;
-        }
-
-        // Must start and end with alphanumeric character
-        if (!isAlphaNum(label[0]) || !isAlphaNum(label[label.length - 1])) {
-            return false;
-        }
-
+        if (label.length < 1 || label.length > 63) return false;
+        if (!/^[A-Za-z0-9-]+$/.test(label)) return false;
+        if (!isAlphaNum(label[0]) || !isAlphaNum(label[label.length - 1])) return false;
         return true;
-    };
+    }
 
-    // Label Validation Loop
     for (const label of parts) {
-        if (!isValidLabel(label))
-            return false;
+        if (!isValidLabel(label)) return false;
     }
 
     return true;
@@ -439,51 +409,10 @@ function isValidDnsName(value) {
     const parts = trimmed.split('.');
     if (parts.length < 2) return false;
 
-    // Helper function to check if a character is alphanumeric (A-Z, a-z, 0-9)
-    function isAlphaNum(ch) { return /[A-Za-z0-9]/.test(ch); }
-
-    // Validate each label
     for (const label of parts) {
         if (label.length < 1 || label.length > 63) return false;
         if (!/^[A-Za-z0-9-]+$/.test(label)) return false;
         if (!isAlphaNum(label[0]) || !isAlphaNum(label[label.length - 1])) return false;
-    }
-
-    return true;
-}
-
-
-
-/**
- * Validates a new zone pattern against system policies
- */
-function validateZonePattern(pattern) {
-    if (!pattern || pattern.trim().length === 0) {
-        throw new Error("Zone pattern cannot be empty");
-    }
-
-    if (!/^[a-zA-Z0-9._%-]+$/.test(pattern)) {
-        throw new Error("Zone pattern contains invalid characters");
-    }
-
-    if (pattern.length > 253) {
-        throw new Error("Zone pattern is too long (max. 253 characters)");
-    }
-
-    return true;
-}
-
-/**
- * Validates user filter
- */
-function validateUserFilter(filter) {
-    if (!filter || filter.trim().length === 0) {
-        throw new Error("User filter cannot be empty");
-    }
-
-    // Must be either *@domain or complete email
-    if (!filter.includes('@')) {
-        throw new Error("User filter must be an email address or *@domain");
     }
 
     return true;

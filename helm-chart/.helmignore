@@ -1,5 +1,5 @@
 # Patterns to ignore when building packages.
-# This supports shell glob patterns, relative paths, and negated (whitelist) patterns.
+# This supports shell glob patterns, relative paths, and negated (allowlist) patterns.
 
 .DS_Store
 .git

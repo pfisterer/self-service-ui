@@ -3,13 +3,11 @@ import { html } from 'htm/preact';
 import { Button, Modal, TextInput, Stack, Group, Box, Text, CopyButton, Loader, Alert } from '@mantine/core';
 import { AlertCircle, Copy, Check } from 'lucide-preact';
 
-export function FetchModal({ endpoint, token, method = "GET" }) {
+export function FetchModal({ sdk, client, token, method = "GET" }) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
   const [error, setError] = useState(null);
-
-  endpoint = new URL(endpoint).toString();
 
   const handleFetch = async () => {
     setLoading(true);
@@ -17,15 +15,11 @@ export function FetchModal({ endpoint, token, method = "GET" }) {
     setError(null);
 
     try {
-      const res = await fetch(endpoint, {
-        method,
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      const data = await res.json();
-      setResponse(data);
+      if (typeof sdk?.listZones !== 'function') {
+        throw new Error('SDK method listZones is not available.');
+      }
+      const res = await sdk.listZones({ client });
+      setResponse(res?.data ?? null);
     } catch (err) {
       setError(err.message || "Unknown error");
     } finally {
@@ -33,7 +27,7 @@ export function FetchModal({ endpoint, token, method = "GET" }) {
     }
   };
 
-  const curlCommand = `curl -H "Authorization: Bearer ${token}" ${endpoint}`;
+  const sdkCommand = `sdk.listZones({ client })`;
 
   return html`
     <div>
@@ -44,7 +38,7 @@ export function FetchModal({ endpoint, token, method = "GET" }) {
       <${Modal} opened=${isOpen} onClose=${() => setIsOpen(false)} title="API Request" size="lg">
         <${Stack} gap="md">
           <${TextInput} label="Token" value=${token} readOnly />
-          <${TextInput} label="Endpoint" value=${endpoint} readOnly />
+          <${TextInput} label="Method" value=${method} readOnly />
 
           <${Button} onClick=${handleFetch} disabled=${loading} color="green">
             ${loading ? html`<${Loader} size="xs" mr="xs" />` : ''}
@@ -57,12 +51,12 @@ export function FetchModal({ endpoint, token, method = "GET" }) {
             
             <${Stack} gap="sm">
               <div>
-                <${Text} size="sm" fw=${600} mb="xs">cURL:<//>
+                <${Text} size="sm" fw=${600} mb="xs">SDK Call:<//>
                 <${Group} gap="xs">
                   <code style=${{ backgroundColor: '#fff', padding: '8px', borderRadius: '4px', flex: 1, fontSize: '12px', whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
-                    ${curlCommand}
+                    ${sdkCommand}
                   </code>
-                  <${CopyButton} value=${curlCommand}>
+                  <${CopyButton} value=${sdkCommand}>
                     ${({ copied }) => html`
                       <${Button} size="xs" color=${copied ? 'green' : 'blue'}>
                         ${copied ? html`<${Check} size="14" />` : html`<${Copy} size="14" />`}

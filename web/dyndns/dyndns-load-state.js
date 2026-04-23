@@ -1,9 +1,8 @@
 import { html } from 'htm/preact';
-import { Delayed } from '/helper/delayed.js';
-import { Container, Alert, Stack, Text, Progress, Paper } from '@mantine/core';
+import { Container, Alert, Stack, Text } from '@mantine/core';
 import { AlertCircle } from 'lucide-preact';
 
-export function DynDnsLoadState({ clientLoadError, configLoadError, client, sdk }) {
+export function DynDnsLoadState({ clientLoadError, configLoadError }) {
 
     // Provide error feedback if module loading failed
     if (clientLoadError || configLoadError) {
@@ -31,23 +30,5 @@ export function DynDnsLoadState({ clientLoadError, configLoadError, client, sdk 
         `;
     }
 
-    if (!client || !sdk) {
-        return html`
-            <${Delayed}>
-                <${Container} size="md" py="xl">
-                    <${Paper} p="xl" withBorder>
-                        <${Stack} gap="md" align="center">
-                            <${Text} size="lg" fw=${500} ta="center">
-                                ⚙️ Initializing API Client...
-                            <//>
-                            <${Progress} value=${100} animate />
-                            <${Text} size="sm" c="dimmed" ta="center">
-                                Loading SDK modules from remote service
-                            <//>
-                        <//>
-                    <//>
-                <//>
-            <//>
-        `;
-    }
+    return null;
 }

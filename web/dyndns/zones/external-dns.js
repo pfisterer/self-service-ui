@@ -18,7 +18,7 @@ export function ExternalDnsConfig({ externalDnsValuesYaml, zone }) {
     useEffect(() => {
         (async () => {
             try {
-                const res = await sdk.getV1Tokens({ client });
+                const res = await sdk.listTokens({ client });
                 const tokens = res?.data?.tokens
                 if (tokens && tokens.length > 0) {
                     const readOnlyToken = tokens.find(t => t.read_only === true);

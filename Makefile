@@ -72,6 +72,16 @@ clean:
 	@rm -rf dist
 	@echo "✅ Cleanup complete"
 
+# Update and install all dependencies
+update-deps:
+	@echo "📦 Updating Go dependencies..."
+	go get -u ./...
+	go mod tidy
+	@echo "✅ Go dependencies updated."
+	@echo "📦 Updating npm dependencies..."
+	ncu -u && npm install
+	@echo "✅ npm dependencies updated."
+
 # Help
 help:
 	@echo "Usage: make <target>"
@@ -80,4 +90,5 @@ help:
 	@echo "  docker-multi-arch-build  → Build and push multi-arch images (latest & version tag). Requires 'docker-login'."
 	@echo "  docker-login             → Log into the Docker registry."
 	@echo "  clean                    → Remove local build output (the 'dist' folder)."
+	@echo "  update-deps              → Update Go and npm dependencies."
 	@echo "  helm-update              → Update Helm chart"

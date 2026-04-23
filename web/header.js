@@ -41,7 +41,7 @@ export function Header() {
 
                     <${Group} gap="xs" visibleFrom="sm">
                         <${Link} href="/" onClick=${handleLinkClick}>
-                            <${Button} variant=${isActive('/') && !isDyndnsActive && !isActive('/cloudresources') && !isActive('/documentation') ? 'filled' : 'subtle'} size="sm">
+                            <${Button} variant=${isActive('/') && !isDyndnsActive && !isActive('/projects') && !isActive('/documentation') ? 'filled' : 'subtle'} size="sm">
                                 Home
                             <//>
                         <//>
@@ -68,9 +68,9 @@ export function Header() {
                             <//>
                         <//>
 
-                        <${Link} href="/cloudresources" onClick=${handleLinkClick}>
-                            <${Button} variant=${isActive('/cloudresources') ? 'filled' : 'subtle'} size="sm">
-                                Cloud Resources
+                        <${Link} href="/projects" onClick=${handleLinkClick}>
+                            <${Button} variant=${isActive('/projects') ? 'filled' : 'subtle'} size="sm">
+                                Cloud Projects
                             <//>
                         <//>
 
@@ -132,9 +132,9 @@ export function Header() {
                                 <//>
                             <//>
 
-                            <${Link} href="/cloudresources" onClick=${handleLinkClick}>
-                                <${Button} variant=${isActive('/cloudresources') ? 'filled' : 'subtle'} size="sm" fullWidth>
-                                    Cloud Resources
+                            <${Link} href="/projects" onClick=${handleLinkClick}>
+                                <${Button} variant=${isActive('/projects') ? 'filled' : 'subtle'} size="sm" fullWidth>
+                                    Cloud Projects
                                 <//>
                             <//>
 

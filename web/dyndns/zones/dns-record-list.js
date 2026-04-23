@@ -4,6 +4,7 @@ import { useAuth, authHeaders } from '/providers/auth.js';
 import { generateNsUpdate } from './dns-update-cmd.js';
 import { useClient } from '/providers/client.js';
 import { useDynDnsConfig } from '/providers/dyndns-config.js';
+import { useErrorModal } from '/providers/error-modal.js';
 import { Table, TextInput, Select, Button, Group, Alert, Loader, Stack, Text } from '@mantine/core';
 import { AlertCircle, Copy, Check } from 'lucide-preact';
 
@@ -68,74 +69,44 @@ function stripZone(recordName, zoneName) {
 // ----------------------------------------
 // DNS Records Management
 // ----------------------------------------
+const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
+
 const SUPPORTED_TYPES = ["A", "AAAA"];
 
 
 export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
     const { config: dynDnsConfig } = useDynDnsConfig();
     const { client, sdk, } = useClient('dyndns');
+    const { showError } = useErrorModal();
 
     const [editing, setEditing] = useState(false);
     const [fields, setFields] = useState({ ...record });
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
 
     const isEditable = SUPPORTED_TYPES.includes(record.type.toUpperCase());
 
     async function handleUpdate() {
         setLoading(true);
-        setError(null);
-        try {
-            const normalizedName = normalizeRecordName(fields.name, zone);
-
-            const createRes = await sdk.postV1DnsRecordsCreate({
-                client,
-                body: {
-                    ...fields,
-                    name: normalizedName,
-                    zone,
-                    key_name: tsigKey.keyname,
-                    key_algorithm: tsigKey.algorithm,
-                    key: tsigKey.key
-                }
-            });
-
-            if (!createRes.response.ok) throw new Error(createRes.response.statusText);
-
-            setEditing(false);
-            onChange();
-        } catch (e) {
-            setError(e);
-        } finally {
-            setLoading(false);
-        }
+        const normalizedName = normalizeRecordName(fields.name, zone);
+        const res = await sdk.createDnsRecord({
+            client,
+            body: { ...fields, name: normalizedName, zone, key_name: tsigKey.keyname, key_algorithm: tsigKey.algorithm, key: tsigKey.key }
+        });
+        const err = sdkError(res) ?? (!res.response.ok ? res.response.statusText : null);
+        if (err) { showError(err); } else { setEditing(false); onChange(); }
+        setLoading(false);
     }
-
 
     async function handleDelete() {
         setLoading(true);
-        setError(null);
-        try {
-            const normalizedName = normalizeRecordName(fields.name, zone);
-
-            const res = await sdk.postV1DnsRecordsDelete({
-                client,
-                body: {
-                    ...fields,
-                    name: normalizedName,
-                    zone,
-                    key_name: tsigKey.keyname,
-                    key_algorithm: tsigKey.algorithm,
-                    key: tsigKey.key
-                }
-            });
-            if (!res.response.ok) throw new Error(res.response.statusText);
-            onChange();
-        } catch (e) {
-            setError(e);
-        } finally {
-            setLoading(false);
-        }
+        const normalizedName = normalizeRecordName(fields.name, zone);
+        const res = await sdk.deleteDnsRecord({
+            client,
+            body: { ...fields, name: normalizedName, zone, key_name: tsigKey.keyname, key_algorithm: tsigKey.algorithm, key: tsigKey.key }
+        });
+        const err = sdkError(res) ?? (!res.response.ok ? res.response.statusText : null);
+        if (err) { showError(err); } else { onChange(); }
+        setLoading(false);
     }
 
     async function handleCopy() {
@@ -183,7 +154,6 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
                         <//>
                         <${Button} size="xs" variant="light" onClick=${handleCopy}>Copy nsupdate<//>
                     <//>
-                    ${error && html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">${error.message}</alert>`}
                 <//>
             <//>
         <//>
@@ -194,32 +164,18 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
     const { user } = useAuth();
     const [fields, setFields] = useState({ name: '', type: 'A', ttl: 300, value: '' });
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
     const { client, sdk } = useClient('dyndns');
+    const { showError } = useErrorModal();
 
     async function handleAdd() {
         setLoading(true);
-        setError(null);
-        try {
-            const res = await sdk.postV1DnsRecordsCreate({
-                client,
-                body: {
-                    ...fields,
-                    zone,
-                    name: normalizeRecordName(fields.name, zone),
-                    key_name: tsigKey.keyname,
-                    key_algorithm: tsigKey.algorithm,
-                    key: tsigKey.key
-                }
-            });
-            if (!res.response.ok) throw new Error(res.response.statusText);
-            setFields({ name: '', type: 'A', ttl: 300, value: '' });
-            onAdd();
-        } catch (e) {
-            setError(e);
-        } finally {
-            setLoading(false);
-        }
+        const res = await sdk.createDnsRecord({
+            client,
+            body: { ...fields, zone, name: normalizeRecordName(fields.name, zone), key_name: tsigKey.keyname, key_algorithm: tsigKey.algorithm, key: tsigKey.key }
+        });
+        const err = sdkError(res) ?? (!res.response.ok ? res.response.statusText : null);
+        if (err) { showError(err); } else { setFields({ name: '', type: 'A', ttl: 300, value: '' }); onAdd(); }
+        setLoading(false);
     }
 
     return html`
@@ -243,7 +199,6 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
             <${Table.Td}>
                 <${Stack} gap="xs">
                     <${Button} color="blue" size="xs" onClick=${handleAdd} disabled=${loading}>${loading ? 'Adding...' : 'Add'}<//>
-                    ${error && html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">${error.message}</alert>`}
                 <//>
             <//>
         <//>
@@ -254,42 +209,34 @@ export function DnsRecordsList({ zone, tsigKey }) {
     const { user } = useAuth();
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [loadFailed, setLoadFailed] = useState(false);
     const { client, sdk } = useClient('dyndns');
+    const { showError } = useErrorModal();
 
     async function fetchRecords() {
         setLoading(true);
-        setError(null);
-        try {
-            const res = await sdk.getV1DnsRecords({
-                client,
-                query: { zone },
-                headers: {
-                    ...authHeaders(user),
-                    "X-DNS-Key-Name": tsigKey.keyname,
-                    "X-DNS-Key-Algorithm": tsigKey.algorithm,
-                    "X-DNS-Key": tsigKey.key,
-                }
-            });
-            if (!res.data) throw new Error('No records found');
-
-            const strippedRecords = res.data.records.map(record => ({
-                ...record,
-                name: stripZone(record.name, zone)
-            }));
-
-            setRecords(strippedRecords);
-        } catch (e) {
-            setError(e);
-        } finally {
-            setLoading(false);
-        }
+        setLoadFailed(false);
+        const res = await sdk.listDnsRecords({
+            client,
+            query: { zone },
+            headers: {
+                ...authHeaders(user),
+                "X-DNS-Key-Name": tsigKey.keyname,
+                "X-DNS-Key-Algorithm": tsigKey.algorithm,
+                "X-DNS-Key": tsigKey.key,
+            }
+        });
+        const err = sdkError(res);
+        if (err) { showError(err); setLoadFailed(true); }
+        else if (!res.data) { showError('No records found'); setLoadFailed(true); }
+        else { setRecords(res.data.records.map(record => ({ ...record, name: stripZone(record.name, zone) }))); }
+        setLoading(false);
     }
 
     useEffect(() => { fetchRecords(); }, []);
 
     if (loading) return html`<${Loader} size="sm" />`;
-    if (error) return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">Error loading DNS records: ${error.message}</alert>`;
+    if (loadFailed) return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">Failed to load DNS records. See the error dialog for details.</alert>`;
 
     return html`
         <${Table} striped highlightOnHover>

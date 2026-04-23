@@ -1,78 +1,51 @@
 import { useState, useEffect } from 'preact/hooks';
 import { html } from 'htm/preact';
 import { useClient } from '/providers/client.js';
+import { useErrorModal } from '/providers/error-modal.js';
 import { FetchModal } from './tokens/modal-fetch.js';
 import { Delayed } from '../helper/delayed.js';
-import { Container, Title, Button, Checkbox, Stack, Group, Paper, Text, Loader, Alert, Divider } from '@mantine/core';
-import { AlertCircle } from 'lucide-preact';
+import { Container, Title, Button, Checkbox, Stack, Group, Paper, Text, Loader, Divider } from '@mantine/core';
+
+const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
 export function Tokens() {
     const { client, sdk } = useClient('dyndns');
+    const { showError } = useErrorModal();
     const [tokens, setTokens] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [readOnly, setReadOnly] = useState(false);
 
     useEffect(() => {
         (async () => {
             setLoading(true);
-            setError(null);
-            try {
-                const res = await sdk.getV1Tokens({ client });
-                setTokens(res?.data?.tokens || []);
-
-                // Set error when status code is not 2xx
-                if (res.response.status < 200 || res.response.status >= 300) {
-                    setError(new Error(`Failed to fetch tokens: ${res.response.status} ${res.response.statusText} @ ${res.request.url}`));
-                }
-
-            } catch (e) {
-                setError(e);
-            } finally {
-                setLoading(false);
-            }
+            const res = await sdk.listTokens({ client });
+            const err = sdkError(res);
+            if (err) { showError(err); } else { setTokens(res?.data?.tokens || []); }
+            setLoading(false);
         })();
     }, [client]);
 
     async function createToken() {
         setLoading(true);
-        setError(null);
-        try {
-            const res = await await sdk.postV1Tokens({
-                client,
-                body: { read_only: readOnly },
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            });
-
-            if (res?.data?.token) {
-                setTokens(prev => [...prev, res.data.token]);
-            }
-        } catch (e) {
-            setError(e);
-        } finally {
-            setLoading(false);
-        }
+        const res = await sdk.createToken({
+            client,
+            body: { read_only: readOnly },
+            headers: { "Content-Type": "application/json" }
+        });
+        const err = sdkError(res);
+        if (err) { showError(err); } else if (res?.data?.token) { setTokens(prev => [...prev, res.data.token]); }
+        setLoading(false);
     }
 
     async function deleteToken(tokenId) {
         setLoading(true);
-        setError(null);
-        try {
-            await await sdk.deleteV1TokensById({ path: { id: tokenId }, client });
-            setTokens(prev => prev.filter(t => t.id !== tokenId));
-        } catch (e) {
-            setError(e);
-        } finally {
-            setLoading(false);
-        }
+        const res = await sdk.deleteToken({ path: { id: tokenId }, client });
+        const err = sdkError(res);
+        if (err) { showError(err); } else { setTokens(prev => prev.filter(t => t.id !== tokenId)); }
+        setLoading(false);
     }
 
     if (loading) return html`<${Delayed}><${Loader} size="lg" /><//>`;
-    if (error) return html`<${Alert} icon=${html`<${AlertCircle} size="16" />`} title="Error" color="red">${error.message}<//>`;
-
-    const endpoint = new URL("/v1/zones/", window.appconfig.dynamicZonesBaseUrl).toString();
 
     return html`
         <${Container} size="lg" py="xl">
@@ -105,7 +78,7 @@ export function Tokens() {
                                         <${Text} size="sm">Mode: ${t.read_only ? "🔒 read-only" : "✏️ read-write"}<//>
                                     <//>
                                     <${Group} gap="xs">
-                                        <${FetchModal} endpoint=${endpoint} token=${t.token_string} />
+                                        <${FetchModal} sdk=${sdk} client=${client} token=${t.token_string} />
                                         <${Button} color="red" size="sm" onClick=${() => deleteToken(t.id)}>Delete<//>
                                     <//>
                                 <//>
