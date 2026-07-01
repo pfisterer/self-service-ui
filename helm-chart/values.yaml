@@ -24,7 +24,7 @@ auth:
 #------------------------------------
 ingress:
   enabled: true
-  # Default to Traefik (k3s) with no cert-manager annotation: TLS is served by
-  # the cluster's wildcard default certificate. Override per environment.
-  className: traefik
+  # Empty className -> field omitted -> cluster default IngressClass (Traefik on
+  # k3s). No cert-manager annotation: TLS = cluster wildcard default cert.
+  className: ""
   annotations: {}
