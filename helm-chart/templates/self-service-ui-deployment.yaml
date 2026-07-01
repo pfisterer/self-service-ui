@@ -8,10 +8,6 @@ kind: Deployment
 metadata:
   name: {{ $uiName }}
   namespace: {{ .Release.Namespace }}
-  annotations:
-    keel.sh/policy: all
-    keel.sh/trigger: poll
-    keel.sh/pollSchedule: "@every 60m"
   labels:
     {{- $labels | nindent 4 }}
 spec:
