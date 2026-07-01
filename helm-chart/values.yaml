@@ -24,8 +24,7 @@ auth:
 #------------------------------------
 ingress:
   enabled: true
-  className: nginx
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-production"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  # Default to Traefik (k3s) with no cert-manager annotation: TLS is served by
+  # the cluster's wildcard default certificate. Override per environment.
+  className: traefik
+  annotations: {}

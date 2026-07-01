@@ -82,5 +82,4 @@ spec:
   tls:
     - hosts:
         - {{ .Values.selfServiceUI.hostname | quote }}
-      secretName: {{ include "cloud-self-service.resourceName" (dict "context" . "component" "self-service-ui" "name" "tls") }}
 {{- end }}
