@@ -18,21 +18,20 @@ export function ShowKeys({ zone }) {
                 <${Paper} p="md" withBorder style=${{ backgroundColor: '#f8f9fa' }}>
                     <${Text} fw=${600}>Key #${index + 1}<//>
                 <//>
-                    <${Stack} gap="md">
-                        <${Table} striped size="sm">
-                            <${Table.Tbody}>
-                                <${Table.Tr}>
-                                    <${Table.Th}>Keyname<//>
-                                    <${Table.Td}><${CodeBlock} code=${key.keyname} /><//>
-                                <//>
-                                <${Table.Tr}>
-                                    <${Table.Th}>Algorithm<//>
-                                    <${Table.Td}><${CodeBlock} code=${key.algorithm} /><//>
-                                <//>
-                                <${Table.Tr}>
-                                    <${Table.Th}>Key<//>
-                                    <${Table.Td}><${CodeBlock} code=${key.key} /><//>
-                                <//>
+                <${Stack} gap="md">
+                    <${Table} striped size="sm">
+                        <${Table.Tbody}>
+                            <${Table.Tr}>
+                                <${Table.Th}>Keyname<//>
+                                <${Table.Td}><${CodeBlock} code=${key.keyname} /><//>
+                            <//>
+                            <${Table.Tr}>
+                                <${Table.Th}>Algorithm<//>
+                                <${Table.Td}><${CodeBlock} code=${key.algorithm} /><//>
+                            <//>
+                            <${Table.Tr}>
+                                <${Table.Th}>Key<//>
+                                <${Table.Td}><${CodeBlock} code=${key.key} /><//>
                             <//>
                         <//>
                     <//>
