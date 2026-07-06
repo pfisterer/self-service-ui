@@ -69,7 +69,7 @@ export function DynamicZonesApiSwagger() {
 
                             {/* Main panel for Swagger UI */}
                             <Box p="md">
-                                <div id="swagger-container" ref={uiRef} style="width: 100%;"></div>
+                                <div id="swagger-container" ref={uiRef} style={{ width: '100%' }}></div>
                             </Box>
                         </Stack>
                     </Paper>

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Route, Switch, useLocation } from 'wouter';
+import { Route, Switch, Redirect } from 'wouter';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useClient } from '/providers/client.jsx';
 import { DynDnsZones } from '/dyndns/zones.jsx';
@@ -14,7 +14,6 @@ const DynamicZonesApiSwagger = lazy(() =>
 export function DynamicDnsManagement() {
     const { config: dynDnsConfig, error: configLoadError } = useDynDnsConfig();
     const { client, sdk, error: clientLoadError } = useClient('dyndns');
-    const [, navigate] = useLocation();
 
     const dynamicZonesLoaded = Boolean(dynDnsConfig && client && sdk);
 
@@ -37,10 +36,7 @@ export function DynamicDnsManagement() {
                 <Route path="/api-doc" component={DynamicZonesApiSwagger} />
                 <Route path="/policy" component={DnsPolicy} />
                 <Route path="/">
-                    {() => {
-            navigate('/zones', { replace: true });
-            return null;
-        }}
+                    <Redirect to="/zones" replace />
                 </Route>
             </Switch>
         </Suspense>

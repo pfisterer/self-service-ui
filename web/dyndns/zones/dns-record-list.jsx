@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth, authHeaders } from '/providers/auth.jsx';
-import { generateNsUpdate } from './dns-update-cmd.jsx';
+import { generateNsUpdate, generateDig } from './dns-update-cmd.jsx';
 import { useClient } from '/providers/client.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
@@ -81,6 +81,7 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
     const [editing, setEditing] = useState(false);
     const [fields, setFields] = useState({ ...record });
     const [loading, setLoading] = useState(false);
+    const [copied, setCopied] = useState(null); // which copy button briefly shows "Copied…"
 
     const isEditable = SUPPORTED_TYPES.includes(record.type.toUpperCase());
 
@@ -108,15 +109,18 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
         setLoading(false);
     }
 
-    async function handleCopy() {
-        const nsupdate = generateNsUpdate(fields, zone, tsigKey, dynDnsConfig);
+    // Copy to clipboard and briefly flip the button label to "Copied…" (~1s)
+    // instead of showing a blocking alert.
+    async function copyToClipboard(text, which) {
         try {
-            await navigator.clipboard.writeText(nsupdate);
-            alert('nsupdate command copied!');
-        } catch {
-            alert('Failed to copy.');
-        }
+            await navigator.clipboard.writeText(text);
+            setCopied(which);
+            setTimeout(() => setCopied(c => (c === which ? null : c)), 1000);
+        } catch { /* clipboard unavailable — no-op */ }
     }
+
+    const handleCopy = () => copyToClipboard(generateNsUpdate(fields, zone, tsigKey, dynDnsConfig), 'nsupdate');
+    const handleCopyDig = () => copyToClipboard(generateDig(fields, zone, dynDnsConfig), 'dig');
 
     return (
         <Table.Tr>
@@ -151,7 +155,8 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
                         <Button color="red" size="xs" onClick={handleDelete} disabled={loading || !isEditable}>
                             {loading ? "Deleting..." : "Delete"}
                         </Button>
-                        <Button size="xs" variant="light" onClick={handleCopy}>Copy nsupdate</Button>
+                        <Button size="xs" variant="light" onClick={handleCopy}>{copied === 'nsupdate' ? 'Copied…' : 'Copy nsupdate'}</Button>
+                        <Button size="xs" variant="light" onClick={handleCopyDig}>{copied === 'dig' ? 'Copied…' : 'Copy dig'}</Button>
                     </Group>
                 </Stack>
             </Table.Td>

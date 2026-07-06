@@ -4,7 +4,7 @@ import './app.css';
 
 import { createRoot } from 'react-dom/client';
 import { lazy, Suspense } from 'react';
-import { Router, Route, Switch } from 'wouter';
+import { Router, Route, Switch, useLocation } from 'wouter';
 import { MantineProvider, AppShell, v8CssVariablesResolver } from '@mantine/core';
 import { Container, Paper, Anchor } from '@mantine/core';
 
@@ -16,6 +16,7 @@ import { Header } from '/header.jsx';
 import { Footer } from '/footer.jsx';
 import { Home } from '/home/home.jsx';
 import { Delayed } from '/helper/delayed.jsx';
+import { ErrorBoundary } from '/helper/error-boundary.jsx';
 import { Documentation } from '/documentation/documentation.jsx';
 import { ClientProvider, useClient } from './providers/client.jsx';
 
@@ -41,7 +42,9 @@ createRoot(document.getElementById('app')).render(
         },
         fontFamily: 'Arial, sans-serif',
     }}>
-        <App name="Dynamic Zones DNS API" />
+        <ErrorBoundary>
+            <App name="Dynamic Zones DNS API" />
+        </ErrorBoundary>
     </MantineProvider>
 )
 
@@ -59,16 +62,19 @@ function App() {
 
 function AppRoutes() {
     const { client: projectClient } = useClient('projects');
+    const [location] = useLocation();
 
     return (
         <Suspense fallback={<Container size="md" py="xl">Lädt…</Container>}>
-            <Switch>
-                <Route path="/" component={Home}/>
-                <Route path="/documentation" component={Documentation} />
-                <Route path="/dyndns" component={DynamicDnsManagement} nest/>
-                {projectClient && <Route path="/projects" component={CloudProjectManagement} nest/>}
-                <Route component={NotFound} />
-            </Switch>
+            <ErrorBoundary key={location}>
+                <Switch>
+                    <Route path="/" component={Home}/>
+                    <Route path="/documentation" component={Documentation} />
+                    <Route path="/dyndns" component={DynamicDnsManagement} nest/>
+                    {projectClient && <Route path="/projects" component={CloudProjectManagement} nest/>}
+                    <Route component={NotFound} />
+                </Switch>
+            </ErrorBoundary>
         </Suspense>
     );
 }

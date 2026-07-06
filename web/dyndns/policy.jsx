@@ -3,7 +3,7 @@ import { useClient } from '/providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { Delayed } from '/helper/delayed.jsx';
 import { Trash2, Edit, Plus, Search, X, AlertCircle } from 'lucide-react';
-import { Container, Title, Text, Button, Group, Stack, TextInput, SimpleGrid, Card, Modal, Alert, Loader, ActionIcon, Paper } from '@mantine/core';
+import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, SimpleGrid, Card, Modal, Alert, Loader, ActionIcon, Paper, Tabs } from '@mantine/core';
 
 const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
@@ -19,6 +19,8 @@ export function DnsPolicy() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchFilter, setSearchFilter] = useState('');
     const [isEditAllowed, setIsEditAllowed] = useState(false);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [activeTab, setActiveTab] = useState('rules');
 
     // Fetch rules on load and when reloadTrigger changes
     useEffect(() => {
@@ -42,6 +44,7 @@ export function DnsPolicy() {
             }
             setRules(res.rules);
             setIsEditAllowed(!!res.edit_allowed);
+            setIsSuperAdmin(!!res.is_super_admin);
             setLoading(false);
         })();
     }, [sdk, reloadTrigger]);
@@ -72,40 +75,59 @@ export function DnsPolicy() {
     if (loadFailed)
         return (<Alert icon={<AlertCircle size="16" />} title="Error" color="red">Failed to load rules. See the error dialog for details.</Alert>);
 
-    // Use the flag retrieved from the API response
-    const isSuperAdmin = isEditAllowed;
-
     return (
         <Container fluid py="md" px="xl">
             <Stack gap="lg">
-                <Group justify="space-between" align="flex-start">
-                    <div>
-                        <Title order={2}>DNS Policy Management</Title>
-                        <Text size="sm" c="dimmed" mt="xs">
-                            {isSuperAdmin
-            ? 'Manage who may create which zones. Policy changes apply to new zones. Existing zones stay as they are, so plan any follow-up updates.'
-            : 'Read-only view of the DNS access rules that are currently active.'}
-                        </Text>
-                    </div>
+                <Title order={2}>DNS Policy Management</Title>
+
+                <Tabs value={activeTab} onChange={setActiveTab}>
+                    <Tabs.List>
+                        <Tabs.Tab value="rules">Policy Rules</Tabs.Tab>
+                        {isSuperAdmin && <Tabs.Tab value="delegations">Delegations</Tabs.Tab>}
+                        {isSuperAdmin && <Tabs.Tab value="orphaned">Orphaned Zones</Tabs.Tab>}
+                    </Tabs.List>
+
+                    <Tabs.Panel value="rules" pt="md">
+                        <Stack gap="lg">
+                            <Group justify="space-between" align="flex-start">
+                                <Text size="sm" c="dimmed">
+                                    {isEditAllowed
+                                        ? 'Manage who may create which zones. Policy changes apply to new zones. Existing zones stay as they are, so plan any follow-up updates.'
+                                        : 'Read-only view of the DNS access rules that are currently active.'}
+                                </Text>
+                                {isEditAllowed && (
+                                    <Button leftSection={<Plus size="16" />} onClick={() => { setEditingRule(null); setIsModalOpen(true); }}>
+                                        New Rule
+                                    </Button>
+                                )}
+                            </Group>
+
+                            <RuleFilter
+                                searchFilter={searchFilter}
+                                onSearchChange={setSearchFilter}
+                                filteredCount={filteredRules.length}
+                                totalCount={rules.length}
+                            />
+
+                            <RuleList rules={filteredRules} isSuperAdmin={isEditAllowed}
+                                onEdit={(rule) => { setEditingRule(rule); setIsModalOpen(true); }}
+                                onDeleteSuccess={handleSuccess}
+                            />
+                        </Stack>
+                    </Tabs.Panel>
 
                     {isSuperAdmin && (
-                        <Button leftSection={<Plus size="16" />} onClick={() => setIsModalOpen(true)}>
-                            New Rule
-                        </Button>
+                        <Tabs.Panel value="delegations" pt="md">
+                            <DelegationManagement />
+                        </Tabs.Panel>
                     )}
-                </Group>
 
-                <RuleFilter
-                    searchFilter={searchFilter}
-                    onSearchChange={setSearchFilter}
-                    filteredCount={filteredRules.length}
-                    totalCount={rules.length}
-                />
-
-                <RuleList rules={filteredRules} isSuperAdmin={isSuperAdmin}
-                    onEdit={(rule) => { setEditingRule(rule); setIsModalOpen(true); }}
-                    onDeleteSuccess={handleSuccess}
-                />
+                    {isSuperAdmin && (
+                        <Tabs.Panel value="orphaned" pt="md">
+                            <OrphanedZonesPanel />
+                        </Tabs.Panel>
+                    )}
+                </Tabs>
 
                 {isModalOpen && (
                     <RuleFormModal ruleToEdit={editingRule}
@@ -232,6 +254,7 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
         zone_pattern: '',
         zone_soa: '',
         target_user_filter: '',
+        allow_subdomains: false,
         description: '',
         ...(ruleToEdit || {})
     };
@@ -288,6 +311,7 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
             zone_pattern: rule.zone_pattern,
             zone_soa: rule.zone_soa,
             target_user_filter: rule.target_user_filter,
+            allow_subdomains: !!rule.allow_subdomains,
             description: rule.description || undefined,
         };
         const res = isEditMode
@@ -338,9 +362,16 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
                             value={rule.target_user_filter}
                             onChange={handleChange}
                             required
-                            placeholder="e.g. *@example.com or alice@example.com"
-                            description="*@example.com = All users with @example.com | alice@example.com = Only this specific user"
-                            error={!userFilterValid && "Enter a valid user filter. Allowed: '*@example.com' or 'alice@example.com'."}
+                            placeholder="e.g. *@example.com  or  alice@example.com, bob@example.com"
+                            description="Comma-separated list. *@example.com = all users at that domain; alice@example.com = one specific user. Access is granted if any entry matches."
+                            error={!userFilterValid && "Enter valid emails and/or *@domain patterns, comma-separated."}
+                        />
+
+                        <Checkbox
+                            label="Allow subdomains"
+                            description="Owners of a matched zone may also create and manage delegated subzones under it (e.g. sub.example.com under example.com)."
+                            checked={!!rule.allow_subdomains}
+                            onChange={(e) => setRule(prev => ({ ...prev, allow_subdomains: e.currentTarget.checked }))}
                         />
 
                         <TextInput
@@ -397,7 +428,9 @@ function isValidZonePattern(value) {
 function isValidUserFilter(value) {
     if (!value) return false;
     const emailRegex = /^(\*[a-zA-Z0-9._-]*|[a-zA-Z0-9._-]+)@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return emailRegex.test(value);
+    // Comma-separated list: every non-empty entry must be a valid email or *@domain pattern.
+    const parts = value.split(',').map(p => p.trim()).filter(p => p !== '');
+    return parts.length > 0 && parts.every(p => emailRegex.test(p));
 }
 
 // Validate DNS name (standard domain without special patterns)
@@ -416,4 +449,202 @@ function isValidDnsName(value) {
     }
 
     return true;
+}
+
+// ============================================================
+// Delegation Policies (super-admin only). Grants users the right to manage
+// policy rules for a zone (and its subdomains). Uses the raw client because
+// the generated SDK does not (yet) include the /policies/delegations endpoints.
+// ============================================================
+function DelegationManagement() {
+    const { client } = useClient('dyndns');
+    const { showError } = useErrorModal();
+    const [delegations, setDelegations] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [reload, setReload] = useState(true);
+    const [editing, setEditing] = useState(null);
+    const [modalOpen, setModalOpen] = useState(false);
+
+    useEffect(() => {
+        (async () => {
+            setLoading(true);
+            const res = await client.get({ url: '/v1/policies/delegations' });
+            const err = sdkError(res);
+            if (err) { showError(err); } else { setDelegations(res.data?.delegations || []); }
+            setLoading(false);
+        })();
+    }, [client, reload]);
+
+    const onSuccess = () => { setEditing(null); setModalOpen(false); setReload(p => !p); };
+
+    async function handleDelete(id) {
+        const res = await client.delete({ url: '/v1/policies/delegations/{id}', path: { id } });
+        const err = sdkError(res) ?? (res.response && res.response.status >= 400 ? res.response.statusText : null);
+        if (err) { showError(err); } else { setReload(p => !p); }
+    }
+
+    if (loading) return (<Delayed><Loader size="lg" /></Delayed>);
+
+    return (
+        <Stack gap="md">
+            <Group justify="space-between" align="flex-start">
+                <Text size="sm" c="dimmed">
+                    Grant specific users the right to manage policy rules for a zone (and its subdomains).
+                    Delegated users can then create, edit and delete rules whose SOA is within that zone.
+                </Text>
+                <Button leftSection={<Plus size="16" />} onClick={() => { setEditing(null); setModalOpen(true); }}>New Delegation</Button>
+            </Group>
+
+            {delegations.length === 0 ? (
+                <Paper p="xl" withBorder><Text ta="center" c="dimmed">No delegations yet.</Text></Paper>
+            ) : (
+                <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+                    {delegations.map(d => (
+                        <Card key={d.id} shadow="sm" padding="md" radius="md" withBorder>
+                            <Stack gap="xs">
+                                <div>
+                                    <Text size="xs" c="dimmed" tt="uppercase">User</Text>
+                                    <Text size="sm"><code style={{ fontSize: '0.85em' }}>{d.target_user_filter}</code></Text>
+                                </div>
+                                <div>
+                                    <Text size="xs" c="dimmed" tt="uppercase">Zone (+ subdomains)</Text>
+                                    <Text size="sm"><code style={{ fontSize: '0.85em' }}>{d.zone_suffix}</code></Text>
+                                </div>
+                                {d.description && <Text size="xs" c="dimmed">{d.description}</Text>}
+                                <Group gap="xs" mt="xs">
+                                    <Button size="xs" variant="light" leftSection={<Edit size="14" />} onClick={() => { setEditing(d); setModalOpen(true); }}>Edit</Button>
+                                    <Button size="xs" color="red" variant="light" leftSection={<Trash2 size="14" />} onClick={() => handleDelete(d.id)}>Delete</Button>
+                                </Group>
+                            </Stack>
+                        </Card>
+                    ))}
+                </SimpleGrid>
+            )}
+
+            {modalOpen && (
+                <DelegationFormModal delegationToEdit={editing} onSuccess={onSuccess} onClose={() => { setModalOpen(false); setEditing(null); }} />
+            )}
+        </Stack>
+    );
+}
+
+function DelegationFormModal({ delegationToEdit, onSuccess, onClose }) {
+    const { client } = useClient('dyndns');
+    const { showError } = useErrorModal();
+    const isEdit = delegationToEdit !== null;
+    const [form, setForm] = useState({ target_user_filter: '', zone_suffix: '', description: '', ...(delegationToEdit || {}) });
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState(null);
+
+    const userValid = isValidUserFilter(form.target_user_filter);
+    const zoneValid = isValidDnsName(form.zone_suffix);
+
+    const handleChange = (e) => { const { name, value } = e.target; setForm(prev => ({ ...prev, [name]: value })); };
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        if (!userValid || !zoneValid) {
+            setMessage(<Alert icon={<AlertCircle size="16" />} title="Validation Error" color="red">Enter a valid user filter and zone.</Alert>);
+            return;
+        }
+        setLoading(true);
+        setMessage(null);
+        const body = { target_user_filter: form.target_user_filter, zone_suffix: form.zone_suffix, description: form.description || undefined };
+        const res = isEdit
+            ? await client.put({ url: '/v1/policies/delegations/{id}', path: { id: form.id }, body })
+            : await client.post({ url: '/v1/policies/delegations', body });
+        const err = sdkError(res) ?? (res.response && res.response.status >= 400 ? res.response.statusText : null);
+        if (err) { showError(err); setLoading(false); }
+        else { setMessage(<Alert title="Success" color="green">{isEdit ? '✅ Delegation updated!' : '✅ Delegation created!'}</Alert>); setTimeout(onSuccess, 700); }
+    }
+
+    return (
+        <Modal opened={true} onClose={onClose} title={isEdit ? '✏️ Edit Delegation' : '➕ New Delegation'} size="lg">
+            <Stack gap="md">
+                {message}
+                <form onSubmit={handleSubmit}>
+                    <Stack gap="md">
+                        <TextInput
+                            label="User Filter" name="target_user_filter" value={form.target_user_filter} onChange={handleChange} required
+                            placeholder="e.g. max@uni-mannheim.de, petra@uni-mannheim.de  or  *@uni-mannheim.de"
+                            description="Who may manage policy rules for the zone below. Comma-separated list of emails and/or *@domain patterns."
+                            error={!userValid && form.target_user_filter && "Enter valid emails and/or *@domain patterns, comma-separated."}
+                        />
+                        <TextInput
+                            label="Zone" name="zone_suffix" value={form.zone_suffix} onChange={handleChange} required
+                            placeholder="e.g. uni-mannheim.de"
+                            description="Delegated users may manage rules for this zone and its subdomains"
+                            error={!zoneValid && form.zone_suffix && "Enter a valid DNS domain name."}
+                        />
+                        <TextInput label="Description (optional)" name="description" value={form.description || ''} onChange={handleChange} placeholder="e.g. Uni-Mannheim DNS admins" />
+                        <Group justify="flex-end" mt="md">
+                            <Button variant="default" onClick={onClose}>Cancel</Button>
+                            <Button type="submit" loading={loading} disabled={!userValid || !zoneValid}>{isEdit ? 'Save' : 'Create'}</Button>
+                        </Group>
+                    </Stack>
+                </form>
+            </Stack>
+        </Modal>
+    );
+}
+
+// ============================================================
+// Orphaned Zones (super-admin only). Zones that still exist but are no longer
+// covered by any policy for their owner (policy deleted/changed). Uses the raw
+// client (endpoints not in the generated SDK).
+// ============================================================
+function OrphanedZonesPanel() {
+    const { client } = useClient('dyndns');
+    const { showError } = useErrorModal();
+    const [zones, setZones] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [reload, setReload] = useState(true);
+    const [deleting, setDeleting] = useState(null);
+
+    useEffect(() => {
+        (async () => {
+            setLoading(true);
+            const res = await client.get({ url: '/v1/policies/orphaned-zones' });
+            const err = sdkError(res);
+            if (err) { showError(err); } else { setZones(res.data?.zones || []); }
+            setLoading(false);
+        })();
+    }, [client, reload]);
+
+    async function handleDelete(zone) {
+        setDeleting(zone);
+        const res = await client.delete({ url: '/v1/policies/orphaned-zones/{zone}', path: { zone } });
+        const err = sdkError(res) ?? (res.response && res.response.status >= 400 ? res.response.statusText : null);
+        if (err) { showError(err); } else { setReload(p => !p); }
+        setDeleting(null);
+    }
+
+    if (loading) return (<Delayed><Loader size="lg" /></Delayed>);
+
+    return (
+        <Stack gap="md">
+            <Text size="sm" c="dimmed">
+                Zones that still exist but are no longer covered by any policy for their owner (e.g. the policy was
+                deleted or changed). Review and delete the ones that are no longer needed.
+            </Text>
+            {zones.length === 0 ? (
+                <Paper p="xl" withBorder><Text ta="center" c="dimmed">No orphaned zones. 🎉</Text></Paper>
+            ) : (
+                <Stack gap="xs">
+                    {zones.map(z => (
+                        <Paper key={z.zone} p="sm" withBorder>
+                            <Group justify="space-between" wrap="nowrap">
+                                <div>
+                                    <Text size="sm"><code style={{ fontSize: '0.85em' }}>{z.zone}</code></Text>
+                                    <Text size="xs" c="dimmed">owner: {z.user}</Text>
+                                </div>
+                                <Button size="xs" color="red" variant="light" leftSection={<Trash2 size="14" />}
+                                    loading={deleting === z.zone} onClick={() => handleDelete(z.zone)}>Delete</Button>
+                            </Group>
+                        </Paper>
+                    ))}
+                </Stack>
+            )}
+        </Stack>
+    );
 }

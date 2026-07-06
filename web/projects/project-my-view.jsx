@@ -68,11 +68,11 @@ export function MyProjectsView() {
         refresh();
     };
 
-    if (!projectConfig || loading) return (<Loader />);
-
     const myRequests = requests;
 
     // Group active requests by funder and status: { [funderId]: { [status]: ResourceQuota } }
+    // NOTE: this hook must run unconditionally (before any early return) to keep
+    // the hook order stable across renders — see the Rules of Hooks.
     const projectsByFunderId = useMemo(() => {
         const active = myRequests.filter(r => r.status === 'approved' || r.status === 'change_pending');
         const byFunder = {};
@@ -89,6 +89,8 @@ export function MyProjectsView() {
         });
         return byFunder;
     }, [requests]);
+
+    if (!projectConfig || loading) return (<Loader />);
 
     return (
         <Stack>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Route, Switch, useLocation, useRoute } from 'wouter';
+import { Route, Switch, useLocation, useRoute, Redirect } from 'wouter';
 import { Box, Database, Shield, Users, ShieldCheck } from 'lucide-react';
 import { Container, Tabs } from '@mantine/core';
 import { useAuth } from '/providers/auth.jsx';
@@ -92,7 +92,7 @@ export function CloudProjectManagement() {
                     <Route path="/my-delegations" component={MyDelegationsView} />
                     {isRoot ? <Route path="/admin-sync" component={RootAdminView} /> : null}
                     <Route path="/">
-                        {() => { navigate('/projects', { replace: true }); return null; }}
+                        <Redirect to="/projects" replace />
                     </Route>
                 </Switch>
             </Container>

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Route, Switch, Link, useRoute, useLocation } from 'wouter';
+import { useState, useEffect, Fragment } from 'react';
+import { Route, Switch, Link, useRoute, useLocation, Redirect } from 'wouter';
 import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '/providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
@@ -7,8 +7,9 @@ import { ShowKeys } from '/dyndns/zones/keys.jsx';
 import { ExternalDnsConfig } from '/dyndns/zones/external-dns.jsx';
 import { DnsUpdateCommand } from '/dyndns/zones/dns-update-cmd.jsx';
 import { DnsRecordsList } from '/dyndns/zones/dns-record-list.jsx';
-import { Container, Title, Paper, Stack, NavLink, Tabs, Button, Text, Loader, Alert, Group } from '@mantine/core';
-import { AlertCircle, Globe } from 'lucide-react';
+import { TlsCertificates } from '/dyndns/zones/tls-certificates.jsx';
+import { Container, Title, Paper, Stack, NavLink, Tabs, Button, Text, Loader, Alert, Group, TextInput } from '@mantine/core';
+import { AlertCircle, Globe, CornerDownRight } from 'lucide-react';
 
 const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
@@ -24,7 +25,6 @@ export function DynDnsZones() {
     const [reloadTrigger, setReloadTrigger] = useState(true);
     const [match, params] = useRoute("/zone/:name/*?");
     const activeZoneName = match ? params.name : null;
-    const [_, navigate] = useLocation()
 
     useEffect(() => {
         let cancelled = false;
@@ -49,6 +49,16 @@ export function DynDnsZones() {
     if (loading) return (<Delayed><Loader size="lg" /></Delayed>);
     if (loadFailed) return (<Button onClick={() => setReloadTrigger(!reloadTrigger)}>Retry Load</Button>);
 
+    // Group zones: policy base zones (no parent) plus the user's created subzones
+    // grouped under their parent base zone (shown indented by label depth).
+    const baseZones = zones.filter(z => !z.parent);
+    const subzonesByParent = {};
+    for (const z of zones) {
+        if (z.parent) (subzonesByParent[z.parent] ??= []).push(z);
+    }
+    for (const k in subzonesByParent) subzonesByParent[k].sort((a, b) => a.name.localeCompare(b.name));
+    const reload = () => setReloadTrigger(t => !t);
+
     return (
         <Container size="xl" py="md">
             <Stack gap="lg">
@@ -60,15 +70,30 @@ export function DynDnsZones() {
                     </Paper>
 
                     <Stack gap={0}>
-                        {zones.map(zone => (
-                            <NavLink
-                                key={zone.name}
-                                component={Link}
-                                to={"/zone/" + zone.name}
-                                label={zone.name}
-                                leftSection={<Globe size="16" />}
-                                active={activeZoneName === zone.name}
-                            />
+                        {baseZones.map(base => (
+                            <Fragment key={base.name}>
+                                <NavLink
+                                    component={Link}
+                                    to={"/zone/" + base.name}
+                                    label={base.name}
+                                    leftSection={<Globe size="16" />}
+                                    active={activeZoneName === base.name}
+                                />
+                                {(subzonesByParent[base.name] || []).map(sz => (
+                                    <NavLink
+                                        key={sz.name}
+                                        component={Link}
+                                        to={"/zone/" + sz.name}
+                                        label={sz.name}
+                                        leftSection={<CornerDownRight size="14" />}
+                                        active={activeZoneName === sz.name}
+                                        style={{ paddingLeft: `${12 + subzoneDepth(sz.name, base.name) * 22}px` }}
+                                    />
+                                ))}
+                                {base.allow_subdomains && base.exists && (
+                                    <AddSubzoneRow parent={base.name} onCreated={reload} />
+                                )}
+                            </Fragment>
                         ))}
                         {zones.length === 0 && (
                             <Text p="md" c="dimmed">No zones available.</Text>
@@ -87,7 +112,9 @@ export function DynDnsZones() {
                     </Route>
 
                     <Route path="/">
-                        {() => zones.length > 0 ? (navigate(`/zone/${zones[0].name}`, { replace: true }), null) : (
+                        {() => zones.length > 0 ? (
+                            <Redirect to={`/zone/${zones[0].name}`} replace />
+                        ) : (
                             <Paper p="xl" withBorder>
                                 <Text ta="center" size="lg">⬆️ Select a zone above to manage its DNS records.</Text>
                             </Paper>
@@ -96,6 +123,46 @@ export function DynDnsZones() {
                 </Switch>
             </Stack>
         </Container>
+    );
+}
+
+// Number of labels a subzone has beyond its base zone (used for indentation).
+function subzoneDepth(name, base) {
+    return name.split('.').length - base.split('.').length;
+}
+
+// ----------------------------------------
+// Add Subzone Row — create a delegated subzone under a parent that allows it
+// ----------------------------------------
+function AddSubzoneRow({ parent, onCreated }) {
+    const { client, sdk } = useClient('dyndns');
+    const { showError } = useErrorModal();
+    const [label, setLabel] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    async function add() {
+        const sub = label.trim().replace(/\.+$/, '');
+        if (!sub) return;
+        setLoading(true);
+        const res = await sdk.createZone({ path: { zone: `${sub}.${parent}` }, client });
+        const err = sdkError(res) ?? (res.response.status !== 201 ? res.response.statusText : null);
+        if (err) { showError(err); } else { setLabel(''); onCreated(); }
+        setLoading(false);
+    }
+
+    return (
+        <Group gap="xs" pl="md" py="6" wrap="nowrap" align="flex-end">
+            <TextInput
+                size="xs"
+                placeholder="new-subzone"
+                value={label}
+                onChange={e => setLabel(e.currentTarget.value)}
+                onKeyDown={e => { if (e.key === 'Enter') add(); }}
+                style={{ width: 180 }}
+            />
+            <Text size="xs" c="dimmed">.{parent}</Text>
+            <Button size="xs" variant="light" onClick={add} loading={loading} disabled={!label.trim()}>+ Subzone</Button>
+        </Group>
     );
 }
 
@@ -158,7 +225,8 @@ function ActiveDomain({ zone: zoneName, onChange }) {
         { name: "Manage", path: "/" },
         { name: "Keys", path: "/keys" },
         { name: "DNS Update Command", path: "/update" },
-        { name: "External DNS Config", path: "/config" }
+        { name: "External DNS Config", path: "/config" },
+        { name: "TLS-Certificates", path: "/tls" }
     ];
 
     // Fetch zone data
@@ -218,6 +286,10 @@ function ActiveDomain({ zone: zoneName, onChange }) {
 
             {activeTab === "External DNS Config" && (
                 <ExternalDnsConfig externalDnsValuesYaml={zone.externalDnsValuesYaml} externalDnsSecretYaml={zone.externalDnsSecretYaml} zone={zone.zoneData} />
+            )}
+
+            {activeTab === "TLS-Certificates" && (
+                <TlsCertificates zone={zone.zoneData} />
             )}
         </Stack>
     );

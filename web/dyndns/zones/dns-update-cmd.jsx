@@ -4,6 +4,16 @@ import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { Container, TextInput, Select, NumberInput, Grid, Stack, Title, Paper } from '@mantine/core';
 
 // ----------------------------------------
+// Shared dig query-command generator
+// ----------------------------------------
+export function generateDig(record, zone, appConfig) {
+    // Build the FQDN, treating '@' / empty name as the zone apex.
+    const fqdn = (!record.name || record.name === '@') ? zone : `${record.name}.${zone}`;
+    const fqdnDotted = fqdn.endsWith('.') ? fqdn : `${fqdn}.`;
+    return `dig @${appConfig.dns_server_address} -p ${appConfig.dns_server_port} ${fqdnDotted} ${record.type} +short`;
+}
+
+// ----------------------------------------
 // Shared NSUPDATE command generator
 // ----------------------------------------
 export function generateNsUpdate(record, zone, tsigKey, appConfig) {
@@ -18,7 +28,7 @@ export function generateNsUpdate(record, zone, tsigKey, appConfig) {
         `EOF`,
         ``,
         `# Verify`,
-        `dig @${appConfig.dns_server_address} -p ${appConfig.dns_server_port} ${record.name}.${zone}. ${record.type} +short`
+        generateDig(record, zone, appConfig)
     ].join('\n');
 }
 
