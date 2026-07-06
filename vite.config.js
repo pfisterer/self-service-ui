@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import { writeFileSync, mkdirSync } from 'fs';
 import path from 'path';
-import preact from '@preact/preset-vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -28,26 +28,23 @@ export default defineConfig(({ mode }) => {
 
   return {
     root: 'web',
-    plugins: [
-      preact({
-        babel: {
-          plugins: mode === 'development'
-            ? ['@babel/plugin-transform-react-jsx-source']
-            : [],
-        },
-      }),
-    ],
-    resolve: {
-      alias: {
-        react: 'preact/compat',
-        'react-dom': 'preact/compat',
-        'react-dom/test-utils': 'preact/test-utils',
-        'react/jsx-runtime': 'preact/jsx-runtime',
-      }
-    },
+    // Source files are .jsx, handled natively by @vitejs/plugin-react
+    // (automatic JSX runtime + React Fast Refresh in dev).
+    plugins: [react()],
     build: {
       outDir: '../dist',
       emptyOutDir: true,
+      rollupOptions: {
+        output: {
+          // Split large vendors into their own long-lived cacheable chunks
+          // (swagger-ui is dynamically imported, so it already lands in its own
+          // async chunk and is intentionally not listed here).
+          manualChunks: {
+            mantine: ['@mantine/core', '@mantine/dates', '@mantine/form', '@mantine/modals', '@mantine/hooks'],
+            vendor: ['react', 'react-dom', 'wouter', 'oidc-client-ts'],
+          },
+        },
+      },
     },
     server: {
       port: 8084

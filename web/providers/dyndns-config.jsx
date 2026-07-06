@@ -1,0 +1,43 @@
+import { createContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
+
+export const DynDnsConfigContext = createContext(null);
+
+export function useDynDnsConfig() {
+    const context = useContext(DynDnsConfigContext);
+    if (!context) {
+        throw new Error('useDynDnsConfig must be used within a DynDnsConfigProvider');
+    }
+    return context;
+};
+
+export function DynDnsConfigProvider({ children }) {
+    const [config, setConfig] = useState();
+    const [error, setError] = useState();
+    const configUrl = new URL('config.json', window?.appconfig?.dynamicZonesBaseUrl).toString();
+
+    // configUrl for base URL configuration
+    if (!configUrl) {
+        setError({
+            message: 'Dynamic Zones base URL is not configured.',
+            details: 'Please set it in window.appconfig.dynamicZonesBaseUrl.'
+        });
+        return;
+    }
+
+    useEffect(() => {
+        (async () => {
+            try {
+                setConfig(await (await fetch(configUrl)).json());
+            } catch (error) {
+                setError(error);
+            }
+        })();
+    }, [configUrl]);
+
+    return (
+        <DynDnsConfigContext.Provider value={{ config, error }}>
+            {children}
+        </DynDnsConfigContext.Provider>
+    );
+}

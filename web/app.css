@@ -1,0 +1,16 @@
+/* Minimal global styles. Bulma (removed) used to reset link decoration; keep
+   just that so nav/menu/footer links are not browser-default underlined. */
+a {
+    text-decoration: none;
+}
+
+/* Immutable record fields (e.g. the zone's NS record) are rendered as disabled
+   inputs. Mantine's default disabled text has very low contrast; darken it so
+   the values stay readable. The greyed background + disabled buttons still
+   signal that the row is not editable. */
+.mantine-Input-input:disabled,
+.mantine-Input-input[data-disabled] {
+    color: var(--mantine-color-text);
+    -webkit-text-fill-color: var(--mantine-color-text);
+    opacity: 1;
+}

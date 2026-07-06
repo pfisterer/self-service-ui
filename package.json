@@ -1,6 +1,6 @@
 {
     "name": "dynamic-zones-ui",
-    "version": "0.5.1",
+    "version": "0.5.2-test.1",
     "type": "module",
     "scripts": {
         "dev": "npx vite",
@@ -9,24 +9,21 @@
         "clean": "rm -rf dist-ui"
     },
     "dependencies": {
-        "@mantine/core": "^8.3.15",
-        "@mantine/dates": "^8.3.15",
-        "@mantine/form": "^8.3.15",
-        "@mantine/hooks": "^8.3.15",
-        "@mantine/modals": "^8.3.15",
-        "@preact/signals": "^2.8.1",
-        "bulma": "^1.0.4",
+        "@mantine/core": "^9.4.1",
+        "@mantine/dates": "^9.4.1",
+        "@mantine/form": "^9.4.1",
+        "@mantine/hooks": "^9.4.1",
+        "@mantine/modals": "^9.4.1",
         "dayjs": "^1.11.19",
-        "htm": "^3.1.1",
-        "lucide-preact": "^0.575.0",
+        "lucide-react": "^0.575.0",
         "oidc-client-ts": "^3.4.1",
-        "preact": "^10.28.4",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
         "swagger-ui-dist": "^5.31.2",
-        "wouter-preact": "^3.9.0"
+        "wouter": "^3.9.0"
     },
     "devDependencies": {
-        "@babel/plugin-transform-react-jsx-source": "^7.27.1",
-        "@preact/preset-vite": "^2.10.3",
+        "@vitejs/plugin-react": "^5.0.4",
         "baseline-browser-mapping": "^2.10.0",
         "vite": "^7.3.1"
     }
