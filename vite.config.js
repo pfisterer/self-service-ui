@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
        window.appconfig = {
           dynamicZonesBaseUrl: "${env.DYNAMIC_ZONE_BASE_URL || ''}",
           cloudResourcesBaseUrl: "${env.CLOUD_RESOURCES_BASE_URL || ''}",
+          acmeServer: "${env.ACME_SERVER || 'https://certificates.dhbw.cloud'}",
           dummyAuth: ${env.DUMMY_AUTH === 'true'},
           "oidc": {
             "client_id": "${env.OIDC_CLIENT_ID}",

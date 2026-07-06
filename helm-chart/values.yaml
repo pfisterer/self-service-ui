@@ -10,6 +10,8 @@ selfServiceUI:
   image: "ghcr.io/pfisterer/self-service-ui"
   version: "latest"
   dynamicZonesBaseUrl: https://dyndnsapi.example.com
+  # DHBW-internal ACME server (acme2certifier) shown on the TLS-Certificates tab.
+  acmeServer: https://certificates.dhbw.cloud
 
 #------------------------------------
 # OIDC/Auth Configuration
