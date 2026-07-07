@@ -3,7 +3,7 @@ import { useClient } from '/providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { Delayed } from '/helper/delayed.jsx';
 import { Trash2, Edit, Plus, Search, X, AlertCircle } from 'lucide-react';
-import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, SimpleGrid, Card, Modal, Alert, Loader, ActionIcon, Paper, Tabs } from '@mantine/core';
+import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, SimpleGrid, Card, Modal, Alert, Loader, ActionIcon, Paper, Tabs, Badge } from '@mantine/core';
 
 const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
@@ -222,6 +222,15 @@ function SingleRule({ rule, isSuperAdmin, isDeleting, onEdit, onDelete }) {
                         </Group>
                     )}
                 </Group>
+
+                <Badge
+                    size="sm"
+                    variant="light"
+                    color={rule.allow_subdomains ? 'green' : 'gray'}
+                    title="Whether users may create subdomains (delegated subzones) under a matched zone"
+                >
+                    {rule.allow_subdomains ? 'Subdomains allowed' : 'Subdomains not allowed'}
+                </Badge>
 
                 <div>
                     <Text size="xs" c="dimmed" tt="uppercase">Zone SOA</Text>
