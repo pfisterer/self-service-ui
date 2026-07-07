@@ -9,6 +9,7 @@ import { MantineProvider, AppShell, v8CssVariablesResolver } from '@mantine/core
 import { Container, Paper, Anchor } from '@mantine/core';
 
 import { DynDnsConfigProvider } from '/providers/dyndns-config.jsx';
+import { CloudConfigProvider } from '/providers/cloud-config.jsx';
 import { useAuth, AuthProvider } from '/providers/auth.jsx';
 import { ErrorModalProvider } from '/providers/error-modal.jsx';
 
@@ -17,7 +18,6 @@ import { Footer } from '/footer.jsx';
 import { Home } from '/home/home.jsx';
 import { Delayed } from '/helper/delayed.jsx';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
-import { Documentation } from '/documentation/documentation.jsx';
 import { ClientProvider, useClient } from './providers/client.jsx';
 
 // Route-level code splitting: the projects and dyndns trees (swagger-ui lives
@@ -52,9 +52,11 @@ function App() {
     return (
         <ErrorModalProvider>
             <DynDnsConfigProvider>
-                <AuthProvider>
-                    <Main />
-                </AuthProvider>
+                <CloudConfigProvider>
+                    <AuthProvider>
+                        <Main />
+                    </AuthProvider>
+                </CloudConfigProvider>
             </DynDnsConfigProvider>
         </ErrorModalProvider>
     );
@@ -69,7 +71,6 @@ function AppRoutes() {
             <ErrorBoundary key={location}>
                 <Switch>
                     <Route path="/" component={Home}/>
-                    <Route path="/documentation" component={Documentation} />
                     <Route path="/dyndns" component={DynamicDnsManagement} nest/>
                     {projectClient && <Route path="/projects" component={CloudProjectManagement} nest/>}
                     <Route component={NotFound} />
