@@ -287,19 +287,27 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
         { name: "TLS-Certificates", path: "/tls" }
     ];
 
-    // Fetch zone data
+    // Fetch zone data. Depend only on the client and the zone — NOT on
+    // currentLocation. The tabs are nested routes, so including currentLocation
+    // made every tab click refetch the whole zone and replace the content with
+    // a loader, collapsing the layout (the footer visibly jumped). All tab
+    // contents render from the already-loaded `zone` (records load themselves),
+    // so switching tabs needs no refetch.
     useEffect(() => {
+        let cancelled = false;
         (async () => {
             setLoading(true);
             setLoadFailed(false);
             const res = await sdk.getZone({ path: { zone: zoneName }, client });
+            if (cancelled) return;
             const err = sdkError(res);
             if (err) { showError(err); setLoadFailed(true); }
             else if (!res.data) { showError(`Zone ${zoneName} not found`); setLoadFailed(true); }
             else { setZone(res.data); }
             setLoading(false);
         })();
-    }, [client, zoneName, currentLocation]);
+        return () => { cancelled = true; };
+    }, [client, zoneName]);
 
     async function handleDeleteClick() {
         setLoading(true);

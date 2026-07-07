@@ -4,6 +4,15 @@ a {
     text-decoration: none;
 }
 
+/* Reserve the vertical scrollbar's space permanently. Different zones/tabs have
+   different content heights, so the scrollbar would otherwise appear/disappear
+   on navigation, changing the viewport width and making the centered header +
+   content visibly jump left<->right (feels like a full page reload). Reserving
+   the gutter keeps the width constant so navigation stays calm. */
+html {
+    scrollbar-gutter: stable;
+}
+
 /* Immutable record fields (e.g. the zone's NS record) are rendered as disabled
    inputs. Mantine's default disabled text has very low contrast; darken it so
    the values stay readable. The greyed background + disabled buttons still

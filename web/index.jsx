@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { lazy, Suspense } from 'react';
 import { Router, Route, Switch, useLocation } from 'wouter';
 import { MantineProvider, AppShell, v8CssVariablesResolver } from '@mantine/core';
-import { Container, Paper, Anchor } from '@mantine/core';
+import { Container, Paper, Anchor, Box } from '@mantine/core';
 
 import { DynDnsConfigProvider } from '/providers/dyndns-config.jsx';
 import { CloudConfigProvider } from '/providers/cloud-config.jsx';
@@ -66,9 +66,16 @@ function AppRoutes() {
     const { client: projectClient } = useClient('projects');
     const [location] = useLocation();
 
+    // Reset the error boundary only when switching between top-level sections
+    // (/, /dyndns, /projects) — NOT on every sub-navigation. Keying on the full
+    // location remounted the entire route subtree on each tab/zone switch, which
+    // refetched everything (zone list + zone + tokens) and made the page collapse
+    // and the footer jump. The first path segment is stable across sub-routes.
+    const section = '/' + (location.split('/')[1] || '');
+
     return (
         <Suspense fallback={<Container size="md" py="xl">Lädt…</Container>}>
-            <ErrorBoundary key={location}>
+            <ErrorBoundary key={section}>
                 <Switch>
                     <Route path="/" component={Home}/>
                     <Route path="/dyndns" component={DynamicDnsManagement} nest/>
@@ -89,8 +96,16 @@ function Main() {
             <AppShell.Header>
                 <Header/>
             </AppShell.Header>
-            <AppShell.Main>
-
+            {/* Flex column + full-viewport min-height makes the footer sticky: the
+                content wrapper grows to fill the viewport, so the footer stays at
+                the bottom even when content is short or briefly loading, instead of
+                jumping up and back. The wrapper is a full-width block on purpose —
+                the routed content centers itself via a Mantine Container whose auto
+                margins would, as a DIRECT flex child, shrink it to its content width
+                and shift it sideways between tabs (Manage 1223px vs others 1320px).
+                Wrapping restores normal block sizing (always max-width). */}
+            <AppShell.Main style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
+                <Box style={{ flexGrow: 1 }}>
                 {!user ? (
                     <Delayed waitMs={200}>
                         <Container size="md" py="xl">
@@ -108,6 +123,7 @@ function Main() {
                         </ClientProvider>
                     </Router>
                 )}
+                </Box>
                 {footer}
             </AppShell.Main>
         </AppShell>
