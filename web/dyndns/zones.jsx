@@ -3,6 +3,7 @@ import { Route, Switch, Link, useRoute, useLocation, Redirect } from 'wouter';
 import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '/providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
+import { useConfirm } from '/providers/confirm.jsx';
 import { ShowKeys } from '/dyndns/zones/keys.jsx';
 import { ExternalDnsConfig } from '/dyndns/zones/external-dns.jsx';
 import { DnsUpdateCommand } from '/dyndns/zones/dns-update-cmd.jsx';
@@ -278,6 +279,7 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
     const [currentLocation, navigate] = useLocation()
     const { client, sdk } = useClient('dyndns');
     const { showError } = useErrorModal();
+    const confirm = useConfirm();
 
     const tabs = [
         { name: "Manage", path: "/" },
@@ -310,6 +312,12 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
     }, [client, zoneName]);
 
     async function handleDeleteClick() {
+        const ok = await confirm({
+            title: '⚠️ Delete zone?',
+            confirmLabel: 'Delete zone',
+            message: (<Text size="sm">This permanently deletes the zone <b>{zone.zoneData.zone}</b> and all of its DNS records. This cannot be undone.</Text>),
+        });
+        if (!ok) return;
         setLoading(true);
         setMessage("Deleting zone...");
         const res = await sdk.deleteZone({ path: { zone: zone.zoneData.zone }, client });

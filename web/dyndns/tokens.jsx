@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useClient } from '/providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
+import { useConfirm } from '/providers/confirm.jsx';
 import { FetchModal } from './tokens/modal-fetch.jsx';
 import { Delayed } from '../helper/delayed.jsx';
 import { Container, Title, Button, Checkbox, Stack, Group, Paper, Text, Loader, Divider } from '@mantine/core';
@@ -10,6 +11,7 @@ const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?
 export function Tokens() {
     const { client, sdk } = useClient('dyndns');
     const { showError } = useErrorModal();
+    const confirm = useConfirm();
     const [tokens, setTokens] = useState([]);
     const [loading, setLoading] = useState(true);
     const [readOnly, setReadOnly] = useState(false);
@@ -37,6 +39,12 @@ export function Tokens() {
     }
 
     async function deleteToken(tokenId) {
+        const ok = await confirm({
+            title: 'Delete API token?',
+            confirmLabel: 'Delete token',
+            message: 'Any client still using this token will immediately stop working. This cannot be undone.',
+        });
+        if (!ok) return;
         setLoading(true);
         const res = await sdk.deleteToken({ path: { id: tokenId }, client });
         const err = sdkError(res);

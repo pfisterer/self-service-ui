@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Box } from '@mantine/core';
 
-export function Delayed({ waitMs = 1000, children }) {
+export function Delayed({ waitMs = 400, children }) {
     const [show, setShow] = useState(false);
 
     useEffect(() => {

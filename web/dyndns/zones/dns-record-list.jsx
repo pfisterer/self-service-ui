@@ -4,9 +4,11 @@ import { generateNsUpdate, generateDig } from './dns-update-cmd.jsx';
 import { useClient } from '/providers/client.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
+import { useConfirm } from '/providers/confirm.jsx';
 import { Table, TextInput, Select, Button, Group, Alert, Loader, Stack, Text, Anchor } from '@mantine/core';
 import { AlertCircle, Copy, Check, Search } from 'lucide-react';
 import { TabIntro } from './tab-intro.jsx';
+import { Delayed } from '/helper/delayed.jsx';
 
 function normalizeRecordName(name, zone) {
     if (!name) return '';
@@ -78,6 +80,7 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
     const { config: dynDnsConfig } = useDynDnsConfig();
     const { client, sdk, } = useClient('dyndns');
     const { showError } = useErrorModal();
+    const confirm = useConfirm();
 
     const [editing, setEditing] = useState(false);
     const [fields, setFields] = useState({ ...record });
@@ -99,6 +102,12 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
     }
 
     async function handleDelete() {
+        const ok = await confirm({
+            title: 'Delete DNS record?',
+            confirmLabel: 'Delete record',
+            message: `Delete the ${fields.type} record “${fields.name}” (${fields.value})? This takes effect immediately.`,
+        });
+        if (!ok) return;
         setLoading(true);
         const normalizedName = normalizeRecordName(fields.name, zone);
         const res = await sdk.deleteDnsRecord({
@@ -241,7 +250,7 @@ export function DnsRecordsList({ zone, tsigKey }) {
 
     useEffect(() => { fetchRecords(); }, []);
 
-    if (loading) return (<Loader size="sm" />);
+    if (loading) return (<Delayed><Loader size="sm" /></Delayed>);
     if (loadFailed) return (<Alert icon={<AlertCircle size="16" />} title="Error" color="red">Failed to load DNS records. See the error dialog for details.</Alert>);
 
     const query = search.trim().toLowerCase();

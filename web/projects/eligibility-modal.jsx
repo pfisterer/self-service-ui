@@ -4,6 +4,7 @@ import { ActionIcon, Badge, Button, Divider, Group, Loader, Modal, Stack, Text }
 import { TokenEditor } from './component-token-editor.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
+import { useConfirm } from '/providers/confirm.jsx';
 import { normalizeArrayResponse } from './util-project.jsx';
 
 const sdkError = (res) => res?.error?.error ?? res?.error?.detail ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
@@ -13,6 +14,7 @@ const sdkError = (res) => res?.error?.error ?? res?.error?.detail ?? res?.error?
 function EligibilityRuleRow({ ownerToken, initialRequesters, initialIsSaved }) {
     const { client, sdk } = useClient('projects');
     const { showError } = useErrorModal();
+    const confirm = useConfirm();
     const [requesters, setRequesters] = useState(initialRequesters);
     const [serverRequesters, setServerRequesters] = useState(initialRequesters);
     const [isSaved, setIsSaved] = useState(initialIsSaved);
@@ -48,6 +50,12 @@ function EligibilityRuleRow({ ownerToken, initialRequesters, initialIsSaved }) {
     };
 
     const handleDelete = async () => {
+        const ok = await confirm({
+            title: 'Delete eligibility rule?',
+            confirmLabel: 'Delete rule',
+            message: `Remove the eligibility rule for ${ownerToken}? Requesters listed here will no longer be able to request resources funded from this token.`,
+        });
+        if (!ok) return;
         setDeleting(true);
         const res = await sdk.deleteEligibilityRule({ client, path: { token: ownerToken } });
         const err = sdkError(res);

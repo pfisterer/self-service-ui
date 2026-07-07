@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useClient } from '/providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
+import { useConfirm } from '/providers/confirm.jsx';
 import { Delayed } from '/helper/delayed.jsx';
 import { isValidDnsName, isValidZonePattern, isValidUserFilter } from '/helper/dns-validation.js';
 import { Trash2, Edit, Plus, Search, X, AlertCircle } from 'lucide-react';
@@ -163,19 +164,38 @@ function RuleFilter({ searchFilter, onSearchChange, filteredCount, totalCount })
 function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
     const { client, sdk } = useClient('dyndns');
     const { showError } = useErrorModal();
+    const confirm = useConfirm();
     const [deleteLoading, setDeleteLoading] = useState(null);
-    // Rule pending deletion — opens the confirmation dialog (null = closed).
-    // Deleting a rule orphans every zone only it covered (zone<->rule links are
-    // recomputed, not stored), so we never delete on a single click: the admin
-    // must confirm in DeleteRuleConfirmModal first.
-    const [ruleToDelete, setRuleToDelete] = useState(null);
 
     const handleDelete = async (rule) => {
+        // Deleting a rule orphans every zone only it covered (zone<->rule links
+        // are recomputed, not stored), so confirm with an explicit impact warning.
+        const ok = await confirm({
+            title: '⚠️ Delete policy rule?',
+            confirmLabel: 'Delete rule',
+            message: (
+                <Stack gap="md">
+                    <Alert color="red" icon={<AlertCircle size="16" />} title="This can orphan zones">
+                        Every zone that is covered <b>only</b> by this rule will become
+                        orphaned. Owners keep their DNS records, but can no longer manage
+                        those zones until a rule reproducing the same names and owners exists
+                        again — recreating it must match <b>exactly</b> (a single typo in the
+                        user filter is enough to leave the zones orphaned).
+                    </Alert>
+                    <Stack gap={6}>
+                        <Text size="sm" c="dimmed">You are about to delete:</Text>
+                        <Text fw={600}>{rule.description || '(no description)'}</Text>
+                        <Group gap="xs" wrap="nowrap"><Text size="sm" c="dimmed" w={110}>Zone pattern</Text><Text component="code" style={{ fontSize: '0.85em' }}>{rule.zone_pattern}</Text></Group>
+                        <Group gap="xs" wrap="nowrap"><Text size="sm" c="dimmed" w={110}>Applies to</Text><Text component="code" style={{ fontSize: '0.85em' }}>{rule.target_user_filter}</Text></Group>
+                    </Stack>
+                </Stack>
+            ),
+        });
+        if (!ok) return;
         setDeleteLoading(rule.id);
         const res = await sdk.deletePolicyRule({ client, path: { id: rule.id } });
         const err = sdkError(res);
-        // Keep the dialog open on error (showError surfaces it); close + refresh on success.
-        if (err) { showError(`Error deleting rule: ${err}`); } else { setRuleToDelete(null); onDeleteSuccess(); }
+        if (err) { showError(`Error deleting rule: ${err}`); } else { onDeleteSuccess(); }
         setDeleteLoading(null);
     }
 
@@ -192,7 +212,6 @@ function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
 
     const codeStyle = { fontSize: '0.85em', whiteSpace: 'nowrap' };
     return (
-        <>
         <Table.ScrollContainer minWidth={760}>
             <Table striped highlightOnHover withTableBorder stickyHeader verticalSpacing="sm" horizontalSpacing="md">
                 <Table.Thead>
@@ -224,7 +243,7 @@ function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
                                         <ActionIcon size="sm" variant="light" color="blue" onClick={() => onEdit(rule)} title="Edit">
                                             <Edit size="16" />
                                         </ActionIcon>
-                                        <ActionIcon size="sm" variant="light" color="red" onClick={() => setRuleToDelete(rule)}
+                                        <ActionIcon size="sm" variant="light" color="red" onClick={() => handleDelete(rule)}
                                             loading={deleteLoading === rule.id} disabled={deleteLoading === rule.id} title="Delete">
                                             <Trash2 size="16" />
                                         </ActionIcon>
@@ -236,53 +255,6 @@ function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
                 </Table.Tbody>
             </Table>
         </Table.ScrollContainer>
-
-        <DeleteRuleConfirmModal
-            rule={ruleToDelete}
-            loading={deleteLoading === ruleToDelete?.id}
-            onConfirm={() => handleDelete(ruleToDelete)}
-            onClose={() => setRuleToDelete(null)}
-        />
-        </>
-    );
-}
-
-// --- Delete Rule Confirmation ---
-// Deleting a policy rule is destructive in a non-obvious way: zone<->rule links
-// are recomputed (there is no stored reference), so every zone that ONLY this
-// rule covered immediately becomes orphaned — the owner keeps the DNS data but
-// can no longer manage the zone until an identical rule exists again. Recreating
-// must match EXACTLY; a single typo in the user filter leaves the zones orphaned
-// (this actually happened on prod, 2026-07-07). Hence an explicit confirm.
-function DeleteRuleConfirmModal({ rule, loading, onConfirm, onClose }) {
-    return (
-        <Modal opened={!!rule} onClose={onClose} title="⚠️ Delete policy rule?" centered size="lg">
-            {rule && (
-                <Stack gap="md" p="xs">
-                    <Alert color="red" icon={<AlertCircle size="16" />} title="This can orphan zones">
-                        Every zone that is covered <b>only</b> by this rule will become
-                        orphaned. Owners keep their DNS records, but can no longer manage
-                        those zones until a rule reproducing the same names and owners exists
-                        again — recreating it must match <b>exactly</b> (a single typo in the
-                        user filter is enough to leave the zones orphaned).
-                    </Alert>
-
-                    <Stack gap={6}>
-                        <Text size="sm" c="dimmed">You are about to delete:</Text>
-                        <Text fw={600}>{rule.description || '(no description)'}</Text>
-                        <Group gap="xs" wrap="nowrap"><Text size="sm" c="dimmed" w={110}>Zone pattern</Text><Text component="code" style={{ fontSize: '0.85em' }}>{rule.zone_pattern}</Text></Group>
-                        <Group gap="xs" wrap="nowrap"><Text size="sm" c="dimmed" w={110}>Applies to</Text><Text component="code" style={{ fontSize: '0.85em' }}>{rule.target_user_filter}</Text></Group>
-                    </Stack>
-
-                    <Group justify="flex-end" gap="sm" mt="xs">
-                        <Button variant="default" onClick={onClose} disabled={loading}>Cancel</Button>
-                        <Button color="red" onClick={onConfirm} loading={loading} leftSection={<Trash2 size="16" />}>
-                            Delete rule
-                        </Button>
-                    </Group>
-                </Stack>
-            )}
-        </Modal>
     );
 }
 
@@ -451,6 +423,7 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
 function DelegationManagement() {
     const { client } = useClient('dyndns');
     const { showError } = useErrorModal();
+    const confirm = useConfirm();
     const [delegations, setDelegations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [reload, setReload] = useState(true);
@@ -469,8 +442,14 @@ function DelegationManagement() {
 
     const onSuccess = () => { setEditing(null); setModalOpen(false); setReload(p => !p); };
 
-    async function handleDelete(id) {
-        const res = await client.delete({ url: '/v1/policies/delegations/{id}', path: { id } });
+    async function handleDelete(delegation) {
+        const ok = await confirm({
+            title: 'Delete delegation?',
+            confirmLabel: 'Delete delegation',
+            message: `Revoke the delegated rule-management permission for “${delegation.target_user_filter}” on ${delegation.zone_suffix}? Existing zones and rules are not affected.`,
+        });
+        if (!ok) return;
+        const res = await client.delete({ url: '/v1/policies/delegations/{id}', path: { id: delegation.id } });
         const err = sdkError(res) ?? (res.response && res.response.status >= 400 ? res.response.statusText : null);
         if (err) { showError(err); } else { setReload(p => !p); }
     }
@@ -511,7 +490,7 @@ function DelegationManagement() {
                                             <ActionIcon size="sm" variant="light" color="blue" onClick={() => { setEditing(d); setModalOpen(true); }} title="Edit">
                                                 <Edit size="16" />
                                             </ActionIcon>
-                                            <ActionIcon size="sm" variant="light" color="red" onClick={() => handleDelete(d.id)} title="Delete">
+                                            <ActionIcon size="sm" variant="light" color="red" onClick={() => handleDelete(d)} title="Delete">
                                                 <Trash2 size="16" />
                                             </ActionIcon>
                                         </Group>
@@ -598,6 +577,7 @@ function DelegationFormModal({ delegationToEdit, onSuccess, onClose }) {
 function OrphanedZonesPanel() {
     const { client } = useClient('dyndns');
     const { showError } = useErrorModal();
+    const confirm = useConfirm();
     const [zones, setZones] = useState([]);
     const [loading, setLoading] = useState(true);
     const [reload, setReload] = useState(true);
@@ -614,6 +594,12 @@ function OrphanedZonesPanel() {
     }, [client, reload]);
 
     async function handleDelete(zone) {
+        const ok = await confirm({
+            title: '⚠️ Delete orphaned zone?',
+            confirmLabel: 'Delete zone',
+            message: (<Text size="sm">This permanently deletes the zone <b>{zone}</b> and all of its DNS records. This cannot be undone.</Text>),
+        });
+        if (!ok) return;
         setDeleting(zone);
         const res = await client.delete({ url: '/v1/policies/orphaned-zones/{zone}', path: { zone } });
         const err = sdkError(res) ?? (res.response && res.response.status >= 400 ? res.response.statusText : null);

@@ -4,6 +4,7 @@ import { Button, Group, SimpleGrid, Stack, Text } from '@mantine/core';
 import { useClient } from '../providers/client.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
+import { useConfirm } from '/providers/confirm.jsx';
 import { DelegationCard } from './delegation-card.jsx';
 import { DelegationModal } from './delegation-modal.jsx';
 import { getAuthUserEmail, normalizeArrayResponse, useAsyncRefresh } from './util-project.jsx';
@@ -14,6 +15,7 @@ export function ManageDelegationsView() {
     const { client, sdk } = useClient('projects');
     const { user } = useAuth();
     const { showError } = useErrorModal();
+    const confirm = useConfirm();
     const [delegations, setDelegations] = useState([]);
     const [parentDelegations, setParentDelegations] = useState([]);
     const [editingDelegation, setEditingDelegation] = useState(null);
@@ -59,6 +61,12 @@ export function ManageDelegationsView() {
     };
 
     const handleDeleteDelegation = async (delegation) => {
+        const ok = await confirm({
+            title: 'Delete delegation?',
+            confirmLabel: 'Delete delegation',
+            message: 'This revokes the delegated resource access. This cannot be undone.',
+        });
+        if (!ok) return;
         const res = await sdk.deleteDelegation({ client, path: { id: delegation.id } });
         const err = sdkError(res);
         if (err) { showError(err); return; }

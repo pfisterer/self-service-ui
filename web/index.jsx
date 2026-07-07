@@ -12,6 +12,7 @@ import { DynDnsConfigProvider } from '/providers/dyndns-config.jsx';
 import { CloudConfigProvider } from '/providers/cloud-config.jsx';
 import { useAuth, AuthProvider } from '/providers/auth.jsx';
 import { ErrorModalProvider } from '/providers/error-modal.jsx';
+import { ConfirmProvider } from '/providers/confirm.jsx';
 
 import { Header } from '/header.jsx';
 import { Footer } from '/footer.jsx';
@@ -29,19 +30,19 @@ const DynamicDnsManagement = lazy(() =>
 
 createRoot(document.getElementById('app')).render(
     <MantineProvider
-      defaultColorScheme="light"
-      cssVariablesResolver={v8CssVariablesResolver}
-      theme={{
-        primaryColor: 'dhbw',
-        // Mantine 9 changed the default radius sm(4px)->md(8px); keep the old
-        // look. v8CssVariablesResolver above keeps the v8 light-variant colors.
-        defaultRadius: 'sm',
-        colors: {
-            dhbw: ['#F5D8D8', '#E69C9A', '#DD6462', '#D52C2A', '#CF2C29', '#B32421', '#991B1A', '#7D1312', '#600B0B', '#400404'],
-            neutral: ['#F0F1F1', '#D9DBDC', '#BFC3C5', '#A5A9AB', '#8B8F91', '#788187', '#5F6466', '#474C4E', '#303537', '#1A1E20'],
-        },
-        fontFamily: 'Arial, sans-serif',
-    }}>
+        defaultColorScheme="light"
+        cssVariablesResolver={v8CssVariablesResolver}
+        theme={{
+            primaryColor: 'dhbw',
+            // Mantine 9 changed the default radius sm(4px)->md(8px); keep the old
+            // look. v8CssVariablesResolver above keeps the v8 light-variant colors.
+            defaultRadius: 'sm',
+            colors: {
+                dhbw: ['#F5D8D8', '#E69C9A', '#DD6462', '#D52C2A', '#CF2C29', '#B32421', '#991B1A', '#7D1312', '#600B0B', '#400404'],
+                neutral: ['#F0F1F1', '#D9DBDC', '#BFC3C5', '#A5A9AB', '#8B8F91', '#788187', '#5F6466', '#474C4E', '#303537', '#1A1E20'],
+            },
+            fontFamily: 'Arial, sans-serif',
+        }}>
         <ErrorBoundary>
             <App name="Dynamic Zones DNS API" />
         </ErrorBoundary>
@@ -51,13 +52,15 @@ createRoot(document.getElementById('app')).render(
 function App() {
     return (
         <ErrorModalProvider>
-            <DynDnsConfigProvider>
-                <CloudConfigProvider>
-                    <AuthProvider>
-                        <Main />
-                    </AuthProvider>
-                </CloudConfigProvider>
-            </DynDnsConfigProvider>
+            <ConfirmProvider>
+                <DynDnsConfigProvider>
+                    <CloudConfigProvider>
+                        <AuthProvider>
+                            <Main />
+                        </AuthProvider>
+                    </CloudConfigProvider>
+                </DynDnsConfigProvider>
+            </ConfirmProvider>
         </ErrorModalProvider>
     );
 }
@@ -77,9 +80,9 @@ function AppRoutes() {
         <Suspense fallback={<Container size="md" py="xl">Lädt…</Container>}>
             <ErrorBoundary key={section}>
                 <Switch>
-                    <Route path="/" component={Home}/>
-                    <Route path="/dyndns" component={DynamicDnsManagement} nest/>
-                    {projectClient && <Route path="/projects" component={CloudProjectManagement} nest/>}
+                    <Route path="/" component={Home} />
+                    <Route path="/dyndns" component={DynamicDnsManagement} nest />
+                    {projectClient && <Route path="/projects" component={CloudProjectManagement} nest />}
                     <Route component={NotFound} />
                 </Switch>
             </ErrorBoundary>
@@ -94,7 +97,7 @@ function Main() {
     return (
         <AppShell header={{ height: 60 }} padding="md">
             <AppShell.Header>
-                <Header/>
+                <Header />
             </AppShell.Header>
             {/* Flex column + full-viewport min-height makes the footer sticky: the
                 content wrapper grows to fill the viewport, so the footer stays at
@@ -106,23 +109,23 @@ function Main() {
                 Wrapping restores normal block sizing (always max-width). */}
             <AppShell.Main style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
                 <Box style={{ flexGrow: 1 }}>
-                {!user ? (
-                    <Delayed waitMs={200}>
-                        <Container size="md" py="xl">
-                            <Paper p="lg" withBorder>
-                                Please <Anchor onClick={login} style={{ cursor: 'pointer' }}>log in</Anchor> to access your data.
-                            </Paper>
-                        </Container>
-                    </Delayed>
-                ) : (
-                    <Router>
-                        <ClientProvider name="dyndns" baseURL={window?.appconfig?.dynamicZonesBaseUrl}>
-                            <ClientProvider name="projects" baseURL={window?.appconfig?.cloudResourcesBaseUrl}>
-                                <AppRoutes />
+                    {!user ? (
+                        <Delayed waitMs={200}>
+                            <Container size="md" py="xl">
+                                <Paper p="lg" withBorder>
+                                    Please <Anchor onClick={login} style={{ cursor: 'pointer' }}>log in</Anchor> to access your data.
+                                </Paper>
+                            </Container>
+                        </Delayed>
+                    ) : (
+                        <Router>
+                            <ClientProvider name="dyndns" baseURL={window?.appconfig?.dynamicZonesBaseUrl}>
+                                <ClientProvider name="projects" baseURL={window?.appconfig?.cloudResourcesBaseUrl}>
+                                    <AppRoutes />
+                                </ClientProvider>
                             </ClientProvider>
-                        </ClientProvider>
-                    </Router>
-                )}
+                        </Router>
+                    )}
                 </Box>
                 {footer}
             </AppShell.Main>
