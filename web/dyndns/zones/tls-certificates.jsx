@@ -1,8 +1,24 @@
+import { useState } from 'react';
 import { CodeBlock } from '/helper/codeblock.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useAuth } from '/providers/auth.jsx';
-import { Container, Stack, Text, Alert, Anchor, Title } from '@mantine/core';
+import { isValidLabel } from '/helper/dns-validation.js';
+import { TabIntro } from './tab-intro.jsx';
+import { Stack, Text, Alert, Anchor, Paper, Group, SimpleGrid, Accordion, TextInput } from '@mantine/core';
 import { AlertCircle } from 'lucide-react';
+
+// Compact "label + value" row for the prefilled-values panel.
+function InfoItem({ label, value, note }) {
+    return (
+        <div>
+            <Text size="xs" c="dimmed" tt="uppercase">{label}</Text>
+            <Group gap="xs" wrap="nowrap" align="baseline">
+                <Text size="sm" style={{ wordBreak: 'break-all' }}><code>{value}</code></Text>
+                {note && <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>({note})</Text>}
+            </Group>
+        </div>
+    );
+}
 
 // ----------------------------------------
 // TLS-Certificates (cert-manager) config display
@@ -16,9 +32,10 @@ export function TlsCertificates({ zone }) {
 
     const zoneName = zone.zone;
     const key = zone.zone_keys?.[0];
-    // Default to the "default" namespace so the manifests apply as-is; the user
-    // adjusts it to wherever their workload/Ingress and the TLS Secret live.
-    const ns = 'default';
+    // The namespace where the Certificate (and its TLS Secret) live — i.e. your
+    // workload's namespace. Editable; the examples update live. Not "default".
+    const [ns, setNs] = useState('web');
+    const nsValid = isValidLabel(ns, { lowercase: true });
     // Prefill the ACME account email from the logged-in user (OIDC profile);
     // fall back to a placeholder if it is not available.
     const email = user?.profile?.email || '<your-email>';
@@ -36,28 +53,28 @@ export function TlsCertificates({ zone }) {
     const acmeServer = window.appconfig?.acmeServer || 'https://certificates.dhbw.cloud';
 
     const dns01Yaml = [
-        `# 1) TSIG secret for the RFC2136 (DNS-01) solver`,
+        `# 1) TSIG secret for the RFC2136 (DNS-01) solver. For a ClusterIssuer the`,
+        `#    solver Secret must live in the cert-manager namespace.`,
         `apiVersion: v1`,
         `kind: Secret`,
         `metadata:`,
         `  name: ${safeZone}-rfc2136-tsig`,
-        `  namespace: ${ns}`,
+        `  namespace: cert-manager`,
         `type: Opaque`,
         `stringData:`,
         `  secret: "${key?.key || '<tsig-secret>'}"`,
         `---`,
-        `# 2) Issuer using DNS-01 (RFC2136) against this Dynamic Zones server`,
+        `# 2) ClusterIssuer using DNS-01 (RFC2136) against this Dynamic Zones server`,
         `apiVersion: cert-manager.io/v1`,
-        `kind: Issuer`,
+        `kind: ClusterIssuer`,
         `metadata:`,
-        `  name: ${safeZone}-letsencrypt-dns01`,
-        `  namespace: ${ns}`,
+        `  name: ${safeZone}-dhbw-dns01`,
         `spec:`,
         `  acme:`,
         `    email: ${email}`,
         `    server: ${acmeServer}`,
         `    privateKeySecretRef:`,
-        `      name: ${safeZone}-letsencrypt-dns01-key`,
+        `      name: ${safeZone}-dhbw-dns01-key`,
         `    solvers:`,
         `      - dns01:`,
         `          rfc2136:`,
@@ -68,7 +85,7 @@ export function TlsCertificates({ zone }) {
         `              name: ${safeZone}-rfc2136-tsig`,
         `              key: secret`,
         `---`,
-        `# 3) Certificate (adjust the host / dnsNames as needed)`,
+        `# 3) Certificate (in your workload's namespace; adjust the dnsNames)`,
         `apiVersion: cert-manager.io/v1`,
         `kind: Certificate`,
         `metadata:`,
@@ -80,22 +97,21 @@ export function TlsCertificates({ zone }) {
         `    - "www.${zoneName}"`,
         `    # - "*.${zoneName}"   # wildcard — DNS-01 only`,
         `  issuerRef:`,
-        `    name: ${safeZone}-letsencrypt-dns01`,
-        `    kind: Issuer`,
+        `    name: ${safeZone}-dhbw-dns01`,
+        `    kind: ClusterIssuer`,
     ].join('\n');
 
     const http01Yaml = [
         `apiVersion: cert-manager.io/v1`,
-        `kind: Issuer`,
+        `kind: ClusterIssuer`,
         `metadata:`,
-        `  name: ${safeZone}-letsencrypt-http01`,
-        `  namespace: ${ns}`,
+        `  name: ${safeZone}-dhbw-http01`,
         `spec:`,
         `  acme:`,
         `    email: ${email}`,
         `    server: ${acmeServer}`,
         `    privateKeySecretRef:`,
-        `      name: ${safeZone}-letsencrypt-http01-key`,
+        `      name: ${safeZone}-dhbw-http01-key`,
         `    solvers:`,
         `      - http01:`,
         `          ingress:`,
@@ -113,44 +129,130 @@ export function TlsCertificates({ zone }) {
         `  dnsNames:`,
         `    - "www.${zoneName}"`,
         `  issuerRef:`,
-        `    name: ${safeZone}-letsencrypt-http01`,
-        `    kind: Issuer`,
+        `    name: ${safeZone}-dhbw-http01`,
+        `    kind: ClusterIssuer`,
+    ].join('\n');
+
+    // CLI ACME clients (DNS-01 / RFC2136) using this zone's TSIG key. cert-manager
+    // (above) is the Kubernetes-native option; these are for non-k8s workflows.
+    const cliHost = host;
+    const cliPort = dynDnsConfig?.dns_server_port ?? 53;
+    const cliKeyname = key?.keyname || '<keyname>';
+    const cliSecret = key?.key || '<tsig-secret>';
+    const cliAlg = key?.algorithm || 'hmac-sha512';
+
+    // certbot: credentials file (INI) + the issue command (bash), shown separately.
+    const certbotIni = [
+        `# rfc2136.ini  (chmod 600)`,
+        `dns_rfc2136_server = ${cliHost}`,
+        `dns_rfc2136_port = ${cliPort}`,
+        `dns_rfc2136_name = ${cliKeyname}`,
+        `dns_rfc2136_secret = ${cliSecret}`,
+        `dns_rfc2136_algorithm = ${cliAlg.toUpperCase()}`,
+    ].join('\n');
+
+    const certbotCmd = [
+        `certbot certonly --server ${acmeServer} --dns-rfc2136 --dns-rfc2136-credentials ./rfc2136.ini -d www.${zoneName}`,
+    ].join('\n');
+
+    // acme.sh: TSIG key file + the issue command (bash), shown separately.
+    const acmeShKey = [
+        `# tsig.key  (chmod 600)`,
+        `key "${cliKeyname}" {`,
+        `  algorithm ${cliAlg};`,
+        `  secret "${cliSecret}";`,
+        `};`,
+    ].join('\n');
+
+    const acmeShCmd = [
+        `export NSUPDATE_SERVER="${cliHost}"`,
+        `export NSUPDATE_SERVER_PORT="${cliPort}"`,
+        `export NSUPDATE_KEY="/path/to/tsig.key"`,
+        `acme.sh --issue --server ${acmeServer} --dns dns_nsupdate -d www.${zoneName}`,
     ].join('\n');
 
     return (
-        <Container size="lg" py="xl">
-            <Stack gap="lg">
-                <Text component="p">
-                    Set up <Anchor href="https://cert-manager.io" target="_blank">cert-manager</Anchor> to issue TLS
-                    certificates for <code>{zoneName}</code>. The recommended method is <b>DNS-01</b> via this Dynamic
-                    Zones server (RFC2136 + your zone's TSIG key): it needs no public HTTP access and can issue
-                    wildcards. The examples are prefilled for <code>{zoneName}</code> against
-                    the DHBW ACME server; adjust the <code>namespace</code> (defaults to <code>{ns}</code>) to where
-                    your workload runs{emailIsPlaceholder ? <> and set the ACME account <code>{email}</code></> : <>. The
-                    ACME account email is prefilled with <code>{email}</code></>}.
-                </Text>
+        <Stack gap="lg">
+            <TabIntro title={`TLS certificates for ${zoneName}`}>
+                Get certificates from the DHBW ACME server with{' '}
+                <Anchor href="https://certbot.eff.org/" target="_blank">certbot</Anchor>,{' '}
+                <Anchor href="https://github.com/acmesh-official/acme.sh" target="_blank">acme.sh</Anchor>, or{' '}
+                <Anchor href="https://cert-manager.io" target="_blank">cert-manager</Anchor> (Kubernetes). All use
+                DNS-01 (RFC&nbsp;2136) with this zone's TSIG key and can issue{' '}
+                <Anchor href="https://en.wikipedia.org/wiki/Wildcard_certificate" target="_blank">wildcard certificates</Anchor>.
+                The snippets below are pre-filled for this zone.
+            </TabIntro>
 
-                {!key && (
-                    <Alert icon={<AlertCircle size="16" />} color="red">
-                        This zone has no TSIG key yet — create one under the "Keys" tab first, then the DNS-01 example
-                        below will be filled in automatically.
-                    </Alert>
-                )}
+            {/* Prefilled values overview (shared by all clients) */}
+            <Paper withBorder radius="md" p="md">
+                <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" verticalSpacing="sm">
+                    <InfoItem label="ACME server" value={acmeServer} />
+                    <InfoItem label="ACME account email" value={email} note={emailIsPlaceholder ? 'set your email' : undefined} />
+                    <InfoItem label="DNS-01 nameserver" value={nameserver} />
+                </SimpleGrid>
+            </Paper>
 
-                <div>
-                    <Title order={4} mb="xs">DNS-01 (recommended)</Title>
-                    <CodeBlock code={dns01Yaml} />
-                </div>
+            {!key && (
+                <Alert icon={<AlertCircle size="16" />} color="red">
+                    This zone has no TSIG key yet — create one under the "Keys" tab first, then the DNS-01 example
+                    below will be filled in automatically.
+                </Alert>
+            )}
 
-                <div>
-                    <Title order={4} mb="xs">HTTP-01 (alternative)</Title>
-                    <Text component="p" mb="md" size="sm" c="dimmed">
-                        No TSIG needed, but the host must be reachable over HTTP (:80) through an Ingress from within
-                        the DHBW network (where the ACME server runs), and wildcard certificates are not possible.
-                    </Text>
-                    <CodeBlock code={http01Yaml} />
-                </div>
-            </Stack>
-        </Container>
+            <Accordion variant="separated">
+                <Accordion.Item value="certbot">
+                    <Accordion.Control>certbot</Accordion.Control>
+                    <Accordion.Panel>
+                        <Text size="sm" c="dimmed" mb="sm">
+                            DNS-01 via the <code>certbot-dns-rfc2136</code> plugin. Issues wildcards too.
+                            First write the credentials file, then run certbot:
+                        </Text>
+                        <Text size="xs" c="dimmed" fw={600} mb={4}>rfc2136.ini</Text>
+                        <CodeBlock code={certbotIni} language="ini" />
+                        <Text size="xs" c="dimmed" fw={600} mt="md" mb={4}>Issue the certificate</Text>
+                        <CodeBlock code={certbotCmd} language="bash" />
+                    </Accordion.Panel>
+                </Accordion.Item>
+                <Accordion.Item value="acmesh">
+                    <Accordion.Control>acme.sh</Accordion.Control>
+                    <Accordion.Panel>
+                        <Text size="sm" c="dimmed" mb="sm">
+                            DNS-01 via <code>nsupdate</code> (RFC&nbsp;2136). First write the TSIG key file,
+                            then run acme.sh:
+                        </Text>
+                        <Text size="xs" c="dimmed" fw={600} mb={4}>tsig.key</Text>
+                        <CodeBlock code={acmeShKey} language="plaintext" />
+                        <Text size="xs" c="dimmed" fw={600} mt="md" mb={4}>Issue the certificate</Text>
+                        <CodeBlock code={acmeShCmd} language="bash" />
+                    </Accordion.Panel>
+                </Accordion.Item>
+                <Accordion.Item value="cert-manager">
+                    <Accordion.Control>cert-manager (Kubernetes)</Accordion.Control>
+                    <Accordion.Panel>
+                        <TextInput
+                            label="Namespace"
+                            description="Where the Certificate + TLS Secret go (your workload's namespace)."
+                            value={ns}
+                            onChange={e => setNs(e.currentTarget.value)}
+                            error={ns && !nsValid ? 'Invalid namespace name.' : null}
+                            size="xs"
+                            mb="md"
+                            maw={360}
+                        />
+                        <Text size="sm" c="dimmed" mb="sm">
+                            <b>DNS-01 (recommended)</b> — a{' '}
+                            <Anchor href="https://cert-manager.io/docs/configuration/acme/dns01/rfc2136/" target="_blank">ClusterIssuer with the RFC&nbsp;2136 solver</Anchor>{' '}
+                            + this zone's TSIG key. No public HTTP access needed; can issue wildcards.
+                        </Text>
+                        <CodeBlock code={dns01Yaml} />
+                        <Text size="sm" c="dimmed" mt="lg" mb="sm">
+                            <b>HTTP-01 (alternative)</b> — no TSIG, but the host must be reachable on :80 via an
+                            Ingress from inside the DHBW network. No wildcards.
+                        </Text>
+                        <CodeBlock code={http01Yaml} />
+                    </Accordion.Panel>
+                </Accordion.Item>
+            </Accordion>
+        </Stack>
     );
 }

@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useClient } from '/providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { Delayed } from '/helper/delayed.jsx';
+import { isValidDnsName, isValidZonePattern, isValidUserFilter } from '/helper/dns-validation.js';
 import { Trash2, Edit, Plus, Search, X, AlertCircle } from 'lucide-react';
-import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, SimpleGrid, Card, Modal, Alert, Loader, ActionIcon, Paper, Tabs, Badge } from '@mantine/core';
+import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, SimpleGrid, Card, Modal, Alert, Loader, ActionIcon, Paper, Tabs, Badge, Table } from '@mantine/core';
 
 const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
@@ -183,73 +184,51 @@ function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
         );
     }
 
+    const codeStyle = { fontSize: '0.85em', whiteSpace: 'nowrap' };
     return (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-            {rules.map(rule => (
-                <SingleRule
-                    key={rule.id}
-                    rule={rule}
-                    isSuperAdmin={isSuperAdmin}
-                    isDeleting={deleteLoading === rule.id}
-                    onEdit={() => onEdit(rule)}
-                    onDelete={() => handleDelete(rule.id)}
-                />
-            ))}
-        </SimpleGrid>
-    );
-}
-
-// --- Single Rule Component ---
-function SingleRule({ rule, isSuperAdmin, isDeleting, onEdit, onDelete }) {
-    return (
-        <Card shadow="sm" padding="md" radius="md" withBorder>
-            <Stack gap="sm">
-                <Group justify="space-between" align="flex-start">
-                    <div style={{ flexGrow: 1 }}>
-                        <Text size="xs" c="dimmed" tt="uppercase">Zone Pattern</Text>
-                        <Text fw={600} size="sm" mt="4">
-                            <code style={{ fontSize: '0.85em' }}>{rule.zone_pattern}</code>
-                        </Text>
-                    </div>
-                    {isSuperAdmin && (
-                        <Group gap="4">
-                            <ActionIcon size="sm" variant="light" color="blue" onClick={onEdit} title="Edit">
-                                <Edit size="16" />
-                            </ActionIcon>
-                            <ActionIcon size="sm" variant="light" color="red" onClick={onDelete} loading={isDeleting} disabled={isDeleting} title="Delete">
-                                <Trash2 size="16" />
-                            </ActionIcon>
-                        </Group>
-                    )}
-                </Group>
-
-                <Badge
-                    size="sm"
-                    variant="light"
-                    color={rule.allow_subdomains ? 'green' : 'gray'}
-                    title="Whether users may create subdomains (delegated subzones) under a matched zone"
-                >
-                    {rule.allow_subdomains ? 'Subdomains allowed' : 'Subdomains not allowed'}
-                </Badge>
-
-                <div>
-                    <Text size="xs" c="dimmed" tt="uppercase">Zone SOA</Text>
-                    <Text size="xs" mt="4"><code style={{ fontSize: '0.85em' }}>{rule.zone_soa}</code></Text>
-                </div>
-
-                <div>
-                    <Text size="xs" c="dimmed" tt="uppercase">Applies To</Text>
-                    <Text size="xs" mt="4"><code style={{ fontSize: '0.85em' }}>{rule.target_user_filter}</code></Text>
-                </div>
-
-                {rule.description && (
-                    <div>
-                        <Text size="xs" c="dimmed" tt="uppercase">Description</Text>
-                        <Text size="xs" mt="4">{rule.description}</Text>
-                    </div>
-                )}
-            </Stack>
-        </Card>
+        <Table.ScrollContainer minWidth={760}>
+            <Table striped highlightOnHover withTableBorder stickyHeader verticalSpacing="sm" horizontalSpacing="md">
+                <Table.Thead>
+                    <Table.Tr>
+                        <Table.Th>Zone Pattern</Table.Th>
+                        <Table.Th>Zone SOA</Table.Th>
+                        <Table.Th>Applies To</Table.Th>
+                        <Table.Th>Subdomains</Table.Th>
+                        <Table.Th>Description</Table.Th>
+                        {isSuperAdmin && <Table.Th w={90} style={{ textAlign: 'right' }}>Actions</Table.Th>}
+                    </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                    {rules.map(rule => (
+                        <Table.Tr key={rule.id}>
+                            <Table.Td><Text fw={600} component="code" style={codeStyle}>{rule.zone_pattern}</Text></Table.Td>
+                            <Table.Td><code style={codeStyle}>{rule.zone_soa}</code></Table.Td>
+                            <Table.Td><code style={codeStyle}>{rule.target_user_filter}</code></Table.Td>
+                            <Table.Td>
+                                <Badge size="sm" variant="light" color={rule.allow_subdomains ? 'green' : 'gray'}
+                                    title="Whether users may create subdomains (delegated subzones) under a matched zone">
+                                    {rule.allow_subdomains ? 'Yes' : 'No'}
+                                </Badge>
+                            </Table.Td>
+                            <Table.Td><Text size="sm" c="dimmed">{rule.description}</Text></Table.Td>
+                            {isSuperAdmin && (
+                                <Table.Td>
+                                    <Group gap="4" justify="flex-end" wrap="nowrap">
+                                        <ActionIcon size="sm" variant="light" color="blue" onClick={() => onEdit(rule)} title="Edit">
+                                            <Edit size="16" />
+                                        </ActionIcon>
+                                        <ActionIcon size="sm" variant="light" color="red" onClick={() => handleDelete(rule.id)}
+                                            loading={deleteLoading === rule.id} disabled={deleteLoading === rule.id} title="Delete">
+                                            <Trash2 size="16" />
+                                        </ActionIcon>
+                                    </Group>
+                                </Table.Td>
+                            )}
+                        </Table.Tr>
+                    ))}
+                </Table.Tbody>
+            </Table>
+        </Table.ScrollContainer>
     );
 }
 
@@ -407,58 +386,8 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
     );
 }
 
-// --- Validation Helpers ---
-
-function isAlphaNum(ch) { return /[A-Za-z0-9]/.test(ch); }
-
-// Allow RFC-compliant domain labels with '%u' as part of labels (e.g., student-%u.users.example.com). No wildcards or TLD as %u.
-function isValidZonePattern(value) {
-    if (!value) return false;
-    let s = value.replaceAll('%u', 'A').trim();
-    if (s.length === 0 || s.length > 253) return false;
-    const parts = s.split('.');
-    if (parts.length < 2) return false;
-
-    function isValidLabel(label) {
-        if (label.length < 1 || label.length > 63) return false;
-        if (!/^[A-Za-z0-9-]+$/.test(label)) return false;
-        if (!isAlphaNum(label[0]) || !isAlphaNum(label[label.length - 1])) return false;
-        return true;
-    }
-
-    for (const label of parts) {
-        if (!isValidLabel(label)) return false;
-    }
-
-    return true;
-}
-
-// Validate email or wildcard email pattern: *@domain.com, user@domain.com, or *user@domain.com
-function isValidUserFilter(value) {
-    if (!value) return false;
-    const emailRegex = /^(\*[a-zA-Z0-9._-]*|[a-zA-Z0-9._-]+)@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    // Comma-separated list: every non-empty entry must be a valid email or *@domain pattern.
-    const parts = value.split(',').map(p => p.trim()).filter(p => p !== '');
-    return parts.length > 0 && parts.every(p => emailRegex.test(p));
-}
-
-// Validate DNS name (standard domain without special patterns)
-function isValidDnsName(value) {
-    if (!value || value.trim().length === 0) return false;
-    const trimmed = value.trim();
-    if (trimmed.length > 253) return false;
-
-    const parts = trimmed.split('.');
-    if (parts.length < 2) return false;
-
-    for (const label of parts) {
-        if (label.length < 1 || label.length > 63) return false;
-        if (!/^[A-Za-z0-9-]+$/.test(label)) return false;
-        if (!isAlphaNum(label[0]) || !isAlphaNum(label[label.length - 1])) return false;
-    }
-
-    return true;
-}
+// Validation helpers (isValidDnsName / isValidZonePattern / isValidUserFilter)
+// live in /helper/dns-validation.js, shared with the subzone modal.
 
 // ============================================================
 // Delegation Policies (super-admin only). Grants users the right to manage
@@ -507,27 +436,37 @@ function DelegationManagement() {
             {delegations.length === 0 ? (
                 <Paper p="xl" withBorder><Text ta="center" c="dimmed">No delegations yet.</Text></Paper>
             ) : (
-                <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
-                    {delegations.map(d => (
-                        <Card key={d.id} shadow="sm" padding="md" radius="md" withBorder>
-                            <Stack gap="xs">
-                                <div>
-                                    <Text size="xs" c="dimmed" tt="uppercase">User</Text>
-                                    <Text size="sm"><code style={{ fontSize: '0.85em' }}>{d.target_user_filter}</code></Text>
-                                </div>
-                                <div>
-                                    <Text size="xs" c="dimmed" tt="uppercase">Zone (+ subdomains)</Text>
-                                    <Text size="sm"><code style={{ fontSize: '0.85em' }}>{d.zone_suffix}</code></Text>
-                                </div>
-                                {d.description && <Text size="xs" c="dimmed">{d.description}</Text>}
-                                <Group gap="xs" mt="xs">
-                                    <Button size="xs" variant="light" leftSection={<Edit size="14" />} onClick={() => { setEditing(d); setModalOpen(true); }}>Edit</Button>
-                                    <Button size="xs" color="red" variant="light" leftSection={<Trash2 size="14" />} onClick={() => handleDelete(d.id)}>Delete</Button>
-                                </Group>
-                            </Stack>
-                        </Card>
-                    ))}
-                </SimpleGrid>
+                <Table.ScrollContainer minWidth={600}>
+                    <Table striped highlightOnHover withTableBorder stickyHeader verticalSpacing="sm" horizontalSpacing="md">
+                        <Table.Thead>
+                            <Table.Tr>
+                                <Table.Th>User</Table.Th>
+                                <Table.Th>Zone (+ subdomains)</Table.Th>
+                                <Table.Th>Description</Table.Th>
+                                <Table.Th w={90} style={{ textAlign: 'right' }}>Actions</Table.Th>
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {delegations.map(d => (
+                                <Table.Tr key={d.id}>
+                                    <Table.Td><code style={{ fontSize: '0.85em', whiteSpace: 'nowrap' }}>{d.target_user_filter}</code></Table.Td>
+                                    <Table.Td><code style={{ fontSize: '0.85em', whiteSpace: 'nowrap' }}>{d.zone_suffix}</code></Table.Td>
+                                    <Table.Td><Text size="sm" c="dimmed">{d.description}</Text></Table.Td>
+                                    <Table.Td>
+                                        <Group gap="4" justify="flex-end" wrap="nowrap">
+                                            <ActionIcon size="sm" variant="light" color="blue" onClick={() => { setEditing(d); setModalOpen(true); }} title="Edit">
+                                                <Edit size="16" />
+                                            </ActionIcon>
+                                            <ActionIcon size="sm" variant="light" color="red" onClick={() => handleDelete(d.id)} title="Delete">
+                                                <Trash2 size="16" />
+                                            </ActionIcon>
+                                        </Group>
+                                    </Table.Td>
+                                </Table.Tr>
+                            ))}
+                        </Table.Tbody>
+                    </Table>
+                </Table.ScrollContainer>
             )}
 
             {modalOpen && (

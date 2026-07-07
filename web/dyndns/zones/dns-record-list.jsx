@@ -4,8 +4,9 @@ import { generateNsUpdate, generateDig } from './dns-update-cmd.jsx';
 import { useClient } from '/providers/client.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
-import { Table, TextInput, Select, Button, Group, Alert, Loader, Stack, Text } from '@mantine/core';
+import { Table, TextInput, Select, Button, Group, Alert, Loader, Stack, Text, Anchor } from '@mantine/core';
 import { AlertCircle, Copy, Check } from 'lucide-react';
+import { TabIntro } from './tab-intro.jsx';
 
 function normalizeRecordName(name, zone) {
     if (!name) return '';
@@ -243,20 +244,27 @@ export function DnsRecordsList({ zone, tsigKey }) {
     if (loadFailed) return (<Alert icon={<AlertCircle size="16" />} title="Error" color="red">Failed to load DNS records. See the error dialog for details.</Alert>);
 
     return (
-        <Table striped highlightOnHover>
-            <Table.Thead>
-                <Table.Tr>
-                    <Table.Th>Name</Table.Th>
-                    <Table.Th>Type</Table.Th>
-                    <Table.Th>TTL</Table.Th>
-                    <Table.Th>Value</Table.Th>
-                    <Table.Th>Actions</Table.Th>
-                </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-                {records.map(record => <DnsRecordRow key={record.name} zone={zone} tsigKey={tsigKey} record={record} onChange={fetchRecords} />)}
-                <AddDnsRecordRow zone={zone} tsigKey={tsigKey} onAdd={fetchRecords} />
-            </Table.Tbody>
-        </Table>
+        <Stack gap="lg">
+            <TabIntro title={`DNS records for ${zone}`}>
+                Add a record in the bottom row, or edit and delete existing ones inline. Changes take effect
+                immediately.
+            </TabIntro>
+
+            <Table striped highlightOnHover>
+                <Table.Thead>
+                    <Table.Tr>
+                        <Table.Th>Name</Table.Th>
+                        <Table.Th>Type</Table.Th>
+                        <Table.Th>TTL</Table.Th>
+                        <Table.Th>Value</Table.Th>
+                        <Table.Th>Actions</Table.Th>
+                    </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                    {records.map(record => <DnsRecordRow key={record.name} zone={zone} tsigKey={tsigKey} record={record} onChange={fetchRecords} />)}
+                    <AddDnsRecordRow zone={zone} tsigKey={tsigKey} onAdd={fetchRecords} />
+                </Table.Tbody>
+            </Table>
+        </Stack>
     );
 }

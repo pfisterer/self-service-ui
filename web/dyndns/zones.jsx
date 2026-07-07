@@ -8,8 +8,9 @@ import { ExternalDnsConfig } from '/dyndns/zones/external-dns.jsx';
 import { DnsUpdateCommand } from '/dyndns/zones/dns-update-cmd.jsx';
 import { DnsRecordsList } from '/dyndns/zones/dns-record-list.jsx';
 import { TlsCertificates } from '/dyndns/zones/tls-certificates.jsx';
-import { Container, Title, Paper, Stack, NavLink, Tabs, Button, Text, Loader, Alert, Group, TextInput } from '@mantine/core';
-import { AlertCircle, Globe, CornerDownRight } from 'lucide-react';
+import { Container, Title, Paper, Stack, NavLink, Tabs, Button, Text, Loader, Alert, Group, TextInput, Modal, Box } from '@mantine/core';
+import { AlertCircle, Globe, CornerDownRight, Plus } from 'lucide-react';
+import { subzoneLabelError } from '/helper/dns-validation.js';
 
 const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
@@ -23,6 +24,8 @@ export function DynDnsZones() {
     const [loading, setLoading] = useState(true);
     const [loadFailed, setLoadFailed] = useState(false);
     const [reloadTrigger, setReloadTrigger] = useState(true);
+    // Parent zone whose "create subzone" modal is currently open (null = closed).
+    const [subzoneParent, setSubzoneParent] = useState(null);
     const [match, params] = useRoute("/zone/:name/*?");
     // navigate() here is relative to this component's router base (/dyndns/zones),
     // so navigate('/') returns to the zone overview.
@@ -81,6 +84,16 @@ export function DynDnsZones() {
                                     label={base.name}
                                     leftSection={<Globe size="16" />}
                                     active={activeZoneName === base.name}
+                                    rightSection={base.allow_subdomains && base.exists ? (
+                                        <Button
+                                            size="compact-xs"
+                                            variant="light"
+                                            leftSection={<Plus size="12" />}
+                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSubzoneParent(base.name); }}
+                                        >
+                                            Subzone
+                                        </Button>
+                                    ) : null}
                                 />
                                 {(subzonesByParent[base.name] || []).map(sz => (
                                     <NavLink
@@ -91,11 +104,18 @@ export function DynDnsZones() {
                                         leftSection={<CornerDownRight size="14" />}
                                         active={activeZoneName === sz.name}
                                         style={{ paddingLeft: `${12 + subzoneDepth(sz.name, base.name) * 22}px` }}
+                                        rightSection={sz.allow_subdomains && sz.exists ? (
+                                            <Button
+                                                size="compact-xs"
+                                                variant="light"
+                                                leftSection={<Plus size="12" />}
+                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSubzoneParent(sz.name); }}
+                                            >
+                                                Subzone
+                                            </Button>
+                                        ) : null}
                                     />
                                 ))}
-                                {base.allow_subdomains && base.exists && (
-                                    <AddSubzoneRow parent={base.name} onCreated={reload} />
-                                )}
                             </Fragment>
                         ))}
                         {zones.length === 0 && (
@@ -103,6 +123,12 @@ export function DynDnsZones() {
                         )}
                     </Stack>
                 </Paper>
+
+                <SubzoneModal
+                    parent={subzoneParent}
+                    onClose={() => setSubzoneParent(null)}
+                    onCreated={() => { setSubzoneParent(null); reload(); }}
+                />
 
                 <Switch>
                     <Route path="/zone/:name" nest>
@@ -139,37 +165,62 @@ function subzoneDepth(name, base) {
 }
 
 // ----------------------------------------
-// Add Subzone Row — create a delegated subzone under a parent that allows it
+// Subzone Modal — create a delegated subzone under a parent that allows it.
+// Opened by the "Subzone" button on a zone row; `parent` null = closed.
 // ----------------------------------------
-function AddSubzoneRow({ parent, onCreated }) {
+function SubzoneModal({ parent, onClose, onCreated }) {
     const { client, sdk } = useClient('dyndns');
     const { showError } = useErrorModal();
     const [label, setLabel] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // Reset the field whenever a different parent opens the modal.
+    useEffect(() => { setLabel(''); }, [parent]);
+
+    const validationError = subzoneLabelError(label, parent);
+    const valid = validationError === null;
+
     async function add() {
+        if (!valid) return;
         const sub = label.trim().replace(/\.+$/, '');
-        if (!sub) return;
         setLoading(true);
         const res = await sdk.createZone({ path: { zone: `${sub}.${parent}` }, client });
         const err = sdkError(res) ?? (res.response.status !== 201 ? res.response.statusText : null);
-        if (err) { showError(err); } else { setLabel(''); onCreated(); }
         setLoading(false);
+        if (err) { showError(err); } else { onCreated(); }
     }
 
+    const preview = label.trim().replace(/\.+$/, '');
     return (
-        <Group gap="xs" pl="md" py="6" wrap="nowrap" align="flex-end">
-            <TextInput
-                size="xs"
-                placeholder="new-subzone"
-                value={label}
-                onChange={e => setLabel(e.currentTarget.value)}
-                onKeyDown={e => { if (e.key === 'Enter') add(); }}
-                style={{ width: 180 }}
-            />
-            <Text size="xs" c="dimmed">.{parent}</Text>
-            <Button size="xs" variant="light" onClick={add} loading={loading} disabled={!label.trim()}>+ Subzone</Button>
-        </Group>
+        <Modal opened={!!parent} onClose={onClose} title="Create subzone" centered size="lg">
+            <Stack gap="lg" p="xs">
+                <Text size="sm" c="dimmed">
+                    Create a delegated subzone under <code>{parent}</code>.
+                </Text>
+                <TextInput
+                    label="Subzone label"
+                    placeholder="new-subzone"
+                    value={label}
+                    onChange={e => setLabel(e.currentTarget.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') add(); }}
+                    error={label.trim() ? validationError : null}
+                    size="md"
+                    data-autofocus
+                />
+                <Text size="sm" c="dimmed">
+                    Full name:{' '}
+                    {valid
+                        ? <code>{preview}.{parent}</code>
+                        : <Text span c="dimmed">…<code>.{parent}</code></Text>}
+                </Text>
+                <Group justify="flex-end" gap="sm" mt="xs">
+                    <Button variant="default" onClick={onClose}>Cancel</Button>
+                    <Button onClick={add} loading={loading} disabled={!valid} leftSection={<Plus size="16" />}>
+                        Create subzone
+                    </Button>
+                </Group>
+            </Stack>
+        </Modal>
     );
 }
 
@@ -269,7 +320,7 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
 
     return (
         <Stack gap="md">
-            <Paper p="md" withBorder style={{ backgroundColor: '#f8f9fa' }}>
+            <Paper p="md" withBorder bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))">
                 <Group justify="space-between" align="center">
                     <Text fw={600}>Zone: {zone.zoneData.zone}</Text>
                     <Button color="red" size="sm" onClick={handleDeleteClick}>Delete Zone</Button>
@@ -282,25 +333,29 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
                 </Tabs.List>
             </Tabs>
 
-            {activeTab === "Manage" && (
-                <DnsRecordsList zone={zone.zoneData.zone} tsigKey={zone.zoneData.zone_keys?.[0]} />
-            )}
+            {/* Consistent padding for every tab's content (each tab renders a
+                bare <Stack>, so the horizontal/bottom padding lives here once). */}
+            <Box px="md" pb="md">
+                {activeTab === "Manage" && (
+                    <DnsRecordsList zone={zone.zoneData.zone} tsigKey={zone.zoneData.zone_keys?.[0]} />
+                )}
 
-            {activeTab === "Keys" && (
-                <ShowKeys zone={zone.zoneData} />
-            )}
+                {activeTab === "Keys" && (
+                    <ShowKeys zone={zone.zoneData} />
+                )}
 
-            {activeTab === "DNS Update Command" && (
-                <DnsUpdateCommand zone={zone.zoneData} />
-            )}
+                {activeTab === "DNS Update Command" && (
+                    <DnsUpdateCommand zone={zone.zoneData} />
+                )}
 
-            {activeTab === "External DNS Config" && (
-                <ExternalDnsConfig externalDnsValuesYaml={zone.externalDnsValuesYaml} externalDnsSecretYaml={zone.externalDnsSecretYaml} zone={zone.zoneData} />
-            )}
+                {activeTab === "External DNS Config" && (
+                    <ExternalDnsConfig externalDnsValuesYaml={zone.externalDnsValuesYaml} externalDnsSecretYaml={zone.externalDnsSecretYaml} zone={zone.zoneData} />
+                )}
 
-            {activeTab === "TLS-Certificates" && (
-                <TlsCertificates zone={zone.zoneData} />
-            )}
+                {activeTab === "TLS-Certificates" && (
+                    <TlsCertificates zone={zone.zoneData} />
+                )}
+            </Box>
         </Stack>
     );
 }

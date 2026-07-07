@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { CodeBlock } from '/helper/codeblock.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
-import { Container, TextInput, Select, NumberInput, Grid, Stack, Title, Paper } from '@mantine/core';
+import { TextInput, Select, NumberInput, Grid, Stack, Title, Paper, Text, Anchor } from '@mantine/core';
+import { TabIntro } from './tab-intro.jsx';
 
 // Nameserver to show in user-facing commands: the public NS hostname when the
 // API advertises one, otherwise the raw server address.
@@ -59,8 +60,15 @@ export function DnsUpdateCommand({ zone }) {
     };
 
     return (
-        <Paper p="md" withBorder>
-            <Stack gap="md">
+        <Stack gap="lg">
+            <TabIntro title={`DNS update command for ${zone.zone}`}>
+                Build an <code>nsupdate</code> command to create or update a record from the command line via{' '}
+                <Anchor href="https://datatracker.ietf.org/doc/html/rfc2136" target="_blank">RFC&nbsp;2136</Anchor>{' '}
+                (signed with this zone's TSIG key). Fill in the fields — the command updates below is updated live. Execute
+                it in a shell to create or update the record, and verify it with <code>dig</code>.
+            </TabIntro>
+
+            <Paper withBorder radius="md" p="md">
                 <Grid>
                     <Grid.Col span={{ base: 12, sm: 6 }}>
                         <TextInput label="Name" name="name" value={form.name} onChange={handleChange} />
@@ -81,14 +89,14 @@ export function DnsUpdateCommand({ zone }) {
                         <TextInput label="Value" name="value" value={form.value} onChange={handleChange} />
                     </Grid.Col>
                 </Grid>
+            </Paper>
 
-                {zone.zone_keys.map(key => (
-                    <Stack gap="sm">
-                        <Title order={4}>Keyname: {key.keyname}</Title>
-                        <CodeBlock code={generateNsUpdate({ name: form.name, type: form.type, ttl: Number(form.ttl), value: form.value }, zone.zone, key, dynDnsConfig)} />
-                    </Stack>
-                ))}
-            </Stack>
-        </Paper>
+            {zone.zone_keys.map(key => (
+                <Paper key={key.keyname} withBorder radius="md" p="md">
+                    <Title order={5} mb="sm">Key: {key.keyname}</Title>
+                    <CodeBlock code={generateNsUpdate({ name: form.name, type: form.type, ttl: Number(form.ttl), value: form.value }, zone.zone, key, dynDnsConfig)} />
+                </Paper>
+            ))}
+        </Stack>
     );
 }

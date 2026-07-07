@@ -3,8 +3,9 @@ import { useAuth } from '/providers/auth.jsx';
 import { useClient } from '/providers/client.jsx';
 import { CodeBlock } from '/helper/codeblock.jsx';
 import { Delayed } from '/helper/delayed.jsx';
-import { Container, Stack, Text, Alert, Anchor } from '@mantine/core';
+import { Stack, Text, Alert, Anchor } from '@mantine/core';
 import { AlertCircle } from 'lucide-react';
+import { TabIntro } from './tab-intro.jsx';
 
 // ----------------------------------------
 // External DNS config display
@@ -34,15 +35,16 @@ export function ExternalDnsConfig({ externalDnsValuesYaml, zone }) {
     const helmCommand = `curl -H 'Authorization: Bearer ${token || "insert_your_token"}' '${url}values.yaml' | helm upgrade --install external-dns external-dns/external-dns -n external-dns -f -`;
 
     return (
-        <Container size="lg" py="xl">
-            <Stack gap="lg">
+        <Stack gap="lg">
+                <TabIntro title={`External DNS for ${zone.zone}`}>
+                    Configure <Anchor href="https://github.com/kubernetes-sigs/external-dns" target="_blank">external-dns</Anchor>{' '}
+                    to automatically manage this zone's records from your Kubernetes resources (Services / Ingresses),
+                    using this zone's TSIG key.
+                </TabIntro>
+
                 <div>
-                    <Text component="p" mb="md">
-                        This section show how to configure <Anchor href="https://github.com/kubernetes-sigs/external-dns" target="_blank">External DNS</Anchor>.
-
-                        This allows for the automatic management of DNS records in this Dynamic Zones server based on the resources in your Kubernetes cluster.
-
-                        You need to add the External DNS Helm repository to your local Helm setup first (only once):
+                    <Text component="p" mb="md" size="sm" c="dimmed">
+                        Add the external-dns Helm repository first (only once):
                     </Text>
                     <CodeBlock code={helmAddRepoCommand} />
                 </div>
@@ -70,7 +72,6 @@ export function ExternalDnsConfig({ externalDnsValuesYaml, zone }) {
                     </Text>
                     <CodeBlock code={externalDnsValuesYaml} />
                 </div>
-            </Stack>
-        </Container>
+        </Stack>
     );
 }
