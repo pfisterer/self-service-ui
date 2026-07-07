@@ -5,7 +5,7 @@ import { useClient } from '/providers/client.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { Table, TextInput, Select, Button, Group, Alert, Loader, Stack, Text, Anchor } from '@mantine/core';
-import { AlertCircle, Copy, Check } from 'lucide-react';
+import { AlertCircle, Copy, Check, Search } from 'lucide-react';
 import { TabIntro } from './tab-intro.jsx';
 
 function normalizeRecordName(name, zone) {
@@ -213,6 +213,7 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
 export function DnsRecordsList({ zone, tsigKey }) {
     const { user } = useAuth();
     const [records, setRecords] = useState([]);
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [loadFailed, setLoadFailed] = useState(false);
     const { client, sdk } = useClient('dyndns');
@@ -243,12 +244,26 @@ export function DnsRecordsList({ zone, tsigKey }) {
     if (loading) return (<Loader size="sm" />);
     if (loadFailed) return (<Alert icon={<AlertCircle size="16" />} title="Error" color="red">Failed to load DNS records. See the error dialog for details.</Alert>);
 
+    const query = search.trim().toLowerCase();
+    const filteredRecords = query
+        ? records.filter(record =>
+            [record.name, record.type, String(record.ttl), record.value]
+                .some(field => (field ?? '').toLowerCase().includes(query)))
+        : records;
+
     return (
         <Stack gap="lg">
             <TabIntro title={`DNS records for ${zone}`}>
                 Add a record in the bottom row, or edit and delete existing ones inline. Changes take effect
                 immediately.
             </TabIntro>
+
+            <TextInput
+                placeholder="Search records by name, type, TTL, or value"
+                leftSection={<Search size="16" />}
+                value={search}
+                onInput={e => setSearch(e.target.value)}
+            />
 
             <Table striped highlightOnHover>
                 <Table.Thead>
@@ -261,7 +276,14 @@ export function DnsRecordsList({ zone, tsigKey }) {
                     </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                    {records.map(record => <DnsRecordRow key={record.name} zone={zone} tsigKey={tsigKey} record={record} onChange={fetchRecords} />)}
+                    {filteredRecords.map(record => <DnsRecordRow key={record.name} zone={zone} tsigKey={tsigKey} record={record} onChange={fetchRecords} />)}
+                    {query && filteredRecords.length === 0 && (
+                        <Table.Tr>
+                            <Table.Td colSpan={5}>
+                                <Text c="dimmed" size="sm">No records match “{search.trim()}”.</Text>
+                            </Table.Td>
+                        </Table.Tr>
+                    )}
                     <AddDnsRecordRow zone={zone} tsigKey={tsigKey} onAdd={fetchRecords} />
                 </Table.Tbody>
             </Table>
