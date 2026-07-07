@@ -25,7 +25,7 @@ export function TlsCertificates({ zone }) {
     const emailIsPlaceholder = email === '<your-email>';
     const safeZone = zoneName.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-+|-+$/g, '');
 
-    const host = dynDnsConfig?.dns_server_address || '<dns-server>';
+    const host = dynDnsConfig?.advertised_nameserver || dynDnsConfig?.dns_server_address || '<dns-server>';
     const nameserver = `${host.includes(':') ? `[${host}]` : host}:${dynDnsConfig?.dns_server_port ?? 53}`;
     // cert-manager expects the algorithm without dashes and uppercase, e.g. HMACSHA512
     const tsigAlg = (key?.algorithm || 'hmac-sha512').replace(/-/g, '').toUpperCase();

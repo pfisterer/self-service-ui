@@ -3,6 +3,12 @@ import { CodeBlock } from '/helper/codeblock.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { Container, TextInput, Select, NumberInput, Grid, Stack, Title, Paper } from '@mantine/core';
 
+// Nameserver to show in user-facing commands: the public NS hostname when the
+// API advertises one, otherwise the raw server address.
+export function nameserverFor(appConfig) {
+    return appConfig?.advertised_nameserver || appConfig?.dns_server_address;
+}
+
 // ----------------------------------------
 // Shared dig query-command generator
 // ----------------------------------------
@@ -10,7 +16,7 @@ export function generateDig(record, zone, appConfig) {
     // Build the FQDN, treating '@' / empty name as the zone apex.
     const fqdn = (!record.name || record.name === '@') ? zone : `${record.name}.${zone}`;
     const fqdnDotted = fqdn.endsWith('.') ? fqdn : `${fqdn}.`;
-    return `dig @${appConfig.dns_server_address} -p ${appConfig.dns_server_port} ${fqdnDotted} ${record.type} +short`;
+    return `dig @${nameserverFor(appConfig)} -p ${appConfig.dns_server_port} ${fqdnDotted} ${record.type} +short`;
 }
 
 // ----------------------------------------
@@ -20,7 +26,7 @@ export function generateNsUpdate(record, zone, tsigKey, appConfig) {
     return [
         `# Create/Update record in DNS`,
         `nsupdate -y "${tsigKey.algorithm}:${tsigKey.keyname}:${tsigKey.key}" <<EOF`,
-        `server ${appConfig.dns_server_address} ${appConfig.dns_server_port}`,
+        `server ${nameserverFor(appConfig)} ${appConfig.dns_server_port}`,
         `zone ${zone}`,
         `update delete ${record.name}.${zone}. IN ${record.type} ${record.value}`,
         `update add ${record.name}.${zone}. ${record.ttl} IN ${record.type} ${record.value}`,

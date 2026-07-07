@@ -24,6 +24,9 @@ export function DynDnsZones() {
     const [loadFailed, setLoadFailed] = useState(false);
     const [reloadTrigger, setReloadTrigger] = useState(true);
     const [match, params] = useRoute("/zone/:name/*?");
+    // navigate() here is relative to this component's router base (/dyndns/zones),
+    // so navigate('/') returns to the zone overview.
+    const [, navigate] = useLocation();
     const activeZoneName = match ? params.name : null;
 
     useEffect(() => {
@@ -106,7 +109,11 @@ export function DynDnsZones() {
                         {param => {
             const zone = zones.find(z => z.name === param.name)
             return zone ?
-                <AvailableDomain zone={zone} onChange={() => setReloadTrigger(!reloadTrigger)} /> :
+                <AvailableDomain
+                    zone={zone}
+                    onChange={() => setReloadTrigger(!reloadTrigger)}
+                    onDeleted={() => { navigate('/'); setReloadTrigger(t => !t); }}
+                /> :
                 <RouteNotFound />
         }}
                     </Route>
@@ -169,13 +176,13 @@ function AddSubzoneRow({ parent, onCreated }) {
 // ----------------------------------------
 // Available Domain List
 // ----------------------------------------
-function AvailableDomain({ zone, onChange }) {
+function AvailableDomain({ zone, onChange, onDeleted }) {
     let response;
 
     if (zone.already_taken_by_someone_else) {
         response = (<Alert icon={<AlertCircle size="16" />} color="red">This zone is already taken by someone else.</Alert>)
     } else if (zone.exists) {
-        response = (<ActiveDomain zone={zone.name} onChange={onChange} />)
+        response = (<ActiveDomain zone={zone.name} onChange={onChange} onDeleted={onDeleted} />)
     } else {
         response = (<Paper p="md"><ActivateZone zone={zone.name} onChange={onChange} /></Paper>)
     }
@@ -212,7 +219,7 @@ function ActivateZone({ zone, onChange }) {
 // ----------------------------------------
 // Active Domain Tabs
 // ----------------------------------------
-function ActiveDomain({ zone: zoneName, onChange }) {
+function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
     const [zone, setZone] = useState(null);
     const [loading, setLoading] = useState(true);
     const [loadFailed, setLoadFailed] = useState(false);
@@ -248,7 +255,10 @@ function ActiveDomain({ zone: zoneName, onChange }) {
         setMessage("Deleting zone...");
         const res = await sdk.deleteZone({ path: { zone: zone.zoneData.zone }, client });
         const err = sdkError(res) ?? (res.response.status !== 204 ? res.response.statusText : null);
-        if (err) { showError(err); setLoading(false); } else { onChange(); }
+        // On success leave the (now-gone) zone URL and return to the overview,
+        // otherwise the nested route renders "Zone Not Found". Fall back to
+        // onChange if no onDeleted handler was provided.
+        if (err) { showError(err); setLoading(false); } else { (onDeleted || onChange)(); }
     }
 
     if (loading) return (<Delayed><Text>{message}</Text></Delayed>);
