@@ -40,7 +40,7 @@ export function Header() {
 
                     <Group gap="xs" visibleFrom="sm">
                         <Link href="/" onClick={handleLinkClick}>
-                            <Button variant={isActive('/') && !isDyndnsActive && !isActive('/projects') && !isActive('/documentation') ? 'filled' : 'subtle'} size="sm">
+                            <Button variant={isActive('/') && !isDyndnsActive && !isActive('/projects') ? 'filled' : 'subtle'} size="sm">
                                 Home
                             </Button>
                         </Link>
@@ -70,12 +70,6 @@ export function Header() {
                         <Link href="/projects" onClick={handleLinkClick}>
                             <Button variant={isActive('/projects') ? 'filled' : 'subtle'} size="sm">
                                 Cloud Projects
-                            </Button>
-                        </Link>
-
-                        <Link href="/documentation" onClick={handleLinkClick}>
-                            <Button variant={isActive('/documentation') ? 'filled' : 'subtle'} size="sm">
-                                Documentation
                             </Button>
                         </Link>
                     </Group>
@@ -134,12 +128,6 @@ export function Header() {
                             <Link href="/projects" onClick={handleLinkClick}>
                                 <Button variant={isActive('/projects') ? 'filled' : 'subtle'} size="sm" fullWidth>
                                     Cloud Projects
-                                </Button>
-                            </Link>
-
-                            <Link href="/documentation" onClick={handleLinkClick}>
-                                <Button variant={isActive('/documentation') ? 'filled' : 'subtle'} size="sm" fullWidth>
-                                    Documentation
                                 </Button>
                             </Link>
                         </Group>
