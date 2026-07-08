@@ -25,7 +25,7 @@ const STEPS = [
         points: [
             'Point a hostname at your service (A / AAAA / CNAME)',
             'Each zone comes with its own TSIG key',
-            'Automate updates with nsupdate or external-dns',
+            'Automate updates with ddclient, nsupdate, or external-dns',
         ],
     },
     {
