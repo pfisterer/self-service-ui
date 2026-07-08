@@ -14,6 +14,11 @@ export function Header() {
     const isDyndnsActive = currentPath.startsWith('/dyndns/');
     const isActive = (path) => currentPath === path || currentPath.startsWith(path + '/');
 
+    // Only offer Cloud Projects where the backend is wired up (cloudResourcesBaseUrl
+    // set). Without it the /projects route isn't registered, so the link would 404
+    // (e.g. on prod, where it's intentionally disabled until it's ready).
+    const cloudProjectsEnabled = Boolean(window?.appconfig?.cloudResourcesBaseUrl);
+
     const handleLinkClick = () => {
         setOpened(false);
     };
@@ -67,11 +72,13 @@ export function Header() {
                             </Menu.Dropdown>
                         </Menu>
 
-                        <Link href="/projects" onClick={handleLinkClick}>
-                            <Button variant={isActive('/projects') ? 'filled' : 'subtle'} size="sm">
-                                Cloud Projects
-                            </Button>
-                        </Link>
+                        {cloudProjectsEnabled && (
+                            <Link href="/projects" onClick={handleLinkClick}>
+                                <Button variant={isActive('/projects') ? 'filled' : 'subtle'} size="sm">
+                                    Cloud Projects
+                                </Button>
+                            </Link>
+                        )}
                     </Group>
 
                     <Group>
@@ -125,11 +132,13 @@ export function Header() {
                                 </Menu.Dropdown>
                             </Menu>
 
-                            <Link href="/projects" onClick={handleLinkClick}>
-                                <Button variant={isActive('/projects') ? 'filled' : 'subtle'} size="sm" fullWidth>
-                                    Cloud Projects
-                                </Button>
-                            </Link>
+                            {cloudProjectsEnabled && (
+                                <Link href="/projects" onClick={handleLinkClick}>
+                                    <Button variant={isActive('/projects') ? 'filled' : 'subtle'} size="sm" fullWidth>
+                                        Cloud Projects
+                                    </Button>
+                                </Link>
+                            )}
                         </Group>
                     </Box>
                 )}

@@ -16,6 +16,7 @@
         "hostname": { "type": "string", "minLength": 1 },
         "replicas": { "type": "integer", "minimum": 0 },
         "dynamicZonesBaseUrl": { "type": "string" },
+        "cloudResourcesBaseUrl": { "type": "string" },
         "acmeServer": { "type": "string" }
       }
     },

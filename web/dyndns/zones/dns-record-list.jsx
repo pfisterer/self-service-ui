@@ -138,6 +138,9 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
                 <TextInput value={fields.name} onInput={e => setFields({ ...fields, name: e.target.value })} disabled={loading || !editing || !isEditable} />
             </Table.Td>
             <Table.Td>
+                <TextInput value={fields.value} onInput={e => setFields({ ...fields, value: e.target.value })} disabled={loading || !editing || !isEditable} />
+            </Table.Td>
+            <Table.Td>
                 {editing && isEditable ? (
                     <Select
                         data={SUPPORTED_TYPES.map(t => ({ value: t, label: t }))}
@@ -150,9 +153,6 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
             </Table.Td>
             <Table.Td>
                 <TextInput type="number" value={fields.ttl} onInput={e => setFields({ ...fields, ttl: e.target.value })} disabled={loading || !editing || !isEditable} />
-            </Table.Td>
-            <Table.Td>
-                <TextInput value={fields.value} onInput={e => setFields({ ...fields, value: e.target.value })} disabled={loading || !editing || !isEditable} />
             </Table.Td>
             <Table.Td>
                 <Stack gap="xs">
@@ -198,6 +198,9 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
                 <TextInput placeholder="Name" value={fields.name} onInput={e => setFields({ ...fields, name: e.target.value })} />
             </Table.Td>
             <Table.Td>
+                <TextInput value={fields.value} onInput={e => setFields({ ...fields, value: e.target.value })} />
+            </Table.Td>
+            <Table.Td>
                 <Select
                     data={SUPPORTED_TYPES.map(t => ({ value: t, label: t }))}
                     value={fields.type}
@@ -206,9 +209,6 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
             </Table.Td>
             <Table.Td>
                 <TextInput type="number" value={fields.ttl} onInput={e => setFields({ ...fields, ttl: e.target.value })} />
-            </Table.Td>
-            <Table.Td>
-                <TextInput value={fields.value} onInput={e => setFields({ ...fields, value: e.target.value })} />
             </Table.Td>
             <Table.Td>
                 <Stack gap="xs">
@@ -276,11 +276,13 @@ export function DnsRecordsList({ zone, tsigKey }) {
 
             <Table striped highlightOnHover>
                 <Table.Thead>
+                    {/* Name + Value sit next to each other and get the space; Type/TTL
+                        are narrow and moved to the back, Actions fits its buttons. */}
                     <Table.Tr>
-                        <Table.Th>Name</Table.Th>
-                        <Table.Th>Type</Table.Th>
-                        <Table.Th>TTL</Table.Th>
-                        <Table.Th>Value</Table.Th>
+                        <Table.Th w="28%">Name</Table.Th>
+                        <Table.Th w="32%">Value</Table.Th>
+                        <Table.Th w={110}>Type</Table.Th>
+                        <Table.Th w={90}>TTL</Table.Th>
                         <Table.Th>Actions</Table.Th>
                     </Table.Tr>
                 </Table.Thead>

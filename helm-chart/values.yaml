@@ -10,6 +10,9 @@ selfServiceUI:
   image: "ghcr.io/pfisterer/self-service-ui"
   version: "latest"
   dynamicZonesBaseUrl: https://dyndnsapi.example.com
+  # OpenStack management API base URL. Empty disables the Cloud Projects tab
+  # (route unregistered + nav link hidden). Set it only where the backend works.
+  cloudResourcesBaseUrl: ""
   # DHBW-internal ACME server (acme2certifier) shown on the TLS-Certificates tab.
   acmeServer: https://certificates.dhbw.cloud
 

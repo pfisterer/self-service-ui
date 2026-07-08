@@ -31,6 +31,9 @@ spec:
           env:
             - name: DYN_ZONES_BASE_URL
               value: "{{ .Values.selfServiceUI.dynamicZonesBaseUrl }}"
+            # Empty -> Cloud Projects tab disabled (route not registered, nav link hidden).
+            - name: CLOUD_RESOURCES_BASE_URL
+              value: "{{ .Values.selfServiceUI.cloudResourcesBaseUrl }}"
             - name: ACME_SERVER
               value: "{{ .Values.selfServiceUI.acmeServer }}"
             - name: OIDC_ISSUER_URL
