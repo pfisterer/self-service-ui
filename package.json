@@ -21,6 +21,7 @@
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
         "swagger-ui-dist": "^5.31.2",
+        "validator": "^13.15.35",
         "wouter": "^3.9.0"
     },
     "devDependencies": {
