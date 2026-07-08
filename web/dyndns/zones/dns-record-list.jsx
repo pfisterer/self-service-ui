@@ -5,10 +5,11 @@ import { useClient } from '/providers/client.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
-import { Table, TextInput, Select, Button, Group, Alert, Loader, Stack, Text, Anchor } from '@mantine/core';
-import { AlertCircle, Copy, Check, Search } from 'lucide-react';
+import { Table, TextInput, Select, Group, Alert, Loader, Stack, Text, ActionIcon, Tooltip } from '@mantine/core';
+import { AlertCircle, Copy, Check, Search, Edit, Trash2, Terminal, Plus } from 'lucide-react';
 import { TabIntro } from './tab-intro.jsx';
 import { Delayed } from '/helper/delayed.jsx';
+import { recordValueError } from '/helper/dns-validation.js';
 
 function normalizeRecordName(name, zone) {
     if (!name) return '';
@@ -88,8 +89,10 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
     const [copied, setCopied] = useState(null); // which copy button briefly shows "Copied…"
 
     const isEditable = SUPPORTED_TYPES.includes(record.type.toUpperCase());
+    const valueError = editing ? recordValueError(fields.type, fields.value) : null;
 
     async function handleUpdate() {
+        if (valueError) return;
         setLoading(true);
         const normalizedName = normalizeRecordName(fields.name, zone);
         const res = await sdk.createDnsRecord({
@@ -138,7 +141,7 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
                 <TextInput value={fields.name} onInput={e => setFields({ ...fields, name: e.target.value })} disabled={loading || !editing || !isEditable} />
             </Table.Td>
             <Table.Td>
-                <TextInput value={fields.value} onInput={e => setFields({ ...fields, value: e.target.value })} disabled={loading || !editing || !isEditable} />
+                <TextInput value={fields.value} onInput={e => setFields({ ...fields, value: e.target.value })} disabled={loading || !editing || !isEditable} error={valueError} />
             </Table.Td>
             <Table.Td>
                 {editing && isEditable ? (
@@ -155,20 +158,30 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
                 <TextInput type="number" value={fields.ttl} onInput={e => setFields({ ...fields, ttl: e.target.value })} disabled={loading || !editing || !isEditable} />
             </Table.Td>
             <Table.Td>
-                <Stack gap="xs">
-                    <Group gap="xs">
-                        {editing && isEditable ? (
-                            <Button color="green" size="xs" onClick={handleUpdate} disabled={loading}>{loading ? "Saving..." : "Save"}</Button>
+                {/* Icon actions with hover tooltips (slimmer than text buttons -> no wrap).
+                    Non-editable records (e.g. the immutable NS record) get no actions at all. */}
+                {isEditable && (
+                    <Group gap={4} wrap="nowrap">
+                        {editing ? (
+                            <Tooltip label="Save">
+                                <ActionIcon variant="light" color="green" onClick={handleUpdate} loading={loading} disabled={!!valueError} aria-label="Save"><Check size={16} /></ActionIcon>
+                            </Tooltip>
                         ) : (
-                            <Button size="xs" onClick={() => isEditable && setEditing(true)} disabled={loading || !isEditable}>Edit</Button>
+                            <Tooltip label="Edit">
+                                <ActionIcon variant="light" onClick={() => setEditing(true)} disabled={loading} aria-label="Edit"><Edit size={16} /></ActionIcon>
+                            </Tooltip>
                         )}
-                        <Button color="red" size="xs" onClick={handleDelete} disabled={loading || !isEditable}>
-                            {loading ? "Deleting..." : "Delete"}
-                        </Button>
-                        <Button size="xs" variant="light" onClick={handleCopy}>{copied === 'nsupdate' ? 'Copied…' : 'Copy nsupdate'}</Button>
-                        <Button size="xs" variant="light" onClick={handleCopyDig}>{copied === 'dig' ? 'Copied…' : 'Copy dig'}</Button>
+                        <Tooltip label="Delete">
+                            <ActionIcon variant="light" color="red" onClick={handleDelete} disabled={loading} loading={loading && !editing} aria-label="Delete"><Trash2 size={16} /></ActionIcon>
+                        </Tooltip>
+                        <Tooltip label={copied === 'nsupdate' ? 'Copied!' : 'Copy nsupdate command'}>
+                            <ActionIcon variant="light" onClick={handleCopy} aria-label="Copy nsupdate">{copied === 'nsupdate' ? <Check size={16} /> : <Copy size={16} />}</ActionIcon>
+                        </Tooltip>
+                        <Tooltip label={copied === 'dig' ? 'Copied!' : 'Copy dig command'}>
+                            <ActionIcon variant="light" onClick={handleCopyDig} aria-label="Copy dig">{copied === 'dig' ? <Check size={16} /> : <Terminal size={16} />}</ActionIcon>
+                        </Tooltip>
                     </Group>
-                </Stack>
+                )}
             </Table.Td>
         </Table.Tr>
     );
@@ -181,7 +194,10 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
     const { client, sdk } = useClient('dyndns');
     const { showError } = useErrorModal();
 
+    const valueError = recordValueError(fields.type, fields.value);
+
     async function handleAdd() {
+        if (valueError) return;
         setLoading(true);
         const res = await sdk.createDnsRecord({
             client,
@@ -198,7 +214,7 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
                 <TextInput placeholder="Name" value={fields.name} onInput={e => setFields({ ...fields, name: e.target.value })} />
             </Table.Td>
             <Table.Td>
-                <TextInput value={fields.value} onInput={e => setFields({ ...fields, value: e.target.value })} />
+                <TextInput value={fields.value} onInput={e => setFields({ ...fields, value: e.target.value })} error={fields.value.trim() ? valueError : null} />
             </Table.Td>
             <Table.Td>
                 <Select
@@ -211,9 +227,9 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
                 <TextInput type="number" value={fields.ttl} onInput={e => setFields({ ...fields, ttl: e.target.value })} />
             </Table.Td>
             <Table.Td>
-                <Stack gap="xs">
-                    <Button color="blue" size="xs" onClick={handleAdd} disabled={loading}>{loading ? 'Adding...' : 'Add'}</Button>
-                </Stack>
+                <Tooltip label="Add record">
+                    <ActionIcon variant="filled" color="blue" onClick={handleAdd} loading={loading} disabled={!!valueError} aria-label="Add record"><Plus size={16} /></ActionIcon>
+                </Tooltip>
             </Table.Td>
         </Table.Tr>
     );
@@ -274,30 +290,32 @@ export function DnsRecordsList({ zone, tsigKey }) {
                 onInput={e => setSearch(e.target.value)}
             />
 
-            <Table striped highlightOnHover>
-                <Table.Thead>
-                    {/* Name + Value sit next to each other and get the space; Type/TTL
+            <Table.ScrollContainer minWidth={720}>
+                <Table striped highlightOnHover withTableBorder stickyHeader verticalSpacing="sm" horizontalSpacing="md">
+                    <Table.Thead>
+                        {/* Name + Value sit next to each other and get the space; Type/TTL
                         are narrow and moved to the back, Actions fits its buttons. */}
-                    <Table.Tr>
-                        <Table.Th w="28%">Name</Table.Th>
-                        <Table.Th w="32%">Value</Table.Th>
-                        <Table.Th w={110}>Type</Table.Th>
-                        <Table.Th w={90}>TTL</Table.Th>
-                        <Table.Th>Actions</Table.Th>
-                    </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                    {filteredRecords.map(record => <DnsRecordRow key={record.name} zone={zone} tsigKey={tsigKey} record={record} onChange={fetchRecords} />)}
-                    {query && filteredRecords.length === 0 && (
                         <Table.Tr>
-                            <Table.Td colSpan={5}>
-                                <Text c="dimmed" size="sm">No records match “{search.trim()}”.</Text>
-                            </Table.Td>
+                            <Table.Th w="28%">Name</Table.Th>
+                            <Table.Th w="32%">Value</Table.Th>
+                            <Table.Th w={110}>Type</Table.Th>
+                            <Table.Th w={90}>TTL (s)</Table.Th>
+                            <Table.Th>Actions</Table.Th>
                         </Table.Tr>
-                    )}
-                    <AddDnsRecordRow zone={zone} tsigKey={tsigKey} onAdd={fetchRecords} />
-                </Table.Tbody>
-            </Table>
+                    </Table.Thead>
+                    <Table.Tbody>
+                        {filteredRecords.map(record => <DnsRecordRow key={record.name} zone={zone} tsigKey={tsigKey} record={record} onChange={fetchRecords} />)}
+                        {query && filteredRecords.length === 0 && (
+                            <Table.Tr>
+                                <Table.Td colSpan={5}>
+                                    <Text c="dimmed" size="sm">No records match “{search.trim()}”.</Text>
+                                </Table.Td>
+                            </Table.Tr>
+                        )}
+                        <AddDnsRecordRow zone={zone} tsigKey={tsigKey} onAdd={fetchRecords} />
+                    </Table.Tbody>
+                </Table>
+            </Table.ScrollContainer>
         </Stack>
     );
 }

@@ -143,7 +143,7 @@ export function TlsCertificates({ zone }) {
 
     // certbot: credentials file (INI) + the issue command (bash), shown separately.
     const certbotIni = [
-        `# rfc2136.ini  (chmod 600)`,
+        `# rfc2136.ini  (run chmod 600 rfc2136.ini to ensure only the user can read it)`,
         `dns_rfc2136_server = ${cliHost}`,
         `dns_rfc2136_port = ${cliPort}`,
         `dns_rfc2136_name = ${cliKeyname}`,
@@ -157,7 +157,7 @@ export function TlsCertificates({ zone }) {
 
     // acme.sh: TSIG key file + the issue command (bash), shown separately.
     const acmeShKey = [
-        `# tsig.key  (chmod 600)`,
+        `# tsig.key  (run chmod 600 tsig.key to ensure only the user can read it)`,
         `key "${cliKeyname}" {`,
         `  algorithm ${cliAlg};`,
         `  secret "${cliSecret}";`,
