@@ -6,12 +6,18 @@ import SwaggerUIStandalonePreset from 'swagger-ui-dist/swagger-ui-standalone-pre
 import 'swagger-ui-dist/swagger-ui.css';
 
 export function DynamicZonesApiSwagger() {
+    // All resolved RELATIVE to baseUrl (dynamicZonesBaseUrl, which has a trailing
+    // slash). In BFF mode baseUrl is "https://<ui>/api/dyndns/", so these become
+    // ".../api/dyndns/client/..." and ".../api/dyndns/swagger.json" — same origin,
+    // through Caddy to the API. A LEADING SLASH ("/swagger.json") or "../client/"
+    // would escape the /api/dyndns/ path and hit the UI root (404 -> index.html ->
+    // "not a valid version field"). Matches how client.jsx loads the SDK.
     const baseUrl = window.appconfig.dynamicZonesBaseUrl
-    const jsSdkUrl = new URL('../client/sdk.gen.js', baseUrl).href;
-    const jsClientUrl = new URL('../client/client.gen.js', baseUrl).href;
-    const mjsSdkUrl = new URL('../client/sdk.gen.mjs', baseUrl).href;
-    const mjsClientUrl = new URL('../client/client.gen.mjs', baseUrl).href;
-    const swaggerJsonUrl = new URL('/swagger.json', baseUrl).href;
+    const jsSdkUrl = new URL('client/sdk.gen.js', baseUrl).href;
+    const jsClientUrl = new URL('client/client.gen.js', baseUrl).href;
+    const mjsSdkUrl = new URL('client/sdk.gen.mjs', baseUrl).href;
+    const mjsClientUrl = new URL('client/client.gen.mjs', baseUrl).href;
+    const swaggerJsonUrl = new URL('swagger.json', baseUrl).href;
 
     // Use a ref to target the DOM element where Swagger UI will render
     const uiRef = useRef(null);

@@ -39,10 +39,11 @@ export default defineConfig(({ mode }) => {
         output: {
           // Split large vendors into their own long-lived cacheable chunks
           // (swagger-ui is dynamically imported, so it already lands in its own
-          // async chunk and is intentionally not listed here).
-          manualChunks: {
-            mantine: ['@mantine/core', '@mantine/dates', '@mantine/form', '@mantine/modals', '@mantine/hooks'],
-            vendor: ['react', 'react-dom', 'wouter', 'oidc-client-ts'],
+          // async chunk and is intentionally not listed here). vite 8 / rolldown
+          // requires manualChunks to be a function, not the object map.
+          manualChunks(id) {
+            if (id.includes('/node_modules/@mantine/')) return 'mantine';
+            if (/\/node_modules\/(react|react-dom|wouter|oidc-client-ts)\//.test(id)) return 'vendor';
           },
         },
       },

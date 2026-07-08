@@ -60,7 +60,7 @@ export function RequestHistoryModal({ opened, onClose, request, config }) {
                                         <Text size="xs" fw={600} mb="xs">Status:</Text>
                                         <Group gap="xs">
                                             <Badge variant="outline" size="sm">{h.status_from || 'new'}</Badge>
-                                            <Text size="xs" c="dimmed">-></Text>
+                                            <Text size="xs" c="dimmed">{'->'}</Text>
                                             <Badge variant="outline" size="sm">{h.status_to}</Badge>
                                         </Group>
                                     </div>
