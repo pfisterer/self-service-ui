@@ -220,6 +220,7 @@ function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
                         <Table.Th>Zone SOA</Table.Th>
                         <Table.Th>Applies To</Table.Th>
                         <Table.Th>Subdomains</Table.Th>
+                        <Table.Th>Sharing</Table.Th>
                         <Table.Th>Description</Table.Th>
                         {isSuperAdmin && <Table.Th w={90} style={{ textAlign: 'right' }}>Actions</Table.Th>}
                     </Table.Tr>
@@ -234,6 +235,12 @@ function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
                                 <Badge size="sm" variant="light" color={rule.allow_subdomains ? 'green' : 'gray'}
                                     title="Whether users may create subdomains (delegated subzones) under a matched zone">
                                     {rule.allow_subdomains ? 'Yes' : 'No'}
+                                </Badge>
+                            </Table.Td>
+                            <Table.Td>
+                                <Badge size="sm" variant="light" color={rule.sharing_allowed ? 'green' : 'gray'}
+                                    title="Whether a matched zone may be shared with additional owners">
+                                    {rule.sharing_allowed ? 'Yes' : 'No'}
                                 </Badge>
                             </Table.Td>
                             <Table.Td><Text size="sm" c="dimmed">{rule.description}</Text></Table.Td>
@@ -269,6 +276,7 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
         zone_soa: '',
         target_user_filter: '',
         allow_subdomains: false,
+        sharing_allowed: false,
         description: '',
         ...(ruleToEdit || {})
     };
@@ -326,6 +334,7 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
             zone_soa: rule.zone_soa,
             target_user_filter: rule.target_user_filter,
             allow_subdomains: !!rule.allow_subdomains,
+            sharing_allowed: !!rule.sharing_allowed,
             description: rule.description || undefined,
         };
         const res = isEditMode
@@ -386,6 +395,13 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
                             description="Owners of a matched zone may also create and manage delegated subzones under it (e.g. sub.example.com under example.com)."
                             checked={!!rule.allow_subdomains}
                             onChange={(e) => setRule(prev => ({ ...prev, allow_subdomains: e.currentTarget.checked }))}
+                        />
+
+                        <Checkbox
+                            label="Allow sharing"
+                            description="Owners may share a matched zone with additional users, and policy-entitled users can join it as co-owners (equal rights). Off = single-owner (the old behaviour)."
+                            checked={!!rule.sharing_allowed}
+                            onChange={(e) => setRule(prev => ({ ...prev, sharing_allowed: e.currentTarget.checked }))}
                         />
 
                         <TextInput

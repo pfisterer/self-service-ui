@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { lazy, Suspense, useState } from 'react';
 import { Router, Route, Switch, useLocation } from 'wouter';
 import { MantineProvider, AppShell, v8CssVariablesResolver } from '@mantine/core';
-import { Container, Paper, Box, Center, Stack, Title, Text, Button, ThemeIcon, TextInput } from '@mantine/core';
+import { Container, Paper, Box, Center, Stack, Title, Text, Button, ThemeIcon, TextInput, Anchor, Group } from '@mantine/core';
 import { LogIn } from 'lucide-react';
 
 import { DynDnsConfigProvider } from '/providers/dyndns-config.jsx';
@@ -141,6 +141,13 @@ function Main() {
                                                 <Button size="lg" onClick={() => login(devEmail)} disabled={!devEmail.trim()} leftSection={<LogIn size={20} />}>
                                                     Log in
                                                 </Button>
+                                                {/* One-click sign-in as common dev users. */}
+                                                <Stack gap={4} align="center" mt="xs">
+                                                    <Text size="xs" c="dimmed">Quick sign-in:</Text>
+                                                    {['dennis.pfisterer@dhbw.de', 'clemens.martin@dhbw.de'].map(e => (
+                                                        <Anchor key={e} size="sm" onClick={() => login(e)} style={{ cursor: 'pointer' }}>{e}</Anchor>
+                                                    ))}
+                                                </Stack>
                                             </Stack>
                                         ) : (
                                             <Button size="lg" onClick={login} leftSection={<LogIn size={20} />}>
