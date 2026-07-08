@@ -8,7 +8,7 @@ import dhbwLogoUrl from '/img/DHBW-Logo.svg';
 
 export function Header() {
     const [opened, setOpened] = useState(false);
-    const [currentPath] = useLocation();
+    const [currentPath, navigate] = useLocation();
     const { user, login, logout } = useAuth();
 
     const isDyndnsActive = currentPath.startsWith('/dyndns/');
@@ -51,8 +51,11 @@ export function Header() {
                         </Link>
 
                         <Menu trigger="hover" openDelay={100} closeDelay={200}>
+                            {/* Hover opens the submenu; a click jumps straight to the first
+                                item (Zone Management) instead of waiting for the dropdown. */}
                             <Menu.Target>
-                                <Button variant={isDyndnsActive ? 'filled' : 'subtle'} size="sm" rightSection={<ChevronDown size="16" />}>
+                                <Button variant={isDyndnsActive ? 'filled' : 'subtle'} size="sm" rightSection={<ChevronDown size="16" />}
+                                    onClick={() => { navigate('/dyndns/zones'); handleLinkClick(); }}>
                                     DNS Zones
                                 </Button>
                             </Menu.Target>

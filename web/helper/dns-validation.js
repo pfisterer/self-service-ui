@@ -58,6 +58,26 @@ export function subzoneLabelError(label, parent) {
     return null;
 }
 
+// Client-side validation of a record's NAME (the relative name entered in the
+// "Name" column / field, e.g. `www`, `_dmarc`, `*`, or `@` for the zone apex).
+// Empty or '@' means the apex and is valid. Otherwise every dot-separated label
+// must be a DNS label: letters/digits/hyphen/underscore, 1–63 chars, not starting
+// or ending with a hyphen; a single leftmost '*' (wildcard) label is allowed.
+// Returns a user-facing error message, or null when valid.
+export function recordNameError(name) {
+    const s = (name || '').trim().replace(/\.+$/, '');
+    if (s === '' || s === '@' || s === '\\@') return null; // zone apex
+    const labels = s.split('.');
+    for (let i = 0; i < labels.length; i++) {
+        const l = labels[i];
+        if (l === '*' && i === 0) continue; // wildcard, leftmost label only
+        if (l.length < 1 || l.length > 63) return 'Each label must be 1–63 characters.';
+        if (!/^[A-Za-z0-9_-]+$/.test(l)) return 'Only letters, digits, hyphen and underscore are allowed.';
+        if (l.startsWith('-') || l.endsWith('-')) return 'A label must not start or end with a hyphen.';
+    }
+    return null;
+}
+
 // Client-side validation of a record's value for its type (A -> IPv4, AAAA -> IPv6).
 // Returns a user-facing error message, or null when valid / unchecked.
 export function recordValueError(type, value) {

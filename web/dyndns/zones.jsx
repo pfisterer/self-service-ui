@@ -449,7 +449,7 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
                 onClose={() => setShareOpen(false)}
                 zoneName={zone.zoneData.zone}
                 owners={zone.owners || []}
-                onChanged={refreshZone}
+                onChanged={() => { refreshZone(); onChange?.(); }}
             />
 
             <Tabs value={activeTab} onChange={(val) => navigate(tabs.find(t => t.name === val)?.path || '/')}>

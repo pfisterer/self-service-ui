@@ -3,7 +3,7 @@ import { CodeBlock } from '/helper/codeblock.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { TextInput, Select, NumberInput, Grid, Stack, Title, Paper, Text, Anchor } from '@mantine/core';
 import { TabIntro } from './tab-intro.jsx';
-import { recordValueError } from '/helper/dns-validation.js';
+import { recordNameError, recordValueError } from '/helper/dns-validation.js';
 
 // Nameserver to show in user-facing commands: the public NS hostname when the
 // API advertises one, otherwise the raw server address.
@@ -72,7 +72,8 @@ export function DnsUpdateCommand({ zone }) {
             <Paper withBorder radius="md" p="md">
                 <Grid>
                     <Grid.Col span={{ base: 12, sm: 6 }}>
-                        <TextInput label="Name" name="name" value={form.name} onChange={handleChange} />
+                        <TextInput label="Name" name="name" value={form.name} onChange={handleChange}
+                            error={recordNameError(form.name)} />
                     </Grid.Col>
                     <Grid.Col span={{ base: 12, sm: 3 }}>
                         <Select

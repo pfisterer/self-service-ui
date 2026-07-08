@@ -9,7 +9,7 @@ import { Table, TextInput, Select, Group, Alert, Loader, Stack, Text, ActionIcon
 import { AlertCircle, Copy, Check, Search, Edit, Trash2, Terminal, Plus } from 'lucide-react';
 import { TabIntro } from './tab-intro.jsx';
 import { Delayed } from '/helper/delayed.jsx';
-import { recordValueError } from '/helper/dns-validation.js';
+import { recordNameError, recordValueError } from '/helper/dns-validation.js';
 
 function normalizeRecordName(name, zone) {
     if (!name) return '';
@@ -90,9 +90,10 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
 
     const isEditable = SUPPORTED_TYPES.includes(record.type.toUpperCase());
     const valueError = editing ? recordValueError(fields.type, fields.value) : null;
+    const nameError = editing ? recordNameError(fields.name) : null;
 
     async function handleUpdate() {
-        if (valueError) return;
+        if (valueError || nameError) return;
         setLoading(true);
         const normalizedName = normalizeRecordName(fields.name, zone);
         const res = await sdk.createDnsRecord({
@@ -138,7 +139,7 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
     return (
         <Table.Tr>
             <Table.Td>
-                <TextInput value={fields.name} onInput={e => setFields({ ...fields, name: e.target.value })} disabled={loading || !editing || !isEditable} />
+                <TextInput value={fields.name} onInput={e => setFields({ ...fields, name: e.target.value })} disabled={loading || !editing || !isEditable} error={nameError} />
             </Table.Td>
             <Table.Td>
                 <TextInput value={fields.value} onInput={e => setFields({ ...fields, value: e.target.value })} disabled={loading || !editing || !isEditable} error={valueError} />
@@ -164,7 +165,7 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
                     <Group gap={4} wrap="nowrap">
                         {editing ? (
                             <Tooltip label="Save">
-                                <ActionIcon variant="light" color="green" onClick={handleUpdate} loading={loading} disabled={!!valueError} aria-label="Save"><Check size={16} /></ActionIcon>
+                                <ActionIcon variant="light" color="green" onClick={handleUpdate} loading={loading} disabled={!!valueError || !!nameError} aria-label="Save"><Check size={16} /></ActionIcon>
                             </Tooltip>
                         ) : (
                             <Tooltip label="Edit">
@@ -195,9 +196,10 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
     const { showError } = useErrorModal();
 
     const valueError = recordValueError(fields.type, fields.value);
+    const nameError = recordNameError(fields.name);
 
     async function handleAdd() {
-        if (valueError) return;
+        if (valueError || nameError) return;
         setLoading(true);
         const res = await sdk.createDnsRecord({
             client,
@@ -211,7 +213,7 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
     return (
         <Table.Tr>
             <Table.Td>
-                <TextInput placeholder="Name" value={fields.name} onInput={e => setFields({ ...fields, name: e.target.value })} />
+                <TextInput placeholder="Name" value={fields.name} onInput={e => setFields({ ...fields, name: e.target.value })} error={fields.name.trim() ? nameError : null} />
             </Table.Td>
             <Table.Td>
                 <TextInput value={fields.value} onInput={e => setFields({ ...fields, value: e.target.value })} error={fields.value.trim() ? valueError : null} />
@@ -228,7 +230,7 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
             </Table.Td>
             <Table.Td>
                 <Tooltip label="Add record">
-                    <ActionIcon variant="filled" color="blue" onClick={handleAdd} loading={loading} disabled={!!valueError} aria-label="Add record"><Plus size={16} /></ActionIcon>
+                    <ActionIcon variant="filled" color="blue" onClick={handleAdd} loading={loading} disabled={!!valueError || !!nameError} aria-label="Add record"><Plus size={16} /></ActionIcon>
                 </Tooltip>
             </Table.Td>
         </Table.Tr>

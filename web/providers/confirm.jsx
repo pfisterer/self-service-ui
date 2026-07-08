@@ -44,6 +44,11 @@ export function ConfirmProvider({ children }) {
                 title={opts?.title ?? 'Are you sure?'}
                 centered
                 size="md"
+                // This confirm is often triggered from inside another Modal (e.g. the
+                // Share-zone dialog's "Remove owner"). Mantine modals all default to
+                // z-index 200, so without this the confirm renders *behind* its opener.
+                // A higher z-index keeps the confirm (and its overlay) on top.
+                zIndex={1000}
             >
                 {opts && (
                     <Stack gap="lg">
