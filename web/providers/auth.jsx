@@ -18,7 +18,9 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [devUser, setDevUser] = useState(null);
-    const useDummyAuth = window.appconfig?.dummyAuth === true;
+    // dummy auth (impersonate any user by email) can ONLY be active in a dev build. 
+    // `import.meta.env.DEV` is false in every `vite build` artifact (staging/prod images), so no runtime config — e.g. a stray dummyAuth:true in a served config.js — can re-enable the bypass.
+    const useDummyAuth = import.meta.env.DEV && window.appconfig?.dummyAuth === true;
     const urlParams = new URLSearchParams(window.location.search);
     const emailParam = urlParams.get('dev_user');
 

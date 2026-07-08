@@ -13,10 +13,21 @@
         # Prevent content sniffing and enforce MIME types
         # This reduces XSS attack vectors.
         X-Content-Type-Options nosniff
-        
+
         # Prevent your site from being loaded in an iframe (Clickjacking protection)
         X-Frame-Options DENY
-        
+
+        # Content-Security-Policy: the OIDC token lives in web storage,
+        # so an injected script would mean token theft — this is the main defence.
+        # - script-src 'self' + https://*.dhbw.cloud: the app entry + config.js are
+        #   same-origin; the generated SDK is import()'d at runtime from the API
+        #   host (dyndnsapi[.staging].dhbw.cloud), which the wildcard covers.
+        # - connect-src likewise covers the APIs and the Keycloak issuer
+        #   (sso.dhbw.cloud). style-src 'unsafe-inline' is required by Mantine /
+        #   swagger-ui inline styles (low risk). No inline <script> exists, so
+        #   script-src stays free of 'unsafe-inline'.
+        Content-Security-Policy "default-src 'self'; script-src 'self' https://*.dhbw.cloud; connect-src 'self' https://*.dhbw.cloud; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+
         # Cache control for static assets (CSS, JS, images)
         # $7 days \times 24 \ hours  x 60 minutes x 60 seconds = 604,800 seconds
         Cache-Control max-age=604800

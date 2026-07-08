@@ -27,6 +27,13 @@ export function CodeBlock({ code, language }) {
         }
     };
 
+    // XSS: `highlighted` is injected via dangerouslySetInnerHTML
+    // That is safe ONLY because highlight.js HTML-escapes
+    // its input, so untrusted `code` (zone names, TSIG key material) cannot break
+    // out. Keep it that way: never pass pre-highlighted HTML in as `code`, never
+    // register a raw/unescaped language, and don't swap highlight.js for a library
+    // that emits unescaped markup. (`ignoreIllegals` only affects parsing, not
+    // escaping, so it's fine.)
     // Syntax highlight: use the given language, otherwise auto-detect between the
     // two we register (YAML manifests and shell commands are all we display).
     const highlighted = language

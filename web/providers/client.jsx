@@ -44,7 +44,10 @@ export function ClientProvider({ children, name = 'dyndns', baseURL }) {
                     const token = auth?.user?.access_token;
                     token ? request.headers.set('Authorization', `Bearer ${token}`) : request.headers.delete('Authorization');
 
-                    if (auth?.dev_user?.trim() !== "") {
+                    // Dev/dummy auth only: assert an identity via header. Gated on
+                    // useDummyAuth (false in every production build, see auth.jsx),
+                    // so this header NEVER ships in staging/prod alongside the Bearer.
+                    if (auth?.useDummyAuth && auth?.dev_user) {
                         console.debug(`ClientProvider: Adding dummy auth header for user '${auth.dev_user}'`);
                         request.headers.set('X-Dummy-Auth-User', auth.dev_user);
                     }
