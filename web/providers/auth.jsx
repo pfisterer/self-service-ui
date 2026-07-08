@@ -84,7 +84,21 @@ export function AuthProvider({ children }) {
         : () => { window.location.href = '/oauth2/start?rd=' + encodeURIComponent(window.location.pathname); };
     const logout = useDummyAuth
         ? () => setUser(null)
-        : () => { window.location.href = '/oauth2/sign_out'; };
+        : () => {
+            // Full logout: clearing only the proxy cookie would let the
+            // still-active Keycloak SSO session silently log the user back in. So we
+            // sign_out (drops the proxy cookie) THEN RP-initiated logout at Keycloak
+            // (ends the SSO session, returns to the app). client_id + post-logout URI
+            // must be registered on the BFF client (config.js oidc.client_id).
+            const oidc = window.appconfig?.oidc || {};
+            const back = window.location.origin + '/';
+            const endSession = oidc.issuer_url
+                ? `${oidc.issuer_url}/protocol/openid-connect/logout` +
+                `?post_logout_redirect_uri=${encodeURIComponent(back)}` +
+                `&client_id=${encodeURIComponent(oidc.client_id || '')}`
+                : back;
+            window.location.href = '/oauth2/sign_out?rd=' + encodeURIComponent(endSession);
+        };
 
     return (
         <AuthContext.Provider value={{ user, login, logout, loading, useDummyAuth, dev_user: devUser }}>
