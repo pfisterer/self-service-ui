@@ -2,7 +2,12 @@
     # Enable compression
     encode zstd gzip
 
-    # Security and Cache Headers
+    # Security headers (applied to every response). NOTE: no Cache-Control here —
+    # a site-level Cache-Control also lands on the /api/* proxy responses below,
+    # which made browsers cache the record/zone LISTS for 7 days, so the SPA showed
+    # stale data after create/delete (looked like "can't add/remove records";
+    # worked in `vite` dev only because there is no Caddy there). Caching is now
+    # set per-route: no-store for the API, long-cache only for hashed assets.
     header {
         # Prevent content sniffing and enforce MIME types (reduces XSS vectors).
         X-Content-Type-Options nosniff
@@ -10,16 +15,13 @@
         # Prevent framing (clickjacking protection).
         X-Frame-Options DENY
 
-        # Content-Security-Policy. In BFF mode the SPA talks to the APIs SAME-ORIGIN 
-        # via /api/*, so 'self' already covers app JS, the dynamically import()'d SDK 
+        # Content-Security-Policy. In BFF mode the SPA talks to the APIs SAME-ORIGIN
+        # via /api/*, so 'self' already covers app JS, the dynamically import()'d SDK
         # and the API fetches. https://*.dhbw.cloud is kept as a margin
         # for the pre-BFF (direct-to-API) config and can be dropped to 'self' once the
         # BFF migration is complete everywhere. style-src 'unsafe-inline' is required
         # by Mantine / swagger-ui inline styles.
         Content-Security-Policy "default-src 'self'; script-src 'self' https://*.dhbw.cloud; connect-src 'self' https://*.dhbw.cloud; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
-
-        # Cache control for static assets (7 days).
-        Cache-Control max-age=604800
     }
 
     # The self-service oauth2-proxy sits IN FRONT of this Caddy and
@@ -27,16 +29,26 @@
     # SPA's same-origin API calls to the in-cluster backends, stripping the /api/<svc>
     # prefix (handle_path). The Bearer is forwarded to the backend by reverse_proxy.
     # Upstreams default to this deployment's Service names; override via env if needed.
+    # API responses must never be cached — the SPA re-fetches record/zone lists
+    # after every mutation and must see the fresh state.
     handle_path /api/dyndns/* {
+        header Cache-Control "no-store"
         reverse_proxy {$DYN_ZONES_UPSTREAM:dynamic-zones-cloud-self-service-dynamic-zones:8082}
     }
     handle_path /api/projects/* {
+        header Cache-Control "no-store"
         reverse_proxy {$CLOUD_RESOURCES_UPSTREAM:openstack-management-api-openstack-management:8083}
     }
 
     # Everything else: the SPA (with client-side routing fallback to index.html).
+    # Hashed build assets (/assets/*) are immutable -> cache them long. index.html
+    # and everything else stay no-cache so a new deploy is picked up immediately.
     handle {
         root * /srv/www
+        @assets path /assets/*
+        header @assets Cache-Control "public, max-age=604800, immutable"
+        @notassets not path /assets/*
+        header @notassets Cache-Control "no-cache"
         try_files {path} /index.html
         file_server
     }
