@@ -41,16 +41,3 @@ Issues and pull requests are welcome.
 ## License
 
 See [LICENSE](./LICENSE).
-
-## Changelog
-
-Date-versioned; newest first.
-
-- **2026-07-08 — 0.5.8** — More prominent login page; dev-mode login-as-any-user.
-- **2026-07-07 — 0.5.3–0.5.7** — Confirm dialog before every delete; searchable DNS records; calmer navigation (no layout jank); first-run home page; show API versions; NS hostname in generated commands.
-- **2026-07-06 — 0.5.2** — Subzones, policy delegations, orphaned-zone cleanup, TLS-certificate & `dig` helpers; TLS tab prefilled via OIDC + DHBW ACME server; migrated Preact → React 19 (JSX, Mantine 9, code-splitting).
-- **2026-07-01–03 — 0.5.1** — Dropped keel/nginx; Helm-chart JSON schema; updated GitHub Actions.
-- **2026-04-23 — 0.4.0-alpha** — Initial cloud project & quota management.
-- **2026-03-05** — Migration to Mantine UI.
-- **2026-01** — Integrated policy + zones API; Helm chart + GitHub Pages repo; DynDNS self-service.
-- **2025-12** — Initial self-service backend integration, routing, and Swagger docs.
