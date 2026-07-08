@@ -41,7 +41,7 @@ export function ClientProvider({ children, name = 'dyndns', baseURL }) {
                 myClient.setConfig({ baseUrl: baseURL });
 
                 const interceptorId = myClient.interceptors.request.use(async (request) => {
-                    // SEC #23 — BFF mode: the SPA holds NO token (access_token is null),
+                    // BFF mode: the SPA holds NO token (access_token is null),
                     // so no Authorization is set here; the oauth2-proxy in front injects
                     // the Bearer server-side. Pre-BFF, the SPA still sets it from the token.
                     const token = auth?.user?.access_token;
@@ -57,7 +57,7 @@ export function ClientProvider({ children, name = 'dyndns', baseURL }) {
                     return request;
                 });
 
-                // SEC #23 — BFF: a 401 means the oauth2-proxy session expired (it answers
+                // BFF: a 401 means the oauth2-proxy session expired (it answers
                 // AJAX requests with 401 rather than a cross-origin redirect an XHR can't
                 // follow). Only a full-page navigation can re-run the OIDC login. Skipped
                 // in dummy/dev mode (there the API itself returns 401 for real auth errors).
