@@ -50,13 +50,19 @@ export function AuthProvider({ children }) {
 
                 } else {
 
-                    // Setup OIDC client
-                    const myUrl = new URL(window.location.href).toString();
+                    // Setup OIDC client. Use a STABLE redirect URI (origin + path,
+                    // NO query/hash). Building it from window.location.href would embed
+                    // transient OIDC params (?code&state) after a callback, so the
+                    // redirect_uri sent on the next login is polluted; Keycloak then
+                    // returns to a URL carrying the stale code/state first, URLSearchParams
+                    // reads the old state, and login fails until the query is removed by
+                    // hand. The path is kept so users return to the same route after login.
+                    const cleanUrl = window.location.origin + window.location.pathname;
                     const config = {
                         authority: window.appconfig.oidc.issuer_url,
                         client_id: window.appconfig.oidc.client_id,
-                        redirect_uri: myUrl,
-                        post_logout_redirect_uri: myUrl,
+                        redirect_uri: cleanUrl,
+                        post_logout_redirect_uri: cleanUrl,
                         response_type: 'code',
                         scope: 'openid profile email',
                         loadUserInfo: true,
@@ -66,12 +72,17 @@ export function AuthProvider({ children }) {
                     const um = new UserManager(config);
                     setUserManager(um);
 
-                    // Handle OIDC callback
+                    // Handle OIDC callback, then ALWAYS strip the query — even if the
+                    // callback failed — so a stale ?code/&state can't linger and break
+                    // the next login attempt.
                     const urlParams = new URLSearchParams(window.location.search);
                     const isCallback = urlParams.has('code') || urlParams.has('error');
                     if (isCallback) {
-                        await um.signinRedirectCallback();
-                        window.history.replaceState({}, document.title, window.location.pathname);
+                        try {
+                            await um.signinRedirectCallback();
+                        } finally {
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        }
                     }
 
                     const u = await um.getUser();
