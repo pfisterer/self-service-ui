@@ -1,38 +1,43 @@
 :8080 {
-    # Base Setup
-    root * /srv/www
-    
-    # SPA Fallback, serve requested file or fall back to index.html
-    try_files {path} /index.html
-
     # Enable compression
     encode zstd gzip
 
     # Security and Cache Headers
     header {
-        # Prevent content sniffing and enforce MIME types
-        # This reduces XSS attack vectors.
+        # Prevent content sniffing and enforce MIME types (reduces XSS vectors).
         X-Content-Type-Options nosniff
 
-        # Prevent your site from being loaded in an iframe (Clickjacking protection)
+        # Prevent framing (clickjacking protection).
         X-Frame-Options DENY
 
-        # Content-Security-Policy: the OIDC token lives in web storage,
-        # so an injected script would mean token theft — this is the main defence.
-        # - script-src 'self' + https://*.dhbw.cloud: the app entry + config.js are
-        #   same-origin; the generated SDK is import()'d at runtime from the API
-        #   host (dyndnsapi[.staging].dhbw.cloud), which the wildcard covers.
-        # - connect-src likewise covers the APIs and the Keycloak issuer
-        #   (sso.dhbw.cloud). style-src 'unsafe-inline' is required by Mantine /
-        #   swagger-ui inline styles (low risk). No inline <script> exists, so
-        #   script-src stays free of 'unsafe-inline'.
+        # Content-Security-Policy. In BFF mode the SPA talks to the APIs SAME-ORIGIN 
+        # via /api/*, so 'self' already covers app JS, the dynamically import()'d SDK 
+        # and the API fetches. https://*.dhbw.cloud is kept as a margin
+        # for the pre-BFF (direct-to-API) config and can be dropped to 'self' once the
+        # BFF migration is complete everywhere. style-src 'unsafe-inline' is required
+        # by Mantine / swagger-ui inline styles.
         Content-Security-Policy "default-src 'self'; script-src 'self' https://*.dhbw.cloud; connect-src 'self' https://*.dhbw.cloud; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
 
-        # Cache control for static assets (CSS, JS, images)
-        # $7 days \times 24 \ hours  x 60 minutes x 60 seconds = 604,800 seconds
+        # Cache control for static assets (7 days).
         Cache-Control max-age=604800
     }
 
-    # Act as a File Server
-    file_server
+    # The self-service oauth2-proxy sits IN FRONT of this Caddy and
+    # injects the Authorization: Bearer for authenticated requests. Caddy routes the
+    # SPA's same-origin API calls to the in-cluster backends, stripping the /api/<svc>
+    # prefix (handle_path). The Bearer is forwarded to the backend by reverse_proxy.
+    # Upstreams default to this deployment's Service names; override via env if needed.
+    handle_path /api/dyndns/* {
+        reverse_proxy {$DYN_ZONES_UPSTREAM:dynamic-zones-cloud-self-service-dynamic-zones:8082}
+    }
+    handle_path /api/projects/* {
+        reverse_proxy {$CLOUD_RESOURCES_UPSTREAM:openstack-management-api-openstack-management:8083}
+    }
+
+    # Everything else: the SPA (with client-side routing fallback to index.html).
+    handle {
+        root * /srv/www
+        try_files {path} /index.html
+        file_server
+    }
 }
