@@ -34,7 +34,7 @@ const STEPS = [
         title: '3 · Get a TLS certificate',
         points: [
             'Issue certificates with cert-manager once the hostname resolves',
-            'Ready-to-copy manifests in the "TLS-Certificates" tab',
+            'Ready-to-copy manifests in the "TLS Certificates" tab',
             'Uses the DHBW ACME server (see below)',
         ],
     },
@@ -96,7 +96,7 @@ export function Home() {
                         CA (via CAA records), so public CAs such as <b>Let's Encrypt can not be used</b> for these hostnames.
                         The DHBW server is free, has no public rate limits, and also issues certificates for services
                         that are only reachable from <b>inside the DHBW network / VPN</b>. Each zone's
-                        {' '}<b>TLS-Certificates</b> tab generates cert-manager manifests pre-filled for exactly this server.
+                        {' '}<b>TLS Certificates</b> tab generates cert-manager manifests pre-filled for exactly this server.
                     </Text>
                 </Alert>
             </Stack>

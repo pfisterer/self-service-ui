@@ -22,7 +22,7 @@ function InfoItem({ label, value, note }) {
 
 // ----------------------------------------
 // TLS-Certificates (cert-manager) config display
-// Mirrors the "External DNS Config" tab: shows how to issue certificates for
+// Mirrors the "Dynamic DNS (Kubernetes)" tab (external-dns): shows how to issue certificates for
 // this zone with cert-manager, DNS-01 (RFC2136 via this server) by default and
 // HTTP-01 as an alternative. Matches how the k3s-dhbw-cloud-role sets it up.
 // ----------------------------------------
@@ -34,7 +34,7 @@ export function TlsCertificates({ zone }) {
     const key = zone.zone_keys?.[0];
     // The namespace where the Certificate (and its TLS Secret) live — i.e. your
     // workload's namespace. Editable; the examples update live. Not "default".
-    const [ns, setNs] = useState('web');
+    const [ns, setNs] = useState('default');
     const nsValid = isValidLabel(ns, { lowercase: true });
     // Prefill the ACME account email from the logged-in user (OIDC profile);
     // fall back to a placeholder if it is not available.
@@ -231,7 +231,7 @@ export function TlsCertificates({ zone }) {
                     <Accordion.Panel>
                         <TextInput
                             label="Namespace"
-                            description="Where the Certificate + TLS Secret go (your workload's namespace)."
+                            description="Where the Certificate + TLS Secret go (your workload's namespace; i.e., where your ingresses live)."
                             value={ns}
                             onChange={e => setNs(e.currentTarget.value)}
                             error={ns && !nsValid ? 'Invalid namespace name.' : null}

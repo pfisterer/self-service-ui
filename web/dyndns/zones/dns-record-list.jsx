@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth, authHeaders } from '/providers/auth.jsx';
-import { generateNsUpdate, generateDig } from './dns-update-cmd.jsx';
+import { generateNsUpdate, generateDig } from './dynamic-dns.jsx';
 import { useClient } from '/providers/client.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';

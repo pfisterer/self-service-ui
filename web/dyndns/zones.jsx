@@ -6,8 +6,8 @@ import { useErrorModal } from '/providers/error-modal.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { ShowKeys } from '/dyndns/zones/keys.jsx';
-import { ExternalDnsConfig } from '/dyndns/zones/external-dns.jsx';
-import { DnsUpdateCommand } from '/dyndns/zones/dns-update-cmd.jsx';
+import { ExternalDnsConfig } from '/dyndns/zones/dynamic-dns-kubernetes.jsx';
+import { DynamicDns } from '/dyndns/zones/dynamic-dns.jsx';
 import { DnsRecordsList } from '/dyndns/zones/dns-record-list.jsx';
 import { TlsCertificates } from '/dyndns/zones/tls-certificates.jsx';
 import { Container, Title, Paper, Stack, NavLink, Tabs, Button, Text, Loader, Alert, Group, TextInput, Modal, Box, Flex, Tooltip } from '@mantine/core';
@@ -137,17 +137,17 @@ export function DynDnsZones() {
                 <Switch>
                     <Route path="/zone/:name" nest>
                         {param => {
-            const zone = zones.find(z => z.name === param.name)
-            // Unknown zone in the URL (e.g. after deleting/leaving it, or a stale
-            // link) -> send the user back to the zone overview instead of a dead end.
-            return zone ?
-                <AvailableDomain
-                    zone={zone}
-                    onChange={() => setReloadTrigger(!reloadTrigger)}
-                    onDeleted={() => { navigate('/'); setReloadTrigger(t => !t); }}
-                /> :
-                <Redirect to="/" replace />
-        }}
+                            const zone = zones.find(z => z.name === param.name)
+                            // Unknown zone in the URL (e.g. after deleting/leaving it, or a stale
+                            // link) -> send the user back to the zone overview instead of a dead end.
+                            return zone ?
+                                <AvailableDomain
+                                    zone={zone}
+                                    onChange={() => setReloadTrigger(!reloadTrigger)}
+                                    onDeleted={() => { navigate('/'); setReloadTrigger(t => !t); }}
+                                /> :
+                                <Redirect to="/" replace />
+                        }}
                     </Route>
 
                     <Route path="/">
@@ -324,9 +324,9 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
     const tabs = [
         { name: "Manage", path: "/" },
         { name: "Keys", path: "/keys" },
-        { name: "DNS Update Command", path: "/update" },
-        { name: "External DNS Config", path: "/config" },
-        { name: "TLS-Certificates", path: "/tls" }
+        { name: "Dynamic DNS", path: "/dyndns" },
+        { name: "Dynamic DNS (Kubernetes)", path: "/config" },
+        { name: "TLS Certificates", path: "/tls" }
     ];
 
     // Fetch zone data. Depend only on the client and the zone — NOT on
@@ -469,15 +469,15 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
                     <ShowKeys zone={zone.zoneData} />
                 )}
 
-                {activeTab === "DNS Update Command" && (
-                    <DnsUpdateCommand zone={zone.zoneData} />
+                {activeTab === "Dynamic DNS" && (
+                    <DynamicDns zone={zone.zoneData} />
                 )}
 
-                {activeTab === "External DNS Config" && (
+                {activeTab === "Dynamic DNS (Kubernetes)" && (
                     <ExternalDnsConfig externalDnsValuesYaml={zone.externalDnsValuesYaml} externalDnsSecretYaml={zone.externalDnsSecretYaml} zone={zone.zoneData} />
                 )}
 
-                {activeTab === "TLS-Certificates" && (
+                {activeTab === "TLS Certificates" && (
                     <TlsCertificates zone={zone.zoneData} />
                 )}
             </Box>
