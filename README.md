@@ -1,50 +1,56 @@
 # Self-Service UI
 
-> A web interface for managing cloud resources and DNS infrastructure in private cloud environments
+> Web interface for self-service management of DNS zones, DNS policies, and cloud resources in private cloud environments.
 
 ## Overview
 
-The Self-Service UI is a comprehensive web application designed to empower users with direct control over their cloud infrastructure. Seamlessly manage DNS names, DNS policies, and cloud resources—all from an intuitive, user-friendly interface.
+The Self-Service UI lets users manage their own DNS names, policies, and cloud
+resources from a single interface — without administrative intervention. It is
+the frontend for the DHBW private-cloud self-service platform.
 
-This platform operates on a **self-service model**, enabling teams to autonomously provision, configure, and maintain their infrastructure without requiring constant administrative intervention. Whether you're managing DNS zones, configuring policies, or orchestrating cloud resources, this UI provides the tools you need.
+### Features
 
-### Key Features
+- **DNS management** — create, edit, and delete DNS zones and records
+- **Policy configuration** — define and enforce DNS policies, subzones, and delegations
+- **Cloud resources** — provision and manage cloud projects and quotas ⚠️ *(WIP)*
 
-- **Self-Service Operations**: Empower users to take control of their own infrastructure
-- **DNS Management**: Create, edit, and manage DNS zones and records with ease
-- **Policy Configuration**: Define and enforce DNS policies tailored to your infrastructure needs
-- ⚠️ **Cloud Resource Management**: Provision and manage cloud resources through a centralized dashboard
+> ⚠️ Work in progress — features and APIs may change.
 
-⚠️: This is Work in Progress (WIP)
+## Related projects
 
-The Self-Service UI is actively under development. Features and functionality may change. We welcome feedback and contributions as we continue to refine and expand the platform.
+- [dynamic-zones](https://github.com/pfisterer/dynamic-zones) — DNS zones & policy API (backend for DNS management)
+- [role-provider-service](https://github.com/pfisterer/role-provider-service) — group/role authorization (Zanzibar-style tuple store)
+- [openstack-management-api](https://github.com/pfisterer/openstack-management-api) — cloud project & quota management backend
 
 ## Development
 
-### Prerequisites
-
-- Node.js (v16+)
-- npm or yarn
-
-### Getting Started
+**Prerequisites:** Node.js 20+ and npm.
 
 ```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
+npm install     # install dependencies
+npm run dev     # start dev server (Vite)
+npm run build   # build for production
 ```
 
-For more information, see the [Makefile](./Makefile).
+See the [Makefile](./Makefile) for more.
 
 ## Contributing
 
-We appreciate contributions! Please feel free to submit issues and pull requests.
+Issues and pull requests are welcome.
 
 ## License
 
-See [LICENSE](./LICENSE) for details.
+See [LICENSE](./LICENSE).
+
+## Changelog
+
+Date-versioned; newest first.
+
+- **2026-07-08 — 0.5.8** — More prominent login page; dev-mode login-as-any-user.
+- **2026-07-07 — 0.5.3–0.5.7** — Confirm dialog before every delete; searchable DNS records; calmer navigation (no layout jank); first-run home page; show API versions; NS hostname in generated commands.
+- **2026-07-06 — 0.5.2** — Subzones, policy delegations, orphaned-zone cleanup, TLS-certificate & `dig` helpers; TLS tab prefilled via OIDC + DHBW ACME server; migrated Preact → React 19 (JSX, Mantine 9, code-splitting).
+- **2026-07-01–03 — 0.5.1** — Dropped keel/nginx; Helm-chart JSON schema; updated GitHub Actions.
+- **2026-04-23 — 0.4.0-alpha** — Initial cloud project & quota management.
+- **2026-03-05** — Migration to Mantine UI.
+- **2026-01** — Integrated policy + zones API; Helm chart + GitHub Pages repo; DynDNS self-service.
+- **2025-12** — Initial self-service backend integration, routing, and Swagger docs.
