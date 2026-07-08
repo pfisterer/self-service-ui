@@ -3,10 +3,11 @@ import '@mantine/dates/styles.css';
 import './app.css';
 
 import { createRoot } from 'react-dom/client';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Router, Route, Switch, useLocation } from 'wouter';
 import { MantineProvider, AppShell, v8CssVariablesResolver } from '@mantine/core';
-import { Container, Paper, Anchor, Box } from '@mantine/core';
+import { Container, Paper, Box, Center, Stack, Title, Text, Button, ThemeIcon, TextInput } from '@mantine/core';
+import { LogIn } from 'lucide-react';
 
 import { DynDnsConfigProvider } from '/providers/dyndns-config.jsx';
 import { CloudConfigProvider } from '/providers/cloud-config.jsx';
@@ -91,7 +92,9 @@ function AppRoutes() {
 }
 
 function Main() {
-    const { user, login } = useAuth()
+    const { user, login, useDummyAuth, dev_user } = useAuth()
+    // Dev-only: the email to sign in as (dummy auth lets you be ANY user).
+    const [devEmail, setDevEmail] = useState(dev_user || 'dennis.pfisterer@dhbw.de')
     const footer = <Footer title={<b>dhbwCloud Self Service</b>} version={__APP_VERSION__} />
 
     return (
@@ -111,11 +114,42 @@ function Main() {
                 <Box style={{ flexGrow: 1 }}>
                     {!user ? (
                         <Delayed waitMs={200}>
-                            <Container size="md" py="xl">
-                                <Paper p="lg" withBorder>
-                                    Please <Anchor onClick={login} style={{ cursor: 'pointer' }}>log in</Anchor> to access your data.
+                            {/* Prominent, space-filling sign-in prompt: a large card
+                                centered in the main viewport area so users clearly see
+                                they need to log in. */}
+                            <Center mih="calc(100dvh - 160px)" p="md">
+                                <Paper p={40} radius="md" withBorder shadow="md" maw={480} w="100%" ta="center">
+                                    <Stack align="center" gap="lg">
+                                        <ThemeIcon size={72} radius="xl" variant="light">
+                                            <LogIn size={38} />
+                                        </ThemeIcon>
+                                        <Title order={2}>Sign in required</Title>
+                                        <Text c="dimmed" size="lg">
+                                            Please sign in to access and manage your DNS zones and cloud resources.
+                                        </Text>
+                                        {useDummyAuth ? (
+                                            // Dev/dummy auth: sign in as any user by typing an email.
+                                            <Stack gap="sm" w="100%" maw={320}>
+                                                <TextInput
+                                                    label="Dev login — sign in as any user"
+                                                    placeholder="user@dhbw.de"
+                                                    value={devEmail}
+                                                    onChange={(e) => setDevEmail(e.currentTarget.value)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') login(devEmail); }}
+                                                    data-autofocus
+                                                />
+                                                <Button size="lg" onClick={() => login(devEmail)} disabled={!devEmail.trim()} leftSection={<LogIn size={20} />}>
+                                                    Log in
+                                                </Button>
+                                            </Stack>
+                                        ) : (
+                                            <Button size="lg" onClick={login} leftSection={<LogIn size={20} />}>
+                                                Log in
+                                            </Button>
+                                        )}
+                                    </Stack>
                                 </Paper>
-                            </Container>
+                            </Center>
                         </Delayed>
                     ) : (
                         <Router>

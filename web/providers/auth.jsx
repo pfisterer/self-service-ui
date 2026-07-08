@@ -10,6 +10,9 @@ export function authHeaders(user) {
     return user?.access_token ? { Authorization: `Bearer ${user.access_token}` } : {};
 }
 
+// Dummy-auth (dev) user object — no real OIDC session.
+const makeDummyUser = (email) => ({ profile: { email, name: `User: ${email}` }, access_token: 'dummy-token' });
+
 export function AuthProvider({ children }) {
     const [userManager, setUserManager] = useState(null);
     const [user, setUser] = useState(null);
@@ -36,10 +39,10 @@ export function AuthProvider({ children }) {
 
                             // Set the devUser so that 
                             setDevUser(emailParam);
-                            setUser({ profile: { email: emailParam, name: `User: ${emailParam}` }, access_token: 'dummy-token' });
+                            setUser(makeDummyUser(emailParam));
                         } else {
                             const defaultEMail = 'dennis.pfisterer@dhbw.de';
-                            setUser({ profile: { email: defaultEMail, name: `User: ${defaultEMail}` }, access_token: 'dummy-token' });
+                            setUser(makeDummyUser(defaultEMail));
                             setDevUser(defaultEMail);
                         }
 
@@ -90,8 +93,23 @@ export function AuthProvider({ children }) {
         })();
     }, [window?.appconfig?.oidc, useDummyAuth, emailParam]);
 
-    const login = () => userManager?.signinRedirect();
-    const logout = () => userManager?.signoutRedirect();
+    // In dummy-auth (dev) mode there is no OIDC session, so login/logout just
+    // toggle the local dummy user — this makes the Login/Logout buttons work in
+    // dev (e.g. to preview the signed-out state). login() accepts an optional
+    // email so the dev login screen can sign in as ANY user; a non-string arg
+    // (e.g. the click event from the header button) falls back to the last/default
+    // dev user. The mount effect does not depend on `user`, so it won't re-set the
+    // user after a dev logout.
+    const login = useDummyAuth
+        ? (email) => {
+            const e = (typeof email === 'string' && email.trim()) ? email.trim() : (devUser || 'dennis.pfisterer@dhbw.de');
+            setDevUser(e);
+            setUser(makeDummyUser(e));
+        }
+        : () => userManager?.signinRedirect();
+    const logout = useDummyAuth
+        ? () => setUser(null)
+        : () => userManager?.signoutRedirect();
 
     return (
         <AuthContext.Provider value={{ user, login, logout, loading, useDummyAuth, dev_user: devUser }}>
