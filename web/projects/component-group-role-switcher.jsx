@@ -34,7 +34,9 @@ export function GroupRoleSwitcher() {
             query: { q: query || undefined, limit: query ? 50 : 10 },
         });
         const err = sdkError(res);
-        if (err) { showError(err); } else { setGroupResults(Array.isArray(res?.data) ? res.data : []); }
+        // searchGroups returns { tokens: [...] } (see TokenListResponse), not a
+        // bare array — read .tokens like the sibling autocomplete/modal do.
+        if (err) { showError(err); } else { setGroupResults(res?.data?.tokens || []); }
         setSearchingGroups(false);
     };
 
