@@ -96,6 +96,7 @@ export function GroupRoleSwitcher() {
 
     const selectedGroup = useMemo(() => state?.override_group_token || null, [state]);
     const impersonatedUser = useMemo(() => state?.impersonated_user || null, [state]);
+    const devUsers = Array.isArray(projectConfig?.dummyDevUsers) ? projectConfig.dummyDevUsers : [];
 
     const handleGroupSelect = async (groupToken) => {
         if (!groupToken || selectedGroup === groupToken) return;
@@ -174,18 +175,18 @@ export function GroupRoleSwitcher() {
                 </Button>
             </Group>
 
-            <Group mt={6} align="center" gap="xs" wrap="nowrap">
-                {Array.isArray(projectConfig?.dummyDevUsers) && projectConfig.dummyDevUsers.length > 0 && (
+            <Group mt={6} align="center" gap="xs" wrap="wrap">
+                {devUsers.length > 0 && (
                     <>
-                        <Text size="xs" c="dimmed" mr="xs">Dev Users:</Text>
-                        {projectConfig.dummyDevUsers.map(user => <Badge key={user} color="blue" variant="outline" size="sm" style={{ cursor: 'pointer', textTransform: 'none' }} onClick={() => handleDevUserClick(user)}>{user}</Badge>)}
+                        <Text size="xs" c="dimmed" mr="xs" fw={600}>Become user (full identity — dev login):</Text>
+                        {devUsers.map(user => <Badge key={user} color="blue" variant="outline" size="sm" style={{ cursor: 'pointer', textTransform: 'none' }} onClick={() => handleDevUserClick(user)}>{user}</Badge>)}
                     </>
                 )}
             </Group>
 
-            {identities.length > 0 && (
+            {identities.length > 0 && devUsers.length === 0 && (
                 <div style={{ marginTop: '6px' }}>
-                    <Text size="xs" c="dimmed" mb={4}>Impersonate identity (assume full context):</Text>
+                    <Text size="xs" c="dimmed" mb={4} fw={600}>Become user (full impersonation — see their projects, act as them):</Text>
                     <Group gap="xs" wrap="wrap">
                         {identities.map((ident) => {
                             const isActive = ident.email === impersonatedUser;
@@ -207,10 +208,11 @@ export function GroupRoleSwitcher() {
                 </div>
             )}
 
-            <Group mt={6} align="center" gap="xs" wrap="nowrap">
+            <Text size="xs" c="dimmed" mt={8} mb={4} fw={600}>Switch group only (you stay yourself — for admin-scope tests):</Text>
+            <Group mt={2} align="center" gap="xs" wrap="nowrap">
 
             <TextInput value={searchText} onInput={(event) => setSearchText(event.currentTarget.value || '')}
-                placeholder="Search temporary group..." size="xs" style={{ minWidth: '220px', flex: 1 }} disabled={updating} />
+                placeholder="Search group to assume…" size="xs" style={{ minWidth: '220px', flex: 1 }} disabled={updating} />
                 {searchingGroups || updating ? <Loader size="xs" /> : null}
             </Group>
 
