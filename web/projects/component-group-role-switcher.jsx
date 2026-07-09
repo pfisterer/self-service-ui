@@ -15,6 +15,7 @@ export function GroupRoleSwitcher() {
     const [groupResults, setGroupResults] = useState([]);
     const [searchingGroups, setSearchingGroups] = useState(false);
     const [updating, setUpdating] = useState(false);
+    const [identities, setIdentities] = useState([]);
     const projectConfig = useProjectConfig();
 
     const refreshState = async () => {
@@ -40,6 +41,32 @@ export function GroupRoleSwitcher() {
         setSearchingGroups(false);
     };
 
+    // Full-identity impersonation (root admins only): fetch the assumable
+    // identities and let the actor fully "become" one. Guarded so an older API
+    // without the endpoint simply shows no identities instead of crashing.
+    const fetchIdentities = async () => {
+        if (!state?.allowed || typeof sdk.listRoleSwitchIdentities !== 'function') {
+            setIdentities([]);
+            return;
+        }
+        const res = await sdk.listRoleSwitchIdentities({ client });
+        const err = sdkError(res);
+        if (err) { showError(err); return; }
+        setIdentities(res?.data?.identities || []);
+    };
+
+    const impersonate = async (email) => {
+        setUpdating(true);
+        const res = await sdk.setRoleSwitch({
+            client,
+            body: { impersonate_user: email },
+            headers: { 'Content-Type': 'application/json' },
+        });
+        const err = sdkError(res);
+        if (err) { showError(err); setUpdating(false); return; }
+        window.location.reload();
+    };
+
     const setTemporaryGroup = async (groupToken) => {
         const res = await sdk.setRoleSwitch({
             client,
@@ -63,7 +90,12 @@ export function GroupRoleSwitcher() {
         fetchGroups(searchText);
     }, [state?.allowed, searchText]);
 
+    useEffect(() => {
+        fetchIdentities();
+    }, [state?.allowed]);
+
     const selectedGroup = useMemo(() => state?.override_group_token || null, [state]);
+    const impersonatedUser = useMemo(() => state?.impersonated_user || null, [state]);
 
     const handleGroupSelect = async (groupToken) => {
         if (!groupToken || selectedGroup === groupToken) return;
@@ -109,15 +141,21 @@ export function GroupRoleSwitcher() {
 
     // Helper to render context switch badges
     function renderContextSwitchBadges() {
+        if (impersonatedUser) {
+            const badges = [
+                { color: 'grape', variant: 'filled', label: 'Impersonating' },
+                { color: 'grape', variant: 'outline', label: impersonatedUser }
+            ];
+            return <>{badges.map(b => <Badge key={b.label} color={b.color} variant={b.variant} size="sm" style={{ textTransform: 'none' }}>{b.label}</Badge>)}</>;
+        }
         if (selectedGroup) {
             const badges = [
                 { color: 'red', variant: 'filled', label: 'Override Active' },
                 { color: 'red', variant: 'outline', label: selectedGroup }
             ];
             return <>{badges.map(b => <Badge key={b.label} color={b.color} variant={b.variant} size="sm" style={{ textTransform: 'none' }}>{b.label}</Badge>)}</>;
-        } else {
-            return <Badge color="gray" variant="light" size="sm" style={{ textTransform: 'none' }}>Original Role</Badge>;
         }
+        return <Badge color="gray" variant="light" size="sm" style={{ textTransform: 'none' }}>Original Role</Badge>;
     }
 
     return (
@@ -131,7 +169,7 @@ export function GroupRoleSwitcher() {
                     {renderContextSwitchBadges()}
                 </Group>
 
-                <Button size="compact-xs" variant="light" color="red" disabled={updating || !selectedGroup} onClick={clearOverride} >
+                <Button size="compact-xs" variant="light" color="red" disabled={updating || (!selectedGroup && !impersonatedUser)} onClick={clearOverride} >
                     Reset
                 </Button>
             </Group>
@@ -144,6 +182,30 @@ export function GroupRoleSwitcher() {
                     </>
                 )}
             </Group>
+
+            {identities.length > 0 && (
+                <div style={{ marginTop: '6px' }}>
+                    <Text size="xs" c="dimmed" mb={4}>Impersonate identity (assume full context):</Text>
+                    <Group gap="xs" wrap="wrap">
+                        {identities.map((ident) => {
+                            const isActive = ident.email === impersonatedUser;
+                            return (
+                                <Badge
+                                    key={ident.id || ident.email}
+                                    variant={isActive ? 'filled' : 'outline'}
+                                    color="grape"
+                                    size="sm"
+                                    onClick={() => !updating && !isActive && impersonate(ident.email)}
+                                    style={{ textTransform: 'none', cursor: updating ? 'wait' : 'pointer' }}
+                                    title={ident.email}
+                                >
+                                    {ident.label || ident.email}
+                                </Badge>
+                            );
+                        })}
+                    </Group>
+                </div>
+            )}
 
             <Group mt={6} align="center" gap="xs" wrap="nowrap">
 
