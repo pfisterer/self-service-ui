@@ -86,7 +86,7 @@ export function DelegationBreakdownModal({ delegation, opened, onClose, knownDel
         if (!opened) return;
 
         const ids = [...new Set(
-            Object.values(delegation?.quota?.usage_by_status ?? {}).flatMap(s => s?.request_ids ?? [])
+            Object.values(delegation?.quota?.usage_by_status ?? {}).flatMap(s => s?.project_ids ?? [])
         )];
         if (ids.length === 0) {
             setProjects([]);
