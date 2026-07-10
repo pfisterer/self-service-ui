@@ -3,7 +3,6 @@ import { Badge, Button, Group, Loader, Paper, Text, TextInput } from '@mantine/c
 import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
-import { useProjectConfig } from './projects.jsx';
 
 const sdkError = (res) => res?.error?.error ?? res?.error?.detail ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
@@ -15,7 +14,6 @@ export function GroupRoleSwitcher() {
     const [updating, setUpdating] = useState(false);
     const [identities, setIdentities] = useState([]);
     const [impersonateEmail, setImpersonateEmail] = useState('');
-    const projectConfig = useProjectConfig();
 
     const refreshState = async () => {
         setLoading(true);
@@ -66,7 +64,6 @@ export function GroupRoleSwitcher() {
 
     const selectedGroup = useMemo(() => state?.override_group_token || null, [state]);
     const impersonatedUser = useMemo(() => state?.impersonated_user || null, [state]);
-    const devUsers = Array.isArray(projectConfig?.dummyDevUsers) ? projectConfig.dummyDevUsers : [];
 
     const clearOverride = async () => {
         setUpdating(true);
@@ -75,13 +72,6 @@ export function GroupRoleSwitcher() {
         if (err) { showError(err); setUpdating(false); return; }
         window.location.reload();
     };
-
-    // Handler for dev user badge click
-    function handleDevUserClick(user) {
-        const url = new URL(window.location.href);
-        url.searchParams.set('dev_user', user);
-        window.location.href = url.toString();
-    }
 
     // This sits at the top of every /projects page and collapses to null for
     // non-privileged users; Delayed keeps it from flashing on fast loads.
@@ -122,76 +112,63 @@ export function GroupRoleSwitcher() {
     }
 
     return (
-        <Paper withBorder p="xs" mb="xs" radius="sm"
+        <Paper withBorder px="sm" py={7} mb="xs" radius="md"
             style={{ borderColor: 'var(--mantine-primary-color-filled)', background: 'linear-gradient(135deg, rgba(176, 0, 32, 0.05), rgba(176, 0, 32, 0.015))' }}>
 
             <Group justify="space-between" align="center" gap="xs" wrap="wrap">
-
                 <Group gap="xs" align="center" wrap="wrap">
-                    <Text size="xs" fw={700}>Context Switch</Text>
+                    <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: 0.4 }}>Context Switch</Text>
                     {renderContextSwitchBadges()}
                 </Group>
-
-                <Button size="compact-xs" variant="light" color="red" disabled={updating || (!selectedGroup && !impersonatedUser)} onClick={clearOverride} >
+                <Button size="compact-xs" variant="subtle" color="red" disabled={updating || (!selectedGroup && !impersonatedUser)} onClick={clearOverride}>
                     Reset
                 </Button>
             </Group>
 
-            <Group mt={6} align="center" gap="xs" wrap="wrap">
-                {devUsers.length > 0 && (
-                    <>
-                        <Text size="xs" c="dimmed" mr="xs" fw={600}>Become user (full identity — dev login):</Text>
-                        {devUsers.map(user => <Badge key={user} color="blue" variant="outline" size="sm" style={{ cursor: 'pointer', textTransform: 'none' }} onClick={() => handleDevUserClick(user)}>{user}</Badge>)}
-                    </>
-                )}
-            </Group>
-
-            {devUsers.length === 0 && (
-                <div style={{ marginTop: '6px' }}>
-                    <Text size="xs" c="dimmed" mb={4} fw={600}>Become any user (see their projects, act as them):</Text>
-
-                    {identities.length > 0 && (
-                        <Group gap="xs" wrap="wrap" mb={6}>
-                            {identities.map((ident) => {
-                                const isActive = ident.email === impersonatedUser;
-                                return (
-                                    <Badge
-                                        key={ident.id || ident.email}
-                                        variant={isActive ? 'filled' : 'outline'}
-                                        color="grape"
-                                        size="sm"
-                                        onClick={() => !updating && !isActive && impersonate(ident.email)}
-                                        style={{ textTransform: 'none', cursor: updating ? 'wait' : 'pointer' }}
-                                        title={ident.email}
-                                    >
-                                        {ident.label || ident.email}
-                                    </Badge>
-                                );
-                            })}
-                        </Group>
-                    )}
-
-                    {/* Free-text: a root admin may become ANY user by email — including
-                        pattern-covered members (e.g. students) who are not enumerable and
-                        so never appear as a quick-pick badge above. */}
-                    <Group mt={2} align="center" gap="xs" wrap="nowrap">
-                        <TextInput
-                            value={impersonateEmail}
-                            onInput={(event) => setImpersonateEmail(event.currentTarget.value || '')}
-                            onKeyDown={(event) => { if (event.key === 'Enter') submitImpersonateEmail(); }}
-                            placeholder="Or type any email to become…"
-                            type="email"
-                            size="xs"
-                            style={{ minWidth: '220px', flex: 1 }}
-                            disabled={updating}
-                        />
-                        <Button size="xs" variant="light" color="grape" onClick={submitImpersonateEmail} disabled={updating || !impersonateEmail.trim()}>
-                            Become
-                        </Button>
-                        {updating ? <Loader size="xs" /> : null}
+            {/* One unified path (dev and prod): become any user via impersonation.
+                Quick-pick badges on one row … */}
+            <div style={{ marginTop: 7 }}>
+                {identities.length > 0 && (
+                    <Group gap={8} align="center" wrap="wrap" mb={6}>
+                        <Text size="xs" c="dimmed" fw={600}>Become</Text>
+                        {identities.map((ident) => {
+                            const isActive = ident.email === impersonatedUser;
+                            return (
+                                <Badge
+                                    key={ident.id || ident.email}
+                                    variant={isActive ? 'filled' : 'light'}
+                                    color="grape"
+                                    size="sm"
+                                    onClick={() => !updating && !isActive && impersonate(ident.email)}
+                                    style={{ textTransform: 'none', cursor: updating ? 'wait' : 'pointer' }}
+                                    title={ident.email}
+                                >
+                                    {ident.label || ident.email}
+                                </Badge>
+                            );
+                        })}
                     </Group>
-                </div>
-            )}
+                )}
+                {/* … and a clearly visible free-text field on its own (capped) row. It
+                    reaches ANY user — incl. pattern-covered members (students) that are
+                    not enumerable and never appear as a quick-pick badge above. */}
+                <Group gap={6} align="center" wrap="nowrap" style={{ maxWidth: 400 }}>
+                    <TextInput
+                        value={impersonateEmail}
+                        onInput={(event) => setImpersonateEmail(event.currentTarget.value || '')}
+                        onKeyDown={(event) => { if (event.key === 'Enter') submitImpersonateEmail(); }}
+                        placeholder="Type any email to become…"
+                        type="email"
+                        size="xs"
+                        style={{ flex: 1 }}
+                        disabled={updating}
+                    />
+                    <Button size="compact-xs" variant="light" color="grape" onClick={submitImpersonateEmail} disabled={updating || !impersonateEmail.trim()}>
+                        Become
+                    </Button>
+                    {updating ? <Loader size="xs" /> : null}
+                </Group>
+            </div>
 
         </Paper>
     );
