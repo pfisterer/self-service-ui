@@ -12,11 +12,9 @@ export function GroupRoleSwitcher() {
     const { showError } = useErrorModal();
     const [loading, setLoading] = useState(true);
     const [state, setState] = useState(null);
-    const [searchText, setSearchText] = useState('');
-    const [groupResults, setGroupResults] = useState([]);
-    const [searchingGroups, setSearchingGroups] = useState(false);
     const [updating, setUpdating] = useState(false);
     const [identities, setIdentities] = useState([]);
+    const [impersonateEmail, setImpersonateEmail] = useState('');
     const projectConfig = useProjectConfig();
 
     const refreshState = async () => {
@@ -25,21 +23,6 @@ export function GroupRoleSwitcher() {
         const err = sdkError(res);
         if (err) { showError(err); } else { setState(res?.data || {}); }
         setLoading(false);
-    };
-
-    const fetchGroups = async (queryText) => {
-        if (!state?.allowed) return;
-        setSearchingGroups(true);
-        const query = queryText?.trim() || '';
-        const res = await sdk.searchGroups({
-            client,
-            query: { q: query || undefined, limit: query ? 50 : 10 },
-        });
-        const err = sdkError(res);
-        // searchGroups returns { tokens: [...] } (see TokenListResponse), not a
-        // bare array — read .tokens like the sibling autocomplete/modal do.
-        if (err) { showError(err); } else { setGroupResults(res?.data?.tokens || []); }
-        setSearchingGroups(false);
     };
 
     // Full-identity impersonation (root admins only): fetch the assumable
@@ -68,28 +51,14 @@ export function GroupRoleSwitcher() {
         window.location.reload();
     };
 
-    const setTemporaryGroup = async (groupToken) => {
-        const res = await sdk.setRoleSwitch({
-            client,
-            body: { group_token: groupToken },
-            headers: { 'Content-Type': 'application/json' }
-        });
-        const err = sdkError(res);
-        if (err) throw new Error(err);
-        return res?.data || {};
+    const submitImpersonateEmail = () => {
+        const email = impersonateEmail.trim();
+        if (email) impersonate(email);
     };
 
     useEffect(() => {
         refreshState();
     }, [client]);
-
-    useEffect(() => {
-        if (!state?.allowed) {
-            setGroupResults([]);
-            return;
-        }
-        fetchGroups(searchText);
-    }, [state?.allowed, searchText]);
 
     useEffect(() => {
         fetchIdentities();
@@ -98,18 +67,6 @@ export function GroupRoleSwitcher() {
     const selectedGroup = useMemo(() => state?.override_group_token || null, [state]);
     const impersonatedUser = useMemo(() => state?.impersonated_user || null, [state]);
     const devUsers = Array.isArray(projectConfig?.dummyDevUsers) ? projectConfig.dummyDevUsers : [];
-
-    const handleGroupSelect = async (groupToken) => {
-        if (!groupToken || selectedGroup === groupToken) return;
-        setUpdating(true);
-        try {
-            await setTemporaryGroup(groupToken);
-            window.location.reload();
-        } catch (err) {
-            showError(err?.message || 'Unable to switch temporary group.');
-            setUpdating(false);
-        }
-    };
 
     const clearOverride = async () => {
         setUpdating(true);
@@ -189,63 +146,52 @@ export function GroupRoleSwitcher() {
                 )}
             </Group>
 
-            {identities.length > 0 && devUsers.length === 0 && (
+            {devUsers.length === 0 && (
                 <div style={{ marginTop: '6px' }}>
-                    <Text size="xs" c="dimmed" mb={4} fw={600}>Become user (full impersonation — see their projects, act as them):</Text>
-                    <Group gap="xs" wrap="wrap">
-                        {identities.map((ident) => {
-                            const isActive = ident.email === impersonatedUser;
-                            return (
-                                <Badge
-                                    key={ident.id || ident.email}
-                                    variant={isActive ? 'filled' : 'outline'}
-                                    color="grape"
-                                    size="sm"
-                                    onClick={() => !updating && !isActive && impersonate(ident.email)}
-                                    style={{ textTransform: 'none', cursor: updating ? 'wait' : 'pointer' }}
-                                    title={ident.email}
-                                >
-                                    {ident.label || ident.email}
-                                </Badge>
-                            );
-                        })}
+                    <Text size="xs" c="dimmed" mb={4} fw={600}>Become any user (see their projects, act as them):</Text>
+
+                    {identities.length > 0 && (
+                        <Group gap="xs" wrap="wrap" mb={6}>
+                            {identities.map((ident) => {
+                                const isActive = ident.email === impersonatedUser;
+                                return (
+                                    <Badge
+                                        key={ident.id || ident.email}
+                                        variant={isActive ? 'filled' : 'outline'}
+                                        color="grape"
+                                        size="sm"
+                                        onClick={() => !updating && !isActive && impersonate(ident.email)}
+                                        style={{ textTransform: 'none', cursor: updating ? 'wait' : 'pointer' }}
+                                        title={ident.email}
+                                    >
+                                        {ident.label || ident.email}
+                                    </Badge>
+                                );
+                            })}
+                        </Group>
+                    )}
+
+                    {/* Free-text: a root admin may become ANY user by email — including
+                        pattern-covered members (e.g. students) who are not enumerable and
+                        so never appear as a quick-pick badge above. */}
+                    <Group mt={2} align="center" gap="xs" wrap="nowrap">
+                        <TextInput
+                            value={impersonateEmail}
+                            onInput={(event) => setImpersonateEmail(event.currentTarget.value || '')}
+                            onKeyDown={(event) => { if (event.key === 'Enter') submitImpersonateEmail(); }}
+                            placeholder="Or type any email to become…"
+                            type="email"
+                            size="xs"
+                            style={{ minWidth: '220px', flex: 1 }}
+                            disabled={updating}
+                        />
+                        <Button size="xs" variant="light" color="grape" onClick={submitImpersonateEmail} disabled={updating || !impersonateEmail.trim()}>
+                            Become
+                        </Button>
+                        {updating ? <Loader size="xs" /> : null}
                     </Group>
                 </div>
             )}
-
-            <Text size="xs" c="dimmed" mt={8} mb={4} fw={600}>Switch group only (you stay yourself — for admin-scope tests):</Text>
-            <Group mt={2} align="center" gap="xs" wrap="nowrap">
-
-            <TextInput value={searchText} onInput={(event) => setSearchText(event.currentTarget.value || '')}
-                placeholder="Search group to assume…" size="xs" style={{ minWidth: '220px', flex: 1 }} disabled={updating} />
-                {searchingGroups || updating ? <Loader size="xs" /> : null}
-            </Group>
-
-            <div style={{ marginTop: '6px' }}> <Group gap="xs" wrap="nowrap" style={{ overflowX: 'auto', paddingBottom: '2px' }}>
-                    {groupResults.length === 0 && !searchingGroups
-            ? <Text size="xs" c="dimmed">No groups found.</Text>
-            : groupResults.map((groupToken) => {
-                const isCurrent = groupToken === selectedGroup;
-                return (
-                            <Badge
-                                key={groupToken}
-                                variant={isCurrent ? 'filled' : 'outline'}
-                                color={isCurrent ? 'red' : 'gray'}
-                                size="sm"
-                                onClick={() => handleGroupSelect(groupToken)}
-                                style={{
-                        textTransform: 'none',
-                        cursor: updating ? 'wait' : 'pointer',
-                        opacity: updating && !isCurrent ? 0.6 : 1,
-                        flex: '0 0 auto'
-                    }}
-                            >
-                                {groupToken}
-                            </Badge>
-                        );
-            })}
-                </Group>
-            </div>
 
         </Paper>
     );
