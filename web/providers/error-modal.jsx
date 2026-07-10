@@ -24,6 +24,9 @@ export function ErrorModalProvider({ children }) {
                 title="Error"
                 centered
                 size="sm"
+                // Sit above any other open modal (e.g. an edit dialog whose save failed),
+                // otherwise the error renders behind it and looks like nothing happened.
+                zIndex={1000}
             >
                 <Text size="sm">{error}</Text>
                 <Group justify="flex-end" mt="md">

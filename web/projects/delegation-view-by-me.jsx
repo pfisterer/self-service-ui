@@ -19,8 +19,14 @@ export function ManageDelegationsView() {
     const [delegations, setDelegations] = useState([]);
     const [parentDelegations, setParentDelegations] = useState([]);
     const [editingDelegation, setEditingDelegation] = useState(null);
-    const [userTokens, setUserTokens] = useState([]);
     const userEmail = getAuthUserEmail(user);
+
+    // Valid parents are delegations the caller administers AND that permit further
+    // delegation — the backend resolves parent_id as a delegation ID, so we must
+    // offer delegations here, not raw group tokens.
+    const parentOptions = parentDelegations
+        .filter(d => d.can_delegate)
+        .map(d => ({ id: d.id, name: d.name }));
 
     const { refresh } = useAsyncRefresh(async () => {
         const [madeByMeRes, toMeRes] = await Promise.all([
@@ -31,14 +37,6 @@ export function ManageDelegationsView() {
         if (toMeRes?.error) throw new Error(sdkError(toMeRes));
         setDelegations(normalizeArrayResponse(madeByMeRes));
         setParentDelegations(normalizeArrayResponse(toMeRes));
-
-        try {
-            const res = await sdk.listMyGroups({ client });
-            const tokens = res?.tokens || res?.data?.tokens || [];
-            setUserTokens(tokens.map(token => ({ id: token, name: token })));
-        } catch {
-            setUserTokens([]);
-        }
     }, showError);
 
     useEffect(() => { refresh(); }, [client, sdk, userEmail]);
@@ -101,7 +99,7 @@ export function ManageDelegationsView() {
 
             <DelegationModal
                 initialData={editingDelegation}
-                parents={userTokens}
+                parents={parentOptions}
                 opened={editingDelegation != null}
                 onClose={() => setEditingDelegation(null)}
                 onSubmit={handleCreateOrUpdateDelegation}
