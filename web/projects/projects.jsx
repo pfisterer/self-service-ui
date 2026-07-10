@@ -63,7 +63,12 @@ export function CloudProjectManagement() {
         (async () => {
             try {
                 const res = await sdk.getRoleSwitch({ client });
-                setIsRoot(!!res?.data?.allowed);
+                // `allowed` reflects the REAL caller's role-switch capability, which
+                // stays true while impersonating (so they can still hit Reset). Identity
+                // impersonation drops root from the effective identity, so the Root Admin
+                // tab must follow the impersonated user (not root) — hide it whenever an
+                // identity is being impersonated. Group override keeps root, so it stays.
+                setIsRoot(!!res?.data?.allowed && !res?.data?.impersonated_user);
             } catch (_) {
                 setIsRoot(false);
             }
