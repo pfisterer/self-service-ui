@@ -57,9 +57,11 @@ export function DelegationModal({ initialData, parents = [], opened, onClose, on
             return;
 
         const hasEndDate = initialData?.end_date !== null && initialData?.end_date !== undefined;
+        // Pre-select the parent when there is exactly one to choose from.
+        const defaultParent = initialData?.parent_id || (parents.length === 1 ? parents[0].id : "");
         const formData = {
             name: initialData?.name || '',
-            parentGroup: initialData?.parent_id || "",
+            parentGroup: defaultParent,
             can_delegate: initialData?.can_delegate ?? false,
             delegation_strategy: initialData?.delegation_strategy || 'pool',
             admin_rules: Array.isArray(initialData?.admin_scope) ? initialData.admin_scope : [],
