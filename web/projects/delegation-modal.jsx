@@ -1,9 +1,23 @@
 import { useEffect, useState } from 'react';
-import { Button, Checkbox, Grid, Group, Modal, NumberInput, Select, Stack, Text, TextInput } from '@mantine/core';
+import { Badge, Button, Checkbox, Grid, Group, Modal, NumberInput, Select, Stack, Tabs, Text, TextInput } from '@mantine/core';
 import { TerminationDatePicker } from './component-common.jsx';
 import { TokenEditor } from './component-token-editor.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { UNLIMITED_QUOTA } from './util-project.jsx';
+
+const TAB_DETAILS = 'details';
+const TAB_BUDGET = 'budget';
+const TAB_SCOPE = 'scope';
+
+// Tab label with an inline error indicator (matches the project request modal).
+function TabLabel({ label, hasError }) {
+    return (
+        <Group gap="xs" wrap="nowrap">
+            {label}
+            {hasError && <Badge size="xs" color="red" circle>!</Badge>}
+        </Group>
+    );
+}
 
 // Merge resource definitions with existing limits, applying defaults as needed
 function buildResourceLimits(projectDefinitions, initialData) {
@@ -36,6 +50,7 @@ export function DelegationModal({ initialData, parents = [], opened, onClose, on
     const [errors, setErrors] = useState({});
     const [noExpiration, setNoExpiration] = useState(false);
     const [noLimit, setNoLimit] = useState({});
+    const [activeTab, setActiveTab] = useState(TAB_DETAILS);
 
     useEffect(() => {
         if (!opened)
@@ -55,13 +70,26 @@ export function DelegationModal({ initialData, parents = [], opened, onClose, on
         setNoExpiration(!hasEndDate);
         setNoLimit(buildNoLimitState(projectDefinitions, initialData));
         setErrors({});
+        setActiveTab(TAB_DETAILS);
     }, [opened, initialData, parents, projectDefinitions]);
 
+    // Which error keys live on which tab — drives the per-tab error badge and the
+    // jump-to-first-error-tab on submit.
+    const detailsErrorKeys = ['name', 'parentGroup'];
+    const budgetErrorKeys = projectDefinitions.map((r) => r.id);
+    const scopeErrorKeys = ['adminScope'];
+
+    const tabHasError = (tab) => {
+        if (tab === TAB_DETAILS) return detailsErrorKeys.some((k) => errors[k]);
+        if (tab === TAB_BUDGET) return budgetErrorKeys.some((k) => errors[k]);
+        if (tab === TAB_SCOPE) return scopeErrorKeys.some((k) => errors[k]);
+        return false;
+    };
 
     const validateForm = () => {
         const newErrors = {};
         if (!formData) {
-            return false;
+            return newErrors;
         }
 
         if (!formData.name || formData.name.trim().length < 3) {
@@ -71,7 +99,6 @@ export function DelegationModal({ initialData, parents = [], opened, onClose, on
         if (formData.admin_rules.length === 0) {
             newErrors.adminScope = 'At least one group must be in the admin scope';
         }
-
 
         if (!formData.parentGroup) {
             newErrors.parentGroup = 'Please select a parent group';
@@ -93,7 +120,7 @@ export function DelegationModal({ initialData, parents = [], opened, onClose, on
         });
 
         setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        return newErrors;
     };
 
     // Admin scope rule handlers
@@ -107,7 +134,6 @@ export function DelegationModal({ initialData, parents = [], opened, onClose, on
         setFormData({ ...formData, admin_rules: formData.admin_rules.filter(r => r !== token) });
     }
 
-
     function handleNoLimitToggle(resourceId, checked, resource) {
         const value = checked ? UNLIMITED_QUOTA : (resource.default ?? resource.min ?? 0);
         setNoLimit({ ...noLimit, [resourceId]: checked });
@@ -116,8 +142,14 @@ export function DelegationModal({ initialData, parents = [], opened, onClose, on
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!validateForm())
+        const newErrors = validateForm();
+        if (Object.keys(newErrors).length > 0) {
+            // Surface the first tab that has an error so nothing fails silently.
+            if (detailsErrorKeys.some((k) => newErrors[k])) setActiveTab(TAB_DETAILS);
+            else if (scopeErrorKeys.some((k) => newErrors[k])) setActiveTab(TAB_SCOPE);
+            else if (budgetErrorKeys.some((k) => newErrors[k])) setActiveTab(TAB_BUDGET);
             return;
+        }
 
         const payload = {
             name: formData.name.trim(),
@@ -139,137 +171,129 @@ export function DelegationModal({ initialData, parents = [], opened, onClose, on
         <Modal opened={opened} onClose={onClose} title={isEdit ? 'Edit Delegation' : 'Create Delegation'} size="lg">
             <form onSubmit={handleSubmit}>
                 <Stack>
+                    <Tabs value={activeTab} onChange={setActiveTab}>
+                        <Tabs.List mb="md">
+                            <Tabs.Tab value={TAB_DETAILS}>
+                                <TabLabel label="Details" hasError={tabHasError(TAB_DETAILS)} />
+                            </Tabs.Tab>
+                            <Tabs.Tab value={TAB_BUDGET}>
+                                <TabLabel label="Budget" hasError={tabHasError(TAB_BUDGET)} />
+                            </Tabs.Tab>
+                            <Tabs.Tab value={TAB_SCOPE}>
+                                <TabLabel label="Admin Scope" hasError={tabHasError(TAB_SCOPE)} />
+                            </Tabs.Tab>
+                        </Tabs.List>
 
-                    {/* ---------------------------------------------- */}
-                    {/* Delegation Name and Parent Group */}
-                    {/* ---------------------------------------------- */}
+                        {/* ---- Details: name, source, strategy, delegation flag, expiry ---- */}
+                        <Tabs.Panel value={TAB_DETAILS}>
+                            <Stack>
+                                <TextInput
+                                    label="Delegation Name"
+                                    value={formData.name}
+                                    required
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    error={errors.name}
+                                    placeholder="e.g., CS Research Group"
+                                    description="Choose a descriptive name" />
 
-                    <TextInput
-                        label="Delegation Name"
-                        value={formData.name}
-                        required
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        error={errors.name}
-                        placeholder="e.g., CS Research Group"
-                        description="Choose a descriptive name" />
+                                <Select
+                                    label="Parent Group"
+                                    value={formData.parentGroup}
+                                    data={parents.map(p => ({ value: p.id, label: p.name }))}
+                                    required
+                                    onChange={v => setFormData({ ...formData, parentGroup: v })}
+                                    error={errors.parentGroup}
+                                    description="The parent group that will provide the resources for this delegation"
+                                    placeholder={parents.length === 0 ? 'No parent groups available' : 'Select parent group'}
+                                    nothingFound="No parent groups"
+                                />
 
-                    <Select
-                        label="Parent Group"
-                        value={formData.parentGroup}
-                        data={parents.map(p => ({ value: p.id, label: p.name }))}
-                        required
-                        onChange={v => setFormData({ ...formData, parentGroup: v })}
-                        error={errors.parentGroup}
-                        description="The parent group that will provide the resources for this delegation"
-                        placeholder={parents.length === 0 ? 'No parent groups available' : 'Select parent group'}
-                        nothingFound="No parent groups"
-                    />
+                                <Select label="Delegation Strategy" value={formData.delegation_strategy}
+                                    onChange={(v) => setFormData({ ...formData, delegation_strategy: v || 'pool' })}
+                                    data={delegationStrategies}
+                                />
 
-                    {/* ---------------------------------------------- */}
-                    {/* Delegation Allowance and Strategy */}
-                    {/* ---------------------------------------------- */}
+                                <Checkbox label="Can Delegate" checked={formData.can_delegate}
+                                    onChange={(e) => setFormData({ ...formData, can_delegate: e.currentTarget.checked })}
+                                    description="Allow this delegation to create sub-delegations and further delegate resources"
+                                />
 
-                    <Checkbox label="Can Delegate" checked={formData.can_delegate}
-                        onChange={(e) => setFormData({ ...formData, can_delegate: e.currentTarget.checked })}
-                        description="Allow this delegation to create sub-delegations and further delegate resources"
-                    />
+                                <Stack gap="xs">
+                                    <Checkbox
+                                        label="Does not expire"
+                                        checked={noExpiration}
+                                        onChange={(e) => {
+                                            const checked = e.currentTarget.checked;
+                                            setNoExpiration(checked);
+                                            const end_date = checked ? null : (() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d; })();
+                                            setFormData({ ...formData, end_date });
+                                        }}
+                                    />
 
-                    <Select label="Delegation Strategy" value={formData.delegation_strategy}
-                        onChange={(v) => setFormData({ ...formData, delegation_strategy: v || 'pool' })}
-                        data={delegationStrategies}
-                    />
-
-                    {/* ---------------------------------------------- */}
-                    {/* Admin Scope */}
-                    {/* ---------------------------------------------- */}
-
-                    <TokenEditor
-                        label="Admin Scope"
-                        description="Groups/users who can approve and manage requests for this delegation"
-                        rules={formData.admin_rules}
-                        onAddRule={handleAddAdminRule}
-                        onRemoveRule={handleRemoveAdminRule}
-                        error={errors.adminScope}
-                    />
-
-                    {/* ---------------------------------------------- */}
-                    {/* Duration */}
-                    {/* ---------------------------------------------- */}
-
-                    <Stack gap="xs">
-
-                        <Checkbox
-                            label="Does not expire"
-                            checked={noExpiration}
-                            onChange={(e) => {
-                                const checked = e.currentTarget.checked;
-                                setNoExpiration(checked);
-                                const end_date = checked ? null : (() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d; })();
-                                setFormData({ ...formData, end_date });
-                            }}
-                        />
-
-                        {!noExpiration && (
-                            <TerminationDatePicker
-                                value={formData.end_date}
-                                label="End Date (Optional)"
-                                onChange={(d) => setFormData({ ...formData, end_date: d })}
-                            />
-                        )}
-
-                    </Stack>
-
-                    {/* ---------------------------------------------- */}
-                    {/* Resource Limits */}
-                    {/* ---------------------------------------------- */}
-
-                    <div>
-                        <Text fw={600} mb="xs">
-                            {formData.delegation_strategy === 'allowance' ? 'Limits Per User' : 'Total Group Budget'}
-                        </Text>
-
-                        <Grid>
-                            {projectDefinitions.map((resource) => (
-                                <Grid.Col key={resource.id} span={{ base: 12, sm: 6 }}>
-                                    <Stack gap="xs">
-
-                                        <Checkbox
-                                            label="No limit"
-                                            checked={noLimit[resource.id] ?? false}
-                                            onChange={(e) => handleNoLimitToggle(resource.id, e.currentTarget.checked, resource)}
+                                    {!noExpiration && (
+                                        <TerminationDatePicker
+                                            value={formData.end_date}
+                                            label="End Date (Optional)"
+                                            onChange={(d) => setFormData({ ...formData, end_date: d })}
                                         />
+                                    )}
+                                </Stack>
+                            </Stack>
+                        </Tabs.Panel>
 
-                                        {!noLimit[resource.id] && (
-                                            <NumberInput
-                                                label={resource.unit ? `${resource.name} (${resource.unit})` : resource.name}
-                                                min={resource.min ?? 0}
-                                                max={typeof resource.max === 'number' ? resource.max : undefined}
-                                                value={formData.quota?.[resource.id]}
-                                                onChange={v => setFormData({ ...formData, quota: { ...formData.quota, [resource.id]: v } })}
-                                                error={errors[resource.id]}
-                                                description={resource.message || undefined}
-                                            />
-                                        )}
+                        {/* ---- Budget: per-resource limits ---- */}
+                        <Tabs.Panel value={TAB_BUDGET}>
+                            <Stack>
+                                <Text fw={600}>
+                                    {formData.delegation_strategy === 'allowance' ? 'Limits Per User' : 'Total Group Budget'}
+                                </Text>
 
-                                    </Stack>
-                                </Grid.Col>
-                            ))}
-                        </Grid>
+                                <Grid>
+                                    {projectDefinitions.map((resource) => (
+                                        <Grid.Col key={resource.id} span={{ base: 12, sm: 6 }}>
+                                            <Stack gap="xs">
+                                                <Checkbox
+                                                    label="No limit"
+                                                    checked={noLimit[resource.id] ?? false}
+                                                    onChange={(e) => handleNoLimitToggle(resource.id, e.currentTarget.checked, resource)}
+                                                />
 
-                    </div>
+                                                {!noLimit[resource.id] && (
+                                                    <NumberInput
+                                                        label={resource.unit ? `${resource.name} (${resource.unit})` : resource.name}
+                                                        min={resource.min ?? 0}
+                                                        max={typeof resource.max === 'number' ? resource.max : undefined}
+                                                        value={formData.quota?.[resource.id]}
+                                                        onChange={v => setFormData({ ...formData, quota: { ...formData.quota, [resource.id]: v } })}
+                                                        error={errors[resource.id]}
+                                                        description={resource.message || undefined}
+                                                    />
+                                                )}
+                                            </Stack>
+                                        </Grid.Col>
+                                    ))}
+                                </Grid>
+                            </Stack>
+                        </Tabs.Panel>
 
-                    {/* ---------------------------------------------- */}
-                    {/* Save / Create */}
-                    {/* ---------------------------------------------- */}
+                        {/* ---- Admin Scope: who may approve/manage ---- */}
+                        <Tabs.Panel value={TAB_SCOPE}>
+                            <TokenEditor
+                                label="Admin Scope"
+                                description="Groups/users who can approve and manage requests for this delegation"
+                                rules={formData.admin_rules}
+                                onAddRule={handleAddAdminRule}
+                                onRemoveRule={handleRemoveAdminRule}
+                                error={errors.adminScope}
+                            />
+                        </Tabs.Panel>
+                    </Tabs>
 
                     <Group justify="flex-end" mt="md">
-
                         <Button variant="default" type="button" onClick={onClose}>Cancel</Button>
-
                         <Button type="submit">
                             {isEdit ? 'Save Changes' : 'Create Group'}
                         </Button>
-
                     </Group>
                 </Stack>
             </form>
