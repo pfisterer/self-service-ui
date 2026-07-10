@@ -4,6 +4,7 @@ import { Box, Database, Shield, Users, ShieldCheck } from 'lucide-react';
 import { Container, Tabs } from '@mantine/core';
 import { useAuth } from '/providers/auth.jsx';
 import { useClient } from '../providers/client.jsx';
+import { ErrorBoundary } from '/helper/error-boundary.jsx';
 import { GroupRoleSwitcher } from './component-group-role-switcher.jsx';
 import { normalizeObjectResponse } from './util-project.jsx';
 
@@ -85,16 +86,26 @@ export function CloudProjectManagement() {
                     </Tabs.List>
                 </Tabs>
 
-                <Switch>
-                    <Route path="/projects" component={MyProjectsView} />
-                    <Route path="/requests" component={ManageRequestsView} />
-                    <Route path="/delegations" component={ManageDelegationsView} />
-                    <Route path="/my-delegations" component={MyDelegationsView} />
-                    {isRoot ? <Route path="/admin-sync" component={RootAdminView} /> : null}
-                    <Route path="/">
-                        <Redirect to="/projects" replace />
-                    </Route>
-                </Switch>
+                {/* Per-tab boundary: a render crash in one tab keeps the tab bar +
+                    role switcher usable, and switching tabs (key change) auto-resets
+                    it. The outer section boundary in index.jsx would blank all of
+                    /projects instead. */}
+                <ErrorBoundary
+                    key={getActiveSection()}
+                    title="This view failed to render"
+                    message="Switch to another tab or reload the page. If it persists, a record on this tab may be malformed."
+                >
+                    <Switch>
+                        <Route path="/projects" component={MyProjectsView} />
+                        <Route path="/requests" component={ManageRequestsView} />
+                        <Route path="/delegations" component={ManageDelegationsView} />
+                        <Route path="/my-delegations" component={MyDelegationsView} />
+                        {isRoot ? <Route path="/admin-sync" component={RootAdminView} /> : null}
+                        <Route path="/">
+                            <Redirect to="/projects" replace />
+                        </Route>
+                    </Switch>
+                </ErrorBoundary>
             </Container>
         </ProjectConfigContext.Provider>
     );

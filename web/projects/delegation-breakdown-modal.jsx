@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Accordion, ActionIcon, Badge, Button, Group, Loader, Modal, Stack, Table, Text, TextInput } from '@mantine/core';
 import { Search, X } from 'lucide-react';
+import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { formatRelativeDate, statusLabel, statusStyle } from './util-project.jsx';
@@ -158,7 +159,7 @@ export function DelegationBreakdownModal({ delegation, opened, onClose, knownDel
             size="90%"
             styles={{ body: { maxHeight: '80vh', overflowY: 'auto' } }}
         >
-            {loading && <Stack align="center" py="xl"><Loader /></Stack>}
+            {loading && <Delayed><Stack align="center" py="xl"><Loader /></Stack></Delayed>}
 
             {!loading && projects.length === 0 && (
                 <Text c="dimmed" ta="center" py="xl">No active projects found.</Text>

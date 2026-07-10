@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useProjectConfig } from './projects.jsx';
 import { Plus } from 'lucide-react';
 import { Button, Checkbox, Group, Loader, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
@@ -22,7 +23,7 @@ export function MyProjectsView() {
     const [showAllocations, setShowAllocations] = useState(true);
     const projectConfig = useProjectConfig();
 
-    const { loading, refresh } = useAsyncRefresh(async () => {
+    const { loaded, refresh } = useAsyncRefresh(async () => {
         const [reqRes, eligibleRes] = await Promise.all([
             sdk.listMyProjects({ client }),
             sdk.listDelegationsEligibleForMe({ client }),
@@ -90,7 +91,8 @@ export function MyProjectsView() {
         return byFunder;
     }, [requests]);
 
-    if (!projectConfig || loading) return (<Loader />);
+    // Loader only on the INITIAL load; refreshes keep the current content on screen.
+    if (!projectConfig || !loaded) return (<Delayed><Loader /></Delayed>);
 
     return (
         <Stack>

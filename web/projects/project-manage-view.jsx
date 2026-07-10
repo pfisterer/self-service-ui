@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useProjectConfig } from './projects.jsx';
 import { Settings } from 'lucide-react';
 import { Button, Chip, Group, Loader, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
@@ -20,7 +21,7 @@ export function ManageRequestsView() {
     const [eligibilityOpen, setEligibilityOpen] = useState(false);
     const projectConfig = useProjectConfig();
 
-    const { loading, refresh } = useAsyncRefresh(async () => {
+    const { loaded, refresh } = useAsyncRefresh(async () => {
         const [reqsRes, delegRes] = await Promise.all([
             sdk.listProjectsToManage({ client }),
             sdk.listDelegationsToMe({ client }),
@@ -86,7 +87,8 @@ export function ManageRequestsView() {
         refresh();
     };
 
-    if (!projectConfig || loading) return <Loader />;
+    // Loader only on the INITIAL load; refreshes keep the current content on screen.
+    if (!projectConfig || !loaded) return <Delayed><Loader /></Delayed>;
 
     const visible = requests.filter(r => visibleStatuses.includes(r.status));
     const presentStatuses = [...new Set(requests.map(r => r.status))];

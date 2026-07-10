@@ -86,14 +86,18 @@ export function formatError(err) {
 }
 
 // Custom hook that wraps an async fetcher with loading and error state.
+// `loaded` flips true after the first attempt completes and stays true, so
+// callers can show a loader only on the INITIAL load and keep rendering stale
+// content across refreshes (stale-while-revalidate) — no blank-out flicker.
 // Usage:
-//   const { loading, error, refresh } = useAsyncRefresh(async () => {
+//   const { loading, loaded, refresh } = useAsyncRefresh(async () => {
 //       const res = await sdk.listMyProjects({ client });
 //       setRequests(normalizeArrayResponse(res));
 //   });
 //   useEffect(() => { refresh(); }, [client, sdk]);
 export function useAsyncRefresh(fetcher, onError) {
     const [loading, setLoading] = useState(false);
+    const [loaded, setLoaded] = useState(false);
 
     const refresh = async () => {
         setLoading(true);
@@ -103,8 +107,9 @@ export function useAsyncRefresh(fetcher, onError) {
             onError?.(formatError(e));
         } finally {
             setLoading(false);
+            setLoaded(true);
         }
     };
 
-    return { loading, refresh };
+    return { loading, loaded, refresh };
 }

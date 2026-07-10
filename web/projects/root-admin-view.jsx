@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Alert, Badge, Button, Group, Loader, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 
@@ -10,19 +11,21 @@ export function RootAdminView() {
     const { client, sdk } = useClient('projects');
     const { showError } = useErrorModal();
     const [status, setStatus] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loaded, setLoaded] = useState(false);
     const [loadFailed, setLoadFailed] = useState(false);
     const [triggering, setTriggering] = useState(false);
     const [triggerSuccess, setTriggerSuccess] = useState(false);
 
     const fetchStatus = async () => {
-        setLoading(true);
         setLoadFailed(false);
-        const res = await sdk.getAdminReconcileStatus({ client });
-        if (res.response?.status === 503) { setStatus(null); setLoading(false); return; }
-        const err = sdkError(res);
-        if (err) { showError(err); setLoadFailed(true); } else { setStatus(res.data); }
-        setLoading(false);
+        try {
+            const res = await sdk.getAdminReconcileStatus({ client });
+            if (res.response?.status === 503) { setStatus(null); return; }
+            const err = sdkError(res);
+            if (err) { showError(err); setLoadFailed(true); } else { setStatus(res.data); }
+        } finally {
+            setLoaded(true);
+        }
     };
 
     useEffect(() => { if (client && sdk) fetchStatus(); }, [client, sdk]);
@@ -36,16 +39,20 @@ export function RootAdminView() {
         setTriggering(false);
     };
 
-    if (loading) {
+    // Loader only until the first status fetch resolves; the manual "Refresh"
+    // button re-fetches without blanking the panel.
+    if (!loaded) {
         return (
-            <Group gap="xs" align="center">
-                <Loader size="sm" />
-                <Text size="sm">Loading sync status...</Text>
-            </Group>
+            <Delayed>
+                <Group gap="xs" align="center">
+                    <Loader size="sm" />
+                    <Text size="sm">Loading sync status...</Text>
+                </Group>
+            </Delayed>
         );
     }
 
-    if (!loading && !loadFailed && status === null) {
+    if (!loadFailed && status === null) {
         return (<Text size="sm" c="dimmed">Reconciler is disabled.</Text>);
     }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
-import { Notification, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Loader, Notification, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
@@ -14,12 +15,16 @@ export function MyDelegationsView() {
     const userEmail = getAuthUserEmail(user);
     const [delegatedGroups, setDelegatedGroups] = useState([]);
 
-    const { refresh } = useAsyncRefresh(async () => {
+    const { loaded, refresh } = useAsyncRefresh(async () => {
         const delegatedRes = await sdk.listDelegationsToMe({ client });
         setDelegatedGroups(normalizeArrayResponse(delegatedRes));
     }, showError);
 
     useEffect(() => { refresh(); }, [userEmail, client, sdk]);
+
+    // Loader on the initial load; avoids flashing the red "nothing delegated"
+    // notification before the first fetch has resolved.
+    if (!loaded) return (<Delayed><Loader /></Delayed>);
 
     return (
         <Stack>

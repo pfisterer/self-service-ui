@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Badge, Button, Group, Loader, Paper, Text, TextInput } from '@mantine/core';
+import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { useProjectConfig } from './projects.jsx';
@@ -125,14 +126,18 @@ export function GroupRoleSwitcher() {
         window.location.href = url.toString();
     }
 
+    // This sits at the top of every /projects page and collapses to null for
+    // non-privileged users; Delayed keeps it from flashing on fast loads.
     if (loading) {
         return (
-            <Paper withBorder p="xs" mb="xs">
-                <Group gap="xs" align="center">
-                    <Loader size="xs" />
-                    <Text size="xs" fw={600}>Loading role switch options...</Text>
-                </Group>
-            </Paper>
+            <Delayed>
+                <Paper withBorder p="xs" mb="xs">
+                    <Group gap="xs" align="center">
+                        <Loader size="xs" />
+                        <Text size="xs" fw={600}>Loading role switch options...</Text>
+                    </Group>
+                </Paper>
+            </Delayed>
         );
     }
 

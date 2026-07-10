@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { ActionIcon, Badge, Button, Divider, Group, Loader, Modal, Stack, Text } from '@mantine/core';
+import { Delayed } from '/helper/delayed.jsx';
 import { TokenEditor } from './component-token-editor.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
@@ -159,10 +160,12 @@ export function EligibilityModal({ opened, onClose }) {
                 </Text>
 
                 {loading && (
-                    <Group justify="center" py="xl">
-                        <Loader size="sm" />
-                        <Text size="sm" c="dimmed">Loading...</Text>
-                    </Group>
+                    <Delayed>
+                        <Group justify="center" py="xl">
+                            <Loader size="sm" />
+                            <Text size="sm" c="dimmed">Loading...</Text>
+                        </Group>
+                    </Delayed>
                 )}
 
                 {!loading && myTokens.length === 0 && (
