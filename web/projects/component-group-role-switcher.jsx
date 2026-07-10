@@ -3,6 +3,7 @@ import { Badge, Button, Group, Loader, Paper, Text, TextInput } from '@mantine/c
 import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
+import { useProjectConfig } from './projects.jsx';
 
 const sdkError = (res) => res?.error?.error ?? res?.error?.detail ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
@@ -14,6 +15,7 @@ export function GroupRoleSwitcher() {
     const [updating, setUpdating] = useState(false);
     const [identities, setIdentities] = useState([]);
     const [impersonateEmail, setImpersonateEmail] = useState('');
+    const projectConfig = useProjectConfig();
 
     const refreshState = async () => {
         setLoading(true);
@@ -64,6 +66,24 @@ export function GroupRoleSwitcher() {
 
     const selectedGroup = useMemo(() => state?.override_group_token || null, [state]);
     const impersonatedUser = useMemo(() => state?.impersonated_user || null, [state]);
+
+    // Quick-pick impersonation targets, deduped by email: the backend's assumable
+    // identities (real staff + project owners on staging/prod) merged with the
+    // hard-coded mock dev users (populated only when the API runs with dummy auth,
+    // i.e. localhost). Both click through to impersonate() — one mechanism, so dev
+    // and prod behave identically; localhost just gets the mock users as suggestions.
+    const quickPicks = useMemo(() => {
+        const byEmail = new Map();
+        for (const id of identities) {
+            if (id?.email) byEmail.set(id.email.toLowerCase(), { email: id.email, label: id.label || id.email });
+        }
+        const devUsers = Array.isArray(projectConfig?.dummyDevUsers) ? projectConfig.dummyDevUsers : [];
+        for (const email of devUsers) {
+            const key = String(email).toLowerCase();
+            if (email && !byEmail.has(key)) byEmail.set(key, { email, label: email });
+        }
+        return [...byEmail.values()];
+    }, [identities, projectConfig?.dummyDevUsers]);
 
     const clearOverride = async () => {
         setUpdating(true);
@@ -128,22 +148,22 @@ export function GroupRoleSwitcher() {
             {/* One unified path (dev and prod): become any user via impersonation.
                 Quick-pick badges on one row … */}
             <div style={{ marginTop: 7 }}>
-                {identities.length > 0 && (
+                {quickPicks.length > 0 && (
                     <Group gap={8} align="center" wrap="wrap" mb={6}>
                         <Text size="xs" c="dimmed" fw={600}>Become</Text>
-                        {identities.map((ident) => {
-                            const isActive = ident.email === impersonatedUser;
+                        {quickPicks.map((qp) => {
+                            const isActive = qp.email === impersonatedUser;
                             return (
                                 <Badge
-                                    key={ident.id || ident.email}
+                                    key={qp.email}
                                     variant={isActive ? 'filled' : 'light'}
                                     color="grape"
                                     size="sm"
-                                    onClick={() => !updating && !isActive && impersonate(ident.email)}
+                                    onClick={() => !updating && !isActive && impersonate(qp.email)}
                                     style={{ textTransform: 'none', cursor: updating ? 'wait' : 'pointer' }}
-                                    title={ident.email}
+                                    title={qp.email}
                                 >
-                                    {ident.label || ident.email}
+                                    {qp.label}
                                 </Badge>
                             );
                         })}
