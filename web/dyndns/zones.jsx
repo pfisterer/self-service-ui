@@ -13,6 +13,7 @@ import { TlsCertificates } from '/dyndns/zones/tls-certificates.jsx';
 import { Container, Title, Paper, Stack, NavLink, Tabs, Button, Text, Loader, Alert, Group, TextInput, Modal, Box, Flex, Tooltip } from '@mantine/core';
 import { AlertCircle, Globe, CornerDownRight, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
 import { subzoneLabelError } from '/helper/dns-validation.js';
+import { CopyableText } from '/helper/copyable-text.jsx';
 
 const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
@@ -414,7 +415,9 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
                     Long zone/owner names wrap instead of overflowing. */}
                 <Flex direction={{ base: 'column', sm: 'row' }} justify="space-between" align={{ base: 'stretch', sm: 'center' }} gap="sm">
                     <div style={{ minWidth: 0 }}>
-                        <Text fw={600} style={{ wordBreak: 'break-word' }}>Zone: {zone.zoneData.zone}</Text>
+                        <Text fw={600} style={{ wordBreak: 'break-word' }}>
+                            Zone: <CopyableText value={zone.zoneData.zone}>{zone.zoneData.zone}</CopyableText>
+                        </Text>
                         {zone.owners?.length > 0 && (
                             <Text size="sm" c="dimmed" style={{ wordBreak: 'break-word' }}>
                                 Managed by: {zone.owners.join(', ')}

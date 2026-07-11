@@ -1,5 +1,5 @@
 import { CodeBlock } from '/helper/codeblock.jsx';
-import { Stack, Paper, Text, Anchor, Group, Badge, ThemeIcon } from '@mantine/core';
+import { Stack, Paper, Text, Anchor, Group, ThemeIcon } from '@mantine/core';
 import { KeyRound } from 'lucide-react';
 import { TabIntro } from './tab-intro.jsx';
 
@@ -24,14 +24,15 @@ export function ShowKeys({ zone }) {
 
             {zone_keys.map((key, index) => (
                 <Paper key={key.keyname || index} withBorder radius="md" p="md">
-                    <Group justify="space-between" mb="sm">
-                        <Group gap="xs">
-                            <ThemeIcon variant="light" radius="md" color="blue"><KeyRound size="16" /></ThemeIcon>
-                            <Text fw={600}>Key #{index + 1}</Text>
-                        </Group>
-                        <Badge variant="light" color="gray">{key.algorithm}</Badge>
+                    <Group gap="xs" mb="sm">
+                        <ThemeIcon variant="light" radius="md" color="blue"><KeyRound size="16" /></ThemeIcon>
+                        <Text fw={600}>Key #{index + 1}</Text>
                     </Group>
                     <Stack gap="sm">
+                        <div>
+                            <Text size="xs" c="dimmed" tt="uppercase" mb={4}>Algorithm</Text>
+                            <CodeBlock code={key.algorithm} language="plaintext" />
+                        </div>
                         <div>
                             <Text size="xs" c="dimmed" tt="uppercase" mb={4}>Key name</Text>
                             <CodeBlock code={key.keyname} />
