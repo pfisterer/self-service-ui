@@ -5,7 +5,7 @@ import { useClient } from '/providers/client.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
-import { Table, TextInput, Select, Group, Alert, Loader, Stack, Text, ActionIcon, Tooltip } from '@mantine/core';
+import { Table, TextInput, Select, Group, Alert, Loader, Stack, Text, ActionIcon, Tooltip, Checkbox, Button } from '@mantine/core';
 import { AlertCircle, Copy, Check, Search, Edit, Trash2, Terminal, Plus } from 'lucide-react';
 import { TabIntro } from './tab-intro.jsx';
 import { Delayed } from '/helper/delayed.jsx';
@@ -76,8 +76,13 @@ const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?
 
 const SUPPORTED_TYPES = ["A", "AAAA"];
 
+// Stable identity for a record across renders and for the selection set.
+// DNS has no exact duplicates (same name+type+value), so this is unique.
+// '|' is safe as a separator: it occurs in neither DNS names nor A/AAAA values.
+const recordKey = (r) => `${r.name}|${r.type}|${r.value}`;
 
-export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
+
+export function DnsRecordRow({ zone, tsigKey, record, onChange, selected, onToggleSelect }) {
     const { config: dynDnsConfig } = useDynDnsConfig();
     const { client, sdk, } = useClient('dyndns');
     const { showError } = useErrorModal();
@@ -137,7 +142,13 @@ export function DnsRecordRow({ zone, tsigKey, record, onChange }) {
     const handleCopyDig = () => copyToClipboard(generateDig(fields, zone, dynDnsConfig), 'dig');
 
     return (
-        <Table.Tr>
+        <Table.Tr bg={selected ? 'var(--mantine-color-blue-light)' : undefined}>
+            <Table.Td>
+                {/* Only editable records (A/AAAA) can be deleted, so only they get a checkbox. */}
+                {isEditable && (
+                    <Checkbox checked={selected} onChange={onToggleSelect} disabled={loading} aria-label={`Select ${fields.name}`} />
+                )}
+            </Table.Td>
             <Table.Td>
                 <TextInput value={fields.name} onInput={e => setFields({ ...fields, name: e.target.value })} disabled={loading || !editing || !isEditable} error={nameError} />
             </Table.Td>
@@ -212,6 +223,7 @@ export function AddDnsRecordRow({ zone, tsigKey, onAdd }) {
 
     return (
         <Table.Tr>
+            <Table.Td />
             <Table.Td>
                 <TextInput placeholder="Name" value={fields.name} onInput={e => setFields({ ...fields, name: e.target.value })} error={fields.name.trim() ? nameError : null} />
             </Table.Td>
@@ -243,12 +255,16 @@ export function DnsRecordsList({ zone, tsigKey }) {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [loadFailed, setLoadFailed] = useState(false);
+    const [selected, setSelected] = useState(new Set());
+    const [bulkDeleting, setBulkDeleting] = useState(false);
     const { client, sdk } = useClient('dyndns');
     const { showError } = useErrorModal();
+    const confirm = useConfirm();
 
     async function fetchRecords() {
         setLoading(true);
         setLoadFailed(false);
+        setSelected(new Set());
         const res = await sdk.listDnsRecords({
             client,
             query: { zone },
@@ -278,6 +294,50 @@ export function DnsRecordsList({ zone, tsigKey }) {
                 .some(field => (field ?? '').toLowerCase().includes(query)))
         : records;
 
+    // Only editable records (A/AAAA) can be selected/deleted.
+    const selectableRecords = filteredRecords.filter(r => SUPPORTED_TYPES.includes(r.type.toUpperCase()));
+    const allSelected = selectableRecords.length > 0 && selectableRecords.every(r => selected.has(recordKey(r)));
+    const someSelected = selectableRecords.some(r => selected.has(recordKey(r)));
+
+    function toggleSelect(record) {
+        const key = recordKey(record);
+        setSelected(prev => {
+            const next = new Set(prev);
+            next.has(key) ? next.delete(key) : next.add(key);
+            return next;
+        });
+    }
+
+    function toggleSelectAll() {
+        setSelected(allSelected ? new Set() : new Set(selectableRecords.map(recordKey)));
+    }
+
+    async function handleBulkDelete() {
+        const toDelete = selectableRecords.filter(r => selected.has(recordKey(r)));
+        if (toDelete.length === 0) return;
+        const ok = await confirm({
+            title: `Delete ${toDelete.length} DNS record${toDelete.length > 1 ? 's' : ''}?`,
+            confirmLabel: `Delete ${toDelete.length} record${toDelete.length > 1 ? 's' : ''}`,
+            message: `Permanently delete the ${toDelete.length} selected record${toDelete.length > 1 ? 's' : ''}? This takes effect immediately.`,
+        });
+        if (!ok) return;
+        setBulkDeleting(true);
+        let firstErr = null;
+        for (const record of toDelete) {
+            const res = await sdk.deleteDnsRecord({
+                client,
+                body: { ...record, name: normalizeRecordName(record.name, zone), zone, key_name: tsigKey.keyname, key_algorithm: tsigKey.algorithm, key: tsigKey.key }
+            });
+            const err = sdkError(res) ?? (!res.response.ok ? res.response.statusText : null);
+            if (err && !firstErr) firstErr = err;
+        }
+        setBulkDeleting(false);
+        if (firstErr) showError(firstErr);
+        fetchRecords();
+    }
+
+    const selectedCount = selectableRecords.filter(r => selected.has(recordKey(r))).length;
+
     return (
         <Stack gap="lg">
             <TabIntro title={`DNS records for ${zone}`}>
@@ -292,12 +352,34 @@ export function DnsRecordsList({ zone, tsigKey }) {
                 onInput={e => setSearch(e.target.value)}
             />
 
+            {/* Bulk-action bar: only shown once records are selected. */}
+            {selectedCount > 0 && (
+                <Group justify="space-between">
+                    <Text size="sm">{selectedCount} record{selectedCount > 1 ? 's' : ''} selected</Text>
+                    <Group gap="sm">
+                        <Button variant="default" size="xs" onClick={() => setSelected(new Set())} disabled={bulkDeleting}>Clear</Button>
+                        <Button color="red" size="xs" leftSection={<Trash2 size={16} />} onClick={handleBulkDelete} loading={bulkDeleting}>
+                            Delete selected
+                        </Button>
+                    </Group>
+                </Group>
+            )}
+
             <Table.ScrollContainer minWidth={720}>
                 <Table striped highlightOnHover withTableBorder stickyHeader verticalSpacing="sm" horizontalSpacing="md">
                     <Table.Thead>
                         {/* Name + Value sit next to each other and get the space; Type/TTL
                         are narrow and moved to the back, Actions fits its buttons. */}
                         <Table.Tr>
+                            <Table.Th w={40}>
+                                <Checkbox
+                                    checked={allSelected}
+                                    indeterminate={someSelected && !allSelected}
+                                    onChange={toggleSelectAll}
+                                    disabled={selectableRecords.length === 0 || bulkDeleting}
+                                    aria-label="Select all records"
+                                />
+                            </Table.Th>
                             <Table.Th w="28%">Name</Table.Th>
                             <Table.Th w="32%">Value</Table.Th>
                             <Table.Th w={110}>Type</Table.Th>
@@ -306,10 +388,10 @@ export function DnsRecordsList({ zone, tsigKey }) {
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                        {filteredRecords.map(record => <DnsRecordRow key={record.name} zone={zone} tsigKey={tsigKey} record={record} onChange={fetchRecords} />)}
+                        {filteredRecords.map(record => <DnsRecordRow key={recordKey(record)} zone={zone} tsigKey={tsigKey} record={record} onChange={fetchRecords} selected={selected.has(recordKey(record))} onToggleSelect={() => toggleSelect(record)} />)}
                         {query && filteredRecords.length === 0 && (
                             <Table.Tr>
-                                <Table.Td colSpan={5}>
+                                <Table.Td colSpan={6}>
                                     <Text c="dimmed" size="sm">No records match “{search.trim()}”.</Text>
                                 </Table.Td>
                             </Table.Tr>
