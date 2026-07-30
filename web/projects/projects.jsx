@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { Route, Switch, useLocation, useRoute, Redirect } from 'wouter';
-import { Box, Database, Shield, Users, ShieldCheck } from 'lucide-react';
+import { FolderKanban, Inbox, ShieldCheck, Wallet } from 'lucide-react';
 import { Container, Tabs } from '@mantine/core';
 import { useAuth } from '/providers/auth.jsx';
 import { useClient } from '../providers/client.jsx';
@@ -8,20 +8,20 @@ import { ErrorBoundary } from '/helper/error-boundary.jsx';
 import { GroupRoleSwitcher } from './component-group-role-switcher.jsx';
 import { normalizeObjectResponse } from './util-project.jsx';
 
-import { MyProjectsView } from './project-my-view.jsx';
-import { ManageRequestsView } from './project-manage-view.jsx';
-import { MyDelegationsView } from './delegation-view-to-me.jsx';
-import { ManageDelegationsView } from './delegation-view-by-me.jsx';
+import { MyProjectsView } from './view-my-projects.jsx';
+import { MyBudgetsView } from './view-my-budgets.jsx';
+import { ApprovalsView } from './view-approvals.jsx';
 import { RootAdminView } from './root-admin-view.jsx';
 
-import { createContext } from 'react';
-import { useContext } from 'react';
-
+// ProjectConfigContext distributes /v1/config (resource definitions, OpenStack
+// roles, dev users) to every view below.
 export const ProjectConfigContext = createContext(null);
 export function useProjectConfig() {
     return useContext(ProjectConfigContext);
 }
 
+// CloudProjectManagement is the cloud resources section: one budget tree in
+// which budgets are delegated downwards and projects hang as leaves.
 export function CloudProjectManagement() {
     const { client, sdk } = useClient('projects');
     const [, navigate] = useLocation();
@@ -30,24 +30,21 @@ export function CloudProjectManagement() {
     const [isRoot, setIsRoot] = useState(false);
 
     const [matchProjects] = useRoute('/projects');
-    const [matchRequests] = useRoute('/requests');
-    const [matchMyDelegations] = useRoute('/my-delegations');
-    const [matchDelegations] = useRoute('/delegations');
+    const [matchBudgets] = useRoute('/budgets');
+    const [matchApprovals] = useRoute('/approvals');
     const [matchAdminSync] = useRoute('/admin-sync');
 
-    // Helper to determine which tab is active
     function getActiveSection() {
         if (matchProjects) return 'projects';
-        if (matchRequests) return 'requests';
-        if (matchMyDelegations) return 'my-delegations';
-        if (matchDelegations) return 'delegations';
+        if (matchBudgets) return 'budgets';
+        if (matchApprovals) return 'approvals';
         if (matchAdminSync) return 'admin-sync';
         return '';
     }
 
     useEffect(() => {
         (async () => {
-            const defaultResponse = { projects: [], openstackRoles: [], delegationStrategies: [], dummyDevUsers: [] };
+            const defaultResponse = { resources: [], openstackRoles: [], dummyDevUsers: [] };
             try {
                 const cfgRes = await sdk.getConfig({ client });
                 setProjectConfig(normalizeObjectResponse(cfgRes, defaultResponse));
@@ -83,10 +80,9 @@ export function CloudProjectManagement() {
 
                 <Tabs value={getActiveSection()} onChange={(val) => val && navigate(`/${val}`)} mb="lg">
                     <Tabs.List>
-                        <Tabs.Tab value="projects" leftSection={<Users size="16" />}>My Projects</Tabs.Tab>
-                        <Tabs.Tab value="requests" leftSection={<Shield size="16" />}>Manage Project Requests</Tabs.Tab>
-                        <Tabs.Tab value="delegations" leftSection={<Database size="16" />}>Delegations I've Made</Tabs.Tab>
-                        <Tabs.Tab value="my-delegations" leftSection={<Box size="16" />}>Projects Delegated To Me</Tabs.Tab>
+                        <Tabs.Tab value="projects" leftSection={<FolderKanban size="16" />}>My Projects</Tabs.Tab>
+                        <Tabs.Tab value="budgets" leftSection={<Wallet size="16" />}>My Budgets</Tabs.Tab>
+                        <Tabs.Tab value="approvals" leftSection={<Inbox size="16" />}>Approvals</Tabs.Tab>
                         {isRoot ? <Tabs.Tab value="admin-sync" leftSection={<ShieldCheck size="16" />}>Root Admin</Tabs.Tab> : null}
                     </Tabs.List>
                 </Tabs>
@@ -102,9 +98,8 @@ export function CloudProjectManagement() {
                 >
                     <Switch>
                         <Route path="/projects" component={MyProjectsView} />
-                        <Route path="/requests" component={ManageRequestsView} />
-                        <Route path="/delegations" component={ManageDelegationsView} />
-                        <Route path="/my-delegations" component={MyDelegationsView} />
+                        <Route path="/budgets" component={MyBudgetsView} />
+                        <Route path="/approvals" component={ApprovalsView} />
                         {isRoot ? <Route path="/admin-sync" component={RootAdminView} /> : null}
                         <Route path="/">
                             <Redirect to="/projects" replace />

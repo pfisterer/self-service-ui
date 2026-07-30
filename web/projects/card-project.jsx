@@ -1,0 +1,185 @@
+import { AlertTriangle, ArrowRightLeft, Check, Eye, FolderInput, History, Pencil, Rocket, Users, X } from 'lucide-react';
+import { Alert, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
+import { NodeChangesDiff, NodeStatusBadge } from './component-common.jsx';
+import { isImported, ownerEmail, resourceSummaryText } from './util-project.jsx';
+
+// ProjectCard renders one project leaf. It is purely presentational: every
+// button reports an action to the owning view via onAction(actionId, node),
+// and the view opens the matching dialog. This keeps a single instance of each
+// dialog per view instead of one per card.
+//
+// perspective:
+//   'owner'    the viewer owns this project (My Projects)
+//   'manager'  the viewer decides on it (Approvals)
+export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction }) {
+    const act = (action) => onAction?.(action, node);
+
+    const imported = isImported(node);
+    const isApproved = node.status === 'approved';
+    const isPending = node.status === 'pending';
+    const isChangePending = node.status === 'change_pending';
+    const isRejected = node.status === 'rejected';
+    const hasHistory = (node.history || []).length > 0;
+    const isManager = perspective === 'manager';
+
+    const createdDate = node.created_at ? new Date(node.created_at).toLocaleDateString() : '';
+    const authorizedCount = (node.authorized_users || []).length;
+    const owner = ownerEmail(node);
+
+    // Resources shown in the summary line: the proposed limit while a change
+    // awaits approval, the current limit otherwise.
+    const summaryQuota = (isChangePending && node.pending?.limit) ? node.pending.limit : node.limit;
+    const resourceSummary = resourceSummaryText(resources, summaryQuota);
+
+    // Rejection reason (if this project was rejected): last matching history entry.
+    const rejectionReason = isRejected && hasHistory
+        ? [...node.history].reverse().find(h => h.event === 'rejected')?.reason
+        : null;
+
+    return (
+        <Card withBorder shadow="sm" radius="md" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Box style={{ flex: 1 }}>
+
+                {/* ── Header: status + creation date ─────────────────────── */}
+                <Group justify="space-between" mb="xs">
+                    <Group gap="xs">
+                        <NodeStatusBadge status={node.status} />
+                        {node.os_overcommitted && (
+                            <Tooltip label="The project currently uses more in OpenStack than was granted. Creating new resources is blocked.">
+                                <Badge color="red" variant="filled" style={{ cursor: 'default' }}>
+                                    <AlertTriangle size="11" style={{ marginRight: 3, verticalAlign: 'middle' }} />
+                                    Overcommitted
+                                </Badge>
+                            </Tooltip>
+                        )}
+                    </Group>
+                    <Text size="xs" c="dimmed">{createdDate}</Text>
+                </Group>
+
+                {/* ── Purpose ────────────────────────────────────────────── */}
+                <Text fw={700} size="sm" mb="xs">
+                    {imported ? (node.os_project_name || node.os_project_id || node.id) : (node.name || node.reason)}
+                </Text>
+
+                {imported && (
+                    <Alert color="violet" variant="light" mb="xs" p="xs">
+                        {(node.flags || []).includes('promote_on_reconcile')
+                            ? 'Queued for adoption — the next synchronization run will bring this project under management.'
+                            : isManager
+                                ? 'This project exists in OpenStack but is not managed here yet. Use “Adopt” to place it under a budget.'
+                                : 'This project exists in OpenStack but is not managed here. It cannot be edited.'}
+                    </Alert>
+                )}
+
+                {/* ── Key facts ──────────────────────────────────────────── */}
+                <Stack gap="3" mb="xs">
+                    {isManager && owner && (
+                        <Group gap="xs" wrap="wrap">
+                            <Text size="xs" c="dimmed" style={{ minWidth: 68 }}>Owner:</Text>
+                            <Badge size="xs" variant="light" color="blue" style={{ textTransform: 'none' }}>{owner}</Badge>
+                        </Group>
+                    )}
+
+                    {parentName && (
+                        <Group gap="xs" wrap="wrap">
+                            <Text size="xs" c="dimmed" style={{ minWidth: 68 }}>Budget:</Text>
+                            <Text size="xs">{parentName}</Text>
+                        </Group>
+                    )}
+
+                    {resourceSummary && (
+                        <Group gap="xs">
+                            <Text size="xs" c="dimmed" style={{ minWidth: 68 }}>Resources:</Text>
+                            <Text size="xs">{resourceSummary}</Text>
+                        </Group>
+                    )}
+
+                    <Group gap="xs" wrap="wrap">
+                        {node.termination_date && (
+                            <Badge size="xs" variant="outline" color="gray">
+                                Ends {new Date(node.termination_date).toLocaleDateString()}
+                            </Badge>
+                        )}
+                        {authorizedCount > 0 && (
+                            <Badge size="xs" variant="outline" color="gray">
+                                <Users size="10" style={{ marginRight: 3, verticalAlign: 'middle' }} />
+                                {authorizedCount} user{authorizedCount !== 1 ? 's' : ''}
+                            </Badge>
+                        )}
+                    </Group>
+                </Stack>
+
+                {/* ── Proposed changes while change_pending ──────────────── */}
+                <NodeChangesDiff
+                    resources={resources}
+                    limitFrom={node.limit}
+                    limitTo={node.pending?.limit}
+                    dateFrom={node.termination_date}
+                    dateTo={node.pending?.termination_date}
+                    usersFrom={node.authorized_users}
+                    usersTo={node.pending?.authorized_users}
+                />
+
+                {rejectionReason && (
+                    <Card.Section withBorder inheritPadding py="xs" mt="xs">
+                        <Group gap="xs">
+                            <X size="14" />
+                            <Text size="xs">{rejectionReason}</Text>
+                        </Group>
+                    </Card.Section>
+                )}
+            </Box>
+
+            {/* ── Actions ────────────────────────────────────────────────── */}
+            <Card.Section withBorder inheritPadding py="xs" mt="auto">
+                <Group grow>
+                    <Button variant="light" size="xs" onClick={() => act('details')}>
+                        <Eye size="13" style={{ marginRight: 4 }} />Details
+                    </Button>
+                    <Button variant="light" size="xs" disabled={!hasHistory} onClick={() => act('history')}>
+                        <History size="13" style={{ marginRight: 4 }} />History
+                    </Button>
+
+                    {/* Owner actions */}
+                    {!isManager && (isApproved || isPending) && (
+                        <Button variant="light" size="xs" onClick={() => act('change')}>
+                            <Pencil size="13" style={{ marginRight: 4 }} />Edit
+                        </Button>
+                    )}
+                    {!isManager && isApproved && (
+                        <Button color="red" variant="light" size="xs" onClick={() => act('release')}>
+                            Release
+                        </Button>
+                    )}
+
+                    {/* Manager actions */}
+                    {isManager && (isPending || isChangePending) && (
+                        <>
+                            <Button color="green" variant="light" size="xs" onClick={() => act('approve')}>
+                                <Check size="13" style={{ marginRight: 4 }} />Approve
+                            </Button>
+                            <Button color="red" variant="light" size="xs" onClick={() => act('reject')}>
+                                <X size="13" style={{ marginRight: 4 }} />Reject
+                            </Button>
+                        </>
+                    )}
+                    {isManager && imported && !(node.flags || []).includes('promote_on_reconcile') && (
+                        <Button color="violet" variant="light" size="xs" onClick={() => act('adopt')}>
+                            <Rocket size="13" style={{ marginRight: 4 }} />Adopt
+                        </Button>
+                    )}
+                    {isManager && isApproved && (
+                        <>
+                            <Button variant="light" size="xs" onClick={() => act('transfer')}>
+                                <ArrowRightLeft size="13" style={{ marginRight: 4 }} />Owner
+                            </Button>
+                            <Button variant="light" size="xs" onClick={() => act('move')}>
+                                <FolderInput size="13" style={{ marginRight: 4 }} />Move
+                            </Button>
+                        </>
+                    )}
+                </Group>
+            </Card.Section>
+        </Card>
+    );
+}

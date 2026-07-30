@@ -1,0 +1,294 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Badge, Button, Group, Modal, Select, Stack, Tabs, Text, Textarea } from '@mantine/core';
+import { useNodesApi } from './api-nodes.jsx';
+import { NodeChangesDiff, TerminationDatePicker } from './component-common.jsx';
+import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
+import { TokenRoleEditor } from './component-token-role-editor.jsx';
+import { formatError, freeAmount, quotaFits, resourceSummaryText } from './util-project.jsx';
+
+const TAB_DETAILS = 'details';
+const TAB_RESOURCES = 'resources';
+const TAB_MEMBERS = 'members';
+
+// BudgetSelect groups the budgets a user can place a project under:
+//   - budgets they manage → the project is created active immediately
+//   - budgets they may request under → the project awaits approval
+//     (or is approved instantly when the budget's self-service covers it)
+function BudgetSelect({ myBudgets, eligibleBudgets, resources, requestedQuota, value, onChange, error }) {
+    const data = useMemo(() => {
+        const managedIds = new Set((myBudgets || []).map(b => b.id));
+        const remainingText = (b) => resources
+            .filter(r => freeAmount(b, r.id) !== Infinity)
+            .map(r => `${freeAmount(b, r.id)} ${r.unit || ''} ${r.name}`.replace('  ', ' '))
+            .join(', ');
+
+        const managed = (myBudgets || []).map(b => ({
+            value: b.id,
+            label: `${b.name || b.id}${remainingText(b) ? ` — free: ${remainingText(b)}` : ''}`,
+        }));
+
+        const eligible = (eligibleBudgets || [])
+            .filter(b => !managedIds.has(b.id))
+            .map(b => {
+                const auto = b.auto_approve?.per_requester_limit;
+                const hint = auto ? ` — instant up to ${resourceSummaryText(resources, auto)} per person` : '';
+                return { value: b.id, label: `${b.name || b.id}${hint}` };
+            });
+
+        const groups = [];
+        if (managed.length) groups.push({ group: 'Budgets you manage (created immediately)', items: managed });
+        if (eligible.length) groups.push({ group: 'Budgets you can request under (needs approval)', items: eligible });
+        return groups;
+    }, [myBudgets, eligibleBudgets, resources]);
+
+    const selected = [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === value);
+    const overCap = selected && requestedQuota && !quotaFits(selected, requestedQuota, resources);
+
+    if (!data.length) {
+        return (
+            <Select label="Budget" required data={[]} value={null} disabled error={error}
+                description="You cannot request a project right now — ask your lecturer or administrator to add you to a budget." />
+        );
+    }
+
+    return (
+        <Stack gap="4">
+            <Select
+                label="Budget"
+                description="Every project lives under a budget that provides its resources."
+                required
+                searchable
+                data={data}
+                value={value}
+                onChange={onChange}
+                error={error}
+                placeholder="Choose where to request this project"
+            />
+            {overCap && (
+                <Text size="xs" c="orange">
+                    The requested amount exceeds this budget's free capacity — the request will
+                    wait until a manager decides (they may grant an adjusted amount).
+                </Text>
+            )}
+        </Stack>
+    );
+}
+
+function TabLabel({ label, hasError }) {
+    return (
+        <Group gap="xs" wrap="nowrap">
+            {label}
+            {hasError && <Badge size="xs" color="red" circle>!</Badge>}
+        </Group>
+    );
+}
+
+// ProjectFormModal creates a new project request or proposes changes to an
+// existing project (mode is derived from `node`):
+//   node == null  → create: budget picker + purpose + resources + members
+//   node != null  → change: resources, end date and members are editable;
+//                   pending projects are amended in place, active projects get
+//                   a change request that a manager must approve.
+export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [] }) {
+    const api = useNodesApi();
+    const isChange = !!node;
+
+    const [activeTab, setActiveTab] = useState(TAB_DETAILS);
+    const [parentId, setParentId] = useState(null);
+    const [reason, setReason] = useState('');
+    const [quota, setQuota] = useState({});
+    const [terminationDate, setTerminationDate] = useState(null);
+    const [authorizedUsers, setAuthorizedUsers] = useState([]);
+    const [errors, setErrors] = useState({});
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState(null);
+
+    // Group token search for the members editor.
+    const [tokenSearchResults, setTokenSearchResults] = useState([]);
+    const [isSearchingTokens, setIsSearchingTokens] = useState(false);
+
+    // (Re-)initialize the form whenever the dialog opens.
+    useEffect(() => {
+        if (!opened) return;
+        setActiveTab(TAB_DETAILS);
+        setErrors({});
+        setSubmitError(null);
+        if (isChange) {
+            setReason(node.reason || '');
+            setQuota({ ...(node.pending?.limit || node.limit) });
+            const date = node.pending?.termination_date || node.termination_date;
+            setTerminationDate(date ? new Date(date) : null);
+            setAuthorizedUsers(node.pending?.authorized_users || node.authorized_users || []);
+        } else {
+            setReason('');
+            setQuota(defaultQuota(resources));
+            setTerminationDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000));
+            setAuthorizedUsers([]);
+            setParentId(myBudgets[0]?.id ?? eligibleBudgets[0]?.id ?? null);
+        }
+    }, [opened, node?.id]);
+
+    const validate = () => {
+        const next = validateQuota(resources, quota);
+        if (!reason || reason.trim().length < 5) next.reason = 'Please describe the purpose (at least 5 characters)';
+        if (!isChange && !parentId) next.parentId = 'Please choose a budget';
+        if (!terminationDate) next.terminationDate = 'Please set an end date';
+        else if (terminationDate <= new Date()) next.terminationDate = 'The end date must be in the future';
+        setErrors(next);
+        return Object.keys(next).length === 0;
+    };
+
+    const tabHasError = (tab) => {
+        if (tab === TAB_DETAILS) return ['reason', 'parentId', 'terminationDate'].some(k => errors[k]);
+        if (tab === TAB_RESOURCES) return (resources || []).some(r => errors[r.id]);
+        return false;
+    };
+
+    const handleSearchTokens = async (query) => {
+        if (!query) { setTokenSearchResults([]); return; }
+        setIsSearchingTokens(true);
+        try {
+            const tokens = await api.searchGroups(query);
+            setTokenSearchResults(tokens.filter(t =>
+                t.toLowerCase().includes(query.toLowerCase()) &&
+                !authorizedUsers.some(au => au.token === t)));
+        } catch {
+            setTokenSearchResults([]);
+        } finally {
+            setIsSearchingTokens(false);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!validate()) return;
+        setSubmitting(true);
+        setSubmitError(null);
+        try {
+            const iso = terminationDate.toISOString();
+            const result = isChange
+                ? await api.requestChange(node.id, {
+                    limit: quota,
+                    termination_date: iso,
+                    authorized_users: authorizedUsers,
+                    reason,
+                })
+                : await api.createNode({
+                    parent_id: parentId,
+                    kind: 'project',
+                    reason,
+                    limit: quota,
+                    termination_date: iso,
+                    authorized_users: authorizedUsers,
+                });
+            onDone?.(result);
+            onClose();
+        } catch (err) {
+            setSubmitError(formatError(err));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <Modal opened={opened} onClose={onClose} size="lg"
+            title={isChange
+                ? (node?.status === 'pending' ? 'Edit request' : 'Request a change')
+                : 'Request a project'}>
+            <form onSubmit={handleSubmit}>
+                <Stack>
+                    <Tabs value={activeTab} onChange={setActiveTab}>
+                        <Tabs.List mb="md">
+                            <Tabs.Tab value={TAB_DETAILS}><TabLabel label="Details" hasError={tabHasError(TAB_DETAILS)} /></Tabs.Tab>
+                            <Tabs.Tab value={TAB_RESOURCES}><TabLabel label="Resources" hasError={tabHasError(TAB_RESOURCES)} /></Tabs.Tab>
+                            <Tabs.Tab value={TAB_MEMBERS}><TabLabel label="Members" hasError={false} /></Tabs.Tab>
+                        </Tabs.List>
+
+                        <Tabs.Panel value={TAB_DETAILS}>
+                            <Stack>
+                                {!isChange && (
+                                    <BudgetSelect
+                                        myBudgets={myBudgets}
+                                        eligibleBudgets={eligibleBudgets}
+                                        resources={resources}
+                                        requestedQuota={quota}
+                                        value={parentId}
+                                        onChange={(v) => { setParentId(v); setErrors(e => ({ ...e, parentId: null })); }}
+                                        error={errors.parentId}
+                                    />
+                                )}
+
+                                <Textarea
+                                    label="Purpose"
+                                    description="What is this project for? Shown to the people who approve it."
+                                    placeholder="e.g. Lab exercises for the Distributed Systems course"
+                                    required
+                                    rows={2}
+                                    value={reason}
+                                    onChange={e => { setReason(e.target.value); setErrors(er => ({ ...er, reason: null })); }}
+                                    error={errors.reason}
+                                />
+
+                                <TerminationDatePicker
+                                    value={terminationDate}
+                                    error={errors.terminationDate}
+                                    onChange={(d) => { setTerminationDate(d); setErrors(er => ({ ...er, terminationDate: null })); }}
+                                />
+                            </Stack>
+                        </Tabs.Panel>
+
+                        <Tabs.Panel value={TAB_RESOURCES}>
+                            <QuotaInputs
+                                resources={resources}
+                                value={quota}
+                                errors={errors}
+                                onChange={(id, v) => { setQuota(q => ({ ...q, [id]: v })); setErrors(er => ({ ...er, [id]: null })); }}
+                            />
+                        </Tabs.Panel>
+
+                        <Tabs.Panel value={TAB_MEMBERS}>
+                            <TokenRoleEditor
+                                label=""
+                                authorizedUsers={authorizedUsers}
+                                onAddToken={(token, role) => setAuthorizedUsers(u => u.some(x => x.token === token) ? u : [...u, { token, openstack_role: role }])}
+                                onRemoveToken={(token) => setAuthorizedUsers(u => u.filter(x => x.token !== token))}
+                                onOpenstackRoleChange={(token, role) => setAuthorizedUsers(u => u.map(x => x.token === token ? { ...x, openstack_role: role || 'member' } : x))}
+                                searchResults={tokenSearchResults}
+                                isSearching={isSearchingTokens}
+                                onSearch={handleSearchTokens}
+                                roles={openstackRoles || []}
+                                defaultOpenstackRole="member"
+                                emptyMessage="Nobody else has access yet. You (the owner) always do."
+                            />
+                        </Tabs.Panel>
+                    </Tabs>
+
+                    {/* Live preview of what will change (change mode only). */}
+                    {isChange && node.status !== 'pending' && (
+                        <NodeChangesDiff
+                            resources={resources}
+                            limitFrom={node.limit}
+                            limitTo={quota}
+                            dateFrom={node.termination_date}
+                            dateTo={terminationDate}
+                            usersFrom={node.authorized_users}
+                            usersTo={authorizedUsers}
+                            label="Your proposed changes"
+                        />
+                    )}
+
+                    {submitError && <Text c="red" size="sm">{submitError}</Text>}
+
+                    <Group justify="flex-end" mt="md">
+                        <Button variant="default" type="button" onClick={onClose}>Cancel</Button>
+                        <Button type="submit" loading={submitting}>
+                            {isChange
+                                ? (node?.status === 'pending' ? 'Update request' : 'Submit change request')
+                                : 'Submit request'}
+                        </Button>
+                    </Group>
+                </Stack>
+            </form>
+        </Modal>
+    );
+}
