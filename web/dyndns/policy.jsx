@@ -394,14 +394,14 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
                             label="Allow subdomains"
                             description="Owners of a matched zone may also create and manage delegated subzones under it (e.g. sub.example.com under example.com)."
                             checked={!!rule.allow_subdomains}
-                            onChange={(e) => setRule(prev => ({ ...prev, allow_subdomains: e.currentTarget.checked }))}
+                            onChange={(e) => { const v = e.currentTarget.checked; setRule(prev => ({ ...prev, allow_subdomains: v })); }}
                         />
 
                         <Checkbox
                             label="Allow sharing"
                             description="Owners may share a matched zone with additional users, and policy-entitled users can join it as co-owners (equal rights). Off = single-owner (the old behaviour)."
                             checked={!!rule.sharing_allowed}
-                            onChange={(e) => setRule(prev => ({ ...prev, sharing_allowed: e.currentTarget.checked }))}
+                            onChange={(e) => { const v = e.currentTarget.checked; setRule(prev => ({ ...prev, sharing_allowed: v })); }}
                         />
 
                         <TextInput
