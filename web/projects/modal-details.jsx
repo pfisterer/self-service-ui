@@ -61,6 +61,14 @@ export function NodeDetailsModal({ opened, onClose, node, resources }) {
                             <TokenBadgeList tokens={node.eligible_requesters}
                                 emptyMessage="Nobody — requests are not enabled" />
                         </div>
+                        <div>
+                            <Text size="xs" fw={600} c="dimmed" mb="4">Sub-budget requests</Text>
+                            <Text size="sm">
+                                {node.allow_sub_budget_requests === false
+                                    ? 'Not accepted — requesters can only ask for projects here'
+                                    : 'Accepted — requesters may ask for a sub-budget of their own'}
+                            </Text>
+                        </div>
                         {node.auto_approve?.per_requester_limit && (
                             <div>
                                 <Text size="xs" fw={600} c="dimmed" mb="4">Self-service limit (per person)</Text>
