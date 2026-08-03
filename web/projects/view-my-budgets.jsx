@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronsDownUp, ChevronsUpDown, Inbox, Search, X } from 'lucide-react';
-import { ActionIcon, Alert, Button, Grid, Group, Loader, Paper, ScrollArea, Stack, Text, TextInput, Tooltip } from '@mantine/core';
+import { ActionIcon, Alert, Button, filterTreeData, getTreeExpandedState, Grid, Group, Loader, Paper, ScrollArea, Stack, Text, TextInput, Tooltip, useTree } from '@mantine/core';
 import { Delayed } from '/helper/delayed.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -8,7 +8,7 @@ import { useErrorModal } from '/providers/error-modal.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { BudgetCard } from './card-budget.jsx';
 import { ProjectCard } from './card-project.jsx';
-import { BudgetTree, filterBudgetTree } from './component-budget-tree.jsx';
+import { BudgetTree, budgetNodeFilter, budgetsToTreeData } from './component-budget-tree.jsx';
 import { AdoptModal } from './modal-adopt.jsx';
 import { ApproveModal } from './modal-approve.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
@@ -37,10 +37,15 @@ export function MyBudgetsView() {
 
     const [myBudgets, setMyBudgets] = useState([]);
     const [eligibleBudgets, setEligibleBudgets] = useState([]);
-    // Tree state: which budgets are open, and the children loaded so far.
-    const [expanded, setExpanded] = useState(new Set());
+    // Budgets that accept a request for a sub-budget — a budget may take project
+    // requests while refusing sub-budgets (allow_sub_budget_requests). Offering
+    // one anyway would produce a request the server rejects.
+    const budgetRequestTargets = useMemo(
+        () => eligibleBudgets.filter(b => b.allow_sub_budget_requests !== false),
+        [eligibleBudgets]);
+    // Tree state: the children loaded so far. Expansion, per-node loading and
+    // load errors are owned by the Mantine tree controller below.
     const [childrenMap, setChildrenMap] = useState(new Map());
-    const [loadingIds, setLoadingIds] = useState(new Set());
     const [selected, setSelected] = useState(null);
     const [search, setSearch] = useState('');
     const dlg = useNodeDialog();
@@ -54,6 +59,16 @@ export function MyBudgetsView() {
     const managedIds = new Set(myBudgets.map(b => b.id));
     const rootBudgets = myBudgets.filter(b => !managedIds.has(b.parent_id));
 
+    // Lazy loading: the tree calls this the first time a node with children is
+    // opened. Errors propagate on purpose — the controller records them and the
+    // row shows the failure in place instead of a modal that loses the context.
+    const loadChildren = async (nodeId) => {
+        const kids = await api.listChildren(nodeId);
+        setChildrenMap(m => new Map(m).set(nodeId, kids));
+    };
+
+    const tree = useTree({ multiple: false, onLoadChildren: loadChildren });
+
     // Reloads the roots AND everything currently visible in the tree, so the
     // usage bars and statuses are fresh after every action.
     const { loaded, refresh } = useAsyncRefresh(async () => {
@@ -64,7 +79,7 @@ export function MyBudgetsView() {
         setMyBudgets(budgets);
         setEligibleBudgets(eligible);
 
-        const ids = [...expanded];
+        const ids = Object.entries(tree.expandedState).filter(([, open]) => open).map(([id]) => id);
         const loadedKids = await Promise.all(ids.map(id => api.listChildren(id).catch(() => null)));
         const map = new Map();
         ids.forEach((id, i) => { if (loadedKids[i]) map.set(id, loadedKids[i]); });
@@ -102,47 +117,37 @@ export function MyBudgetsView() {
     };
 
     const expandAll = async () => {
+        // Expand from the freshly loaded map: the derived tree data has not been
+        // re-rendered yet at this point, so the controller must be told directly.
         const map = await loadAllChildren();
-        setExpanded(new Set([...map.keys()]));
+        tree.setExpandedState(getTreeExpandedState(budgetsToTreeData(rootBudgets, map), '*'));
     };
-    const collapseAll = () => setExpanded(new Set());
+    const collapseAll = () => tree.collapseAllNodes();
 
     // Full-text search filters the WHOLE tree, so it must be loaded once the
     // user starts typing (no-op when everything is already in memory).
     const searching = search.trim().length > 0;
     useEffect(() => { if (searching) loadAllChildren(); }, [searching]);
 
-    const filtered = useMemo(
-        () => (searching ? filterBudgetTree(rootBudgets, childrenMap, search.trim()) : null),
-        [searching, search, myBudgets, childrenMap],
+    const treeData = useMemo(
+        () => budgetsToTreeData(rootBudgets, childrenMap),
+        [myBudgets, childrenMap],
     );
 
-    const toggle = async (node) => {
-        if (expanded.has(node.id)) {
-            setExpanded(s => { const next = new Set(s); next.delete(node.id); return next; });
-            return;
-        }
-        if (!childrenMap.has(node.id)) {
-            setLoadingIds(s => new Set(s).add(node.id));
-            try {
-                const kids = await api.listChildren(node.id);
-                setChildrenMap(m => new Map(m).set(node.id, kids));
-            } catch (e) {
-                showError(formatError(e));
-                return;
-            } finally {
-                setLoadingIds(s => { const next = new Set(s); next.delete(node.id); return next; });
-            }
-        }
-        setExpanded(s => new Set(s).add(node.id));
-    };
+    const visibleData = useMemo(
+        () => (searching ? filterTreeData(treeData, search.trim(), budgetNodeFilter) : treeData),
+        [treeData, searching, search],
+    );
 
-    // Clicking a row selects it; budgets also expand on first click so
-    // exploring the tree needs no aimed chevron clicks.
-    const select = (node) => {
-        setSelected(node);
-        if (isBudget(node) && !expanded.has(node.id)) toggle(node);
-    };
+    // A search result is only useful fully unfolded — the matches usually sit
+    // deep in the tree.
+    useEffect(() => {
+        if (searching) tree.setExpandedState(getTreeExpandedState(visibleData, '*'));
+    }, [searching, visibleData]);
+
+    // Clicking a row selects it. Expanding is handled by the tree itself
+    // (expandOnClick), which also triggers onLoadChildren on first open.
+    const select = (node) => setSelected(node);
 
     const handleDelete = async (node) => {
         const ok = await confirm({
@@ -183,7 +188,7 @@ export function MyBudgetsView() {
                     The budgets you manage, as a tree. Select a node to inspect it;
                     delegate by creating a sub-budget with someone else in “Managed by”.
                 </Text>
-                {eligibleBudgets.length > 0 && (
+                {budgetRequestTargets.length > 0 && (
                     <Button size="xs" variant="light" leftSection={<Inbox size="14" />}
                         onClick={() => setBudgetForm({ mode: 'request' })}>
                         Request budget
@@ -194,8 +199,8 @@ export function MyBudgetsView() {
             {myBudgets.length === 0 && (
                 <Alert color="blue" variant="light">
                     You don't manage any budgets yet.
-                    {eligibleBudgets.length > 0
-                        ? ' You can request one from a budget that accepts your requests.'
+                    {budgetRequestTargets.length > 0
+                        ? ' You can request one from a budget that accepts sub-budget requests.'
                         : ' A manager of a parent budget can delegate one to you.'}
                 </Alert>
             )}
@@ -241,14 +246,10 @@ export function MyBudgetsView() {
 
                             <ScrollArea.Autosize mah="70vh">
                                 <BudgetTree
-                                    roots={filtered ? filtered.roots : rootBudgets}
-                                    childrenMap={filtered ? filtered.childrenMap : childrenMap}
-                                    expanded={expanded}
-                                    loadingIds={loadingIds}
+                                    data={visibleData}
+                                    tree={tree}
                                     selectedId={selected?.id}
                                     onSelect={select}
-                                    onToggle={toggle}
-                                    searchActive={!!filtered}
                                 />
                             </ScrollArea.Autosize>
                         </Paper>
@@ -281,7 +282,7 @@ export function MyBudgetsView() {
                 mode={budgetForm?.mode}
                 parent={budgetForm?.parent}
                 node={budgetForm?.node}
-                eligibleBudgets={eligibleBudgets}
+                eligibleBudgets={budgetRequestTargets}
                 currentUserEmail={userEmail}
             />
             <ApproveModal opened={dlg.is('approve')} onClose={dlg.close} onDone={refresh}
