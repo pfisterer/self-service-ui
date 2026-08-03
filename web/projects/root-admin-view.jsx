@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { Alert, Badge, Button, Group, Loader, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
@@ -131,6 +131,28 @@ export function RootAdminView() {
                     </Stack>
                 </SimpleGrid>
             </Paper>
+
+            {/* Users whose Keystone account could not be resolved without guessing.
+                Their role was NOT assigned — without this panel that stays invisible
+                until someone reports missing access. */}
+            {status?.preseed_conflicts?.length ? (
+                <Alert color="orange" icon={<AlertTriangle size="16" />}
+                    title={`${status.preseed_conflicts.length} user(s) could not be prepared in OpenStack`}>
+                    <Text size="sm" mb="xs">
+                        These people did not get their role. Their OpenStack account is ambiguous — most
+                        often the OIDC username differs from the email address. Assign the role to the
+                        correct account by hand, or correct the username; the next sync retries.
+                    </Text>
+                    <Stack gap="xs">
+                        {status.preseed_conflicts.map((c, i) => (
+                            <div key={`${c.email}-${i}`}>
+                                <Text size="sm" fw={600}>{c.email}</Text>
+                                <Text size="xs" c="dimmed">{c.reason}</Text>
+                            </div>
+                        ))}
+                    </Stack>
+                </Alert>
+            ) : null}
         </Stack>
     );
 }
