@@ -8,25 +8,20 @@ export function Footer({ title, version }) {
     const { config: dynDnsConfig } = useDynDnsConfig();
     const { config: cloudConfig } = useCloudConfig();
 
-    const apiVersions = [
-        dynDnsConfig?.version && { name: 'Dynamic Zones API', ver: dynDnsConfig.version },
-        cloudConfig?.version && { name: 'Cloud API', ver: cloudConfig.version },
+    // One line, one format for every component: "<name> — Version <x>".
+    const versions = [
+        <>{title} — Version {version}</>,
+        dynDnsConfig?.version && <>Dynamic Zones API — Version {dynDnsConfig.version}</>,
+        cloudConfig?.version && <>Cloud API — Version {cloudConfig.version}</>,
     ].filter(Boolean);
 
     return (
         <Box component="div" py="xs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Box ta="center">
-                {/* App name + version */}
-                <Text size="sm" c="dimmed" mb={apiVersions.length ? 2 : 'xs'}>
-                    {title} — Version {version}
+                {/* This UI and the APIs it talks to, on one line */}
+                <Text size="sm" c="dimmed" mb="xs">
+                    {versions.map((v, i) => <span key={i}>{i > 0 && ' · '}{v}</span>)}
                 </Text>
-
-                {/* Versions of the APIs this UI talks to */}
-                {apiVersions.length > 0 && (
-                    <Text size="xs" c="dimmed" mb="xs">
-                        {apiVersions.map(a => `${a.name} ${a.ver}`).join(' · ')}
-                    </Text>
-                )}
 
                 <Group justify="center" gap="xs">
                     <Anchor href="https://github.com/pfisterer/self-service-ui" size="sm" target="_blank">
