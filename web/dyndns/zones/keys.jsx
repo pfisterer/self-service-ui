@@ -30,6 +30,10 @@ export function ShowKeys({ zone }) {
                     </Group>
                     <Stack gap="sm">
                         <div>
+                            <Text size="xs" c="dimmed" tt="uppercase" mb={4}>Zone</Text>
+                            <CodeBlock code={zone.zone} language="plaintext" />
+                        </div>
+                        <div>
                             <Text size="xs" c="dimmed" tt="uppercase" mb={4}>Algorithm</Text>
                             <CodeBlock code={key.algorithm} language="plaintext" />
                         </div>

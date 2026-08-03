@@ -81,8 +81,8 @@ export function CloudProjectManagement() {
                 <Tabs value={getActiveSection()} onChange={(val) => val && navigate(`/${val}`)} mb="lg">
                     <Tabs.List>
                         <Tabs.Tab value="projects" leftSection={<FolderKanban size="16" />}>My Projects</Tabs.Tab>
-                        <Tabs.Tab value="budgets" leftSection={<Wallet size="16" />}>My Budgets</Tabs.Tab>
                         <Tabs.Tab value="approvals" leftSection={<Inbox size="16" />}>Approvals</Tabs.Tab>
+                        <Tabs.Tab value="budgets" leftSection={<Wallet size="16" />}>My Budgets</Tabs.Tab>
                         {isRoot ? <Tabs.Tab value="admin-sync" leftSection={<ShieldCheck size="16" />}>Root Admin</Tabs.Tab> : null}
                     </Tabs.List>
                 </Tabs>

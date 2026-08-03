@@ -65,8 +65,25 @@ function InfoItem({ label, value, note }) {
     );
 }
 
+// The zone's connection details, derived once and shared by every tab that
+// pre-fills snippets from a zone + its TSIG key (this tab and the Kubernetes one).
+export function deriveZoneConfig(zone, dynDnsConfig) {
+    const zoneName = zone.zone;
+    const key = zone.zone_keys?.[0];
+    return {
+        host: dynDnsConfig?.advertised_nameserver || dynDnsConfig?.dns_server_address || '<dns-server>',
+        port: dynDnsConfig?.dns_server_port ?? 53,
+        zoneFqdn: zoneName.endsWith('.') ? zoneName : `${zoneName}.`,
+        zoneNoDot: zoneName.replace(/\.$/, ''),
+        keyname: key?.keyname || '<keyname>',
+        alg: key?.algorithm || 'hmac-sha256',
+        secret: key?.key || '<tsig-secret>',
+        hasKey: !!key,
+    };
+}
+
 // Read-only overview of the values every client below is pre-filled with.
-function PrefilledValues({ cfg }) {
+export function PrefilledValues({ cfg }) {
     return (
         <Paper withBorder radius="md" p="md">
             <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" verticalSpacing="sm">
@@ -242,16 +259,9 @@ ${fqdnNoDot}`;
 export function DynamicDns({ zone }) {
     const { config: dynDnsConfig } = useDynDnsConfig();
 
-    const zoneName = zone.zone;
-    const key = zone.zone_keys?.[0];
     const cfg = {
-        host: dynDnsConfig?.advertised_nameserver || dynDnsConfig?.dns_server_address || '<dns-server>',
-        port: dynDnsConfig?.dns_server_port ?? 53,
-        zoneFqdn: zoneName.endsWith('.') ? zoneName : `${zoneName}.`,
-        zoneNoDot: zoneName.replace(/\.$/, ''),
-        keyname: key?.keyname || '<keyname>',
-        alg: key?.algorithm || 'hmac-sha256',
-        secret: key?.key || '<tsig-secret>',
+        ...deriveZoneConfig(zone, dynDnsConfig),
+        // ddclient-specific additions on top of the shared zone details.
         keyfilePath: '/etc/dyndns/zone.key',
         ttl: 60,
     };
@@ -268,7 +278,7 @@ export function DynamicDns({ zone }) {
 
             <PrefilledValues cfg={cfg} />
 
-            {!key && (
+            {!cfg.hasKey && (
                 <Alert icon={<AlertCircle size="16" />} color="red">
                     This zone has no TSIG key yet — create one under the "Keys" tab first, then the snippets below
                     will be filled in automatically.

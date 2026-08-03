@@ -6,7 +6,7 @@ import { useErrorModal } from '/providers/error-modal.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { ShowKeys } from '/dyndns/zones/keys.jsx';
-import { ExternalDnsConfig } from '/dyndns/zones/dynamic-dns-kubernetes.jsx';
+import { DynamicDnsKubernetes } from '/dyndns/zones/dynamic-dns-kubernetes.jsx';
 import { DynamicDns } from '/dyndns/zones/dynamic-dns.jsx';
 import { DnsRecordsList } from '/dyndns/zones/dns-record-list.jsx';
 import { TlsCertificates } from '/dyndns/zones/tls-certificates.jsx';
@@ -477,7 +477,7 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
                 )}
 
                 {activeTab === "Dynamic DNS (Kubernetes)" && (
-                    <ExternalDnsConfig externalDnsValuesYaml={zone.externalDnsValuesYaml} externalDnsSecretYaml={zone.externalDnsSecretYaml} zone={zone.zoneData} />
+                    <DynamicDnsKubernetes externalDnsValuesYaml={zone.externalDnsValuesYaml} zone={zone.zoneData} />
                 )}
 
                 {activeTab === "TLS Certificates" && (
