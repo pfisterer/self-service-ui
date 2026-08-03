@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Badge, Button, Group, Modal, Select, Stack, Tabs, Text, Textarea } from '@mantine/core';
+import { Select, Stack, Text, Textarea } from '@mantine/core';
 import { useNodesApi } from './api-nodes.jsx';
 import { NodeChangesDiff, TerminationDatePicker } from './component-common.jsx';
+import { FormModal, FormTabs, useFormErrors } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
 import { formatError, freeAmount, quotaFits, resourceSummaryText } from './util-project.jsx';
@@ -74,15 +75,6 @@ function BudgetSelect({ myBudgets, eligibleBudgets, resources, requestedQuota, v
     );
 }
 
-function TabLabel({ label, hasError }) {
-    return (
-        <Group gap="xs" wrap="nowrap">
-            {label}
-            {hasError && <Badge size="xs" color="red" circle>!</Badge>}
-        </Group>
-    );
-}
-
 // ProjectFormModal creates a new project request or proposes changes to an
 // existing project (mode is derived from `node`):
 //   node == null  → create: budget picker + purpose + resources + members
@@ -99,7 +91,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const [quota, setQuota] = useState({});
     const [terminationDate, setTerminationDate] = useState(null);
     const [authorizedUsers, setAuthorizedUsers] = useState([]);
-    const [errors, setErrors] = useState({});
+    const { errors, setErrors, clear } = useFormErrors();
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState(null);
 
@@ -190,105 +182,101 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         }
     };
 
+    const detailsTab = (
+        <Stack>
+            {!isChange && (
+                <BudgetSelect
+                    myBudgets={myBudgets}
+                    eligibleBudgets={eligibleBudgets}
+                    resources={resources}
+                    requestedQuota={quota}
+                    value={parentId}
+                    onChange={(v) => { setParentId(v); clear('parentId'); }}
+                    error={errors.parentId}
+                />
+            )}
+
+            <Textarea
+                label="Purpose"
+                description="What is this project for? Shown to the people who approve it."
+                placeholder="e.g. Lab exercises for the Distributed Systems course"
+                required
+                rows={2}
+                value={reason}
+                onChange={e => { setReason(e.target.value); clear('reason'); }}
+                error={errors.reason}
+            />
+
+            <TerminationDatePicker
+                value={terminationDate}
+                error={errors.terminationDate}
+                onChange={(d) => { setTerminationDate(d); clear('terminationDate'); }}
+            />
+        </Stack>
+    );
+
+    const resourcesTab = (
+        <QuotaInputs
+            resources={resources}
+            value={quota}
+            errors={errors}
+            onChange={(id, v) => { setQuota(q => ({ ...q, [id]: v })); clear(id); }}
+        />
+    );
+
+    const membersTab = (
+        <TokenRoleEditor
+            label=""
+            authorizedUsers={authorizedUsers}
+            onAddToken={(token, role) => setAuthorizedUsers(u => u.some(x => x.token === token) ? u : [...u, { token, openstack_role: role }])}
+            onRemoveToken={(token) => setAuthorizedUsers(u => u.filter(x => x.token !== token))}
+            onOpenstackRoleChange={(token, role) => setAuthorizedUsers(u => u.map(x => x.token === token ? { ...x, openstack_role: role || 'member' } : x))}
+            searchResults={tokenSearchResults}
+            isSearching={isSearchingTokens}
+            onSearch={handleSearchTokens}
+            roles={openstackRoles || []}
+            defaultOpenstackRole="member"
+            emptyMessage="Nobody else has access yet. You (the owner) always do."
+        />
+    );
+
     return (
-        <Modal opened={opened} onClose={onClose} size="lg"
+        <FormModal
+            opened={opened}
+            onClose={onClose}
             title={isChange
                 ? (node?.status === 'pending' ? 'Edit request' : 'Request a change')
-                : 'Request a project'}>
-            <form onSubmit={handleSubmit}>
-                <Stack>
-                    <Tabs value={activeTab} onChange={setActiveTab}>
-                        <Tabs.List mb="md">
-                            <Tabs.Tab value={TAB_DETAILS}><TabLabel label="Details" hasError={tabHasError(TAB_DETAILS)} /></Tabs.Tab>
-                            <Tabs.Tab value={TAB_RESOURCES}><TabLabel label="Resources" hasError={tabHasError(TAB_RESOURCES)} /></Tabs.Tab>
-                            <Tabs.Tab value={TAB_MEMBERS}><TabLabel label="Members" hasError={false} /></Tabs.Tab>
-                        </Tabs.List>
+                : 'Request a project'}
+            onSubmit={handleSubmit}
+            submitting={submitting}
+            submitError={submitError}
+            submitLabel={isChange
+                ? (node?.status === 'pending' ? 'Update request' : 'Submit change request')
+                : 'Submit request'}
+        >
+            <FormTabs
+                value={activeTab}
+                onChange={setActiveTab}
+                tabs={[
+                    { value: TAB_DETAILS, label: 'Details', hasError: tabHasError(TAB_DETAILS), content: detailsTab },
+                    { value: TAB_RESOURCES, label: 'Resources', hasError: tabHasError(TAB_RESOURCES), content: resourcesTab },
+                    { value: TAB_MEMBERS, label: 'Members', content: membersTab },
+                ]}
+            />
 
-                        <Tabs.Panel value={TAB_DETAILS}>
-                            <Stack>
-                                {!isChange && (
-                                    <BudgetSelect
-                                        myBudgets={myBudgets}
-                                        eligibleBudgets={eligibleBudgets}
-                                        resources={resources}
-                                        requestedQuota={quota}
-                                        value={parentId}
-                                        onChange={(v) => { setParentId(v); setErrors(e => ({ ...e, parentId: null })); }}
-                                        error={errors.parentId}
-                                    />
-                                )}
-
-                                <Textarea
-                                    label="Purpose"
-                                    description="What is this project for? Shown to the people who approve it."
-                                    placeholder="e.g. Lab exercises for the Distributed Systems course"
-                                    required
-                                    rows={2}
-                                    value={reason}
-                                    onChange={e => { setReason(e.target.value); setErrors(er => ({ ...er, reason: null })); }}
-                                    error={errors.reason}
-                                />
-
-                                <TerminationDatePicker
-                                    value={terminationDate}
-                                    error={errors.terminationDate}
-                                    onChange={(d) => { setTerminationDate(d); setErrors(er => ({ ...er, terminationDate: null })); }}
-                                />
-                            </Stack>
-                        </Tabs.Panel>
-
-                        <Tabs.Panel value={TAB_RESOURCES}>
-                            <QuotaInputs
-                                resources={resources}
-                                value={quota}
-                                errors={errors}
-                                onChange={(id, v) => { setQuota(q => ({ ...q, [id]: v })); setErrors(er => ({ ...er, [id]: null })); }}
-                            />
-                        </Tabs.Panel>
-
-                        <Tabs.Panel value={TAB_MEMBERS}>
-                            <TokenRoleEditor
-                                label=""
-                                authorizedUsers={authorizedUsers}
-                                onAddToken={(token, role) => setAuthorizedUsers(u => u.some(x => x.token === token) ? u : [...u, { token, openstack_role: role }])}
-                                onRemoveToken={(token) => setAuthorizedUsers(u => u.filter(x => x.token !== token))}
-                                onOpenstackRoleChange={(token, role) => setAuthorizedUsers(u => u.map(x => x.token === token ? { ...x, openstack_role: role || 'member' } : x))}
-                                searchResults={tokenSearchResults}
-                                isSearching={isSearchingTokens}
-                                onSearch={handleSearchTokens}
-                                roles={openstackRoles || []}
-                                defaultOpenstackRole="member"
-                                emptyMessage="Nobody else has access yet. You (the owner) always do."
-                            />
-                        </Tabs.Panel>
-                    </Tabs>
-
-                    {/* Live preview of what will change (change mode only). */}
-                    {isChange && node.status !== 'pending' && (
-                        <NodeChangesDiff
-                            resources={resources}
-                            limitFrom={node.limit}
-                            limitTo={quota}
-                            dateFrom={node.termination_date}
-                            dateTo={terminationDate}
-                            usersFrom={node.authorized_users}
-                            usersTo={authorizedUsers}
-                            label="Your proposed changes"
-                        />
-                    )}
-
-                    {submitError && <Text c="red" size="sm">{submitError}</Text>}
-
-                    <Group justify="flex-end" mt="md">
-                        <Button variant="default" type="button" onClick={onClose}>Cancel</Button>
-                        <Button type="submit" loading={submitting}>
-                            {isChange
-                                ? (node?.status === 'pending' ? 'Update request' : 'Submit change request')
-                                : 'Submit request'}
-                        </Button>
-                    </Group>
-                </Stack>
-            </form>
-        </Modal>
+            {/* Live preview of what will change (change mode only). */}
+            {isChange && node.status !== 'pending' && (
+                <NodeChangesDiff
+                    resources={resources}
+                    limitFrom={node.limit}
+                    limitTo={quota}
+                    dateFrom={node.termination_date}
+                    dateTo={terminationDate}
+                    usersFrom={node.authorized_users}
+                    usersTo={authorizedUsers}
+                    label="Your proposed changes"
+                />
+            )}
+        </FormModal>
     );
 }
