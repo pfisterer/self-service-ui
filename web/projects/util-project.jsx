@@ -183,6 +183,25 @@ export function isExpired(d) {
     return !!d && dayjs(d).isBefore(dayjs());
 }
 
+// ── Requests waiting for a decision ─────────────────────────────────────────
+
+// The four kinds of thing a manager decides on. Used by the filter in the
+// budget tree; the keys are also what `requestType` returns.
+export const REQUEST_TYPES = [
+    { value: 'project', label: 'New projects' },
+    { value: 'budget', label: 'New budgets' },
+    { value: 'change', label: 'Change requests' },
+    { value: 'imported', label: 'Imported' },
+];
+
+// Classifies a node into one of REQUEST_TYPES; null when it waits for nobody.
+export function requestType(node) {
+    if (isImported(node)) return 'imported';
+    if (node?.status === 'change_pending') return 'change';
+    if (node?.status !== 'pending') return null;
+    return isBudget(node) ? 'budget' : 'project';
+}
+
 // Extracts a user-friendly error message from a thrown value.
 export function formatError(err) {
     return err?.message ?? String(err);

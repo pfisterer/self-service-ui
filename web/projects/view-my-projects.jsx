@@ -5,14 +5,13 @@ import { Delayed } from '/helper/delayed.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
-import { fetchParentNames, useNodesApi } from './api-nodes.jsx';
+import { useNodesApi } from './api-nodes.jsx';
 import { ProjectCard } from './card-project.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
-import { NodeDetailsModal } from './modal-details.jsx';
-import { NodeHistoryModal } from './modal-history.jsx';
+import { NodeInspectModal, TAB_DETAILS, TAB_HISTORY } from './modal-inspect.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
-import { formatError, getAuthUserEmail, useAsyncRefresh } from './util-project.jsx';
+import { COLOR, formatError, getAuthUserEmail, useAsyncRefresh } from './util-project.jsx';
 
 // MyProjectsView lists the projects the signed-in user owns and lets them
 // request new ones, propose changes and release finished projects.
@@ -126,8 +125,10 @@ export function MyProjectsView() {
                 openstackRoles={config.openstackRoles}
                 node={dlg.node}
             />
-            <NodeDetailsModal opened={dlg.is('details')} onClose={dlg.close} node={dlg.node} resources={resources} />
-            <NodeHistoryModal opened={dlg.is('history')} onClose={dlg.close} node={dlg.node} resources={resources} />
+            {/* One modal for both triggers: the History button opens it on that tab. */}
+            <NodeInspectModal opened={dlg.is('details') || dlg.is('history')}
+                initialTab={dlg.is('history') ? TAB_HISTORY : TAB_DETAILS}
+                onClose={dlg.close} node={dlg.node} resources={resources} />
         </Stack>
     );
 }

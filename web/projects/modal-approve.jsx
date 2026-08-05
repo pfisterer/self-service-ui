@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Checkbox, Group, Loader, Modal, Stack, Text } from '@mantine/core';
+import { Alert, Anchor, Button, Checkbox, Group, Loader, Modal, Stack, Text } from '@mantine/core';
 import { useNodesApi } from './api-nodes.jsx';
 import { NodeUsageBars, QuotaBadges } from './component-common.jsx';
 import { QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
-import { formatError, isBudget, nodeTitle, ownerEmail } from './util-project.jsx';
+import { COLOR, formatError, isBudget, nodeTitle, ownerEmail } from './util-project.jsx';
 
 // ApproveModal confirms granting a pending request or a pending change.
 // The manager sees the impact on the funding budget before deciding and may
@@ -72,10 +72,19 @@ export function ApproveModal({ opened, onClose, onDone, resources, node }) {
             title={isChange ? `Approve change: ${nodeTitle(node)}` : `Approve: ${nodeTitle(node)}`}>
             <Stack>
                 <Stack gap="4">
-                    {ownerEmail(node) && <Text size="sm"><b>Requested by:</b> {ownerEmail(node)}</Text>}
+                    {/* The owner for a leaf; a budget has none, so fall back to
+                        whoever filed the request. */}
+                    {(ownerEmail(node) || node.created_by) && (
+                        <Text size="sm">
+                            <b>Requested by:</b>{' '}
+                            <Anchor href={`mailto:${ownerEmail(node) || node.created_by}`} size="sm">
+                                {ownerEmail(node) || node.created_by}
+                            </Anchor>
+                        </Text>
+                    )}
                     {node.reason && <Text size="sm"><b>Purpose:</b> {node.reason}</Text>}
                     {isBudget(node) && (
-                        <Alert color="blue" variant="light" p="xs">
+                        <Alert color={COLOR.info} variant="light" p="xs">
                             This approves a <b>budget</b>: its managers can then approve requests and
                             delegate further within the granted cap.
                         </Alert>
@@ -118,7 +127,7 @@ export function ApproveModal({ opened, onClose, onDone, resources, node }) {
 
                 <Group justify="flex-end" mt="md">
                     <Button variant="default" onClick={onClose}>Cancel</Button>
-                    <Button color="green" loading={submitting} onClick={handleSubmit}>Approve</Button>
+                    <Button color={COLOR.positive} loading={submitting} onClick={handleSubmit}>Approve</Button>
                 </Group>
             </Stack>
         </Modal>
