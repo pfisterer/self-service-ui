@@ -32,14 +32,18 @@ export function CloudStatusProvider({ children }) {
             // 'direct': the badge counts what is this user's to decide. Requests
             // inside delegated sub-budgets belong to their manager — counting
             // them would nag a root admin with the whole organization.
-            sdk.listNodesToManage({ client, query: { limit: 200, offset: 0, scope: 'direct' } }),
+            //
+            // limit=1 because only the count is wanted: the listing reports how
+            // many matches it was cut from, so the badge is exact without
+            // fetching a single row it would ever show.
+            sdk.listNodesToManage({ client, query: { limit: 1, offset: 0, scope: 'direct' } }),
         ]);
         setState({
             isRoot: role.status === 'fulfilled'
                 && !!role.value?.data?.allowed
                 && !role.value?.data?.impersonated_user,
             pending: toManage.status === 'fulfilled'
-                ? (toManage.value?.data || []).length
+                ? (toManage.value?.data?.total ?? 0)
                 : 0,
         });
     }, [client, sdk, user]);

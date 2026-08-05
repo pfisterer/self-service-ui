@@ -40,7 +40,7 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
         if (!opened || !email.includes('@')) { setOwnerBudgets([]); return; }
         let cancelled = false;
         api.listEligibleForOwner([`user:${email}`])
-            .then(list => { if (!cancelled) setOwnerBudgets(list); })
+            .then(page => { if (!cancelled) setOwnerBudgets(page.items); })
             .catch(() => { if (!cancelled) setOwnerBudgets([]); });
         return () => { cancelled = true; };
     }, [opened, ownerEmail]);

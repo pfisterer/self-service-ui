@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useClient } from '../providers/client.jsx';
-import { normalizeArrayResponse, normalizeObjectResponse } from './util-project.jsx';
+import { normalizeObjectResponse } from './util-project.jsx';
 
 // useNodesApi wraps every node-tree SDK operation with uniform error handling,
 // so views and modals never deal with transport envelopes, headers or the
@@ -18,12 +18,6 @@ function errorOf(res) {
         ?? (res?.error ? String(res.error) : null);
 }
 
-function unwrapArray(res) {
-    const err = errorOf(res);
-    if (err) throw new Error(err);
-    return normalizeArrayResponse(res);
-}
-
 function unwrapObject(res) {
     const err = errorOf(res);
     if (err) throw new Error(err);
@@ -35,15 +29,34 @@ function unwrapVoid(res) {
     if (err) throw new Error(err);
 }
 
+// Every listing answers with { items, total }: total counts the matches BEFORE
+// the page was cut, so a caller can always tell a complete list from the first
+// page of a longer one. Nothing in this UI may show a list without knowing that.
+function unwrapPage(res) {
+    const err = errorOf(res);
+    if (err) throw new Error(err);
+    const data = normalizeObjectResponse(res);
+    const items = Array.isArray(data.items) ? data.items : [];
+    return { items, total: Number.isInteger(data.total) ? data.total : items.length };
+}
+
+// PAGE_SIZE is one page of tree children or search hits — small enough that a
+// course budget with hundreds of student projects arrives in readable chunks
+// and the DOM never holds more rows than someone asked to see.
+export const PAGE_SIZE = 50;
+
 export function useNodesApi() {
     const { client, sdk } = useClient('projects');
 
     return useMemo(() => {
         if (!client || !sdk) return null;
 
-        // Lists are capped generously; the deployment scale (one university)
-        // stays far below this, so the UI skips pagination controls.
-        const PAGE = { limit: 500, offset: 0 };
+        // Lists that grow with one person's own work — the projects they own,
+        // the budgets delegated to them, the decisions on their desk. These are
+        // bounded by what a human can keep track of, so they are fetched in one
+        // go; the views say so when the cap is ever hit rather than pretending
+        // the list is complete.
+        const BOUNDED = { limit: 500, offset: 0 };
 
         return {
             // ── Configuration ────────────────────────────────────────────
@@ -53,21 +66,27 @@ export function useNodesApi() {
             // ── Reading the tree ─────────────────────────────────────────
             getNode: async (id) =>
                 unwrapObject(await sdk.getNode({ client, path: { id } })),
-            listChildren: async (id) =>
-                unwrapArray(await sdk.listNodeChildren({ client, path: { id }, query: PAGE })),
+            // The one list that has no natural bound: a course budget holds as
+            // many projects as it has students. Loaded one page at a time.
+            listChildren: async (id, { limit = PAGE_SIZE, offset = 0 } = {}) =>
+                unwrapPage(await sdk.listNodeChildren({ client, path: { id }, query: { limit, offset } })),
+            // Full-text search over everything below the budgets the caller
+            // manages. Server-side because the tree is no longer fully loaded.
+            searchNodes: async (q, { limit = PAGE_SIZE, offset = 0 } = {}) =>
+                unwrapPage(await sdk.searchNodes({ client, query: { q, limit, offset } })),
             listMine: async () =>
-                unwrapArray(await sdk.listMyNodes({ client, query: PAGE })),
+                unwrapPage(await sdk.listMyNodes({ client, query: BOUNDED })),
             listMyBudgets: async () =>
-                unwrapArray(await sdk.listMyBudgets({ client, query: PAGE })),
+                unwrapPage(await sdk.listMyBudgets({ client, query: BOUNDED })),
             // scope 'direct' = requests nobody else manages, 'subtree' = everything
             // below my budgets, including what a sub-budget's manager should handle.
             listToManage: async (scope = 'direct') =>
-                unwrapArray(await sdk.listNodesToManage({ client, query: { ...PAGE, scope } })),
+                unwrapPage(await sdk.listNodesToManage({ client, query: { ...BOUNDED, scope } })),
             listEligibleForMe: async () =>
-                unwrapArray(await sdk.listEligibleBudgets({ client, query: PAGE })),
+                unwrapPage(await sdk.listEligibleBudgets({ client, query: BOUNDED })),
             listEligibleForOwner: async (ownerTokens) =>
-                unwrapArray(await sdk.listEligibleBudgetsForOwner({
-                    client, query: { ...PAGE, owner_token: ownerTokens },
+                unwrapPage(await sdk.listEligibleBudgetsForOwner({
+                    client, query: { ...BOUNDED, owner_token: ownerTokens },
                 })),
 
             // ── Creating and editing ─────────────────────────────────────

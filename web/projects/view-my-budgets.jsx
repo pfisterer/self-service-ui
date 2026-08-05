@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronsDownUp, ChevronsUpDown, Inbox, Search, X } from 'lucide-react';
-import { ActionIcon, Alert, Badge, Button, Checkbox, filterTreeData, getTreeExpandedState, Grid, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, Tooltip, useTree } from '@mantine/core';
+import { Inbox, Search, X } from 'lucide-react';
+import { ActionIcon, Alert, Badge, Button, Checkbox, Grid, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, useTree } from '@mantine/core';
 import { Delayed } from '/helper/delayed.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
-import { useNodesApi } from './api-nodes.jsx';
+import { PAGE_SIZE, useNodesApi } from './api-nodes.jsx';
 import { BudgetCard } from './card-budget.jsx';
 import { ProjectCard } from './card-project.jsx';
-import { BudgetTree, budgetNodeFilter, budgetsToTreeData } from './component-budget-tree.jsx';
+import { BudgetTree, NodeResultList, budgetsToTreeData } from './component-budget-tree.jsx';
 import { AdoptModal } from './modal-adopt.jsx';
 import { ApproveModal } from './modal-approve.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
@@ -22,12 +22,23 @@ import { useProjectConfig } from './projects.jsx';
 import { COLOR, formatError, getAuthUserEmail, isBudget, REQUEST_TYPES, requestType, useAsyncRefresh } from './util-project.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
+// How long typing pauses before a search is sent.
+const SEARCH_DEBOUNCE_MS = 300;
+
 // MyBudgetsView is a master-detail tree navigator: the left side shows the
 // budgets the user manages as an expandable tree (sub-budgets and projects
-// load lazily on expand), the right side shows the selected node with its
-// usage, access rules and actions. Delegating resources = creating a
-// sub-budget with someone else in "Managed by" — there is deliberately no
-// separate "delegation" concept.
+// load lazily on expand, one page at a time), the right side shows the selected
+// node with its usage, access rules and actions. Delegating resources =
+// creating a sub-budget with someone else in "Managed by" — there is
+// deliberately no separate "delegation" concept.
+//
+// The left panel has three modes, and only ever one of them at a time:
+//   tree     — browsing; children are fetched per node, page by page
+//   search   — a flat list of hits from the server, across the whole subtree
+//   waiting  — a flat list of what needs a decision
+// Search and the waiting inbox are flat because the tree is no longer loaded in
+// full: it cannot be filtered in the browser, and unfolding it down to a few
+// matches would be slower and harder to read than naming their budget.
 export function MyBudgetsView() {
     const api = useNodesApi();
     const { user } = useAuth();
@@ -37,7 +48,7 @@ export function MyBudgetsView() {
     const cloudStatus = useCloudStatus();
     const userEmail = getAuthUserEmail(user);
 
-    const [myBudgets, setMyBudgets] = useState([]);
+    const [myBudgets, setMyBudgets] = useState({ items: [], total: 0 });
     const [eligibleBudgets, setEligibleBudgets] = useState([]);
     // Budgets that accept a request for a sub-budget — a budget may take project
     // requests while refusing sub-budgets (allow_sub_budget_requests). Offering
@@ -45,11 +56,13 @@ export function MyBudgetsView() {
     const budgetRequestTargets = useMemo(
         () => eligibleBudgets.filter(b => b.allow_sub_budget_requests !== false),
         [eligibleBudgets]);
-    // Tree state: the children loaded so far. Expansion, per-node loading and
-    // load errors are owned by the Mantine tree controller below.
+    // The pages of children loaded so far, per node: { items, total }. Expansion,
+    // per-node loading and load errors are owned by the Mantine tree controller.
     const [childrenMap, setChildrenMap] = useState(new Map());
     const [selected, setSelected] = useState(null);
     const [search, setSearch] = useState('');
+    const [results, setResults] = useState(null); // { items, total } | null
+    const [searchBusy, setSearchBusy] = useState(false);
     // '' = the whole tree; 'waiting' = everything that needs a decision; the
     // rest narrow that down to one kind of request (see REQUEST_TYPES).
     const [filter, setFilter] = useState('');
@@ -58,7 +71,7 @@ export function MyBudgetsView() {
     // what nobody else manages; a request inside a delegated sub-budget belongs
     // to its manager and would otherwise bury the own ones (a root admin would
     // see the whole organization).
-    const [waiting, setWaiting] = useState([]);
+    const [waiting, setWaiting] = useState({ items: [], total: 0 });
     const [includeSubtree, setIncludeSubtree] = useState(false);
     const scope = includeSubtree ? 'subtree' : 'direct';
     const dlg = useNodeDialog();
@@ -69,21 +82,43 @@ export function MyBudgetsView() {
     // as a top-level root would show those nested budgets twice. Keep only the
     // budgets whose direct parent is not itself in the managed set; the rest
     // appear in their natural place when their parent is expanded.
-    const managedIds = new Set(myBudgets.map(b => b.id));
-    const rootBudgets = myBudgets.filter(b => !managedIds.has(b.parent_id));
+    const managedIds = new Set(myBudgets.items.map(b => b.id));
+    const rootBudgets = myBudgets.items.filter(b => !managedIds.has(b.parent_id));
 
     // Lazy loading: the tree calls this the first time a node with children is
-    // opened. Errors propagate on purpose — the controller records them and the
-    // row shows the failure in place instead of a modal that loses the context.
+    // opened, and it fetches the FIRST page only. Errors propagate on purpose —
+    // the controller records them and the row shows the failure in place instead
+    // of a modal that loses the context.
     const loadChildren = async (nodeId) => {
-        const kids = await api.listChildren(nodeId);
-        setChildrenMap(m => new Map(m).set(nodeId, kids));
+        const page = await api.listChildren(nodeId);
+        setChildrenMap(m => new Map(m).set(nodeId, page));
+    };
+
+    // The "show more" row under a partly loaded budget. The new page is appended;
+    // total comes from the fresh response, so a child added meanwhile is counted.
+    const loadMoreChildren = async (nodeId) => {
+        const loaded = childrenMap.get(nodeId)?.items || [];
+        try {
+            const page = await api.listChildren(nodeId, { offset: loaded.length });
+            setChildrenMap(m => {
+                const previous = m.get(nodeId)?.items || [];
+                const seen = new Set(previous.map(n => n.id));
+                return new Map(m).set(nodeId, {
+                    items: [...previous, ...page.items.filter(n => !seen.has(n.id))],
+                    total: page.total,
+                });
+            });
+        } catch (e) {
+            showError(formatError(e));
+        }
     };
 
     const tree = useTree({ multiple: false, onLoadChildren: loadChildren });
 
     // Reloads the roots AND everything currently visible in the tree, so the
-    // usage bars and statuses are fresh after every action.
+    // usage bars and statuses are fresh after every action. Each expanded node
+    // is refetched with as many rows as were loaded, so a refresh does not
+    // silently fold pages the user opened back up.
     const { loaded, refresh } = useAsyncRefresh(async () => {
         const [budgets, eligible, toManage] = await Promise.all([
             api.listMyBudgets(),
@@ -91,16 +126,20 @@ export function MyBudgetsView() {
             api.listToManage(scope),
         ]);
         setMyBudgets(budgets);
-        setEligibleBudgets(eligible);
+        setEligibleBudgets(eligible.items);
         setWaiting(toManage);
         // The header badge shows the same number; a decision made here must not
         // leave it stale.
         cloudStatus.refresh();
 
         const ids = Object.entries(tree.expandedState).filter(([, open]) => open).map(([id]) => id);
-        const loadedKids = await Promise.all(ids.map(id => api.listChildren(id).catch(() => null)));
+        const pages = await Promise.all(ids.map(id => {
+            const shown = childrenMap.get(id)?.items.length || 0;
+            const limit = Math.max(PAGE_SIZE, Math.ceil(shown / PAGE_SIZE) * PAGE_SIZE);
+            return api.listChildren(id, { limit }).catch(() => null);
+        }));
         const map = new Map();
-        ids.forEach((id, i) => { if (loadedKids[i]) map.set(id, loadedKids[i]); });
+        ids.forEach((id, i) => { if (pages[i]) map.set(id, pages[i]); });
         setChildrenMap(map);
 
         // Refresh the selected node too; drop the selection if it vanished
@@ -139,66 +178,55 @@ export function MyBudgetsView() {
             .forEach(b => { loadChildren(b.id).catch(() => { }); });
     }, [myBudgets]);
 
-    // Loads the children of every budget in the tree, level by level. Needed
-    // by full-text search and "expand all"; already-loaded budgets are skipped.
-    const loadAllChildren = async () => {
-        const map = new Map(childrenMap);
-        let frontier = rootBudgets;
-        while (frontier.length > 0) {
-            const budgets = frontier.filter(isBudget);
-            const toLoad = budgets.filter(b => !map.has(b.id));
-            const results = await Promise.all(toLoad.map(b => api.listChildren(b.id).catch(() => [])));
-            toLoad.forEach((b, i) => map.set(b.id, results[i]));
-            frontier = budgets.flatMap(b => map.get(b.id) || []);
-        }
-        setChildrenMap(map);
-        return map;
-    };
-
-    const expandAll = async () => {
-        // Expand from the freshly loaded map: the derived tree data has not been
-        // re-rendered yet at this point, so the controller must be told directly.
-        const map = await loadAllChildren();
-        tree.setExpandedState(getTreeExpandedState(budgetsToTreeData(rootBudgets, map), '*'));
-    };
-    const collapseAll = () => tree.collapseAllNodes();
-
-    // Search and the request filter both look at the WHOLE tree, so it has to be
-    // in memory once either is on (no-op when everything is already loaded).
-    const searching = search.trim().length > 0;
+    // ── Search ──────────────────────────────────────────────────────────────
+    // Server-side: the tree holds only the pages that were opened, so there is
+    // nothing local to filter. Debounced, because it runs on every keystroke.
+    const query = search.trim();
+    const searching = query.length > 0;
     const filtering = filter !== '';
-    useEffect(() => { if (searching || filtering) loadAllChildren(); }, [searching, filtering]);
+
+    useEffect(() => {
+        if (!api) return;
+        if (!searching) { setResults(null); return; }
+        let cancelled = false;
+        setSearchBusy(true);
+        const timer = setTimeout(async () => {
+            try {
+                const page = await api.searchNodes(query);
+                if (!cancelled) setResults(page);
+            } catch (e) {
+                if (!cancelled) showError(formatError(e));
+            } finally {
+                if (!cancelled) setSearchBusy(false);
+            }
+        }, SEARCH_DEBOUNCE_MS);
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [query, api, userEmail]);
+
+    const loadMoreResults = async () => {
+        try {
+            const page = await api.searchNodes(query, { offset: results.items.length });
+            setResults(r => ({ items: [...r.items, ...page.items], total: page.total }));
+        } catch (e) {
+            showError(formatError(e));
+        }
+    };
+
+    // The two flat modes exclude each other: searching inside "what needs me"
+    // would silently mean two filters at once, and neither control would say so.
+    const changeSearch = (value) => {
+        setSearch(value);
+        if (value.trim()) setFilter('');
+    };
+    const changeFilter = (value) => {
+        setFilter(value);
+        if (value) setSearch('');
+    };
 
     const treeData = useMemo(
         () => budgetsToTreeData(rootBudgets, childrenMap),
         [myBudgets, childrenMap],
     );
-
-    // The filter matches against the inbox, not against the node's status: both
-    // must mean the same thing, or the tree would show rows the count above it
-    // excludes (a request in a delegated sub-budget, with the scope off).
-    const waitingIds = useMemo(() => new Set(waiting.map(n => n.id)), [waiting]);
-
-    // Mantine keeps the ancestors of a match, so a hit stays visible in its
-    // context.
-    const visibleData = useMemo(() => {
-        let data = treeData;
-        if (filtering) {
-            data = filterTreeData(data, filter, (_, treeNode) => {
-                const node = treeNode?.nodeProps?.node;
-                if (!waitingIds.has(node?.id)) return false;
-                return filter === 'waiting' || requestType(node) === filter;
-            });
-        }
-        if (searching) data = filterTreeData(data, search.trim(), budgetNodeFilter);
-        return data;
-    }, [treeData, filtering, filter, waitingIds, searching, search]);
-
-    // A filtered or searched tree is only useful fully unfolded — the matches
-    // usually sit deep in it.
-    useEffect(() => {
-        if (searching || filtering) tree.setExpandedState(getTreeExpandedState(visibleData, '*'));
-    }, [searching, filtering, visibleData]);
 
     // Widening the scope only changes the inbox, not the tree — so reload just
     // that instead of going through the full refresh.
@@ -214,8 +242,13 @@ export function MyBudgetsView() {
     // Counts come from the inbox, not from the loaded tree: they must be right
     // before anything is expanded.
     const waitingCount = (type) => (type === 'waiting'
-        ? waiting.length
-        : waiting.filter(n => requestType(n) === type).length);
+        ? waiting.items.length
+        : waiting.items.filter(n => requestType(n) === type).length);
+
+    // The list behind the current filter: everything waiting, or one kind of it.
+    const waitingList = filter === 'waiting'
+        ? waiting.items
+        : waiting.items.filter(n => requestType(n) === filter);
 
     // Clicking a row selects it. Expanding is handled by the tree itself
     // (expandOnClick), which also triggers onLoadChildren on first open.
@@ -247,10 +280,10 @@ export function MyBudgetsView() {
 
     const resources = config.resources || [];
     // Move targets: every budget visible in the tree.
-    const loadedBudgets = [...childrenMap.values()].flat().filter(isBudget);
+    const loadedBudgets = [...childrenMap.values()].flatMap(p => p.items).filter(isBudget);
     const moveTargets = [
-        ...myBudgets,
-        ...loadedBudgets.filter(b => !myBudgets.some(r => r.id === b.id)),
+        ...myBudgets.items,
+        ...loadedBudgets.filter(b => !myBudgets.items.some(r => r.id === b.id)),
     ];
 
     return (
@@ -271,7 +304,7 @@ export function MyBudgetsView() {
                 </Group>
             </Group>
 
-            {myBudgets.length === 0 && (
+            {myBudgets.items.length === 0 && (
                 <Alert color={COLOR.info} variant="light">
                     You don't manage any budgets yet.
                     {budgetRequestTargets.length > 0
@@ -280,7 +313,17 @@ export function MyBudgetsView() {
                 </Alert>
             )}
 
-            {myBudgets.length > 0 && (
+            {/* The roots are fetched in one go — one person manages a handful of
+                budgets. Say so rather than quietly drop the rest if that ever
+                stops being true. */}
+            {myBudgets.items.length < myBudgets.total && (
+                <Alert color={COLOR.attention} variant="light">
+                    Showing {myBudgets.items.length} of {myBudgets.total} budgets you manage.
+                    Use the search to find the ones not listed.
+                </Alert>
+            )}
+
+            {myBudgets.items.length > 0 && (
                 // align="flex-start": tree and detail panel each keep their
                 // natural height — otherwise the panel card stretches to the
                 // tree's height and its action bar floats far below the content.
@@ -295,7 +338,7 @@ export function MyBudgetsView() {
                                 size="xs"
                                 mb="xs"
                                 value={filter}
-                                onChange={setFilter}
+                                onChange={changeFilter}
                                 data={[
                                     { value: '', label: 'All' },
                                     {
@@ -318,13 +361,13 @@ export function MyBudgetsView() {
                                 sub-budgets have not handled. */}
                             {filtering && (
                                 <>
-                                    {waiting.length > 0 && (
+                                    {waiting.items.length > 0 && (
                                         <SegmentedControl
                                             fullWidth
                                             size="xs"
                                             mb="xs"
                                             value={filter}
-                                            onChange={setFilter}
+                                            onChange={changeFilter}
                                             data={[
                                                 { value: 'waiting', label: `All (${waitingCount('waiting')})` },
                                                 ...REQUEST_TYPES.map(t => ({
@@ -342,55 +385,64 @@ export function MyBudgetsView() {
                                         checked={includeSubtree}
                                         onChange={(e) => changeScope(e.currentTarget.checked)}
                                     />
+                                    {/* The inbox is fetched in one go — a queue of
+                                        decisions is meant to be worked off, not
+                                        paged through. Say it if it ever overflows,
+                                        because the counts above are then partial. */}
+                                    {waiting.items.length < waiting.total && (
+                                        <Text size="xs" c={COLOR.attention} mb="xs">
+                                            Showing {waiting.items.length} of {waiting.total} open requests.
+                                        </Text>
+                                    )}
                                 </>
                             )}
 
-                            {/* Toolbar: full-text search + expand/collapse all. */}
                             <Group gap="xs" mb="xs" wrap="nowrap">
                                 <TextInput
                                     size="xs"
                                     style={{ flex: 1 }}
                                     placeholder="Search name, owner, group…"
                                     aria-label="Search the budget tree"
-                                    leftSection={<Search size="13" />}
+                                    leftSection={searchBusy ? <Loader size="12" /> : <Search size="13" />}
                                     value={search}
-                                    onChange={(e) => setSearch(e.currentTarget.value)}
+                                    onChange={(e) => changeSearch(e.currentTarget.value)}
                                     rightSection={search ? (
                                         <ActionIcon size="xs" variant="subtle" color="gray"
-                                            aria-label="Clear search" onClick={() => setSearch('')}>
+                                            aria-label="Clear search" onClick={() => changeSearch('')}>
                                             <X size="12" />
                                         </ActionIcon>
                                     ) : null}
                                 />
-                                <Tooltip label="Expand all">
-                                    <ActionIcon variant="light" color="gray" aria-label="Expand all"
-                                        disabled={searching || filtering} onClick={expandAll}>
-                                        <ChevronsUpDown size="14" />
-                                    </ActionIcon>
-                                </Tooltip>
-                                <Tooltip label="Collapse all">
-                                    <ActionIcon variant="light" color="gray" aria-label="Collapse all"
-                                        disabled={searching || filtering} onClick={collapseAll}>
-                                        <ChevronsDownUp size="14" />
-                                    </ActionIcon>
-                                </Tooltip>
                             </Group>
 
-                            {/* A filtered tree with an empty inbox would just be
-                                blank — say why instead. */}
-                            {filtering && waiting.length === 0 && (
-                                <Text size="xs" c="dimmed" ta="center" py="md">
-                                    Nothing is waiting for your decision.
-                                </Text>
-                            )}
-
+                            {/* Searching and filtering each replace the tree with a
+                                flat list — see the note on this component. */}
                             <ScrollArea.Autosize mah="70vh">
-                                <BudgetTree
-                                    data={visibleData}
-                                    tree={tree}
-                                    selectedId={selected?.id}
-                                    onSelect={select}
-                                />
+                                {searching ? (
+                                    <NodeResultList
+                                        nodes={results?.items}
+                                        total={results?.total}
+                                        onMore={loadMoreResults}
+                                        selectedId={selected?.id}
+                                        onSelect={select}
+                                        emptyText={searchBusy ? 'Searching…' : 'No matches.'}
+                                    />
+                                ) : filtering ? (
+                                    <NodeResultList
+                                        nodes={waitingList}
+                                        selectedId={selected?.id}
+                                        onSelect={select}
+                                        emptyText="Nothing is waiting for your decision."
+                                    />
+                                ) : (
+                                    <BudgetTree
+                                        data={treeData}
+                                        tree={tree}
+                                        selectedId={selected?.id}
+                                        onSelect={select}
+                                        onLoadMore={loadMoreChildren}
+                                    />
+                                )}
                             </ScrollArea.Autosize>
                         </Paper>
                     </Grid.Col>
@@ -432,7 +484,7 @@ export function MyBudgetsView() {
                 node={dlg.node} targetBudgets={moveTargets} />
             <TransferOwnerModal opened={dlg.is('transfer')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
             <AdoptModal opened={dlg.is('adopt')} onClose={dlg.close} onDone={refresh}
-                resources={resources} node={dlg.node} myBudgets={myBudgets} />
+                resources={resources} node={dlg.node} myBudgets={myBudgets.items} />
             {/* One modal for both triggers: the History button opens it on that tab. */}
             <NodeInspectModal opened={dlg.is('details') || dlg.is('history')}
                 initialTab={dlg.is('history') ? TAB_HISTORY : TAB_DETAILS}

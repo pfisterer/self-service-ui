@@ -24,7 +24,7 @@ export function MyProjectsView() {
     const config = useProjectConfig();
     const userEmail = getAuthUserEmail(user);
 
-    const [projects, setProjects] = useState([]);
+    const [projects, setProjects] = useState({ items: [], total: 0 });
     const [myBudgets, setMyBudgets] = useState([]);
     const [eligibleBudgets, setEligibleBudgets] = useState([]);
     const [showNewModal, setShowNewModal] = useState(false);
@@ -37,8 +37,8 @@ export function MyProjectsView() {
             api.listEligibleForMe(),
         ]);
         setProjects(mine);
-        setMyBudgets(budgets);
-        setEligibleBudgets(eligible);
+        setMyBudgets(budgets.items);
+        setEligibleBudgets(eligible.items);
     }, showError);
 
     useEffect(() => { if (api) refresh(); }, [api, userEmail]);
@@ -82,7 +82,15 @@ export function MyProjectsView() {
                 </Group>
             </Group>
 
-            {projects.length === 0 && (
+            {/* One person's own projects fit in one request. If that ever stops
+                being true, say it — a missing project is worse than a long list. */}
+            {projects.items.length < projects.total && (
+                <Alert color={COLOR.attention} variant="light">
+                    Showing {projects.items.length} of your {projects.total} projects.
+                </Alert>
+            )}
+
+            {projects.items.length === 0 && (
                 canRequest ? (
                     <Alert color={COLOR.info} variant="light">
                         You don't have any projects yet. Click “Request project” to get started —
@@ -97,7 +105,7 @@ export function MyProjectsView() {
             )}
 
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                {projects.map(node => (
+                {projects.items.map(node => (
                     <ProjectCard
                         key={node.id}
                         node={node}
@@ -118,7 +126,7 @@ export function MyProjectsView() {
                 openstackRoles={config.openstackRoles}
                 myBudgets={myBudgets}
                 eligibleBudgets={eligibleBudgets}
-                myProjects={projects}
+                myProjects={projects.items}
             />
             <ProjectFormModal
                 opened={dlg.is('change')}
