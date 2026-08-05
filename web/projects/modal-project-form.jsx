@@ -127,14 +127,15 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         if (!terminationDate) next.terminationDate = 'Please set an end date';
         else if (terminationDate <= new Date()) next.terminationDate = 'The end date must be in the future';
         setErrors(next);
-        return Object.keys(next).length === 0;
+        return next;
     };
 
-    const tabHasError = (tab) => {
-        if (tab === TAB_DETAILS) return ['reason', 'parentId', 'terminationDate'].some(k => errors[k]);
-        if (tab === TAB_RESOURCES) return (resources || []).some(r => errors[r.id]);
+    const errorsInTab = (tab, errs) => {
+        if (tab === TAB_DETAILS) return ['reason', 'parentId', 'terminationDate'].some(k => errs[k]);
+        if (tab === TAB_RESOURCES) return (resources || []).some(r => errs[r.id]);
         return false;
     };
+    const tabHasError = (tab) => errorsInTab(tab, errors);
 
     const handleSearchTokens = async (query) => {
         if (!query) { setTokenSearchResults([]); return; }
@@ -155,7 +156,14 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!validate()) return;
+        const errs = validate();
+        if (Object.keys(errs).length > 0) {
+            // Jump to the problem instead of leaving the button looking broken:
+            // the offending field is usually on a tab the user is not looking at.
+            const bad = [TAB_DETAILS, TAB_RESOURCES, TAB_MEMBERS].find(t => errorsInTab(t, errs));
+            if (bad) setActiveTab(bad);
+            return;
+        }
         setSubmitting(true);
         setSubmitError(null);
         try {

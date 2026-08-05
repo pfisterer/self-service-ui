@@ -52,7 +52,13 @@ export function FormModal({
 }) {
     return (
         <Modal opened={opened} onClose={onClose} size={size} title={title}>
-            <form onSubmit={onSubmit}>
+            {/* noValidate: these forms live in tabs, so a `required` field on an
+                inactive tab is display:none. The browser then refuses to submit
+                AND cannot focus the offender to say why ("An invalid form control
+                is not focusable") — the button simply does nothing. Every dialog
+                validates in its own submit handler and marks the offending tab,
+                so native validation only had this failure mode to contribute. */}
+            <form onSubmit={onSubmit} noValidate>
                 <Stack>
                     {children}
 

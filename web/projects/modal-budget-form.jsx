@@ -93,17 +93,18 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
             Object.entries(validateQuota(resources, autoApproveQuota)).forEach(([k, v]) => { next[`auto_${k}`] = v; });
         }
         setErrors(next);
-        return Object.keys(next).length === 0;
+        return next;
     };
 
     // Which tab to flag: a field the user cannot see must not fail silently.
-    const tabHasError = (tab) => {
-        if (tab === TAB_DETAILS) return ['name', 'reason', 'parentId'].some(k => errors[k]);
-        if (tab === TAB_RESOURCES) return (resources || []).some(r => errors[r.id]);
-        if (tab === TAB_ACCESS) return !!errors.adminScope;
-        if (tab === TAB_AUTO_APPROVE) return Object.keys(errors).some(k => k.startsWith('auto_'));
+    const errorsInTab = (tab, errs) => {
+        if (tab === TAB_DETAILS) return ['name', 'reason', 'parentId'].some(k => errs[k]);
+        if (tab === TAB_RESOURCES) return (resources || []).some(r => errs[r.id]);
+        if (tab === TAB_ACCESS) return !!errs.adminScope;
+        if (tab === TAB_AUTO_APPROVE) return Object.keys(errs).some(k => k.startsWith('auto_'));
         return false;
     };
+    const tabHasError = (tab) => errorsInTab(tab, errors);
 
     const buildEditBody = () => {
         // Diff against the current node: only send what changed (see note above).
@@ -137,7 +138,15 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!validate()) return;
+        const errs = validate();
+        if (Object.keys(errs).length > 0) {
+            // Jump to the problem instead of leaving the button looking broken:
+            // the offending field is usually on a tab the user is not looking at.
+            const bad = [TAB_DETAILS, TAB_RESOURCES, TAB_ACCESS, TAB_AUTO_APPROVE]
+                .find(t => errorsInTab(t, errs));
+            if (bad) setActiveTab(bad);
+            return;
+        }
         setSubmitting(true);
         setSubmitError(null);
         try {
