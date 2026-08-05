@@ -22,12 +22,35 @@ spec:
       labels:
         {{- $selectors | nindent 8 }}
     spec:
+      # This pod never talks to the Kubernetes API — do not hand it a token for it.
+      automountServiceAccountToken: false
       containers:
         - name: self-service-ui
           image: {{ .Values.selfServiceUI.image }}:{{ .Values.selfServiceUI.version }}
           imagePullPolicy: {{ .Values.selfServiceUI.imagePullPolicy | default "Always" }}
           ports:
             - containerPort: 8080
+          # Hardening: non-root, no privilege escalation, no capabilities, default
+          # seccomp. The image sets USER 65532 and owns the three paths this
+          # container writes. readOnlyRootFilesystem is deliberately NOT set: the
+          # entrypoint renders /srv/www/config.js at startup and Caddy keeps state
+          # in /config and /data — making those writable again via emptyDir would
+          # shadow the built assets, so the rootfs stays writable here.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            requests:
+              cpu: "20m"
+              memory: "32Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
           env:
             - name: DYN_ZONES_BASE_URL
               value: "{{ .Values.selfServiceUI.dynamicZonesBaseUrl }}"

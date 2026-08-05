@@ -33,6 +33,12 @@ COPY --from=builder /app/dist /srv/www
 # Caddy exposes port 8080 by default.
 EXPOSE 8080
 
+# Run as a non-root user. The entrypoint writes /srv/www/config.js at startup and
+# Caddy keeps its state in /config and /data, so those three need to belong to
+# that user — everything else stays root-owned and read-only to the process.
+RUN chown -R 65532:65532 /srv/www /config /data
+USER 65532:65532
+
 # 3. Set the ENTRYPOINT to the script, and the main Caddy command to CMD
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--resume"]
