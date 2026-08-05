@@ -114,6 +114,7 @@ export function MyProjectsView() {
                 openstackRoles={config.openstackRoles}
                 myBudgets={myBudgets}
                 eligibleBudgets={eligibleBudgets}
+                myProjects={projects}
             />
             <ProjectFormModal
                 opened={dlg.is('change')}

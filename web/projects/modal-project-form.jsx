@@ -5,7 +5,7 @@ import { NodeChangesDiff, TerminationDatePicker } from './component-common.jsx';
 import { FormModal, FormTabs, useFormErrors } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
-import { formatError, freeAmount, quotaFits, resourceSummaryText } from './util-project.jsx';
+import { autoApproveHeadroom, COLOR, formatError, freeAmount, quotaFits, resourceSummaryText } from './util-project.jsx';
 
 const TAB_DETAILS = 'details';
 const TAB_RESOURCES = 'resources';
@@ -81,7 +81,7 @@ function BudgetSelect({ myBudgets, eligibleBudgets, resources, requestedQuota, v
 //   node != null  → change: resources, end date and members are editable;
 //                   pending projects are amended in place, active projects get
 //                   a change request that a manager must approve.
-export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [] }) {
+export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [] }) {
     const api = useNodesApi();
     const isChange = !!node;
 
@@ -116,7 +116,12 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             setQuota(defaultQuota(resources));
             setTerminationDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000));
             setAuthorizedUsers([]);
-            setParentId(myBudgets[0]?.id ?? eligibleBudgets[0]?.id ?? null);
+            const initial = myBudgets[0]?.id ?? eligibleBudgets[0]?.id ?? null;
+            setParentId(initial);
+            const headroom = autoApproveHeadroom(
+                [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === initial),
+                resources, myProjects);
+            if (headroom) setQuota(headroom);
         }
     }, [opened, node?.id]);
 
@@ -128,6 +133,20 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         else if (terminationDate <= new Date()) next.terminationDate = 'The end date must be in the future';
         setErrors(next);
         return next;
+    };
+
+    const allBudgets = [...(myBudgets || []), ...(eligibleBudgets || [])];
+    const selectedHeadroom = autoApproveHeadroom(
+        allBudgets.find(b => b.id === parentId), resources, myProjects);
+
+    // Picking a budget with auto-approve fills the resources with the most it
+    // would grant on the spot, so the common case ("give me what I may have")
+    // is one click. Any other budget leaves the numbers alone — overwriting
+    // carefully typed values with a default would be worse than a stale form.
+    const selectBudget = (id) => {
+        setParentId(id);
+        const headroom = autoApproveHeadroom(allBudgets.find(b => b.id === id), resources, myProjects);
+        if (headroom) setQuota(headroom);
     };
 
     const errorsInTab = (tab, errs) => {
@@ -201,9 +220,18 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     resources={resources}
                     requestedQuota={quota}
                     value={parentId}
-                    onChange={(v) => { setParentId(v); clear('parentId'); }}
+                    onChange={(v) => { selectBudget(v); clear('parentId'); }}
                     error={errors.parentId}
                 />
+            )}
+
+            {/* Say why the numbers on the next tab just changed by themselves. */}
+            {!isChange && selectedHeadroom && (
+                <Text size="xs" c={COLOR.positive}>
+                    Resources set to {resourceSummaryText(resources, selectedHeadroom) || 'nothing left'} — the most
+                    this budget approves instantly for you. Ask for less and it is still instant; ask for more and a
+                    manager decides.
+                </Text>
             )}
 
             <Textarea

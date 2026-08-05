@@ -98,6 +98,38 @@ export function quotaFits(budget, requestedQuota, resources) {
     return (resources || []).every(r => (requestedQuota?.[r.id] ?? 0) <= freeAmount(budget, r.id));
 }
 
+// autoApproveHeadroom returns the largest request a budget would approve on the
+// spot for this user, or null when the budget has no auto-approve policy.
+//
+// The backend grants instantly while the requester's own ACTIVE usage under the
+// budget stays within its per-requester limit AND every ancestor still has room
+// (see the auto-approve branch of CreateNode). Both halves are mirrored here:
+// the personal cap minus what this user already holds, capped by the budget's
+// own free capacity. Own usage is summed from the caller's projects because the
+// node's `usage` is the total over all owners.
+export function autoApproveHeadroom(budget, resources, myProjects) {
+    const perRequester = budget?.auto_approve?.per_requester_limit;
+    if (!perRequester) return null;
+
+    const mine = {};
+    for (const project of myProjects || []) {
+        if (project?.parent_id !== budget.id) continue;
+        // Same definition of "active" the server uses for this sum.
+        if (project.status !== 'approved' && project.status !== 'change_pending') continue;
+        for (const r of resources || []) {
+            mine[r.id] = (mine[r.id] || 0) + (project.limit?.[r.id] || 0);
+        }
+    }
+
+    const out = {};
+    for (const r of resources || []) {
+        const personal = Math.max(0, (perRequester[r.id] ?? 0) - (mine[r.id] || 0));
+        const free = freeAmount(budget, r.id);
+        out[r.id] = Math.max(0, Math.min(personal, free));
+    }
+    return out;
+}
+
 // One-line resource summary, e.g. "8 vCPUs · 16 GB RAM · 200 GB Disk".
 export function resourceSummaryText(resources, quota) {
     if (!resources || !quota) return '';
