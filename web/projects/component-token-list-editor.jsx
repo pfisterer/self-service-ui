@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Badge, Button, Group, Stack, Text } from '@mantine/core';
-import { GroupTokenAutocomplete } from './component-group-token-autocomplete.jsx';
+import { PrincipalTokenAutocomplete } from './component-principal-token-autocomplete.jsx';
 import { tokenDisplay, useTokenLabels } from './token-labels.jsx';
 
 // TokenListEditor edits a plain list of user:/group: tokens (admin scope,
@@ -28,7 +28,7 @@ export function TokenListEditor({ label, description, tokens, onChange, placehol
 
             <Group gap="xs" align="flex-start" wrap="nowrap">
                 <div style={{ flex: 1 }}>
-                    <GroupTokenAutocomplete
+                    <PrincipalTokenAutocomplete
                         value={draft}
                         onChange={setDraft}
                         onSelect={add}

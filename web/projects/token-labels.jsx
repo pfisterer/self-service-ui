@@ -69,7 +69,7 @@ export function TokenLabelProvider({ children }) {
             inFlight.current.add(token);
             try {
                 const id = token.slice(GROUP_PREFIX.length);
-                const res = await sdk.searchGroups({ client, query: { q: id, limit: 10 } });
+                const res = await sdk.searchPrincipals({ client, query: { q: id, limit: 10 } });
                 const hit = (res?.data?.groups || []).find(g => g?.token === token);
                 setLabels(prev => {
                     const next = { ...prev, [token]: hit?.label || '' };

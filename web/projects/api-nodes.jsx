@@ -108,12 +108,18 @@ export function useNodesApi() {
             deleteNode: async (id) =>
                 unwrapVoid(await sdk.deleteNode({ client, path: { id } })),
 
-            // ── Group search (token pickers) ─────────────────────────────
-            searchGroups: async (q, limit = 50) => {
-                const res = await sdk.searchGroups({ client, query: { q, limit } });
+            // ── Principal search (token pickers) ─────────────────────────
+            // Returns ready-to-use tokens: groups (matched on name, display name
+            // or description) followed by users (matched on their email address
+            // only, and only for a non-empty query — staff are not browsable).
+            searchPrincipals: async (q, limit = 50) => {
+                const res = await sdk.searchPrincipals({ client, query: { q, limit } });
                 const err = errorOf(res);
                 if (err) throw new Error(err);
-                return res?.data?.tokens || [];
+                return [
+                    ...(res?.data?.groups || []).map(g => g?.token).filter(Boolean),
+                    ...(res?.data?.users || []).map(email => `user:${email}`),
+                ];
             },
         };
     }, [client, sdk]);

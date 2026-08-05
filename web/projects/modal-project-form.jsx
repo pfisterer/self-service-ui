@@ -140,9 +140,11 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         if (!query) { setTokenSearchResults([]); return; }
         setIsSearchingTokens(true);
         try {
-            const tokens = await api.searchGroups(query);
+            // No second filter on the query here: the API already matched, and a
+            // group found through its DESCRIPTION has a token that does not
+            // contain the search text — filtering again would drop exactly those.
+            const tokens = await api.searchPrincipals(query);
             setTokenSearchResults(tokens.filter(t =>
-                t.toLowerCase().includes(query.toLowerCase()) &&
                 !authorizedUsers.some(au => au.token === t)));
         } catch {
             setTokenSearchResults([]);

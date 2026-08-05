@@ -3,14 +3,17 @@ import { Autocomplete, Loader, Stack, Text } from '@mantine/core';
 import { useClient } from '../providers/client.jsx';
 
 /**
- * GroupTokenAutocomplete
+ * PrincipalTokenAutocomplete
  *
- * The server searches groups by token AND by label (display name), so the
- * dropdown must show whatever the server returned. Mantine filters `data`
- * client-side by default, which would drop every label-only match (the option
- * text is the token, and the token does not contain the typed label) — hence
- * the identity `filter`. The option's label stays the bare token so selecting
- * one inserts the token, with the group label rendered underneath.
+ * Suggests both kinds of token a rule may name: groups (matched by token,
+ * display name or description) and individual users (matched by email address
+ * only — the directory is deliberately not searchable by person's name).
+ *
+ * The dropdown must show whatever the server returned. Mantine filters `data`
+ * client-side by default, which would drop every match found through a label or
+ * description (the option text is the token, and the token does not contain the
+ * typed text) — hence the identity `filter`. The option's label stays the bare
+ * token so selecting one inserts the token, with the detail rendered underneath.
  *
  * Props:
  *   value: string
@@ -20,7 +23,7 @@ import { useClient } from '../providers/client.jsx';
  *   disabled?: boolean
  *   limit?: number
  */
-export function GroupTokenAutocomplete({ value, onChange, onSelect, placeholder = 'e.g. group:cs-students', limit = 10 }) {
+export function PrincipalTokenAutocomplete({ value, onChange, onSelect, placeholder = 'e.g. group:cs-students', limit = 10 }) {
     const { sdk, client } = useClient('projects');
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -39,8 +42,11 @@ export function GroupTokenAutocomplete({ value, onChange, onSelect, placeholder 
             try {
                 setLoading(true);
                 try {
-                    const res = await sdk.searchGroups({ client, query: { q: search, limit } });
-                    setGroups((res?.data?.groups || []).filter(g => g?.token));
+                    const res = await sdk.searchPrincipals({ client, query: { q: search, limit } });
+                    setGroups([
+                        ...(res?.data?.groups || []).filter(g => g?.token),
+                        ...(res?.data?.users || []).map(email => ({ token: `user:${email}`, description: 'Individual person' })),
+                    ]);
                     setFailed(false);
                 } catch (err) {
                     console.error('Error fetching group suggestions:', err);
