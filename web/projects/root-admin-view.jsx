@@ -5,6 +5,7 @@ import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { COLOR } from './util-project.jsx';
+import { RoleSwitchButton } from './component-group-role-switcher.jsx';
 
 const sdkError = (res) => res?.error?.error ?? res?.error?.detail ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
@@ -72,6 +73,7 @@ export function RootAdminView() {
             <Group justify="space-between" align="center">
                 <Title order={4}>OpenStack Sync Status</Title>
                 <Group gap="xs">
+                    <RoleSwitchButton />
                     {status?.running ? <Badge color={COLOR.info} variant="light">Running...</Badge> : null}
                     <Button
                         size="sm"

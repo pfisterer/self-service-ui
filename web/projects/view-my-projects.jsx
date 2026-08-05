@@ -8,6 +8,7 @@ import { useErrorModal } from '/providers/error-modal.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { ProjectCard } from './card-project.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
+import { RoleSwitchButton } from './component-group-role-switcher.jsx';
 import { NodeInspectModal, TAB_DETAILS, TAB_HISTORY } from './modal-inspect.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
@@ -73,9 +74,12 @@ export function MyProjectsView() {
                 <Text size="sm" c="dimmed">
                     A project is your own space in the DHBW cloud with the resources you request.
                 </Text>
-                <Button size="xs" leftSection={<Plus size="16" />} onClick={() => setShowNewModal(true)}>
-                    Request project
-                </Button>
+                <Group gap="xs" wrap="nowrap">
+                    <Button size="xs" leftSection={<Plus size="16" />} onClick={() => setShowNewModal(true)}>
+                        Request project
+                    </Button>
+                    <RoleSwitchButton />
+                </Group>
             </Group>
 
             {projects.length === 0 && (

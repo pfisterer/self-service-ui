@@ -1,10 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Route, Switch, useLocation, useRoute, Redirect } from 'wouter';
-import { Box, Container, Group } from '@mantine/core';
+import { Container } from '@mantine/core';
 import { useAuth } from '/providers/auth.jsx';
 import { useClient } from '../providers/client.jsx';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
-import { RoleSwitchProvider, RoleSwitchPanel, RoleSwitchButton } from './component-group-role-switcher.jsx';
+import { RoleSwitchProvider, RoleSwitchPanel } from './component-group-role-switcher.jsx';
 import { TokenLabelProvider } from './token-labels.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 import { normalizeObjectResponse } from './util-project.jsx';
@@ -63,34 +63,29 @@ export function CloudProjectManagement() {
             <Container size="xl" py="md">
 
                 {/* Open, the role switch is a bar across the content. Collapsed,
-                    it is a button in a narrow right-hand gutter, so it shares the
-                    line with whatever header the view below starts with instead
-                    of costing a row of its own. */}
+                    it is a button that each view puts into its own header row
+                    (<RoleSwitchButton />), so it costs neither a row nor a column
+                    of width. */}
                 <RoleSwitchPanel />
 
-                <Group align="flex-start" wrap="nowrap" gap="sm">
-                    <Box style={{ flex: 1, minWidth: 0 }}>
-                        {/* Per-section boundary: a render crash in one section keeps the
-                            role switcher and the navigation usable, and moving to another
-                            section (key change) auto-resets it. The outer boundary in
-                            index.jsx would blank all of /projects instead. */}
-                        <ErrorBoundary
-                            key={getActiveSection()}
-                            title="This view failed to render"
-                            message="Switch to another section or reload the page. If it persists, a record here may be malformed."
-                        >
-                            <Switch>
-                                <Route path="/projects" component={MyProjectsView} />
-                                <Route path="/budgets" component={MyBudgetsView} />
-                                {isRoot ? <Route path="/admin-sync" component={RootAdminView} /> : null}
-                                <Route path="/">
-                                    <Redirect to="/projects" replace />
-                                </Route>
-                            </Switch>
-                        </ErrorBoundary>
-                    </Box>
-                    <RoleSwitchButton />
-                </Group>
+                {/* Per-section boundary: a render crash in one section keeps the
+                    role switcher and the navigation usable, and moving to another
+                    section (key change) auto-resets it. The outer boundary in
+                    index.jsx would blank all of /projects instead. */}
+                <ErrorBoundary
+                    key={getActiveSection()}
+                    title="This view failed to render"
+                    message="Switch to another section or reload the page. If it persists, a record here may be malformed."
+                >
+                    <Switch>
+                        <Route path="/projects" component={MyProjectsView} />
+                        <Route path="/budgets" component={MyBudgetsView} />
+                        {isRoot ? <Route path="/admin-sync" component={RootAdminView} /> : null}
+                        <Route path="/">
+                            <Redirect to="/projects" replace />
+                        </Route>
+                    </Switch>
+                </ErrorBoundary>
             </Container>
             </RoleSwitchProvider>
             </TokenLabelProvider>
