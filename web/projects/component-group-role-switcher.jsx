@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { ActionIcon, Badge, Button, Group, Loader, Paper, Text, TextInput } from '@mantine/core';
 import { Repeat, X } from 'lucide-react';
-import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { useProjectConfig } from './projects.jsx';
@@ -17,7 +16,13 @@ const MAX_PICKS = 10;
 
 const sdkError = (res) => res?.error?.error ?? res?.error?.detail ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
-export function GroupRoleSwitcher() {
+// The panel and the button live in two different places — the panel spans the
+// content, the button belongs in the top-right gutter next to a view's own
+// header row — but they share one piece of state and, more to the point, one set
+// of API calls. Mounting the component twice would query the role switch twice.
+const RoleSwitchContext = createContext(null);
+
+export function RoleSwitchProvider({ children }) {
     const { client, sdk } = useClient('projects');
     const { showError } = useErrorModal();
     const [loading, setLoading] = useState(true);
@@ -133,41 +138,50 @@ export function GroupRoleSwitcher() {
         window.location.reload();
     };
 
-    // This sits at the top of every /projects page and collapses to null for
-    // non-privileged users; Delayed keeps it from flashing on fast loads.
-    if (loading) {
-        return (
-            <Delayed>
-                <Paper withBorder p="xs" mb="xs">
-                    <Group gap="xs" align="center">
-                        <Loader size="xs" />
-                        <Text size="xs" fw={600}>Loading role switch options...</Text>
-                    </Group>
-                </Paper>
-            </Delayed>
-        );
-    }
+    // Everything the two consumers need, so neither owns state of its own. Both
+    // draw nothing until the role switch is known to be available — for everyone
+    // without the privilege that is forever, and they must not flash on the way.
+    const value = {
+        ready: !loading && Boolean(state?.enabled && state?.allowed),
+        open,
+        expand: () => setExpanded(true),
+        collapse: () => setExpanded(false),
+        canCollapse: !isSwitched && !DEV_MODE,
+        isSwitched, impersonatedUser, selectedGroup,
+        query, setQuery, submitQuery, submitTarget,
+        shown, hasMore, matches, updating, impersonate, clearOverride,
+    };
 
-    if (!state?.enabled || !state?.allowed) {
-        return null;
-    }
+    return <RoleSwitchContext.Provider value={value}>{children}</RoleSwitchContext.Provider>;
+}
 
-    // Collapsed by default: a root admin looks at these pages all day and only
-    // rarely switches context, so the tool gets a button instead of a banner.
-    // It is forced open in two cases. In a dev build, because switching users IS
-    // the workflow there. And whenever a switch is ACTIVE — hiding the fact that
-    // you are currently someone else would be the one genuinely dangerous state.
-    if (!open) {
-        return (
-            <Group justify="flex-end" mb="xs">
-                <Button size="compact-xs" variant="subtle" color={COLOR.identity}
-                    leftSection={<Repeat size={13} />}
-                    onClick={() => setExpanded(true)}>
-                    Context switch
-                </Button>
-            </Group>
-        );
-    }
+// RoleSwitchButton is the collapsed state: one unobtrusive button, rendered by
+// the caller wherever it should sit. Draws nothing while the panel is open.
+export function RoleSwitchButton() {
+    const ctx = useContext(RoleSwitchContext);
+    if (!ctx?.ready || ctx.open) return null;
+    return (
+        <Button size="compact-xs" variant="subtle" color={COLOR.identity}
+            leftSection={<Repeat size={13} />}
+            onClick={ctx.expand}>
+            Context switch
+        </Button>
+    );
+}
+
+// RoleSwitchPanel is the expanded state. Collapsed by default: a root admin
+// looks at these pages all day and switches context rarely. It is forced open in
+// a dev build, where becoming another user IS the workflow, and whenever a
+// switch is ACTIVE — hiding the fact that you are currently someone else would
+// be the one genuinely dangerous state.
+export function RoleSwitchPanel() {
+    const ctx = useContext(RoleSwitchContext);
+    if (!ctx?.ready || !ctx.open) return null;
+    const {
+        impersonatedUser, selectedGroup, isSwitched, canCollapse, collapse,
+        query, setQuery, submitQuery, submitTarget,
+        shown, hasMore, matches, updating, impersonate, clearOverride,
+    } = ctx;
 
     return (
         <Paper withBorder px="sm" py={6} mb="xs" radius="md"
@@ -227,8 +241,8 @@ export function GroupRoleSwitcher() {
                     )}
                     {/* No way to close while switched: the badge above is the only
                         thing telling you that you are not yourself right now. */}
-                    {!isSwitched && !DEV_MODE && (
-                        <ActionIcon size="sm" variant="subtle" color="gray" onClick={() => setExpanded(false)} title="Close">
+                    {canCollapse && (
+                        <ActionIcon size="sm" variant="subtle" color="gray" onClick={collapse} title="Close">
                             <X size={14} />
                         </ActionIcon>
                     )}
