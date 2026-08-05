@@ -59,8 +59,10 @@ export function useNodesApi() {
                 unwrapArray(await sdk.listMyNodes({ client, query: PAGE })),
             listMyBudgets: async () =>
                 unwrapArray(await sdk.listMyBudgets({ client, query: PAGE })),
-            listToManage: async () =>
-                unwrapArray(await sdk.listNodesToManage({ client, query: PAGE })),
+            // scope 'direct' = requests nobody else manages, 'subtree' = everything
+            // below my budgets, including what a sub-budget's manager should handle.
+            listToManage: async (scope = 'direct') =>
+                unwrapArray(await sdk.listNodesToManage({ client, query: { ...PAGE, scope } })),
             listEligibleForMe: async () =>
                 unwrapArray(await sdk.listEligibleBudgets({ client, query: PAGE })),
             listEligibleForOwner: async (ownerTokens) =>
