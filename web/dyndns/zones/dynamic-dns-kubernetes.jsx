@@ -18,14 +18,13 @@ import { deriveZoneConfig, PrefilledValues } from './dynamic-dns.jsx';
 // ----------------------------------------
 // Accordion 1 — external-dns for a cluster you already have.
 // ----------------------------------------
-// The command used to arrive with one of the user's tokens already filled in.
-// That is no longer possible — the API stores only a hash, so an existing token
-// exists nowhere but in the hands of whoever created it. The placeholder stays,
-// and the note below says where to get a token.
-function ExternalDnsPanel({ externalDnsValuesYaml, zone }) {
-    const url = new URL(`v1/zones/${zone.zone}?format=external-dns&part=`, window.appconfig.dynamicZonesBaseUrl).toString();
+// The values are shown here and installed from a local file. There used to be a
+// one-liner that curl'd them from the API with one of the user's tokens filled
+// in — tokens are stored hashed now, so nothing can fill one in, and a snippet
+// that only works after pasting a credential is worse than showing the values.
+function ExternalDnsPanel({ externalDnsValuesYaml }) {
     const helmAddRepoCommand = `helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/; helm repo update`;
-    const helmCommand = `curl -H 'Authorization: Bearer <your-api-token>' '${url}values.yaml' | helm upgrade --install external-dns external-dns/external-dns -n external-dns -f -`;
+    const helmInstallCommand = `helm upgrade --install external-dns external-dns/external-dns -n external-dns --create-namespace -f external-dns-values.yaml`;
 
     return (
         <Stack gap="lg">
@@ -37,29 +36,24 @@ function ExternalDnsPanel({ externalDnsValuesYaml, zone }) {
 
             <div>
                 <Text component="p" mb="md" size="sm" c="dimmed">
-                    Add the external-dns Helm repository first (only once):
+                    1. Add the external-dns Helm repository (only once):
                 </Text>
                 <CodeBlock code={helmAddRepoCommand} />
             </div>
 
             <div>
-                <Text component="p" mb="md">
-                    You can curl Helm's values.yaml directly using something like the following command:
+                <Text component="p" mb="md" size="sm" c="dimmed">
+                    2. Save these values as <code>external-dns-values.yaml</code> — they carry this zone's TSIG
+                    key, so keep the file private:
                 </Text>
-                <CodeBlock code={helmCommand} />
-
-                <Alert icon={<AlertCircle size="16" />} title="Insert your API token" color="blue" mt="md">
-                    Replace <code>&lt;your-api-token&gt;</code> with a token from the "API Tokens" section —
-                    read-only is enough here. A token is shown exactly once, when you create it: the server
-                    keeps only its hash and cannot fill it in for you.
-                </Alert>
+                <CodeBlock code={externalDnsValuesYaml} />
             </div>
 
             <div>
-                <Text component="p" mb="md">
-                    For a manual installation, use the following values.yaml content:
+                <Text component="p" mb="md" size="sm" c="dimmed">
+                    3. Install:
                 </Text>
-                <CodeBlock code={externalDnsValuesYaml} />
+                <CodeBlock code={helmInstallCommand} />
             </div>
         </Stack>
     );
@@ -151,7 +145,7 @@ export function DynamicDnsKubernetes({ externalDnsValuesYaml, zone }) {
                 <Accordion.Item value="external-dns">
                     <Accordion.Control>external-dns (existing cluster)</Accordion.Control>
                     <Accordion.Panel>
-                        <ExternalDnsPanel externalDnsValuesYaml={externalDnsValuesYaml} zone={zone} />
+                        <ExternalDnsPanel externalDnsValuesYaml={externalDnsValuesYaml} />
                     </Accordion.Panel>
                 </Accordion.Item>
 
