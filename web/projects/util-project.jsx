@@ -62,13 +62,29 @@ const STATUS_META = {
     imported: { label: 'Imported', color: COLOR.outside, variant: 'light' },
 };
 
+// A leaf that is approved but has no OpenStack project yet. The reconciler runs
+// on an interval, so "granted" and "usable" are minutes apart — and calling that
+// window "Active" sends people looking for a project that is not there.
+// Only meaningful while provisioning actually runs; with the reconciler off,
+// nothing ever gets an ID and every project would be stuck on "Setting up".
+const PROVISIONING_META = { label: 'Setting up', color: COLOR.attention, variant: 'filled' };
+
+export function isProvisioning(node, provisioningEnabled) {
+    return Boolean(provisioningEnabled)
+        && node?.kind === 'project'
+        && node?.status === 'approved'
+        && !node?.os_project_id;
+}
+
 // Returns Mantine badge color + variant for a node status.
-export function statusStyle(status) {
+export function statusStyle(status, provisioning = false) {
+    if (provisioning) return PROVISIONING_META;
     return STATUS_META[status] ?? { color: 'gray', variant: 'outline' };
 }
 
 // Returns the human-readable label for a status string.
-export function statusLabel(status) {
+export function statusLabel(status, provisioning = false) {
+    if (provisioning) return PROVISIONING_META.label;
     return STATUS_META[status]?.label ?? status;
 }
 

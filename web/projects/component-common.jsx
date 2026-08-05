@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { DatePickerInput } from '@mantine/dates';
-import { Badge, Box, Checkbox, Group, NumberInput, Progress, Select, Stack, Table, Text } from '@mantine/core';
+import { Badge, Box, Checkbox, Group, NumberInput, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { COLOR, formatRoleLabel, statusLabel, statusStyle, UNLIMITED_QUOTA } from './util-project.jsx';
@@ -34,12 +34,18 @@ export function FactRow({ label, hint, children }) {
 // ── Badges ──────────────────────────────────────────────────────────────────
 
 // NodeStatusBadge renders the status of a node in the one shared vocabulary.
-export function NodeStatusBadge({ status, size = 'sm' }) {
-    const style = statusStyle(status);
-    return (
+export function NodeStatusBadge({ status, size = 'sm', provisioning = false }) {
+    const style = statusStyle(status, provisioning);
+    const badge = (
         <Badge size={size} color={style.color} variant={style.variant}>
-            {statusLabel(status)}
+            {statusLabel(status, provisioning)}
         </Badge>
+    );
+    if (!provisioning) return badge;
+    return (
+        <Tooltip label="Approved. The OpenStack project is being created — this usually takes a few minutes.">
+            <span style={{ cursor: 'default' }}>{badge}</span>
+        </Tooltip>
     );
 }
 

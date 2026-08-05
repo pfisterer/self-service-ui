@@ -1,7 +1,8 @@
 import { AlertTriangle, ArrowRightLeft, Check, Eye, FolderInput, History, Pencil, Rocket, X } from 'lucide-react';
 import { Alert, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge } from './component-common.jsx';
-import { COLOR, expiryTone, expiryValue, isImported, ownerEmail, resourceSummaryText } from './util-project.jsx';
+import { COLOR, expiryTone, expiryValue, isImported, isProvisioning, ownerEmail, resourceSummaryText } from './util-project.jsx';
+import { useProjectConfig } from './projects.jsx';
 
 // ProjectCard renders one project leaf. It is purely presentational: every
 // button reports an action to the owning view via onAction(actionId, node),
@@ -13,8 +14,11 @@ import { COLOR, expiryTone, expiryValue, isImported, ownerEmail, resourceSummary
 //   'manager'  the viewer decides on it (Approvals)
 export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction }) {
     const act = (action) => onAction?.(action, node);
+    const config = useProjectConfig();
 
     const imported = isImported(node);
+    // Approved but not in OpenStack yet — the reconciler runs on an interval.
+    const provisioning = isProvisioning(node, config?.provisioningEnabled);
     const isApproved = node.status === 'approved';
     const isPending = node.status === 'pending';
     const isChangePending = node.status === 'change_pending';
@@ -43,7 +47,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 {/* ── Header: status + creation date ─────────────────────── */}
                 <Group justify="space-between" mb="xs">
                     <Group gap="xs">
-                        <NodeStatusBadge status={node.status} />
+                        <NodeStatusBadge status={node.status} provisioning={provisioning} />
                         {node.os_overcommitted && (
                             <Tooltip label="The project currently uses more in OpenStack than was granted. Creating new resources is blocked.">
                                 <Badge color={COLOR.negative} variant="filled" style={{ cursor: 'default' }}>
