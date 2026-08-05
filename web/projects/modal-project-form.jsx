@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Select, Stack, Text, Textarea } from '@mantine/core';
+import { Select, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { useNodesApi } from './api-nodes.jsx';
 import { NodeChangesDiff, TerminationDatePicker } from './component-common.jsx';
 import { FormModal, FormTabs, useFormErrors } from './component-form-modal.jsx';
@@ -92,6 +92,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
     const [parentId, setParentId] = useState(null);
+    const [name, setName] = useState('');
     const [reason, setReason] = useState('');
     const [quota, setQuota] = useState({});
     const [terminationDate, setTerminationDate] = useState(null);
@@ -121,12 +122,14 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         setErrors({});
         setSubmitError(null);
         if (isChange) {
+            setName(node.name || '');
             setReason(node.reason || '');
             setQuota({ ...(node.pending?.limit || node.limit) });
             const date = node.pending?.termination_date || node.termination_date;
             setTerminationDate(date ? new Date(date) : null);
             setAuthorizedUsers(node.pending?.authorized_users || node.authorized_users || []);
         } else {
+            setName('');
             setReason('');
             setQuota(defaultQuota(resources));
             setTerminationDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000));
@@ -140,6 +143,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
 
     const validate = () => {
         const next = validateQuota(resources, quota);
+        if (!name || name.trim().length < 3) next.name = 'Please give the project a name (at least 3 characters)';
         if (!reason || reason.trim().length < 5) next.reason = 'Please describe the purpose (at least 5 characters)';
         if (!isChange && !parentId) next.parentId = 'Please choose a budget';
         if (!terminationDate) next.terminationDate = 'Please set an end date';
@@ -160,8 +164,23 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         if (headroom) setQuota(headroom);
     };
 
+    // What the form was showing when it opened — a change request is only worth
+    // sending when one of these actually moved. The user comparison is order
+    // sensitive; a false positive costs an unnecessary change request, which is
+    // exactly what happened for every save before.
+    const approvalFieldsChanged = () => {
+        if (!isChange) return true;
+        const baseLimit = node.pending?.limit || node.limit || {};
+        const baseDate = node.pending?.termination_date || node.termination_date;
+        const baseUsers = node.pending?.authorized_users || node.authorized_users || [];
+        return (resources || []).some(r => (quota[r.id] ?? 0) !== (baseLimit[r.id] ?? 0))
+            || !baseDate || new Date(baseDate).getTime() !== terminationDate.getTime()
+            || JSON.stringify(baseUsers) !== JSON.stringify(authorizedUsers)
+            || reason.trim() !== (node.reason || '').trim();
+    };
+
     const errorsInTab = (tab, errs) => {
-        if (tab === TAB_DETAILS) return ['reason', 'parentId', 'terminationDate'].some(k => errs[k]);
+        if (tab === TAB_DETAILS) return ['name', 'reason', 'parentId', 'terminationDate'].some(k => errs[k]);
         if (tab === TAB_RESOURCES) return (resources || []).some(r => errs[r.id]);
         return false;
     };
@@ -198,22 +217,37 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         setSubmitError(null);
         try {
             const iso = terminationDate.toISOString();
-            const result = isChange
-                ? await api.requestChange(node.id, {
-                    limit: quota,
-                    termination_date: iso,
-                    authorized_users: authorizedUsers,
-                    reason,
-                })
-                : await api.createNode({
+            let result;
+            if (isChange) {
+                // A rename takes effect immediately and on its own — dragging a
+                // typo fix through the approval cycle would park the project in
+                // change_pending until a manager gets around to it.
+                if (name.trim() !== (node.name || '')) {
+                    result = await api.updateNode(node.id, { name: name.trim() });
+                }
+                // Everything with resource consequences still needs a decision —
+                // but only when it actually differs, so renaming alone does not
+                // manufacture a change request out of unchanged numbers.
+                if (approvalFieldsChanged()) {
+                    result = await api.requestChange(node.id, {
+                        limit: quota,
+                        termination_date: iso,
+                        authorized_users: authorizedUsers,
+                        reason,
+                    });
+                }
+            } else {
+                result = await api.createNode({
                     parent_id: parentId,
                     kind: 'project',
+                    name: name.trim(),
                     reason,
                     limit: quota,
                     termination_date: iso,
                     authorized_users: authorizedUsers,
                 });
-            onDone?.(result);
+            }
+            if (result) onDone?.(result);
             onClose();
         } catch (err) {
             setSubmitError(formatError(err));
@@ -244,6 +278,16 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     manager decides.
                 </Text>
             )}
+
+            <TextInput
+                label="Name"
+                description="A short, recognizable name — this is what the project is called in OpenStack."
+                placeholder="e.g. Cloud Computing Lab WS26"
+                required
+                value={name}
+                onChange={e => { setName(e.target.value); clear('name'); }}
+                error={errors.name}
+            />
 
             <Textarea
                 label="Purpose"
