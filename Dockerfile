@@ -36,7 +36,16 @@ EXPOSE 8080
 # Run as a non-root user. The entrypoint writes /srv/www/config.js at startup and
 # Caddy keeps its state in /config and /data, so those three need to belong to
 # that user — everything else stays root-owned and read-only to the process.
-RUN chown -R 65532:65532 /srv/www /config /data
+#
+# The capability bit has to go as well: the upstream image ships caddy with
+# cap_net_bind_service=+ep (for binding :80/:443 as a non-root user), and the
+# kernel refuses to exec a file with capabilities once no_new_privs is set —
+# which is exactly what the pod's allowPrivilegeEscalation: false does. We
+# listen on 8080, so nothing here needs the capability in the first place.
+RUN apk add --no-cache libcap \
+    && setcap -r /usr/bin/caddy \
+    && apk del libcap \
+    && chown -R 65532:65532 /srv/www /config /data
 USER 65532:65532
 
 # 3. Set the ENTRYPOINT to the script, and the main Caddy command to CMD
