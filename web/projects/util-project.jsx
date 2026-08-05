@@ -29,16 +29,37 @@ export function nodeTitle(node) {
     return node.name || node.reason || node.id;
 }
 
+// ── Colour language ─────────────────────────────────────────────────────────
+// Colour carries exactly one meaning here: the state of a thing. It never marks
+// what KIND of thing something is — a person, a group, a number and a date all
+// look the same, and the label beside them says which is which. Five roles, and
+// nothing outside this list:
+export const COLOR = {
+    // Who and what: people, groups, tokens, plain values. Neutral on purpose —
+    // three differently coloured badges in a row read as three severities.
+    identity: 'gray',
+    // Needs a human: waiting for a decision, a change proposed, a dead end.
+    attention: 'orange',
+    // Granted, active, will be added.
+    positive: 'green',
+    // Rejected, over the limit, destroys something.
+    negative: 'red',
+    // Exists in OpenStack but outside the managed lifecycle (imported/adopt).
+    outside: 'violet',
+    // Explanation, not state: info alerts and the neutral fill of a usage bar.
+    info: 'blue',
+};
+
 // ── Status vocabulary ───────────────────────────────────────────────────────
 // One place defines how every status looks and reads across the whole UI.
 
 const STATUS_META = {
-    pending: { label: 'Awaiting approval', color: 'blue', variant: 'outline' },
-    approved: { label: 'Active', color: 'green', variant: 'filled' },
-    change_pending: { label: 'Change requested', color: 'orange', variant: 'outline' },
-    rejected: { label: 'Rejected', color: 'red', variant: 'filled' },
-    released: { label: 'Released', color: 'gray', variant: 'light' },
-    imported: { label: 'Imported', color: 'violet', variant: 'light' },
+    pending: { label: 'Awaiting approval', color: COLOR.attention, variant: 'outline' },
+    approved: { label: 'Active', color: COLOR.positive, variant: 'filled' },
+    change_pending: { label: 'Change requested', color: COLOR.attention, variant: 'outline' },
+    rejected: { label: 'Rejected', color: COLOR.negative, variant: 'filled' },
+    released: { label: 'Released', color: COLOR.identity, variant: 'light' },
+    imported: { label: 'Imported', color: COLOR.outside, variant: 'light' },
 };
 
 // Returns Mantine badge color + variant for a node status.
@@ -129,6 +150,37 @@ export function formatDate(d) {
 // Formats a date value as "MM/DD/YYYY (relative)" or '—' if falsy.
 export function formatRelativeDate(d) {
     return d ? `${new Date(d).toLocaleDateString()} (${dayjs(d).fromNow()})` : '—';
+}
+
+// expiryTone turns "how much time is left" into a colour. A date years away is
+// background information; one that is days away is the most important thing on
+// the card, and grey text does not say that.
+export function expiryTone(d) {
+    if (!d) return 'gray';
+    const days = dayjs(d).diff(dayjs(), 'day');
+    if (days <= 14) return 'red';
+    if (days <= 60) return 'orange';
+    return 'gray';
+}
+
+// expiryLabel reads as a sentence in both directions: "Valid until 4/8/2027
+// (in a year)" / "Expired 2/8/2026 (2 days ago)". The relative part comes from
+// dayjs' relativeTime plugin, so "in 13 days", "in a month", "in a year" are
+// phrased the way a person would say them.
+export function expiryLabel(d) {
+    if (!d) return '';
+    return `${isExpired(d) ? 'Expired' : 'Valid until'} ${formatRelativeDate(d)}`;
+}
+
+// expiryValue is the same information without the leading words, for places
+// that already carry a "Valid until:" label of their own.
+export function expiryValue(d) {
+    if (!d) return '';
+    return isExpired(d) ? `${formatRelativeDate(d)} — expired` : formatRelativeDate(d);
+}
+
+export function isExpired(d) {
+    return !!d && dayjs(d).isBefore(dayjs());
 }
 
 // Extracts a user-friendly error message from a thrown value.

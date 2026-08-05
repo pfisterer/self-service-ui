@@ -14,7 +14,7 @@ const TAB_MEMBERS = 'members';
 // BudgetSelect groups the budgets a user can place a project under:
 //   - budgets they manage → the project is created active immediately
 //   - budgets they may request under → the project awaits approval
-//     (or is approved instantly when the budget's self-service covers it)
+//     (or is approved instantly when the budget's auto-approve covers it)
 function BudgetSelect({ myBudgets, eligibleBudgets, resources, requestedQuota, value, onChange, error }) {
     const data = useMemo(() => {
         const managedIds = new Set((myBudgets || []).map(b => b.id));

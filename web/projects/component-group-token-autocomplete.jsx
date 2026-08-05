@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Autocomplete, Loader, Text } from '@mantine/core';
+import { Autocomplete, Loader, Stack, Text } from '@mantine/core';
 import { useClient } from '../providers/client.jsx';
 
 /**
@@ -24,6 +24,9 @@ export function GroupTokenAutocomplete({ value, onChange, onSelect, placeholder 
     const { sdk, client } = useClient('projects');
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(false);
+    // A directory that is down looks exactly like "no group matches" — both show
+    // an empty dropdown — so the failure is stated instead of swallowed.
+    const [failed, setFailed] = useState(false);
     const [search, setSearch] = useState(value || '');
 
     useEffect(() => {
@@ -38,9 +41,11 @@ export function GroupTokenAutocomplete({ value, onChange, onSelect, placeholder 
                 try {
                     const res = await sdk.searchGroups({ client, query: { q: search, limit } });
                     setGroups((res?.data?.groups || []).filter(g => g?.token));
+                    setFailed(false);
                 } catch (err) {
                     console.error('Error fetching group suggestions:', err);
                     setGroups([]);
+                    setFailed(true);
                 }
             } finally {
                 setLoading(false);
@@ -58,7 +63,19 @@ export function GroupTokenAutocomplete({ value, onChange, onSelect, placeholder 
         : (g.description || g.label || '');
     const detailByToken = Object.fromEntries(groups.map(g => [g.token, describe(g)]));
 
+    // Hand the token over and empty the field — both the visible value and the
+    // query behind it, so the next keystroke starts a fresh search instead of
+    // filtering against what was just added.
+    const submit = (raw) => {
+        const token = (raw ?? '').trim();
+        if (!token) return;
+        onSelect?.(token);
+        setSearch('');
+        onChange('');
+    };
+
     return (
+        <Stack gap="4">
         <Autocomplete
             placeholder={placeholder}
             value={value}
@@ -66,7 +83,15 @@ export function GroupTokenAutocomplete({ value, onChange, onSelect, placeholder 
             filter={({ options }) => options}
             clearable={true}
             onChange={(val) => { setSearch(val); onChange(val); }}
-            onOptionSubmit={(val) => { if (onSelect) onSelect(val); }}
+            onOptionSubmit={submit}
+            onKeyDown={(e) => {
+                if (e.key !== 'Enter') return;
+                // With an option highlighted Mantine submits that one; taking over
+                // here would add the typed text as a second entry.
+                if (e.currentTarget.getAttribute('aria-activedescendant')) return;
+                e.preventDefault();
+                submit(e.currentTarget.value);
+            }}
             renderOption={({ option }) => (
                 <div>
                     <Text size="sm">{option.value}</Text>
@@ -77,6 +102,12 @@ export function GroupTokenAutocomplete({ value, onChange, onSelect, placeholder 
             )}
             rightSection={loading ? <Loader size="xs" /> : null}
         />
+        {failed && (
+            <Text size="xs" c="orange.8">
+                The group directory is not reachable — no suggestions. You can still type a token by hand.
+            </Text>
+        )}
+        </Stack>
     );
 
 }

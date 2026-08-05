@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Badge, Button, Group, Stack, Text } from '@mantine/core';
 import { GroupTokenAutocomplete } from './component-group-token-autocomplete.jsx';
+import { tokenDisplay, useTokenLabels } from './token-labels.jsx';
 
 // TokenListEditor edits a plain list of user:/group: tokens (admin scope,
 // eligible requesters). Group tokens autocomplete from the directory; user
 // tokens (user:someone@…) can be typed directly.
 export function TokenListEditor({ label, description, tokens, onChange, placeholder, error }) {
     const [draft, setDraft] = useState('');
+    const labels = useTokenLabels(tokens);
 
     const add = (raw) => {
         const token = (raw ?? draft).trim();
@@ -45,7 +47,7 @@ export function TokenListEditor({ label, description, tokens, onChange, placehol
                                 rightSection={
                                     <span role="button" style={{ cursor: 'pointer' }} onClick={() => remove(token)}>×</span>
                                 }>
-                                {token}
+                                {tokenDisplay(token, labels[token])}
                             </Badge>
                         ))}
                     </Group>

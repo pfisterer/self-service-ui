@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button, Group, Modal, Paper, Stack, Text, Textarea } from '@mantine/core';
 import { useNodesApi } from './api-nodes.jsx';
-import { formatError, nodeTitle, ownerEmail } from './util-project.jsx';
+import { COLOR, formatError, nodeTitle, ownerEmail } from './util-project.jsx';
 
 // RejectModal declines a pending request or discards a pending change.
 // Rejecting a CHANGE does not harm the project — it simply stays as it was.
@@ -52,7 +52,7 @@ export function RejectModal({ opened, onClose, onDone, node }) {
                     </Paper>
 
                     {isChange && (
-                        <Alert color="blue" variant="light" p="xs">
+                        <Alert color={COLOR.info} variant="light" p="xs">
                             Only the proposed change is discarded — the project keeps running
                             with its current resources.
                         </Alert>
@@ -70,7 +70,7 @@ export function RejectModal({ opened, onClose, onDone, node }) {
 
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" type="button" onClick={onClose}>Cancel</Button>
-                        <Button type="submit" color="red" loading={submitting}>
+                        <Button type="submit" color={COLOR.negative} loading={submitting}>
                             {isChange ? 'Decline change' : 'Reject'}
                         </Button>
                     </Group>

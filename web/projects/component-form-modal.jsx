@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Badge, Button, Group, Modal, Stack, Tabs, Text } from '@mantine/core';
+import { COLOR } from './util-project.jsx';
 
 // The shell every create/change dialog in this section shares: a modal holding a
 // form, its tab strip, the submit error and the Cancel/Submit pair. The dialogs
@@ -12,7 +13,7 @@ export function TabLabel({ label, hasError }) {
     return (
         <Group gap="xs" wrap="nowrap">
             {label}
-            {hasError && <Badge size="xs" color="red" circle>!</Badge>}
+            {hasError && <Badge size="xs" color={COLOR.negative} circle>!</Badge>}
         </Group>
     );
 }

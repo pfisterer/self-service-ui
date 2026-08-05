@@ -4,6 +4,7 @@ import { Alert, Badge, Button, Group, Loader, Paper, SimpleGrid, Stack, Text, Ti
 import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
+import { COLOR } from './util-project.jsx';
 
 const sdkError = (res) => res?.error?.error ?? res?.error?.detail ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
@@ -71,7 +72,7 @@ export function RootAdminView() {
             <Group justify="space-between" align="center">
                 <Title order={4}>OpenStack Sync Status</Title>
                 <Group gap="xs">
-                    {status?.running ? <Badge color="blue" variant="light">Running...</Badge> : null}
+                    {status?.running ? <Badge color={COLOR.info} variant="light">Running...</Badge> : null}
                     <Button
                         size="sm"
                         variant="light"
@@ -92,7 +93,7 @@ export function RootAdminView() {
             </Group>
 
             {triggerSuccess ? (
-                <Alert color="green">
+                <Alert color={COLOR.positive}>
                     Sync triggered. Refresh status in a moment.
                 </Alert>
             ) : null}
@@ -136,7 +137,7 @@ export function RootAdminView() {
                 Their role was NOT assigned — without this panel that stays invisible
                 until someone reports missing access. */}
             {status?.preseed_conflicts?.length ? (
-                <Alert color="orange" icon={<AlertTriangle size="16" />}
+                <Alert color={COLOR.attention} icon={<AlertTriangle size="16" />}
                     title={`${status.preseed_conflicts.length} user(s) could not be prepared in OpenStack`}>
                     <Text size="sm" mb="xs">
                         These people did not get their role. Their OpenStack account is ambiguous — most

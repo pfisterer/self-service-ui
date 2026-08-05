@@ -1,6 +1,6 @@
 import { AlertTriangle, ChevronRight, CloudDownload, FileText, Folder, Zap } from 'lucide-react';
 import { Box, Group, Loader, Text, Tooltip, Tree } from '@mantine/core';
-import { isBudget, isImported, nodeTitle, statusLabel, statusStyle } from './util-project.jsx';
+import { COLOR, isBudget, isImported, nodeTitle, statusLabel, statusStyle } from './util-project.jsx';
 
 // BudgetTree is the navigation side of the "My Budgets" master-detail view: a
 // lazily loaded tree of budgets (inner nodes) and projects (leaves).
@@ -67,16 +67,18 @@ function StatusDot({ status }) {
 }
 
 // One row: chevron (only where there is something to expand), type icon, title,
-// self-service marker and status dot.
+// auto-approve marker and status dot.
 function TreeRow({ payload, selectedId, onSelect }) {
     const { node: treeNode, expanded, hasChildren, isLoading, loadError, elementProps } = payload;
     const node = treeNode.nodeProps.node;
     const isSelected = node.id === selectedId;
 
     const Icon = isImported(node) ? CloudDownload : isBudget(node) ? Folder : FileText;
+    // The icon says WHAT a row is, and the shape already says it — so only the
+    // one row that is not part of the managed world gets a colour.
     const iconColor = isImported(node)
-        ? 'var(--mantine-color-violet-6)'
-        : isBudget(node) ? 'var(--mantine-color-yellow-7)' : 'var(--mantine-color-blue-6)';
+        ? `var(--mantine-color-${COLOR.outside}-6)`
+        : 'var(--mantine-color-gray-6)';
 
     return (
         <Group
@@ -124,8 +126,8 @@ function TreeRow({ payload, selectedId, onSelect }) {
                 </Tooltip>
             )}
             {node.auto_approve?.per_requester_limit && (
-                <Tooltip label="Self-service: small requests are approved automatically.">
-                    <Zap size="12" color="var(--mantine-color-teal-6)" style={{ flexShrink: 0 }} />
+                <Tooltip label="Auto-approve: small requests are approved automatically.">
+                    <Zap size="12" color="var(--mantine-color-green-6)" style={{ flexShrink: 0 }} />
                 </Tooltip>
             )}
             <StatusDot status={node.status} />

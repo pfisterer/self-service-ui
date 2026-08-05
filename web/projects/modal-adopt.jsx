@@ -3,7 +3,7 @@ import { Alert, Button, Group, Modal, Select, Stack, Text, Textarea, TextInput }
 import { useNodesApi } from './api-nodes.jsx';
 import { TerminationDatePicker } from './component-common.jsx';
 import { QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
-import { formatError, nodeTitle } from './util-project.jsx';
+import { COLOR, formatError, nodeTitle } from './util-project.jsx';
 
 // AdoptModal brings an imported OpenStack project under management: pick the
 // responsible owner and the budget that will fund it. On the next
@@ -90,7 +90,7 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
         <Modal opened={opened} onClose={onClose} size="lg" title={`Adopt project: ${nodeTitle(node)}`}>
             <form onSubmit={handleSubmit}>
                 <Stack>
-                    <Alert color="violet" variant="light" p="xs">
+                    <Alert color={COLOR.outside} variant="light" p="xs">
                         This OpenStack project ({node.os_project_id || 'unknown ID'}) is not managed
                         here yet. Adopting places it under a budget; the next synchronization run
                         then sends it through the normal approval flow. Its current members are kept.
@@ -152,7 +152,7 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
 
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" type="button" onClick={onClose}>Cancel</Button>
-                        <Button type="submit" color="violet" loading={submitting}>Adopt</Button>
+                        <Button type="submit" color={COLOR.outside} loading={submitting}>Adopt</Button>
                     </Group>
                 </Stack>
             </form>

@@ -1,5 +1,5 @@
 import { Badge, Button, Group, Select, Text, Stack } from '@mantine/core';
-import { formatRoleLabel } from './util-project.jsx';
+import { COLOR, formatRoleLabel } from './util-project.jsx';
 import { SearchableItemSelector } from './component-searchable-item-selector.jsx';
 
 export function TokenRoleEditor({
@@ -48,7 +48,7 @@ export function TokenRoleEditor({
                     />
                     <Button
                         size="xs"
-                        color="red"
+                        color={COLOR.negative}
                         variant="light"
                         onClick={() => onRemove(auth.token)}
                     >
