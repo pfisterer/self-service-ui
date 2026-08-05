@@ -80,12 +80,12 @@ export function MyProjectsView() {
 
             {projects.length === 0 && (
                 canRequest ? (
-                    <Alert color="blue" variant="light">
+                    <Alert color={COLOR.info} variant="light">
                         You don't have any projects yet. Click “Request project” to get started —
                         small requests are often approved instantly.
                     </Alert>
                 ) : (
-                    <Alert color="yellow" variant="light">
+                    <Alert color={COLOR.attention} variant="light">
                         You don't have any projects yet, and no budget currently accepts requests
                         from you. Ask your lecturer or administrator to add you to a budget.
                     </Alert>

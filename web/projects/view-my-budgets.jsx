@@ -268,7 +268,7 @@ export function MyBudgetsView() {
             </Group>
 
             {myBudgets.length === 0 && (
-                <Alert color="blue" variant="light">
+                <Alert color={COLOR.info} variant="light">
                     You don't manage any budgets yet.
                     {budgetRequestTargets.length > 0
                         ? ' You can request one from a budget that accepts sub-budget requests.'
@@ -394,7 +394,7 @@ export function MyBudgetsView() {
                     {/* ── Detail panel: the selected node ────────────────── */}
                     <Grid.Col span={{ base: 12, md: 7, lg: 8 }}>
                         {!selected && (
-                            <Alert color="blue" variant="light">
+                            <Alert color={COLOR.info} variant="light">
                                 Select a budget or project in the tree to see its details.
                             </Alert>
                         )}
@@ -402,7 +402,7 @@ export function MyBudgetsView() {
                             <BudgetCard node={selected} resources={resources}
                                 onAction={handleAction} manageable />
                         ) : (
-                            <ProjectCard node={selected} resources={resources}
+                            <ProjectCard node={selected} resources={resources} parentName={selected.parent_name}
                                 perspective="manager" onAction={handleAction} />
                         ))}
                     </Grid.Col>
