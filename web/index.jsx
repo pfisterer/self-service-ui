@@ -80,8 +80,17 @@ function App() {
 }
 
 function AppRoutes() {
-    const { client: projectClient } = useClient('projects');
+    const { client: projectClient, error: projectClientError } = useClient('projects');
     const [location] = useLocation();
+
+    // The /projects route only exists once its API client has been built, which
+    // happens asynchronously (the generated SDK is imported at runtime). Until
+    // then nothing matches /projects/... and the fall-through below would answer
+    // a deep link with "404: Page not found" for a moment — visible on every
+    // reload of a bookmarked budget page. So while the client is still on its
+    // way, an unmatched path is "not yet", not "not there".
+    const cloudConfigured = Boolean(window?.appconfig?.cloudResourcesBaseUrl);
+    const cloudPending = cloudConfigured && !projectClient && !projectClientError;
 
     // Reset the error boundary only when switching between top-level sections
     // (/, /dyndns, /projects) — NOT on every sub-navigation. Keying on the full
@@ -97,7 +106,7 @@ function AppRoutes() {
                     <Route path="/" component={Home} />
                     <Route path="/dyndns" component={DynamicDnsManagement} nest />
                     {projectClient && <Route path="/projects" component={CloudProjectManagement} nest />}
-                    <Route component={NotFound} />
+                    <Route component={cloudPending ? Loading : NotFound} />
                 </Switch>
             </ErrorBoundary>
         </Suspense>
@@ -206,6 +215,11 @@ function Shell({ children, footer }) {
             </AppShell.Main>
         </AppShell>
     );
+}
+
+// Shown while a section's client is still being built — see AppRoutes.
+function Loading() {
+    return <Container size="md" py="xl">Lädt…</Container>;
 }
 
 function NotFound() {
