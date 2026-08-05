@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Badge, Button, Group, Loader, Paper, Text, TextInput } from '@mantine/core';
+import { ActionIcon, Badge, Button, Group, Loader, Paper, Text, TextInput } from '@mantine/core';
+import { Repeat, X } from 'lucide-react';
 import { Delayed } from '/helper/delayed.jsx';
 import { useClient } from '../providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { useProjectConfig } from './projects.jsx';
+import { COLOR } from './util-project.jsx';
+
+// A dev build is where impersonation is the everyday workflow, so the panel
+// stays open there. False in every `vite build` artifact (staging/prod).
+const DEV_MODE = import.meta.env.DEV;
 
 // How many identity chips the panel ever shows at once. This bar sits on top of
 // every /projects page, so it must not grow with the directory.
@@ -19,6 +25,7 @@ export function GroupRoleSwitcher() {
     const [updating, setUpdating] = useState(false);
     const [identities, setIdentities] = useState([]);
     const [query, setQuery] = useState('');
+    const [expanded, setExpanded] = useState(false);
     const projectConfig = useProjectConfig();
 
     const refreshState = async () => {
@@ -113,6 +120,11 @@ export function GroupRoleSwitcher() {
     const submitTarget = typed.includes('@') ? typed
         : (matches.length === 1 ? matches[0].email : null);
 
+    // Open when the user asked for it, when a switch is active (that state must
+    // never be invisible), or always in a dev build.
+    const isSwitched = Boolean(impersonatedUser || selectedGroup);
+    const open = expanded || isSwitched || DEV_MODE;
+
     const clearOverride = async () => {
         setUpdating(true);
         const res = await sdk.clearRoleSwitch({ client });
@@ -140,93 +152,88 @@ export function GroupRoleSwitcher() {
         return null;
     }
 
-    // Helper to render context switch badges
-    function renderContextSwitchBadges() {
-        if (impersonatedUser) {
-            const badges = [
-                { color: 'grape', variant: 'filled', label: 'Impersonating' },
-                { color: 'grape', variant: 'outline', label: impersonatedUser }
-            ];
-            return <>{badges.map(b => <Badge key={b.label} color={b.color} variant={b.variant} size="sm" style={{ textTransform: 'none' }}>{b.label}</Badge>)}</>;
-        }
-        if (selectedGroup) {
-            const badges = [
-                { color: 'red', variant: 'filled', label: 'Override Active' },
-                { color: 'red', variant: 'outline', label: selectedGroup }
-            ];
-            return <>{badges.map(b => <Badge key={b.label} color={b.color} variant={b.variant} size="sm" style={{ textTransform: 'none' }}>{b.label}</Badge>)}</>;
-        }
-        return <Badge color="gray" variant="light" size="sm" style={{ textTransform: 'none' }}>Original Role</Badge>;
+    // Collapsed by default: a root admin looks at these pages all day and only
+    // rarely switches context, so the tool gets a button instead of a banner.
+    // It is forced open in two cases. In a dev build, because switching users IS
+    // the workflow there. And whenever a switch is ACTIVE — hiding the fact that
+    // you are currently someone else would be the one genuinely dangerous state.
+    if (!open) {
+        return (
+            <Group justify="flex-end" mb="xs">
+                <Button size="compact-xs" variant="subtle" color={COLOR.identity}
+                    leftSection={<Repeat size={13} />}
+                    onClick={() => setExpanded(true)}>
+                    Context switch
+                </Button>
+            </Group>
+        );
     }
 
     return (
-        <Paper withBorder px="sm" py={7} mb="xs" radius="md"
+        <Paper withBorder px="sm" py={6} mb="xs" radius="md"
             style={{ borderColor: 'var(--mantine-primary-color-filled)', background: 'linear-gradient(135deg, rgba(176, 0, 32, 0.05), rgba(176, 0, 32, 0.015))' }}>
 
-            <Group justify="space-between" align="center" gap="xs" wrap="wrap">
-                <Group gap="xs" align="center" wrap="wrap">
-                    <Text size="xs" fw={700} tt="uppercase" c="dimmed" style={{ letterSpacing: 0.4 }}>Context Switch</Text>
-                    {renderContextSwitchBadges()}
-                </Group>
-                <Button size="compact-xs" variant="subtle" color="red" disabled={updating || (!selectedGroup && !impersonatedUser)} onClick={clearOverride}>
-                    Reset
+            {/* Everything on one line: state, the search that doubles as free-text
+                entry for anyone not listed, and the way out. */}
+            <Group gap="xs" align="center" wrap="wrap">
+                <Repeat size={13} style={{ color: 'var(--mantine-color-dimmed)', flexShrink: 0 }} />
+
+                {impersonatedUser
+                    ? <Badge color={COLOR.outside} variant="filled" size="sm" style={{ textTransform: 'none' }}>Acting as {impersonatedUser}</Badge>
+                    : selectedGroup
+                        ? <Badge color={COLOR.negative} variant="filled" size="sm" style={{ textTransform: 'none' }}>Acting as {selectedGroup}</Badge>
+                        : <Text size="xs" c="dimmed" fw={600}>Become</Text>}
+
+                <TextInput
+                    value={query}
+                    onInput={(event) => setQuery(event.currentTarget.value || '')}
+                    onKeyDown={(event) => { if (event.key === 'Enter') submitQuery(); }}
+                    placeholder="Search a user, or type any email…"
+                    size="xs"
+                    w={260}
+                    disabled={updating}
+                />
+                <Button size="compact-xs" variant="light" color={COLOR.outside} onClick={submitQuery} disabled={updating || !submitTarget}>
+                    Become
                 </Button>
-            </Group>
+                {updating ? <Loader size="xs" /> : null}
 
-            {/* One unified path (dev and prod): become any user via impersonation.
-                The field searches the known identities AND doubles as free text for
-                anyone who is not listed. */}
-            <div style={{ marginTop: 7 }}>
-                <Group gap={6} align="center" wrap="nowrap" style={{ maxWidth: 400 }}>
-                    <TextInput
-                        value={query}
-                        onInput={(event) => setQuery(event.currentTarget.value || '')}
-                        onKeyDown={(event) => { if (event.key === 'Enter') submitQuery(); }}
-                        placeholder="Search a user, or type any email…"
-                        size="xs"
-                        style={{ flex: 1 }}
-                        disabled={updating}
-                    />
-                    <Button size="compact-xs" variant="light" color="grape" onClick={submitQuery} disabled={updating || !submitTarget}>
-                        Become
-                    </Button>
-                    {updating ? <Loader size="xs" /> : null}
-                </Group>
-
-                {(
-                    <Group gap={8} align="center" wrap="wrap" mt={6}>
-                        {shown.map((qp) => {
-                            const isActive = qp.email === impersonatedUser;
-                            return (
-                                <Badge
-                                    key={qp.email}
-                                    variant={isActive ? 'filled' : 'light'}
-                                    color="grape"
-                                    size="sm"
-                                    onClick={() => !updating && !isActive && impersonate(qp.email)}
-                                    style={{ textTransform: 'none', cursor: updating ? 'wait' : 'pointer' }}
-                                    title={qp.email}
-                                >
-                                    {qp.label}
-                                </Badge>
-                            );
-                        })}
-                        {matches.length === 0 && (
-                            <Text size="xs" c="dimmed">
-                                {query.trim()
-                                    ? 'No match — type a full email to become someone anyway.'
-                                    : 'Type part of an address to find someone.'}
-                            </Text>
-                        )}
-                        {hasMore && (
-                            <Text size="xs" c="dimmed">
-                                more matches — keep typing to narrow it down.
-                            </Text>
-                        )}
-                    </Group>
+                {shown.map((qp) => {
+                    const isActive = qp.email === impersonatedUser;
+                    return (
+                        <Badge
+                            key={qp.email}
+                            variant={isActive ? 'filled' : 'light'}
+                            color={COLOR.outside}
+                            size="sm"
+                            onClick={() => !updating && !isActive && impersonate(qp.email)}
+                            style={{ textTransform: 'none', cursor: updating ? 'wait' : 'pointer' }}
+                            title={qp.email}
+                        >
+                            {qp.label}
+                        </Badge>
+                    );
+                })}
+                {hasMore && <Text size="xs" c="dimmed">more matches — keep typing.</Text>}
+                {query.trim() && matches.length === 0 && (
+                    <Text size="xs" c="dimmed">No match — a full email works anyway.</Text>
                 )}
-            </div>
 
+                <Group gap={4} align="center" ml="auto" wrap="nowrap">
+                    {isSwitched && (
+                        <Button size="compact-xs" variant="subtle" color={COLOR.negative} disabled={updating} onClick={clearOverride}>
+                            Reset
+                        </Button>
+                    )}
+                    {/* No way to close while switched: the badge above is the only
+                        thing telling you that you are not yourself right now. */}
+                    {!isSwitched && !DEV_MODE && (
+                        <ActionIcon size="sm" variant="subtle" color="gray" onClick={() => setExpanded(false)} title="Close">
+                            <X size={14} />
+                        </ActionIcon>
+                    )}
+                </Group>
+            </Group>
         </Paper>
     );
 }
