@@ -1,23 +1,59 @@
 import { Link } from 'wouter';
 import { Container, Stack, Group, Title, Text, Paper, Button, ThemeIcon, SimpleGrid, List, Alert } from '@mantine/core';
-import { Globe, ListPlus, ShieldCheck, ArrowRight, ServerCog } from 'lucide-react';
+import { Globe, ListPlus, ShieldCheck, ArrowRight, ServerCog, FolderKanban } from 'lucide-react';
 
-// First-run friendly landing page: explain what this portal is for (DNS zones
-// as the basis for hostnames and therefore TLS certificates) and give a short,
-// scannable "get started" path. Most users arrive here on their first login and
-// don't yet know what to do.
+// First-run friendly landing page: explain what this portal is for and give a
+// short, scannable path through it. Most users arrive here on their first login
+// and don't yet know what to do.
+//
+// The path follows what a student actually does: request a project to run
+// something in, give it hostnames, then secure those hostnames with TLS. The
+// budget/delegation side of Cloud Projects is deliberately absent — it concerns
+// the handful of people who hand out resources, not the people arriving here.
 
-const STEPS = [
-    {
-        icon: Globe,
-        color: 'blue',
-        title: '1 · Activate a zone',
-        points: [
-            'Activate your personal zone in Zone Management',
-            'You get your own hostnames, e.g. myapp.you.users.dhbw.cloud',
-            'This is the basis for records and certificates',
-        ],
-    },
+// Cloud Projects only exists where the backend is wired up (cloudResourcesBaseUrl),
+// which is the same check the header uses to show the tab. Without it the
+// /projects route isn't registered, so neither the button nor the project step
+// may appear — the portal is then purely about DNS and certificates.
+const cloudProjectsEnabled = () => Boolean(window?.appconfig?.cloudResourcesBaseUrl);
+
+const PROJECT_STEP = {
+    icon: FolderKanban,
+    color: 'blue',
+    title: '1 · Request a project',
+    points: [
+        'A project is your own space in the DHBW cloud, with the CPU, RAM and storage you ask for',
+        'Small requests are often approved instantly',
+        'Add fellow students to it so you can work on it together',
+    ],
+};
+
+const ZONE_STEP = {
+    icon: Globe,
+    color: 'teal',
+    title: '2 · Give it a DNS name',
+    points: [
+        'Activate your personal zone in Zone Management',
+        'You get your own hostnames, e.g. myapp.you.users.dhbw.cloud',
+        'Point them at your machines (A / AAAA / CNAME); each zone has a TSIG key for ddclient, nsupdate or external-dns',
+    ],
+};
+
+const TLS_STEP = {
+    icon: ShieldCheck,
+    color: 'indigo',
+    title: '3 · Get TLS certificates',
+    points: [
+        'Issue certificates with cert-manager once the hostname resolves',
+        'Ready-to-copy manifests in the "TLS Certificates" tab',
+        'Uses the DHBW ACME server (see below)',
+    ],
+};
+
+// Without Cloud Projects the portal starts at the zone, so the DNS steps are
+// spelled out separately instead of being condensed into one.
+const DNS_ONLY_STEPS = [
+    { ...ZONE_STEP, title: '1 · Activate a zone', points: ZONE_STEP.points.slice(0, 2).concat('This is the basis for records and certificates') },
     {
         icon: ListPlus,
         color: 'teal',
@@ -28,21 +64,15 @@ const STEPS = [
             'Automate updates with ddclient, nsupdate, or external-dns',
         ],
     },
-    {
-        icon: ShieldCheck,
-        color: 'indigo',
-        title: '3 · Get a TLS certificate',
-        points: [
-            'Issue certificates with cert-manager once the hostname resolves',
-            'Ready-to-copy manifests in the "TLS Certificates" tab',
-            'Uses the DHBW ACME server (see below)',
-        ],
-    },
+    TLS_STEP,
 ];
 
 export function Home() {
     const acmeServer = window.appconfig?.acmeServer || 'https://certificates.dhbw.cloud';
     const acmeHost = acmeServer.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const withProjects = cloudProjectsEnabled();
+
+    const steps = withProjects ? [PROJECT_STEP, ZONE_STEP, TLS_STEP] : DNS_ONLY_STEPS;
 
     return (
         <Container size="lg" py="xl">
@@ -52,16 +82,32 @@ export function Home() {
                     <Stack gap="sm">
                         <Title order={1}>Welcome to dhbwCloud Self-Service</Title>
                         <Text size="lg" c="dimmed">
-                            This portal is where you manage <b>your own DNS zones</b>. A zone gives you
-                            your own <b>hostnames</b> — the basis for reaching your services by name and for
-                            issuing <b>TLS certificates</b> for them.
+                            {withProjects ? (
+                                <>
+                                    This portal is where you request <b>your own cloud project</b> — your space in
+                                    the DHBW cloud with the resources you need — and where you give the services
+                                    you run there <b>their own hostnames</b> and <b>TLS certificates</b>.
+                                </>
+                            ) : (
+                                <>
+                                    This portal is where you manage <b>your own DNS zones</b>. A zone gives you
+                                    your own <b>hostnames</b> — the basis for reaching your services by name and for
+                                    issuing <b>TLS certificates</b> for them.
+                                </>
+                            )}
                         </Text>
                         <Group mt="sm">
-                            <Button component={Link} to="/dyndns/zones" size="md" rightSection={<ArrowRight size="18" />}>
-                                Manage your zones
-                            </Button>
-                            <Button component={Link} to="/dyndns/api-doc" size="md" variant="light">
-                                API documentation
+                            {/* Same target as the header's Cloud Projects link: /projects
+                                redirects to My Projects, where "Request project" lives. */}
+                            {withProjects && (
+                                <Button component={Link} to="/projects" size="md" rightSection={<ArrowRight size="18" />}>
+                                    Request a project
+                                </Button>
+                            )}
+                            <Button component={Link} to="/dyndns/zones" size="md"
+                                variant={withProjects ? 'light' : 'filled'}
+                                rightSection={withProjects ? null : <ArrowRight size="18" />}>
+                                Manage DNS zones
                             </Button>
                         </Group>
                     </Stack>
@@ -71,7 +117,7 @@ export function Home() {
                 <div>
                     <Title order={3} mb="md">Get started in three steps</Title>
                     <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
-                        {STEPS.map(({ icon: Icon, color, title, points }) => (
+                        {steps.map(({ icon: Icon, color, title, points }) => (
                             <Paper key={title} p="lg" shadow="xs" radius="md" withBorder>
                                 <Stack gap="sm">
                                     <ThemeIcon size={44} radius="md" variant="light" color={color}>
