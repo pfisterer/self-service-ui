@@ -4,6 +4,19 @@
     background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8));
     border: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
     border-radius: var(--mantine-radius-sm);
+    transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+/* The whole block is clickable, so it has to look it — otherwise the copy
+   button stays the only visible affordance and the click is a hidden feature. */
+.codeblock-surface:hover {
+    background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-7));
+    border-color: light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
+}
+
+.codeblock-surface:focus-visible {
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: 2px;
 }
 
 .codeblock-surface .hljs {

@@ -27,6 +27,17 @@ export function CodeBlock({ code, language }) {
         }
     };
 
+    // Clicking the block copies it — the button sits at the far right and is a
+    // long way from a short value. Selecting text keeps working: a click that
+    // ends a selection (drag, double-click) leaves that selection in place, and
+    // copying then would both fight the user and overwrite what they were about
+    // to copy themselves. So a click only counts when nothing is selected.
+    const handleSurfaceClick = () => {
+        const selection = window.getSelection();
+        if (selection && !selection.isCollapsed && selection.toString().trim()) return;
+        copyToClipboard(code);
+    };
+
     // XSS: `highlighted` is injected via dangerouslySetInnerHTML
     // That is safe ONLY because highlight.js HTML-escapes
     // its input, so untrusted `code` (zone names, TSIG key material) cannot break
@@ -47,6 +58,17 @@ export function CodeBlock({ code, language }) {
             p="sm"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onClick={handleSurfaceClick}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    copyToClipboard(code);
+                }
+            }}
+            role="button"
+            tabIndex={0}
+            title={copied ? 'Copied' : 'Click to copy'}
+            style={{ cursor: 'pointer' }}
         >
             <pre style={{
                 margin: 0,
@@ -76,7 +98,9 @@ export function CodeBlock({ code, language }) {
                     zIndex: 10,
                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                 }}
-                onClick={() => copyToClipboard(code)}
+                // The surface below copies too; without this the click would run
+                // both handlers.
+                onClick={(e) => { e.stopPropagation(); copyToClipboard(code); }}
                 title="Copy code"
                 leftSection={copied ? <Check size="14" /> : <Copy size="14" />}
             >
