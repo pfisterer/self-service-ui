@@ -26,7 +26,6 @@ export function MyProjectsView() {
     const [projects, setProjects] = useState([]);
     const [myBudgets, setMyBudgets] = useState([]);
     const [eligibleBudgets, setEligibleBudgets] = useState([]);
-    const [parentNames, setParentNames] = useState(new Map());
     const [showNewModal, setShowNewModal] = useState(false);
     const dlg = useNodeDialog();
 
@@ -39,7 +38,6 @@ export function MyProjectsView() {
         setProjects(mine);
         setMyBudgets(budgets);
         setEligibleBudgets(eligible);
-        setParentNames(await fetchParentNames(api, mine));
     }, showError);
 
     useEffect(() => { if (api) refresh(); }, [api, userEmail]);
@@ -100,7 +98,7 @@ export function MyProjectsView() {
                         key={node.id}
                         node={node}
                         resources={resources}
-                        parentName={parentNames.get(node.parent_id)}
+                        parentName={node.parent_name}
                         perspective="owner"
                         onAction={handleAction}
                     />

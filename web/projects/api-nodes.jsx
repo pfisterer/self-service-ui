@@ -116,19 +116,3 @@ export function useNodesApi() {
         };
     }, [client, sdk]);
 }
-
-// Fetches the display names of the given nodes' parents, best-effort: IDs the
-// caller may not read (or that fail) simply fall back to the raw ID. Returns a
-// Map parentId → title. Not a hook — call inside an async fetcher.
-export async function fetchParentNames(api, nodes) {
-    const ids = [...new Set((nodes || []).map(n => n.parent_id).filter(Boolean))];
-    const entries = await Promise.all(ids.map(async (id) => {
-        try {
-            const parent = await api.getNode(id);
-            return [id, parent.name || parent.id];
-        } catch {
-            return [id, id];
-        }
-    }));
-    return new Map(entries);
-}
