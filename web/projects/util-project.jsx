@@ -160,13 +160,6 @@ export function resourceSummaryText(resources, quota) {
 
 // ── Generic helpers (unchanged semantics) ───────────────────────────────────
 
-export function normalizeArrayResponse(res) {
-    if (Array.isArray(res?.data)) return res.data;
-    if (Array.isArray(res?.data?.data)) return res.data.data;
-    if (Array.isArray(res)) return res;
-    return [];
-}
-
 export function normalizeObjectResponse(res, fallback = {}) {
     if (res?.data && typeof res.data === 'object' && !Array.isArray(res.data)) {
         if (res.data.data && typeof res.data.data === 'object' && !Array.isArray(res.data.data)) {
