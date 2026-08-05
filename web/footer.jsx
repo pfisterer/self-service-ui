@@ -1,4 +1,4 @@
-import { Box, Text, Anchor, Group } from '@mantine/core';
+import { Box, Text, Anchor } from '@mantine/core';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useCloudConfig } from '/providers/cloud-config.jsx';
 
@@ -28,24 +28,20 @@ export function Footer({ title, version }) {
         // Left-aligned like the header and the page content: the portal has one
         // vertical edge, from the logo down to the last line on the page.
         <Box component="div" py="xs" px="md">
-            <Box>
-                {/* This UI and the APIs it talks to, on one line */}
-                <Text size="sm" c="dimmed" mb="xs">
-                    {components.map(({ label, version: v, repo }, i) => (
-                        <span key={repo}>
-                            {i > 0 && ' · '}
-                            <Anchor href={repo} size="sm" target="_blank" rel="noreferrer">{label}</Anchor>
-                            {' '}({v})
-                        </span>
-                    ))}
-                </Text>
-
-                <Group gap="xs">
-                    <Anchor href="https://dennis-pfisterer.de" size="sm" target="_blank">
-                        © Dennis Pfisterer, DHBW
-                    </Anchor>
-                </Group>
-            </Box>
+            {/* Components and copyright on a single line, separated like the
+                components are among themselves. It wraps on narrow screens
+                rather than being two lines everywhere. */}
+            <Text size="sm" c="dimmed">
+                {components.map(({ label, version: v, repo }) => (
+                    <span key={repo}>
+                        <Anchor href={repo} size="sm" target="_blank" rel="noreferrer">{label}</Anchor>
+                        {' '}({v}){' · '}
+                    </span>
+                ))}
+                <Anchor href="https://dennis-pfisterer.de" size="sm" target="_blank">
+                    © Dennis Pfisterer, DHBW
+                </Anchor>
+            </Text>
         </Box>
     );
 }
