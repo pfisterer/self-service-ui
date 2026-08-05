@@ -9,7 +9,9 @@ export function authHeaders(user) {
 }
 
 // Dummy-auth (dev) user object — no real OIDC session.
-const makeDummyUser = (email) => ({ profile: { email, name: `User: ${email}` }, access_token: 'dummy-token' });
+// name is what the header shows; a real OIDC session puts a display name there,
+// so the dev user carries the plain address and no "User:" label of its own.
+const makeDummyUser = (email) => ({ profile: { email, name: email }, access_token: 'dummy-token' });
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);

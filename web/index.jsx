@@ -16,7 +16,9 @@ import { ErrorModalProvider } from '/providers/error-modal.jsx';
 import { ConfirmProvider } from '/providers/confirm.jsx';
 
 import { Header } from '/header.jsx';
+import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
 import { Footer } from '/footer.jsx';
+import { CloudStatusProvider } from './projects/cloud-status.jsx';
 import { Home } from '/home/home.jsx';
 import { Delayed } from '/helper/delayed.jsx';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
@@ -43,6 +45,17 @@ createRoot(document.getElementById('app')).render(
                 neutral: ['#F0F1F1', '#D9DBDC', '#BFC3C5', '#A5A9AB', '#8B8F91', '#788187', '#5F6466', '#474C4E', '#303537', '#1A1E20'],
             },
             fontFamily: 'Arial, sans-serif',
+            components: {
+                // Every page wraps itself in a Container, which Mantine centres
+                // by default. Left-aligned instead, because the header spans the
+                // window: centred content would start at a different x than the
+                // logo and the tabs above it, and the eye follows that edge.
+                // The width cap stays — only the leftover space moves to the
+                // right-hand side.
+                Container: Container.extend({
+                    styles: { root: { marginInlineStart: 0 } },
+                }),
+            },
         }}>
         <ErrorBoundary>
             <App name="Dynamic Zones DNS API" />
@@ -97,21 +110,15 @@ function Main() {
     const [devEmail, setDevEmail] = useState(dev_user || 'dennis.pfisterer@dhbw.de')
     const footer = <Footer title={<b>dhbwCloud Self Service</b>} version={__APP_VERSION__} />
 
+    // Router and clients wrap the WHOLE shell, not just the routes: the header
+    // menu needs the cloud status (root admin? open requests?), and that comes
+    // from the same API the section below uses.
     return (
-        <AppShell header={{ height: 60 }} padding="md">
-            <AppShell.Header>
-                <Header />
-            </AppShell.Header>
-            {/* Flex column + full-viewport min-height makes the footer sticky: the
-                content wrapper grows to fill the viewport, so the footer stays at
-                the bottom even when content is short or briefly loading, instead of
-                jumping up and back. The wrapper is a full-width block on purpose —
-                the routed content centers itself via a Mantine Container whose auto
-                margins would, as a DIRECT flex child, shrink it to its content width
-                and shift it sideways between tabs (Manage 1223px vs others 1320px).
-                Wrapping restores normal block sizing (always max-width). */}
-            <AppShell.Main style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
-                <Box style={{ flexGrow: 1 }}>
+        <Router>
+        <ClientProvider name="dyndns" baseURL={window?.appconfig?.dynamicZonesBaseUrl}>
+        <ClientProvider name="projects" baseURL={window?.appconfig?.cloudResourcesBaseUrl}>
+        <CloudStatusProvider>
+        <Shell footer={footer}>
                     {!user ? (
                         <Delayed waitMs={200}>
                             {/* Prominent, space-filling sign-in prompt: a large card
@@ -159,15 +166,42 @@ function Main() {
                             </Center>
                         </Delayed>
                     ) : (
-                        <Router>
-                            <ClientProvider name="dyndns" baseURL={window?.appconfig?.dynamicZonesBaseUrl}>
-                                <ClientProvider name="projects" baseURL={window?.appconfig?.cloudResourcesBaseUrl}>
-                                    <AppRoutes />
-                                </ClientProvider>
-                            </ClientProvider>
-                        </Router>
+                        <AppRoutes />
                     )}
-                </Box>
+        </Shell>
+        </CloudStatusProvider>
+        </ClientProvider>
+        </ClientProvider>
+        </Router>
+    );
+}
+
+// The shell around every page. It lives below the Router because the header's
+// height is not fixed: a section with a second navigation bar is taller, and
+// AppShell derives the content offset from exactly this number — get it wrong
+// and the page slides under the header.
+function Shell({ children, footer }) {
+    const { subNavItems } = useNav();
+    const tall = HEADER_HEIGHT + SUBNAV_HEIGHT;
+
+    return (
+        // base: the second row is never shown below the breakpoint (the burger
+        // holds the whole tree instead), so the header stays one row tall there.
+        <AppShell padding="md"
+            header={{ height: { base: HEADER_HEIGHT, [NAV_BREAKPOINT]: subNavItems.length > 0 ? tall : HEADER_HEIGHT } }}>
+            <AppShell.Header>
+                <Header />
+            </AppShell.Header>
+            {/* Flex column + full-viewport min-height makes the footer sticky: the
+                content wrapper grows to fill the viewport, so the footer stays at
+                the bottom even when content is short or briefly loading, instead of
+                jumping up and back. The wrapper is a full-width block on purpose —
+                the routed content sits in a Mantine Container, and as a DIRECT flex
+                child its margins would shrink it to its content width and change
+                its size between tabs (Manage 1223px vs others 1320px). Wrapping
+                restores normal block sizing (always max-width). */}
+            <AppShell.Main style={{ display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
+                <Box style={{ flexGrow: 1 }}>{children}</Box>
                 {footer}
             </AppShell.Main>
         </AppShell>
