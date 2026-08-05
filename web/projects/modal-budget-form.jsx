@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Box, Checkbox, Select, Stack, Text, Textarea, TextInput } from '@mantine/core';
+import { Info } from 'lucide-react';
+import { Alert, Box, Checkbox, Fieldset, Select, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { useNodesApi } from './api-nodes.jsx';
 import { TerminationDatePicker } from './component-common.jsx';
 import { FormModal, FormTabs, useFormErrors } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
-import { formatError } from './util-project.jsx';
+import { COLOR, formatError } from './util-project.jsx';
 
 // Same three-step split as the project dialog: what it is → how much → who.
 const TAB_DETAILS = 'details';
 const TAB_RESOURCES = 'resources';
 const TAB_ACCESS = 'access';
+const TAB_AUTO_APPROVE = 'auto-approve';
 
 // BudgetFormModal covers the three ways a budget comes to life or changes:
 //
@@ -98,7 +100,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const tabHasError = (tab) => {
         if (tab === TAB_DETAILS) return ['name', 'reason', 'parentId'].some(k => errors[k]);
         if (tab === TAB_RESOURCES) return (resources || []).some(r => errors[r.id]);
-        if (tab === TAB_ACCESS) return !!errors.adminScope || Object.keys(errors).some(k => k.startsWith('auto_'));
+        if (tab === TAB_ACCESS) return !!errors.adminScope;
+        if (tab === TAB_AUTO_APPROVE) return Object.keys(errors).some(k => k.startsWith('auto_'));
         return false;
     };
 
@@ -126,6 +129,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         const prevDate = node.termination_date ? new Date(node.termination_date).getTime() : null;
         const nextDate = terminationDate ? terminationDate.getTime() : null;
         if (prevDate !== nextDate && nextDate) body.termination_date = terminationDate.toISOString();
+        // Removing a date needs its own flag: an absent termination_date means
+        // "leave as is", so switching the end date off would otherwise be a no-op.
+        else if (prevDate && !nextDate) body.clear_termination_date = true;
         return body;
     };
 
@@ -203,7 +209,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
             )}
 
             <TerminationDatePicker
-                label="Valid until (optional)"
+                label="Valid until"
+                optional
                 value={terminationDate}
                 onChange={setTerminationDate}
             />
@@ -226,53 +233,89 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         </div>
     );
 
-    // Managing, requesting and auto-approval belong together: they answer "who
-    // may take from this budget, and how much goes through without me".
+    // Two questions, two boxes: who runs this budget, and who may ask it for
+    // something. Flat in one column they read as equally important switches
+    // instead of two groups. (What goes through without being asked is its own
+    // tab — see autoApproveTab.)
+    const hasRequesters = eligibleRequesters.length > 0;
+    // Everything below the requester list only matters once somebody may request
+    // at all — shown faded rather than hidden, so the setting stays discoverable.
+    const fadedWithoutRequesters = { opacity: hasRequesters ? 1 : 0.45, transition: 'opacity 150ms ease' };
     const accessTab = (
         <Stack>
-            <TokenListEditor
-                label="Managed by"
-                description="These people or groups approve requests under this budget and can delegate further. This is how you hand resources to someone."
-                tokens={adminScope}
-                onChange={(t) => { setAdminScope(t); clear('adminScope'); }}
-                error={errors.adminScope}
-            />
+            {/* The group legend IS the field label — printing "Managed by" again
+                inside a box called "Management" says the same thing twice. */}
+            <Fieldset legend="Managed by">
+                <TokenListEditor
+                    description="These people or groups approve requests under this budget and can delegate further. This is how you hand resources to someone."
+                    tokens={adminScope}
+                    onChange={(t) => { setAdminScope(t); clear('adminScope'); }}
+                    error={errors.adminScope}
+                />
+            </Fieldset>
 
-            <TokenListEditor
-                label="Who can request here"
-                description="These people or groups may submit project or budget requests under this budget. Leave empty to disable requests."
-                tokens={eligibleRequesters}
-                onChange={setEligibleRequesters}
-            />
+            <Fieldset legend="Who can request here">
+                <Stack>
+                    {/* The description deliberately says "project requests" only:
+                        whether budgets may be requested too is the checkbox at the
+                        end of this group, which would otherwise contradict it. */}
+                    <TokenListEditor
+                        description="These people or groups may submit project requests under this budget. Leave empty to disable requests."
+                        tokens={eligibleRequesters}
+                        onChange={setEligibleRequesters}
+                    />
 
-            <Checkbox
-                label="Allow sub-budget requests"
-                description="Requesters may ask for a sub-budget of their own here, not just for projects. Turn this off for a course budget that should only ever hold projects. Managers can always create sub-budgets directly."
-                checked={allowSubBudgetRequests}
-                onChange={e => setAllowSubBudgetRequests(e.currentTarget.checked)}
-            />
+                    <Checkbox
+                        label="Also allow budget requests in addition to projects"
+                        description={hasRequesters
+                            ? 'A requester can then ask for a budget of their own here and delegate further. Turn this off for a course budget that should only ever hold projects — managers can always create sub-budgets directly.'
+                            : 'Only relevant once somebody may request here.'}
+                        checked={allowSubBudgetRequests}
+                        disabled={!hasRequesters}
+                        onChange={e => setAllowSubBudgetRequests(e.currentTarget.checked)}
+                        style={fadedWithoutRequesters}
+                    />
+                </Stack>
+            </Fieldset>
+
+        </Stack>
+    );
+
+
+    // Auto-approve is its own tab, not a third box under Access: it is the one
+    // setting here that decides what happens WITHOUT a human, and next to the
+    // access lists it drowned — the per-person limit alone is taller than both.
+    const autoApproveTab = (
+        <Stack>
+            {!hasRequesters && (
+                <Alert color={COLOR.info} variant="light" icon={<Info size="18" />}>
+                    Nobody may request from this budget yet, so there is nothing to approve
+                    automatically. Add people or groups under <b>Access → “Who can request here”</b>
+                    {' '}first; this tab becomes editable as soon as somebody is listed.
+                </Alert>
+            )}
 
             <Stack gap="xs">
                 <Checkbox
-                    label="Enable self-service (auto-approval)"
-                    description="Small requests are approved instantly without a manager, as long as the person stays under the per-person limit and the budget has capacity."
+                    label="Approve small requests automatically"
+                    description="Requests are granted instantly without a manager, as long as the person stays under the per-person limit and the budget has capacity."
                     checked={autoApproveEnabled}
+                    disabled={!hasRequesters}
                     onChange={e => { setAutoApproveEnabled(e.currentTarget.checked); clearPrefixed('auto_'); }}
+                    style={fadedWithoutRequesters}
                 />
                 {/* Indented under the checkbox, and shown disabled rather than
-                    hidden while self-service is off: the per-person limit is what
-                    the checkbox actually does, so it must read as belonging to it
-                    instead of looking like a second, unrelated resource block. */}
+                    hidden while auto-approve is off: the per-person limit is what
+                    the checkbox actually does, so it must read as belonging to it. */}
                 <Box
                     pl="xl"
                     ml="xs"
                     style={{
-                        borderLeft: '2px solid var(--mantine-color-default-border)',
-                        // Mantine only greys the inputs themselves; the labels,
-                        // ranges and the bracket line would stay fully black and
-                        // make the block read as active. Fading the whole group
-                        // is what makes "off" obvious at a glance.
-                        opacity: autoApproveEnabled ? 1 : 0.45,
+                        // Mantine only greys the inputs themselves; the labels and
+                        // ranges would stay fully black and make the block read as
+                        // active. Fading the whole group is what makes "off"
+                        // obvious at a glance.
+                        opacity: autoApproveEnabled && hasRequesters ? 1 : 0.45,
                         transition: 'opacity 150ms ease',
                     }}
                 >
@@ -282,7 +325,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     <QuotaInputs
                         resources={resources}
                         value={autoApproveQuota}
-                        disabled={!autoApproveEnabled}
+                        disabled={!autoApproveEnabled || !hasRequesters}
                         errors={Object.fromEntries(Object.entries(errors)
                             .filter(([k]) => k.startsWith('auto_'))
                             .map(([k, v]) => [k.slice(5), v]))}
@@ -310,6 +353,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     { value: TAB_DETAILS, label: 'Details', hasError: tabHasError(TAB_DETAILS), content: detailsTab },
                     { value: TAB_RESOURCES, label: 'Resources', hasError: tabHasError(TAB_RESOURCES), content: resourcesTab },
                     { value: TAB_ACCESS, label: 'Access', hasError: tabHasError(TAB_ACCESS), content: accessTab },
+                    { value: TAB_AUTO_APPROVE, label: 'Auto-approve', hasError: tabHasError(TAB_AUTO_APPROVE), content: autoApproveTab },
                 ]}
             />
         </FormModal>
