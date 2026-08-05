@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useClient } from '/providers/client.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
-import { FetchModal } from './tokens/modal-fetch.jsx';
 import { Delayed } from '../helper/delayed.jsx';
 import { Container, Title, Button, Checkbox, Stack, Group, Paper, Text, Loader, Divider, Alert, Code, CopyButton } from '@mantine/core';
 
@@ -118,10 +117,7 @@ export function Tokens() {
                                             <Text size="sm" c="dimmed">Expires: {t.expires_at}</Text>
                                             <Text size="sm">Mode: {t.read_only ? "🔒 read-only" : "✏️ read-write"}</Text>
                                         </Stack>
-                                        <Group gap="xs">
-                                            <FetchModal sdk={sdk} client={client} token={secret || `${t.token_prefix || ''}…`} />
-                                            <Button color="red" size="sm" onClick={() => deleteToken(t.id)}>Delete</Button>
-                                        </Group>
+                                        <Button color="red" size="sm" onClick={() => deleteToken(t.id)}>Delete</Button>
                                     </Group>
                                 </div>
                             );

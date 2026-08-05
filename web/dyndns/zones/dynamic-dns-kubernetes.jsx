@@ -1,9 +1,6 @@
-import { useState, useEffect } from 'react';
 import { useAuth } from '/providers/auth.jsx';
-import { useClient } from '/providers/client.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { CodeBlock } from '/helper/codeblock.jsx';
-import { Delayed } from '/helper/delayed.jsx';
 import { Accordion, Alert, Anchor, Stack, Text } from '@mantine/core';
 import { AlertCircle } from 'lucide-react';
 import { TabIntro } from './tab-intro.jsx';
@@ -21,29 +18,14 @@ import { deriveZoneConfig, PrefilledValues } from './dynamic-dns.jsx';
 // ----------------------------------------
 // Accordion 1 — external-dns for a cluster you already have.
 // ----------------------------------------
+// The command used to arrive with one of the user's tokens already filled in.
+// That is no longer possible — the API stores only a hash, so an existing token
+// exists nowhere but in the hands of whoever created it. The placeholder stays,
+// and the note below says where to get a token.
 function ExternalDnsPanel({ externalDnsValuesYaml, zone }) {
-    const { user } = useAuth();
-    const [token, setToken] = useState(null);
-    const { client, sdk } = useClient('dyndns');
-
-    useEffect(() => {
-        (async () => {
-            try {
-                const res = await sdk.listTokens({ client });
-                const tokens = res?.data?.tokens
-                if (tokens && tokens.length > 0) {
-                    const readOnlyToken = tokens.find(t => t.read_only === true);
-                    setToken(readOnlyToken?.token_string || tokens[0].token_string);
-                }
-            } catch (e) {
-                console.error("Failed to fetch tokens:", e);
-            }
-        })();
-    }, [client, user]);
-
     const url = new URL(`v1/zones/${zone.zone}?format=external-dns&part=`, window.appconfig.dynamicZonesBaseUrl).toString();
     const helmAddRepoCommand = `helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/; helm repo update`;
-    const helmCommand = `curl -H 'Authorization: Bearer ${token || "insert_your_token"}' '${url}values.yaml' | helm upgrade --install external-dns external-dns/external-dns -n external-dns -f -`;
+    const helmCommand = `curl -H 'Authorization: Bearer <your-api-token>' '${url}values.yaml' | helm upgrade --install external-dns external-dns/external-dns -n external-dns -f -`;
 
     return (
         <Stack gap="lg">
@@ -66,15 +48,11 @@ function ExternalDnsPanel({ externalDnsValuesYaml, zone }) {
                 </Text>
                 <CodeBlock code={helmCommand} />
 
-                {!token ? (
-                    <Delayed>
-                        <Alert icon={<AlertCircle size="16" />} title="Authentication Required" color="red" mt="md">
-                            You need a valid token to authenticate the request. Use the "API Tokens" section to create one.
-                            This token should have read-only permissions. Once created, a token (preferably read-only)
-                            will be automatically inserted into the command above.
-                        </Alert>
-                    </Delayed>
-                ) : ''}
+                <Alert icon={<AlertCircle size="16" />} title="Insert your API token" color="blue" mt="md">
+                    Replace <code>&lt;your-api-token&gt;</code> with a token from the "API Tokens" section —
+                    read-only is enough here. A token is shown exactly once, when you create it: the server
+                    keeps only its hash and cannot fill it in for you.
+                </Alert>
             </div>
 
             <div>
