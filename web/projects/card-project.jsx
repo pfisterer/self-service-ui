@@ -1,7 +1,7 @@
-import { AlertTriangle, ArrowRightLeft, Check, Eye, FolderInput, History, Pencil, Rocket, Users, X } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, Check, Eye, FolderInput, History, Pencil, Rocket, X } from 'lucide-react';
 import { Alert, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
-import { NodeChangesDiff, NodeStatusBadge } from './component-common.jsx';
-import { isImported, ownerEmail, resourceSummaryText } from './util-project.jsx';
+import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge } from './component-common.jsx';
+import { COLOR, expiryTone, expiryValue, isImported, ownerEmail, resourceSummaryText } from './util-project.jsx';
 
 // ProjectCard renders one project leaf. It is purely presentational: every
 // button reports an action to the owning view via onAction(actionId, node),
@@ -46,7 +46,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         <NodeStatusBadge status={node.status} />
                         {node.os_overcommitted && (
                             <Tooltip label="The project currently uses more in OpenStack than was granted. Creating new resources is blocked.">
-                                <Badge color="red" variant="filled" style={{ cursor: 'default' }}>
+                                <Badge color={COLOR.negative} variant="filled" style={{ cursor: 'default' }}>
                                     <AlertTriangle size="11" style={{ marginRight: 3, verticalAlign: 'middle' }} />
                                     Overcommitted
                                 </Badge>
@@ -62,7 +62,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 </Text>
 
                 {imported && (
-                    <Alert color="violet" variant="light" mb="xs" p="xs">
+                    <Alert color={COLOR.outside} variant="light" mb="xs" p="xs">
                         {(node.flags || []).includes('promote_on_reconcile')
                             ? 'Queued for adoption — the next synchronization run will bring this project under management.'
                             : isManager
@@ -72,41 +72,39 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 )}
 
                 {/* ── Key facts ──────────────────────────────────────────── */}
-                <Stack gap="3" mb="xs">
+                <Stack gap="6" mb="xs">
                     {isManager && owner && (
-                        <Group gap="xs" wrap="wrap">
-                            <Text size="xs" c="dimmed" style={{ minWidth: 68 }}>Owner:</Text>
-                            <Badge size="xs" variant="light" color="blue" style={{ textTransform: 'none' }}>{owner}</Badge>
-                        </Group>
+                        <FactRow label="Owner">
+                            <PersonBadge email={owner} size="xs" />
+                        </FactRow>
                     )}
 
                     {parentName && (
-                        <Group gap="xs" wrap="wrap">
-                            <Text size="xs" c="dimmed" style={{ minWidth: 68 }}>Budget:</Text>
-                            <Text size="xs">{parentName}</Text>
-                        </Group>
+                        <FactRow label="Paid from">{parentName}</FactRow>
                     )}
 
                     {resourceSummary && (
-                        <Group gap="xs">
-                            <Text size="xs" c="dimmed" style={{ minWidth: 68 }}>Resources:</Text>
-                            <Text size="xs">{resourceSummary}</Text>
-                        </Group>
+                        <FactRow label="Resources">{resourceSummary}</FactRow>
                     )}
 
-                    <Group gap="xs" wrap="wrap">
-                        {node.termination_date && (
-                            <Badge size="xs" variant="outline" color="gray">
-                                Ends {new Date(node.termination_date).toLocaleDateString()}
-                            </Badge>
-                        )}
-                        {authorizedCount > 0 && (
-                            <Badge size="xs" variant="outline" color="gray">
-                                <Users size="10" style={{ marginRight: 3, verticalAlign: 'middle' }} />
-                                {authorizedCount} user{authorizedCount !== 1 ? 's' : ''}
-                            </Badge>
-                        )}
-                    </Group>
+                    {/* Only a date that is close keeps a colour, because then it
+                        IS the message; anything further out reads like the rows
+                        above it. */}
+                    {node.termination_date && (
+                        <FactRow label="Valid until">
+                            <Text size="xs" c={expiryTone(node.termination_date) === 'gray'
+                                ? undefined
+                                : `${expiryTone(node.termination_date)}.7`}>
+                                {expiryValue(node.termination_date)}
+                            </Text>
+                        </FactRow>
+                    )}
+
+                    {authorizedCount > 0 && (
+                        <FactRow label="Members">
+                            {`the owner and ${authorizedCount} other${authorizedCount !== 1 ? 's' : ''}`}
+                        </FactRow>
+                    )}
                 </Stack>
 
                 {/* ── Proposed changes while change_pending ──────────────── */}
@@ -147,7 +145,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         </Button>
                     )}
                     {!isManager && isApproved && (
-                        <Button color="red" variant="light" size="xs" onClick={() => act('release')}>
+                        <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('release')}>
                             Release
                         </Button>
                     )}
@@ -155,16 +153,16 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                     {/* Manager actions */}
                     {isManager && (isPending || isChangePending) && (
                         <>
-                            <Button color="green" variant="light" size="xs" onClick={() => act('approve')}>
+                            <Button color={COLOR.positive} variant="light" size="xs" onClick={() => act('approve')}>
                                 <Check size="13" style={{ marginRight: 4 }} />Approve
                             </Button>
-                            <Button color="red" variant="light" size="xs" onClick={() => act('reject')}>
+                            <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('reject')}>
                                 <X size="13" style={{ marginRight: 4 }} />Reject
                             </Button>
                         </>
                     )}
                     {isManager && imported && !(node.flags || []).includes('promote_on_reconcile') && (
-                        <Button color="violet" variant="light" size="xs" onClick={() => act('adopt')}>
+                        <Button color={COLOR.outside} variant="light" size="xs" onClick={() => act('adopt')}>
                             <Rocket size="13" style={{ marginRight: 4 }} />Adopt
                         </Button>
                     )}
