@@ -309,6 +309,11 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
     // field claims something that is not stored anywhere.
     const [durationValue, setDurationValue] = useState(currentDate ? DEFAULT_DURATION_DAYS : null);
     const [durationUnit, setDurationUnit] = useState('days');
+    // Once the user picks a unit it sticks. Deriving it from the date instead
+    // fights them: "Weeks" + 4 is 28 days, and the thresholds below would snap
+    // that straight back to "Days" — the number jumped and the unit reset on
+    // every keystroke.
+    const [unitPicked, setUnitPicked] = useState(false);
     const selectData = [
         { value: 'days', label: 'Days' },
         { value: 'weeks', label: 'Weeks' },
@@ -321,6 +326,15 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
             return;
         }
         const diffDays = Math.ceil((new Date(currentDate) - new Date()) / (1000 * 60 * 60 * 24));
+        if (unitPicked) {
+            // Keep the chosen unit, only restate the date in it.
+            setDurationValue(durationUnit === 'weeks' ? Math.round(diffDays / 7)
+                : durationUnit === 'months' ? Math.round(diffDays / 30)
+                    : diffDays);
+            return;
+        }
+        // No choice made yet (opening the form, or a date set from elsewhere):
+        // pick the unit that states the span in the fewest digits.
         if (diffDays < 60) {
             setDurationValue(diffDays);
             setDurationUnit('days');
@@ -331,7 +345,7 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
             setDurationValue(Math.round(diffDays / 30));
             setDurationUnit('months');
         }
-    }, [currentDate]);
+    }, [currentDate, unitPicked, durationUnit]);
 
     const dateFromDuration = (val, unit) => {
         const days = unit === 'weeks' ? val * 7 : unit === 'months' ? val * 30 : val;
