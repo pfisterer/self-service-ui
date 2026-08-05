@@ -44,6 +44,10 @@ function BudgetSelect({ myBudgets, eligibleBudgets, resources, requestedQuota, v
 
     const selected = [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === value);
     const overCap = selected && requestedQuota && !quotaFits(selected, requestedQuota, resources);
+    // Over capacity means two different things: a request queues up for a
+    // manager, but a manager's own creation is approved on the spot and the
+    // capacity check therefore rejects it outright.
+    const managesSelected = (myBudgets || []).some(b => b.id === value);
 
     if (!data.length) {
         return (
@@ -67,8 +71,9 @@ function BudgetSelect({ myBudgets, eligibleBudgets, resources, requestedQuota, v
             />
             {overCap && (
                 <Text size="xs" c="orange">
-                    The requested amount exceeds this budget's free capacity — the request will
-                    wait until a manager decides (they may grant an adjusted amount).
+                    {managesSelected
+                        ? 'The requested amount exceeds this budget\'s free capacity — creating the project will be refused. Lower the amount, or raise this budget first.'
+                        : 'The requested amount exceeds this budget\'s free capacity — the request will wait until a manager decides (they may grant an adjusted amount).'}
                 </Text>
             )}
         </Stack>
@@ -99,6 +104,16 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const [tokenSearchResults, setTokenSearchResults] = useState([]);
     const [isSearchingTokens, setIsSearchingTokens] = useState(false);
 
+    // Auto-approve only ever applies to budgets you REQUEST under. On a budget
+    // you manage the project is created approved outright, so its headroom is
+    // not a limit for you — neither prefill the form with it nor talk about it.
+    const managedIds = useMemo(() => new Set((myBudgets || []).map(b => b.id)), [myBudgets]);
+    const headroomFor = (id) => managedIds.has(id)
+        ? null
+        : autoApproveHeadroom(
+            [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === id),
+            resources, myProjects);
+
     // (Re-)initialize the form whenever the dialog opens.
     useEffect(() => {
         if (!opened) return;
@@ -118,9 +133,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             setAuthorizedUsers([]);
             const initial = myBudgets[0]?.id ?? eligibleBudgets[0]?.id ?? null;
             setParentId(initial);
-            const headroom = autoApproveHeadroom(
-                [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === initial),
-                resources, myProjects);
+            const headroom = headroomFor(initial);
             if (headroom) setQuota(headroom);
         }
     }, [opened, node?.id]);
@@ -135,9 +148,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         return next;
     };
 
-    const allBudgets = [...(myBudgets || []), ...(eligibleBudgets || [])];
-    const selectedHeadroom = autoApproveHeadroom(
-        allBudgets.find(b => b.id === parentId), resources, myProjects);
+    const selectedHeadroom = headroomFor(parentId);
 
     // Picking a budget with auto-approve fills the resources with the most it
     // would grant on the spot, so the common case ("give me what I may have")
@@ -145,7 +156,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // carefully typed values with a default would be worse than a stale form.
     const selectBudget = (id) => {
         setParentId(id);
-        const headroom = autoApproveHeadroom(allBudgets.find(b => b.id === id), resources, myProjects);
+        const headroom = headroomFor(id);
         if (headroom) setQuota(headroom);
     };
 
