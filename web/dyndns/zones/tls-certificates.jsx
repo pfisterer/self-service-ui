@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ExternalLink } from '/helper/external-link.jsx';
 import { CodeBlock } from '/helper/codeblock.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useAuth } from '/providers/auth.jsx';
@@ -175,11 +176,11 @@ export function TlsCertificates({ zone }) {
         <Stack gap="lg">
             <TabIntro title={`TLS certificates for ${zoneName}`}>
                 Get certificates from the DHBW ACME server with{' '}
-                <Anchor href="https://certbot.eff.org/" target="_blank">certbot</Anchor>,{' '}
-                <Anchor href="https://github.com/acmesh-official/acme.sh" target="_blank">acme.sh</Anchor>, or{' '}
-                <Anchor href="https://cert-manager.io" target="_blank">cert-manager</Anchor> (Kubernetes). All use
+                <ExternalLink href="https://certbot.eff.org/">certbot</ExternalLink>,{' '}
+                <ExternalLink href="https://github.com/acmesh-official/acme.sh">acme.sh</ExternalLink>, or{' '}
+                <ExternalLink href="https://cert-manager.io">cert-manager</ExternalLink> (Kubernetes). All use
                 DNS-01 (RFC&nbsp;2136) with this zone's TSIG key and can issue{' '}
-                <Anchor href="https://en.wikipedia.org/wiki/Wildcard_certificate" target="_blank">wildcard certificates</Anchor>.
+                <ExternalLink href="https://en.wikipedia.org/wiki/Wildcard_certificate">wildcard certificates</ExternalLink>.
                 The snippets below are pre-filled for this zone.
             </TabIntro>
 
@@ -241,7 +242,7 @@ export function TlsCertificates({ zone }) {
                         />
                         <Text size="sm" c="dimmed" mb="sm">
                             <b>DNS-01 (recommended)</b> — a{' '}
-                            <Anchor href="https://cert-manager.io/docs/configuration/acme/dns01/rfc2136/" target="_blank">ClusterIssuer with the RFC&nbsp;2136 solver</Anchor>{' '}
+                            <ExternalLink href="https://cert-manager.io/docs/configuration/acme/dns01/rfc2136/">ClusterIssuer with the RFC&nbsp;2136 solver</ExternalLink>{' '}
                             + this zone's TSIG key. No public HTTP access needed; can issue wildcards.
                         </Text>
                         <CodeBlock code={dns01Yaml} />

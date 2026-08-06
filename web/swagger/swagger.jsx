@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { ExternalLink } from '/helper/external-link.jsx';
 import { Container, Title, Paper, Text, Anchor, Code, Stack, Box } from '@mantine/core';
 
 import SwaggerUIBundle from 'swagger-ui-dist/swagger-ui-bundle.js';
@@ -67,9 +68,9 @@ export function DynamicZonesApiSwagger() {
                                 <Text>
                                     The API endpoint is available at <Code>{baseUrl}</Code>.
 
-                                    See <Anchor href={swaggerJsonUrl} target="_blank">swagger.json</Anchor> for full API specification.
+                                    See <ExternalLink href={swaggerJsonUrl}>swagger.json</ExternalLink> for full API specification.
 
-                                    JavaScript (<Anchor href={jsClientUrl} target="_blank">Client</Anchor> and <Anchor href={jsSdkUrl} target="_blank">SDKs</Anchor>) and ESM-Module (<Anchor href={mjsClientUrl} target="_blank">Client</Anchor> and <Anchor href={mjsSdkUrl} target="_blank">SDKs</Anchor>) clients are available for accessing the API.
+                                    JavaScript (<ExternalLink href={jsClientUrl}>Client</ExternalLink> and <ExternalLink href={jsSdkUrl}>SDKs</ExternalLink>) and ESM-Module (<ExternalLink href={mjsClientUrl}>Client</ExternalLink> and <ExternalLink href={mjsSdkUrl}>SDKs</ExternalLink>) clients are available for accessing the API.
                                 </Text>
                             </Box>
 

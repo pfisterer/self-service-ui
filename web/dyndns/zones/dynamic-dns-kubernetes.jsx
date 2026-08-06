@@ -1,4 +1,5 @@
 import { useAuth } from '/providers/auth.jsx';
+import { ExternalLink } from '/helper/external-link.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { CodeBlock } from '/helper/codeblock.jsx';
 import { Accordion, Alert, Anchor, Stack, Text } from '@mantine/core';
@@ -29,7 +30,7 @@ function ExternalDnsPanel({ externalDnsValuesYaml }) {
     return (
         <Stack gap="lg">
             <Text size="sm" c="dimmed">
-                Install <Anchor href="https://github.com/kubernetes-sigs/external-dns" target="_blank">external-dns</Anchor>{' '}
+                Install <ExternalLink href="https://github.com/kubernetes-sigs/external-dns">external-dns</ExternalLink>{' '}
                 into a cluster you already run, so this zone's records follow your Kubernetes resources
                 (Services / Ingresses). It signs its updates with this zone's TSIG key.
             </Text>
@@ -98,8 +99,8 @@ function AnsibleRolePanel({ cfg }) {
         <Stack gap="lg">
             <Text size="sm" c="dimmed">
                 Turn one or more fresh Linux hosts into a{' '}
-                <Anchor href="https://k3s.io" target="_blank">k3s</Anchor> cluster with the{' '}
-                <Anchor href={ROLE_URL} target="_blank">k3s-dhbw-cloud-role</Anchor> Ansible role. It installs
+                <ExternalLink href="https://k3s.io">k3s</ExternalLink> cluster with the{' '}
+                <ExternalLink href={ROLE_URL}>k3s-dhbw-cloud-role</ExternalLink> Ansible role. It installs
                 external-dns and cert-manager for you, so every Ingress under this zone automatically gets a DNS
                 record and a wildcard HTTPS certificate. Add the block below to your inventory — it is everything
                 the role needs to know about this zone. Keep that file private: the TSIG key grants write access
@@ -125,9 +126,9 @@ export function DynamicDnsKubernetes({ externalDnsValuesYaml, zone }) {
         <Stack gap="lg">
             <TabIntro title={`Dynamic DNS (Kubernetes) for ${cfg.zoneNoDot}`}>
                 Manage this zone's records from Kubernetes — either with{' '}
-                <Anchor href="https://github.com/kubernetes-sigs/external-dns" target="_blank">external-dns</Anchor>{' '}
+                <ExternalLink href="https://github.com/kubernetes-sigs/external-dns">external-dns</ExternalLink>{' '}
                 in a cluster you already have, or by setting up a whole k3s cluster (DNS + HTTPS included) with the{' '}
-                <Anchor href={ROLE_URL} target="_blank">k3s-dhbw-cloud-role</Anchor> Ansible role.
+                <ExternalLink href={ROLE_URL}>k3s-dhbw-cloud-role</ExternalLink> Ansible role.
                 Both use this zone's TSIG key.
             </TabIntro>
 

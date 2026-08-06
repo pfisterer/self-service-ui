@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ExternalLink } from '/helper/external-link.jsx';
 import { CodeBlock } from '/helper/codeblock.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { recordNameError, recordValueError } from '/helper/dns-validation.js';
@@ -158,7 +159,7 @@ function OneShotPanel({ zone }) {
         <Stack gap="lg">
             <Text size="sm" c="dimmed">
                 Build a one-shot <code>nsupdate</code> command via{' '}
-                <Anchor href="https://datatracker.ietf.org/doc/html/rfc2136" target="_blank">RFC&nbsp;2136</Anchor>{' '}
+                <ExternalLink href="https://datatracker.ietf.org/doc/html/rfc2136">RFC&nbsp;2136</ExternalLink>{' '}
                 (signed with this zone's TSIG key). Fill in the fields — the command below updates live. Run it once
                 to create or update the record, and verify with <code>dig</code>.
             </Text>
@@ -196,7 +197,7 @@ function OneShotPanel({ zone }) {
                 <Text size="sm">
                     To keep a record updated (e.g. a host whose public IP changes), save this command as a small
                     script and run it on a schedule — for example with a{' '}
-                    <Anchor href="https://wiki.archlinux.org/title/Systemd/Timers" target="_blank">systemd&nbsp;timer</Anchor>{' '}
+                    <ExternalLink href="https://wiki.archlinux.org/title/Systemd/Timers">systemd&nbsp;timer</ExternalLink>{' '}
                     or a cron job. For a ready-made updater that also detects your current public IP, use the{' '}
                     <b>ddclient</b> section below.
                 </Text>
@@ -270,9 +271,9 @@ export function DynamicDns({ zone }) {
         <Stack gap="lg">
             <TabIntro title={`Dynamic DNS for ${cfg.zoneNoDot}`}>
                 Keep a host's public IP current in this zone via{' '}
-                <Anchor href="https://datatracker.ietf.org/doc/html/rfc2136" target="_blank">RFC&nbsp;2136</Anchor>{' '}
+                <ExternalLink href="https://datatracker.ietf.org/doc/html/rfc2136">RFC&nbsp;2136</ExternalLink>{' '}
                 — a one-shot <code>nsupdate</code> command, or{' '}
-                <Anchor href="https://ddclient.net/" target="_blank">ddclient</Anchor> for a self-running updater.
+                <ExternalLink href="https://ddclient.net/">ddclient</ExternalLink> for a self-running updater.
                 Both use this zone's TSIG key.
             </TabIntro>
 

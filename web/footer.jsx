@@ -1,4 +1,5 @@
 import { Box, Text, Anchor } from '@mantine/core';
+import { ExternalLink } from '/helper/external-link.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useCloudConfig } from '/providers/cloud-config.jsx';
 
@@ -34,13 +35,13 @@ export function Footer({ title, version }) {
             <Text size="sm" c="dimmed">
                 {components.map(({ label, version: v, repo }) => (
                     <span key={repo}>
-                        <Anchor href={repo} size="sm" target="_blank" rel="noreferrer">{label}</Anchor>
+                        <ExternalLink href={repo} size="sm" rel="noreferrer">{label}</ExternalLink>
                         {' '}({v}){' · '}
                     </span>
                 ))}
-                <Anchor href="https://dennis-pfisterer.de" size="sm" target="_blank">
+                <ExternalLink href="https://dennis-pfisterer.de" size="sm">
                     © Dennis Pfisterer, DHBW
-                </Anchor>
+                </ExternalLink>
             </Text>
         </Box>
     );
