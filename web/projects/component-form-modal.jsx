@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Badge, Button, Group, Modal, Stack, Tabs, Text } from '@mantine/core';
 import { COLOR } from './util-project.jsx';
 
@@ -79,28 +78,4 @@ export function FormModal({
             </form>
         </Modal>
     );
-}
-
-/**
- * useFormErrors holds the per-field validation errors. `clear` drops the error
- * of the field being edited — every input did this inline before, which is the
- * kind of repetition that quietly goes out of sync.
- */
-export function useFormErrors() {
-    const [errors, setErrors] = useState({});
-
-    const clear = (...keys) => setErrors(prev => {
-        if (!keys.some(k => prev[k])) return prev;
-        const next = { ...prev };
-        keys.forEach(k => delete next[k]);
-        return next;
-    });
-
-    // Clears every error whose key starts with prefix (the "auto_" quota block).
-    const clearPrefixed = (prefix) => setErrors(prev => {
-        const next = Object.fromEntries(Object.entries(prev).filter(([k]) => !k.startsWith(prefix)));
-        return Object.keys(next).length === Object.keys(prev).length ? prev : next;
-    });
-
-    return { errors, setErrors, clear, clearPrefixed };
 }

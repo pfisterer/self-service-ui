@@ -1,47 +1,43 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
-import { Alert, Button, Group, Loader, SimpleGrid, Stack, Text } from '@mantine/core';
-import { Delayed } from '/helper/delayed.jsx';
-import { useAuth } from '/providers/auth.jsx';
+import { Alert, Button, Group, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
-import { useErrorModal } from '/providers/error-modal.jsx';
 import { useNodesApi } from './api-nodes.jsx';
+import { projectKeys } from './query-keys.js';
 import { ProjectCard } from './card-project.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
 import { RoleSwitchButton } from './component-group-role-switcher.jsx';
 import { NodeInspectModal, TAB_DETAILS, TAB_HISTORY } from './modal-inspect.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
-import { COLOR, formatError, getAuthUserEmail, useAsyncRefresh } from './util-project.jsx';
+import { COLOR } from './util-project.jsx';
 
 // MyProjectsView lists the projects the signed-in user owns and lets them
 // request new ones, propose changes and release finished projects.
 export function MyProjectsView() {
     const api = useNodesApi();
-    const { user } = useAuth();
-    const { showError } = useErrorModal();
     const confirm = useConfirm();
     const config = useProjectConfig();
-    const userEmail = getAuthUserEmail(user);
-
-    const [projects, setProjects] = useState({ items: [], total: 0 });
-    const [myBudgets, setMyBudgets] = useState([]);
-    const [eligibleBudgets, setEligibleBudgets] = useState([]);
     const [showNewModal, setShowNewModal] = useState(false);
     const dlg = useNodeDialog();
 
-    const { loaded, refresh } = useAsyncRefresh(async () => {
-        const [mine, budgets, eligible] = await Promise.all([
-            api.listMine(),
-            api.listMyBudgets(),
-            api.listEligibleForMe(),
-        ]);
-        setProjects(mine);
-        setMyBudgets(budgets.items);
-        setEligibleBudgets(eligible.items);
-    }, showError);
+    // Three lists, one screen. useQueries keeps them independent (a failing
+    // eligible-budget lookup does not blank out the projects) while still
+    // giving one place to ask "are we still loading".
+    const [projectsQuery, myBudgetsQuery, eligibleQuery] = useQueries({
+        queries: [
+            { queryKey: projectKeys.mine(), queryFn: () => api.listMine(), enabled: !!api },
+            { queryKey: projectKeys.myBudgets(), queryFn: () => api.listMyBudgets(), enabled: !!api },
+            { queryKey: projectKeys.eligibleForMe(), queryFn: () => api.listEligibleForMe(), enabled: !!api },
+        ],
+    });
 
-    useEffect(() => { if (api) refresh(); }, [api, userEmail]);
+    const release = useApiMutation({
+        mutationFn: (id) => api.release(id),
+        invalidates: [projectKeys.tree()],
+    });
 
     const handleRelease = async (node) => {
         const ok = await confirm({
@@ -49,13 +45,7 @@ export function MyProjectsView() {
             message: 'Releasing removes the project and its resources from OpenStack. This cannot be undone.',
             confirmLabel: 'Release',
         });
-        if (!ok) return;
-        try {
-            await api.release(node.id);
-            refresh();
-        } catch (e) {
-            showError(formatError(e));
-        }
+        if (ok) release.mutate(node.id);
     };
 
     const handleAction = (action, node) => {
@@ -63,9 +53,13 @@ export function MyProjectsView() {
         dlg.open(action, node);
     };
 
-    if (!config || !loaded) return (<Delayed><Loader /></Delayed>);
+    if (!api || !config || projectsQuery.isPending) return <Loading />;
+    if (projectsQuery.isError) return <LoadError query={projectsQuery} title="Could not load your projects" />;
 
     const resources = config.resources || [];
+    const projects = projectsQuery.data ?? { items: [], total: 0 };
+    const myBudgets = myBudgetsQuery.data?.items ?? [];
+    const eligibleBudgets = eligibleQuery.data?.items ?? [];
     const canRequest = myBudgets.length > 0 || eligibleBudgets.length > 0;
 
     return (
@@ -119,9 +113,9 @@ export function MyProjectsView() {
 
             {/* ── Dialogs (one instance per view) ────────────────────────── */}
             <ProjectFormModal
+                key={showNewModal ? 'new' : 'new-closed'}
                 opened={showNewModal}
                 onClose={() => setShowNewModal(false)}
-                onDone={refresh}
                 resources={resources}
                 openstackRoles={config.openstackRoles}
                 myBudgets={myBudgets}
@@ -129,15 +123,15 @@ export function MyProjectsView() {
                 myProjects={projects.items}
             />
             <ProjectFormModal
+                key={dlg.key}
                 opened={dlg.is('change')}
                 onClose={dlg.close}
-                onDone={refresh}
                 resources={resources}
                 openstackRoles={config.openstackRoles}
                 node={dlg.node}
             />
             {/* One modal for both triggers: the History button opens it on that tab. */}
-            <NodeInspectModal opened={dlg.is('details') || dlg.is('history')}
+            <NodeInspectModal key={dlg.key} opened={dlg.is('details') || dlg.is('history')}
                 initialTab={dlg.is('history') ? TAB_HISTORY : TAB_DETAILS}
                 onClose={dlg.close} node={dlg.node} resources={resources} />
         </Stack>

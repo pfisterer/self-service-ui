@@ -1,11 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Select, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { useNodesApi } from './api-nodes.jsx';
+import { projectKeys } from './query-keys.js';
+import { useApiMutation } from '/helper/query-state.jsx';
+import { formatError } from '/helper/api-error.js';
+import { useForm } from '@mantine/form';
 import { NodeChangesDiff, TerminationDatePicker } from './component-common.jsx';
-import { FormModal, FormTabs, useFormErrors } from './component-form-modal.jsx';
+import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
-import { autoApproveHeadroom, COLOR, formatError, freeAmount, quotaFits, resourceSummaryText } from './util-project.jsx';
+import { autoApproveHeadroom, COLOR, freeAmount, quotaFits, resourceSummaryText } from './util-project.jsx';
+
+const DEFAULT_TERM_DAYS = 90;
 
 const TAB_DETAILS = 'details';
 const TAB_RESOURCES = 'resources';
@@ -91,15 +97,6 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const isChange = !!node;
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
-    const [parentId, setParentId] = useState(null);
-    const [name, setName] = useState('');
-    const [reason, setReason] = useState('');
-    const [quota, setQuota] = useState({});
-    const [terminationDate, setTerminationDate] = useState(null);
-    const [authorizedUsers, setAuthorizedUsers] = useState([]);
-    const { errors, setErrors, clear } = useFormErrors();
-    const [submitting, setSubmitting] = useState(false);
-    const [submitError, setSubmitError] = useState(null);
 
     // Group token search for the members editor.
     const [tokenSearchResults, setTokenSearchResults] = useState([]);
@@ -115,76 +112,88 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === id),
             resources, myProjects);
 
-    // (Re-)initialize the form whenever the dialog opens.
-    useEffect(() => {
-        if (!opened) return;
-        setActiveTab(TAB_DETAILS);
-        setErrors({});
-        setSubmitError(null);
-        if (isChange) {
-            setName(node.name || '');
-            setReason(node.reason || '');
-            setQuota({ ...(node.pending?.limit || node.limit) });
-            const date = node.pending?.termination_date || node.termination_date;
-            setTerminationDate(date ? new Date(date) : null);
-            setAuthorizedUsers(node.pending?.authorized_users || node.authorized_users || []);
-        } else {
-            setName('');
-            setReason('');
-            setQuota(defaultQuota(resources));
-            setTerminationDate(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000));
-            setAuthorizedUsers([]);
-            const initial = myBudgets[0]?.id ?? eligibleBudgets[0]?.id ?? null;
-            setParentId(initial);
-            const headroom = headroomFor(initial);
-            if (headroom) setQuota(headroom);
-        }
-    }, [opened, node?.id]);
+    // Reading the clock is a side effect, so it happens once in a lazy
+    // initialiser rather than on every render. The dialog is remounted per
+    // opening (see the `key` at the call sites), so once = per opening.
+    const [defaultEnd] = useState(() => new Date(Date.now() + DEFAULT_TERM_DAYS * 24 * 60 * 60 * 1000));
 
-    const validate = () => {
-        const next = validateQuota(resources, quota);
-        if (!name || name.trim().length < 3) next.name = 'Please give the project a name (at least 3 characters)';
-        if (!reason || reason.trim().length < 5) next.reason = 'Please describe the purpose (at least 5 characters)';
-        if (!isChange && !parentId) next.parentId = 'Please choose a budget';
-        if (!terminationDate) next.terminationDate = 'Please set an end date';
-        else if (terminationDate <= new Date()) next.terminationDate = 'The end date must be in the future';
-        setErrors(next);
-        return next;
-    };
+    // The whole form is initialised HERE instead of by an effect that fired on
+    // `opened` and wrote eight setStates. Remounting is what makes that correct:
+    // "initial" and "for the node currently being edited" are the same moment.
+    const initialParentId = isChange ? null : (myBudgets[0]?.id ?? eligibleBudgets[0]?.id ?? null);
+    const form = useForm({
+        initialValues: isChange
+            ? {
+                parentId: null,
+                name: node.name || '',
+                reason: node.reason || '',
+                quota: { ...(node.pending?.limit || node.limit) },
+                terminationDate: (node.pending?.termination_date || node.termination_date)
+                    ? new Date(node.pending?.termination_date || node.termination_date)
+                    : null,
+                authorizedUsers: node.pending?.authorized_users || node.authorized_users || [],
+            }
+            : {
+                parentId: initialParentId,
+                name: '',
+                reason: '',
+                // A budget that approves instantly starts filled with the most
+                // it would grant, so the common case is one click.
+                quota: headroomFor(initialParentId) ?? defaultQuota(resources),
+                terminationDate: defaultEnd,
+                authorizedUsers: [],
+            },
+        validate: (values) => ({
+            name: (values.name || '').trim().length < 3
+                ? 'Please give the project a name (at least 3 characters)' : null,
+            reason: (values.reason || '').trim().length < 5
+                ? 'Please describe the purpose (at least 5 characters)' : null,
+            parentId: (!isChange && !values.parentId) ? 'Please choose a budget' : null,
+            terminationDate: !values.terminationDate
+                ? 'Please set an end date'
+                : (values.terminationDate <= new Date() ? 'The end date must be in the future' : null),
+            ...Object.fromEntries(
+                Object.entries(validateQuota(resources, values.quota)).map(([id, msg]) => [`quota.${id}`, msg])),
+        }),
+    });
 
+    const { parentId, quota, terminationDate, authorizedUsers } = form.values;
     const selectedHeadroom = headroomFor(parentId);
 
     // Picking a budget with auto-approve fills the resources with the most it
-    // would grant on the spot, so the common case ("give me what I may have")
-    // is one click. Any other budget leaves the numbers alone — overwriting
-    // carefully typed values with a default would be worse than a stale form.
+    // would grant on the spot. Any other budget leaves the numbers alone —
+    // overwriting carefully typed values with a default would be worse than a
+    // stale form.
     const selectBudget = (id) => {
-        setParentId(id);
+        form.setFieldValue('parentId', id);
+        form.clearFieldError('parentId');
         const headroom = headroomFor(id);
-        if (headroom) setQuota(headroom);
+        if (headroom) form.setFieldValue('quota', headroom);
     };
 
     // What the form was showing when it opened — a change request is only worth
     // sending when one of these actually moved. The user comparison is order
     // sensitive; a false positive costs an unnecessary change request, which is
     // exactly what happened for every save before.
-    const approvalFieldsChanged = () => {
+    // Takes the submitted values rather than reading them from the closure, so
+    // there is no chance of comparing against a render-stale copy.
+    const approvalFieldsChanged = (values) => {
         if (!isChange) return true;
         const baseLimit = node.pending?.limit || node.limit || {};
         const baseDate = node.pending?.termination_date || node.termination_date;
         const baseUsers = node.pending?.authorized_users || node.authorized_users || [];
-        return (resources || []).some(r => (quota[r.id] ?? 0) !== (baseLimit[r.id] ?? 0))
-            || !baseDate || new Date(baseDate).getTime() !== terminationDate.getTime()
-            || JSON.stringify(baseUsers) !== JSON.stringify(authorizedUsers)
-            || reason.trim() !== (node.reason || '').trim();
+        return (resources || []).some(r => (values.quota[r.id] ?? 0) !== (baseLimit[r.id] ?? 0))
+            || !baseDate || new Date(baseDate).getTime() !== values.terminationDate.getTime()
+            || JSON.stringify(baseUsers) !== JSON.stringify(values.authorizedUsers)
+            || values.reason.trim() !== (node.reason || '').trim();
     };
 
     const errorsInTab = (tab, errs) => {
         if (tab === TAB_DETAILS) return ['name', 'reason', 'parentId', 'terminationDate'].some(k => errs[k]);
-        if (tab === TAB_RESOURCES) return (resources || []).some(r => errs[r.id]);
+        if (tab === TAB_RESOURCES) return (resources || []).some(r => errs[`quota.${r.id}`]);
         return false;
     };
-    const tabHasError = (tab) => errorsInTab(tab, errors);
+    const tabHasError = (tab) => errorsInTab(tab, form.errors);
 
     const handleSearchTokens = async (query) => {
         if (!query) { setTokenSearchResults([]); return; }
@@ -203,57 +212,50 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        const errs = validate();
-        if (Object.keys(errs).length > 0) {
-            // Jump to the problem instead of leaving the button looking broken:
-            // the offending field is usually on a tab the user is not looking at.
-            const bad = [TAB_DETAILS, TAB_RESOURCES, TAB_MEMBERS].find(t => errorsInTab(t, errs));
-            if (bad) setActiveTab(bad);
-            return;
-        }
-        setSubmitting(true);
-        setSubmitError(null);
-        try {
-            const iso = terminationDate.toISOString();
-            let result;
-            if (isChange) {
-                // A rename takes effect immediately and on its own — dragging a
-                // typo fix through the approval cycle would park the project in
-                // change_pending until a manager gets around to it.
-                if (name.trim() !== (node.name || '')) {
-                    result = await api.updateNode(node.id, { name: name.trim() });
-                }
-                // Everything with resource consequences still needs a decision —
-                // but only when it actually differs, so renaming alone does not
-                // manufacture a change request out of unchanged numbers.
-                if (approvalFieldsChanged()) {
-                    result = await api.requestChange(node.id, {
-                        limit: quota,
-                        termination_date: iso,
-                        authorized_users: authorizedUsers,
-                        reason,
-                    });
-                }
-            } else {
-                result = await api.createNode({
-                    parent_id: parentId,
+    const save = useApiMutation({
+        mutationFn: async (values) => {
+            const iso = values.terminationDate.toISOString();
+            if (!isChange) {
+                return api.createNode({
+                    parent_id: values.parentId,
                     kind: 'project',
-                    name: name.trim(),
-                    reason,
-                    limit: quota,
+                    name: values.name.trim(),
+                    reason: values.reason,
+                    limit: values.quota,
                     termination_date: iso,
-                    authorized_users: authorizedUsers,
+                    authorized_users: values.authorizedUsers,
                 });
             }
-            if (result) onDone?.(result);
-            onClose();
-        } catch (err) {
-            setSubmitError(formatError(err));
-        } finally {
-            setSubmitting(false);
-        }
+            let result;
+            // A rename takes effect immediately and on its own — dragging a
+            // typo fix through the approval cycle would park the project in
+            // change_pending until a manager gets around to it.
+            if (values.name.trim() !== (node.name || '')) {
+                result = await api.updateNode(node.id, { name: values.name.trim() });
+            }
+            // Everything with resource consequences still needs a decision —
+            // but only when it actually differs, so renaming alone does not
+            // manufacture a change request out of unchanged numbers.
+            if (approvalFieldsChanged(values)) {
+                result = await api.requestChange(node.id, {
+                    limit: values.quota,
+                    termination_date: iso,
+                    authorized_users: values.authorizedUsers,
+                    reason: values.reason,
+                });
+            }
+            return result;
+        },
+        invalidates: [projectKeys.tree()],
+        reportErrors: 'inline',
+        onSuccess: (result) => { if (result) onDone?.(result); onClose(); },
+    });
+
+    // Jump to the problem instead of leaving the button looking broken: the
+    // offending field is usually on a tab the user is not looking at.
+    const handleInvalid = (errs) => {
+        const bad = [TAB_DETAILS, TAB_RESOURCES, TAB_MEMBERS].find(t => errorsInTab(t, errs));
+        if (bad) setActiveTab(bad);
     };
 
     const detailsTab = (
@@ -265,8 +267,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     resources={resources}
                     requestedQuota={quota}
                     value={parentId}
-                    onChange={(v) => { selectBudget(v); clear('parentId'); }}
-                    error={errors.parentId}
+                    onChange={selectBudget}
+                    error={form.errors.parentId}
                 />
             )}
 
@@ -284,9 +286,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 description="A short, recognizable name — this is what the project is called in OpenStack."
                 placeholder="e.g. Cloud Computing Lab WS26"
                 required
-                value={name}
-                onChange={e => { setName(e.target.value); clear('name'); }}
-                error={errors.name}
+                {...form.getInputProps('name')}
             />
 
             <Textarea
@@ -295,15 +295,13 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 placeholder="e.g. Lab exercises for the Distributed Systems course"
                 required
                 rows={2}
-                value={reason}
-                onChange={e => { setReason(e.target.value); clear('reason'); }}
-                error={errors.reason}
+                {...form.getInputProps('reason')}
             />
 
             <TerminationDatePicker
                 value={terminationDate}
-                error={errors.terminationDate}
-                onChange={(d) => { setTerminationDate(d); clear('terminationDate'); }}
+                error={form.errors.terminationDate}
+                onChange={(d) => { form.setFieldValue('terminationDate', d); form.clearFieldError('terminationDate'); }}
             />
         </Stack>
     );
@@ -312,8 +310,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         <QuotaInputs
             resources={resources}
             value={quota}
-            errors={errors}
-            onChange={(id, v) => { setQuota(q => ({ ...q, [id]: v })); clear(id); }}
+            errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
+            onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}
         />
     );
 
@@ -321,9 +319,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         <TokenRoleEditor
             label=""
             authorizedUsers={authorizedUsers}
-            onAddToken={(token, role) => setAuthorizedUsers(u => u.some(x => x.token === token) ? u : [...u, { token, openstack_role: role }])}
-            onRemoveToken={(token) => setAuthorizedUsers(u => u.filter(x => x.token !== token))}
-            onOpenstackRoleChange={(token, role) => setAuthorizedUsers(u => u.map(x => x.token === token ? { ...x, openstack_role: role || 'member' } : x))}
+            onAddToken={(token, role) => form.setFieldValue('authorizedUsers', u => u.some(x => x.token === token) ? u : [...u, { token, openstack_role: role }])}
+            onRemoveToken={(token) => form.setFieldValue('authorizedUsers', u => u.filter(x => x.token !== token))}
+            onOpenstackRoleChange={(token, role) => form.setFieldValue('authorizedUsers', u => u.map(x => x.token === token ? { ...x, openstack_role: role || 'member' } : x))}
             searchResults={tokenSearchResults}
             isSearching={isSearchingTokens}
             onSearch={handleSearchTokens}
@@ -340,9 +338,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             title={isChange
                 ? (node?.status === 'pending' ? 'Edit request' : 'Request a change')
                 : 'Request a project'}
-            onSubmit={handleSubmit}
-            submitting={submitting}
-            submitError={submitError}
+            onSubmit={form.onSubmit(values => save.mutate(values), handleInvalid)}
+            submitting={save.isPending}
+            submitError={save.error && formatError(save.error)}
             submitLabel={isChange
                 ? (node?.status === 'pending' ? 'Update request' : 'Submit change request')
                 : 'Submit request'}
