@@ -1,6 +1,8 @@
-import { createContext } from 'react';
-import { useState, useEffect, useContext } from 'react';
+import { createContext, useContext } from 'react';
+import { useRemoteConfig } from './remote-config.jsx';
 
+// The dynamic-zones API's public config. Strict: everything that reads this
+// context lives in the dyndns section, which cannot work without that API.
 export const DynDnsConfigContext = createContext(null);
 
 export function useDynDnsConfig() {
@@ -9,34 +11,12 @@ export function useDynDnsConfig() {
         throw new Error('useDynDnsConfig must be used within a DynDnsConfigProvider');
     }
     return context;
-};
+}
 
 export function DynDnsConfigProvider({ children }) {
-    const [config, setConfig] = useState();
-    const [error, setError] = useState();
-    const configUrl = new URL('config.json', window?.appconfig?.dynamicZonesBaseUrl).toString();
-
-    // configUrl for base URL configuration
-    if (!configUrl) {
-        setError({
-            message: 'Dynamic Zones base URL is not configured.',
-            details: 'Please set it in window.appconfig.dynamicZonesBaseUrl.'
-        });
-        return;
-    }
-
-    useEffect(() => {
-        (async () => {
-            try {
-                setConfig(await (await fetch(configUrl)).json());
-            } catch (error) {
-                setError(error);
-            }
-        })();
-    }, [configUrl]);
-
+    const value = useRemoteConfig(window?.appconfig?.dynamicZonesBaseUrl);
     return (
-        <DynDnsConfigContext.Provider value={{ config, error }}>
+        <DynDnsConfigContext.Provider value={value}>
             {children}
         </DynDnsConfigContext.Provider>
     );
