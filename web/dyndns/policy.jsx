@@ -1,62 +1,48 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useClient } from '/providers/client.jsx';
-import { useErrorModal } from '/providers/error-modal.jsx';
+import { useState, useMemo } from 'react';
+import { formatError } from '/helper/api-error.js';
+import { useQuery } from '@tanstack/react-query';
+import { useZonesApi } from '/dyndns/api-zones.jsx';
+import { dyndnsKeys } from '/dyndns/query-keys.js';
+import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
-import { Delayed } from '/helper/delayed.jsx';
 import { isValidDnsName, isValidZonePattern, isValidUserFilter } from '/helper/dns-validation.js';
 import { Trash2, Edit, Plus, Search, X, AlertCircle } from 'lucide-react';
-import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, SimpleGrid, Card, Modal, Alert, Loader, ActionIcon, Paper, Tabs, Badge, Table } from '@mantine/core';
+import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, SimpleGrid, Card, Modal, Alert, ActionIcon, Paper, Tabs, Badge, Table } from '@mantine/core';
 
-const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
 // --- Main Component: DnsPolicy ---
 export function DnsPolicy() {
-    const { client, sdk } = useClient('dyndns');
-    const { showError } = useErrorModal();
-    const [rules, setRules] = useState([]);
-    const [loadFailed, setLoadFailed] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [reloadTrigger, setReloadTrigger] = useState(true);
+    const api = useZonesApi();
     const [editingRule, setEditingRule] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchFilter, setSearchFilter] = useState('');
-    const [isEditAllowed, setIsEditAllowed] = useState(false);
-    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [activeTab, setActiveTab] = useState('rules');
 
-    // Fetch rules on load and when reloadTrigger changes
-    useEffect(() => {
-        (async () => {
-            setLoading(true);
-            setLoadFailed(false);
-            const fullRes = await sdk.listPolicyRules({ client });
-            const err = sdkError(fullRes);
-            if (err) {
-                showError(err);
-                setLoadFailed(true);
-                setLoading(false);
-                return;
+    // The rules AND the caller's permissions come from one response, so they
+    // stay one cache entry — three separate useStates used to hold them and
+    // could in principle disagree.
+    const policyQuery = useQuery({
+        queryKey: dyndnsKeys.policyRules(),
+        queryFn: async () => {
+            const data = await api.listPolicyRules();
+            if (!data || !Array.isArray(data.rules)) {
+                throw new Error("Invalid response format: 'rules' array missing.");
             }
-            const res = fullRes.data;
-            if (!res || !Array.isArray(res.rules)) {
-                showError("Invalid response format: 'rules' array missing.");
-                setLoadFailed(true);
-                setLoading(false);
-                return;
-            }
-            setRules(res.rules);
-            setIsEditAllowed(!!res.edit_allowed);
-            setIsSuperAdmin(!!res.is_super_admin);
-            setLoading(false);
-        })();
-    }, [sdk, reloadTrigger]);
+            return data;
+        },
+        enabled: !!api,
+    });
 
-    // Handle successful create/edit/delete
+    // Closing the dialog is all that is left to do here: the mutations
+    // invalidate the rule list themselves.
     const handleSuccess = () => {
         setEditingRule(null);
         setIsModalOpen(false);
-        setReloadTrigger(p => !p);
     }
+
+    const rules = useMemo(() => policyQuery.data?.rules ?? [], [policyQuery.data]);
+    const isEditAllowed = !!policyQuery.data?.edit_allowed;
+    const isSuperAdmin = !!policyQuery.data?.is_super_admin;
 
     // Filter rules based on search term (and remember the filtered list until rules or search term changes)
     const filteredRules = useMemo(() => {
@@ -71,11 +57,8 @@ export function DnsPolicy() {
         });
     }, [rules, searchFilter]);
 
-    if (loading)
-        return (<Delayed><Loader size="lg" /></Delayed>);
-
-    if (loadFailed)
-        return (<Alert icon={<AlertCircle size="16" />} title="Error" color="red">Failed to load rules. See the error dialog for details.</Alert>);
+    if (!api || policyQuery.isPending) return <Loading />;
+    if (policyQuery.isError) return <LoadError query={policyQuery} title="Could not load policy rules" />;
 
     return (
         <Container fluid py="md" px="xl">
@@ -113,7 +96,6 @@ export function DnsPolicy() {
 
                             <RuleList rules={filteredRules} isSuperAdmin={isEditAllowed}
                                 onEdit={(rule) => { setEditingRule(rule); setIsModalOpen(true); }}
-                                onDeleteSuccess={handleSuccess}
                             />
                         </Stack>
                     </Tabs.Panel>
@@ -132,7 +114,11 @@ export function DnsPolicy() {
                 </Tabs>
 
                 {isModalOpen && (
-                    <RuleFormModal ruleToEdit={editingRule}
+                    <RuleFormModal
+                        // Remount per edited rule so the form resets itself,
+                        // instead of an effect copying props into state.
+                        key={editingRule?.id ?? 'new'}
+                        ruleToEdit={editingRule}
                         onFormSuccess={handleSuccess}
                         onClose={() => { setIsModalOpen(false); setEditingRule(null); }}
                     />
@@ -161,11 +147,14 @@ function RuleFilter({ searchFilter, onSearchChange, filteredCount, totalCount })
 }
 
 // --- Rule List Component ---
-function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
-    const { client, sdk } = useClient('dyndns');
-    const { showError } = useErrorModal();
+function RuleList({ rules, isSuperAdmin, onEdit }) {
+    const api = useZonesApi();
     const confirm = useConfirm();
-    const [deleteLoading, setDeleteLoading] = useState(null);
+
+    const deleteRule = useApiMutation({
+        mutationFn: (id) => api.deletePolicyRule(id),
+        invalidates: [dyndnsKeys.policyRules(), dyndnsKeys.zones()],
+    });
 
     const handleDelete = async (rule) => {
         // Deleting a rule orphans every zone only it covered (zone<->rule links
@@ -191,12 +180,7 @@ function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
                 </Stack>
             ),
         });
-        if (!ok) return;
-        setDeleteLoading(rule.id);
-        const res = await sdk.deletePolicyRule({ client, path: { id: rule.id } });
-        const err = sdkError(res);
-        if (err) { showError(`Error deleting rule: ${err}`); } else { onDeleteSuccess(); }
-        setDeleteLoading(null);
+        if (ok) deleteRule.mutate(rule.id);
     }
 
     if (rules.length === 0) {
@@ -251,7 +235,8 @@ function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
                                             <Edit size="16" />
                                         </ActionIcon>
                                         <ActionIcon size="sm" variant="light" color="red" onClick={() => handleDelete(rule)}
-                                            loading={deleteLoading === rule.id} disabled={deleteLoading === rule.id} title="Delete">
+                                            loading={deleteRule.isPending && deleteRule.variables === rule.id}
+                                            disabled={deleteRule.isPending} title="Delete">
                                             <Trash2 size="16" />
                                         </ActionIcon>
                                     </Group>
@@ -267,11 +252,10 @@ function RuleList({ rules, isSuperAdmin, onEdit, onDeleteSuccess }) {
 
 // --- Rule Form Modal ---
 function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
-    const { client, sdk } = useClient('dyndns');
-    const { showError } = useErrorModal();
+    const api = useZonesApi();
     const isEditMode = ruleToEdit !== null;
 
-    const initialRuleState = {
+    const [rule, setRule] = useState({
         zone_pattern: '',
         zone_soa: '',
         target_user_filter: '',
@@ -279,75 +263,53 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
         sharing_allowed: false,
         description: '',
         ...(ruleToEdit || {})
-    };
-
-    const [rule, setRule] = useState(initialRuleState);
-    const [loading, setLoading] = useState(false);
+    });
     const [message, setMessage] = useState(null);
-    const [zoneValid, setZoneValid] = useState(isValidZonePattern(initialRuleState.zone_pattern));
-    const [zoneSoaValid, setZoneSoaValid] = useState(isValidDnsName(initialRuleState.zone_soa));
-    const [userFilterValid, setUserFilterValid] = useState(isValidUserFilter(initialRuleState.target_user_filter));
 
-    useEffect(() => {
-        if (ruleToEdit) {
-            setRule(ruleToEdit);
-            setMessage(null);
-            setZoneValid(isValidZonePattern(ruleToEdit.zone_pattern || ''));
-            setZoneSoaValid(isValidDnsName(ruleToEdit.zone_soa || ''));
-            setUserFilterValid(isValidUserFilter(ruleToEdit.target_user_filter || ''));
-        } else {
-            setRule(initialRuleState);
-            setZoneValid(isValidZonePattern(initialRuleState.zone_pattern || ''));
-            setZoneSoaValid(isValidDnsName(initialRuleState.zone_soa || ''));
-            setUserFilterValid(isValidUserFilter(initialRuleState.target_user_filter || ''));
-        }
-    }, [ruleToEdit]);
+    // Derived, not stored. These were three useStates kept in sync by hand from
+    // an effect AND from every change handler — two code paths writing the same
+    // three flags, which is how they get to disagree.
+    const zoneValid = isValidZonePattern(rule.zone_pattern);
+    const zoneSoaValid = isValidDnsName(rule.zone_soa);
+    const userFilterValid = isValidUserFilter(rule.target_user_filter);
+
+    const saveRule = useApiMutation({
+        mutationFn: (body) => isEditMode
+            ? api.updatePolicyRule(rule.id, body)
+            : api.createPolicyRule(body),
+        // A rule decides which zones exist for whom, so the zone list changes too.
+        invalidates: [dyndnsKeys.policyRules(), dyndnsKeys.zones()],
+        onSuccess: () => {
+            setMessage(<Alert title="Success" color="green">{isEditMode ? '✅ Rule updated!' : '✅ Rule created!'}</Alert>);
+            setTimeout(() => onFormSuccess(), 700);
+        },
+        onError: (error) => setMessage(
+            <Alert icon={<AlertCircle size="16" />} title="Error" color="red">{formatError(error)}</Alert>
+        ),
+    });
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setRule(prev => ({
-            ...prev,
-            [name]: value
-        }));
-        if (name === 'zone_pattern') {
-            setZoneValid(isValidZonePattern(value));
-        } else if (name === 'zone_soa') {
-            setZoneSoaValid(isValidDnsName(value));
-        } else if (name === 'target_user_filter') {
-            setUserFilterValid(isValidUserFilter(value));
-        }
+        setRule(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        setLoading(true);
         setMessage(null);
 
-        if (!isValidZonePattern(rule.zone_pattern) || !isValidDnsName(rule.zone_soa) || !isValidUserFilter(rule.target_user_filter)) {
+        if (!zoneValid || !zoneSoaValid || !userFilterValid) {
             setMessage(<Alert icon={<AlertCircle size="16" />} title="Validation Error" color="red">Please ensure Zone Pattern, Zone SOA, and User Filter are all valid.</Alert>);
-            setLoading(false);
             return;
         }
 
-        const body = {
+        saveRule.mutate({
             zone_pattern: rule.zone_pattern,
             zone_soa: rule.zone_soa,
             target_user_filter: rule.target_user_filter,
             allow_subdomains: !!rule.allow_subdomains,
             sharing_allowed: !!rule.sharing_allowed,
             description: rule.description || undefined,
-        };
-        const res = isEditMode
-            ? await sdk.updatePolicyRule({ client, path: { id: rule.id }, body })
-            : await sdk.createPolicyRule({ client, body });
-        const err = sdkError(res);
-        if (err) {
-            showError(err);
-        } else {
-            setMessage(<Alert title="Success" color="green">{isEditMode ? '✅ Rule updated!' : '✅ Rule created!'}</Alert>);
-            setTimeout(() => onFormSuccess(), 700);
-        }
-        setLoading(false);
+        });
     };
 
     return (
@@ -416,7 +378,7 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
                             <Button variant="default" onClick={onClose}>Cancel</Button>
                             <Button
                                 type="submit"
-                                loading={loading}
+                                loading={saveRule.isPending}
                                 disabled={!zoneValid || !zoneSoaValid || !userFilterValid}>
                                 {isEditMode ? "Save Changes" : "Create Rule"}
                             </Button>
@@ -437,26 +399,23 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
 // the generated SDK does not (yet) include the /policies/delegations endpoints.
 // ============================================================
 function DelegationManagement() {
-    const { client } = useClient('dyndns');
-    const { showError } = useErrorModal();
+    const api = useZonesApi();
     const confirm = useConfirm();
-    const [delegations, setDelegations] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [reload, setReload] = useState(true);
     const [editing, setEditing] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
 
-    useEffect(() => {
-        (async () => {
-            setLoading(true);
-            const res = await client.get({ url: '/v1/policies/delegations' });
-            const err = sdkError(res);
-            if (err) { showError(err); } else { setDelegations(res.data?.delegations || []); }
-            setLoading(false);
-        })();
-    }, [client, reload]);
+    const delegationsQuery = useQuery({
+        queryKey: dyndnsKeys.delegations(),
+        queryFn: () => api.listDelegations(),
+        enabled: !!api,
+    });
 
-    const onSuccess = () => { setEditing(null); setModalOpen(false); setReload(p => !p); };
+    const deleteDelegation = useApiMutation({
+        mutationFn: (id) => api.deleteDelegation(id),
+        invalidates: [dyndnsKeys.delegations()],
+    });
+
+    const onSuccess = () => { setEditing(null); setModalOpen(false); };
 
     async function handleDelete(delegation) {
         const ok = await confirm({
@@ -464,13 +423,13 @@ function DelegationManagement() {
             confirmLabel: 'Delete delegation',
             message: `Revoke the delegated rule-management permission for “${delegation.target_user_filter}” on ${delegation.zone_suffix}? Existing zones and rules are not affected.`,
         });
-        if (!ok) return;
-        const res = await client.delete({ url: '/v1/policies/delegations/{id}', path: { id: delegation.id } });
-        const err = sdkError(res) ?? (res.response && res.response.status >= 400 ? res.response.statusText : null);
-        if (err) { showError(err); } else { setReload(p => !p); }
+        if (ok) deleteDelegation.mutate(delegation.id);
     }
 
-    if (loading) return (<Delayed><Loader size="lg" /></Delayed>);
+    if (!api || delegationsQuery.isPending) return <Loading />;
+    if (delegationsQuery.isError) return <LoadError query={delegationsQuery} title="Could not load delegations" />;
+
+    const delegations = delegationsQuery.data ?? [];
 
     return (
         <Stack gap="md">
@@ -526,33 +485,40 @@ function DelegationManagement() {
 }
 
 function DelegationFormModal({ delegationToEdit, onSuccess, onClose }) {
-    const { client } = useClient('dyndns');
-    const { showError } = useErrorModal();
+    const api = useZonesApi();
     const isEdit = delegationToEdit !== null;
     const [form, setForm] = useState({ target_user_filter: '', zone_suffix: '', description: '', ...(delegationToEdit || {}) });
-    const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
+
+    const saveDelegation = useApiMutation({
+        mutationFn: (body) => isEdit ? api.updateDelegation(form.id, body) : api.createDelegation(body),
+        invalidates: [dyndnsKeys.delegations()],
+        onSuccess: () => {
+            setMessage(<Alert title="Success" color="green">{isEdit ? '✅ Delegation updated!' : '✅ Delegation created!'}</Alert>);
+            setTimeout(onSuccess, 700);
+        },
+        onError: (error) => setMessage(
+            <Alert icon={<AlertCircle size="16" />} title="Error" color="red">{formatError(error)}</Alert>
+        ),
+    });
 
     const userValid = isValidUserFilter(form.target_user_filter);
     const zoneValid = isValidDnsName(form.zone_suffix);
 
     const handleChange = (e) => { const { name, value } = e.target; setForm(prev => ({ ...prev, [name]: value })); };
 
-    async function handleSubmit(e) {
+    function handleSubmit(e) {
         e.preventDefault();
         if (!userValid || !zoneValid) {
             setMessage(<Alert icon={<AlertCircle size="16" />} title="Validation Error" color="red">Enter a valid user filter and zone.</Alert>);
             return;
         }
-        setLoading(true);
         setMessage(null);
-        const body = { target_user_filter: form.target_user_filter, zone_suffix: form.zone_suffix, description: form.description || undefined };
-        const res = isEdit
-            ? await client.put({ url: '/v1/policies/delegations/{id}', path: { id: form.id }, body })
-            : await client.post({ url: '/v1/policies/delegations', body });
-        const err = sdkError(res) ?? (res.response && res.response.status >= 400 ? res.response.statusText : null);
-        if (err) { showError(err); setLoading(false); }
-        else { setMessage(<Alert title="Success" color="green">{isEdit ? '✅ Delegation updated!' : '✅ Delegation created!'}</Alert>); setTimeout(onSuccess, 700); }
+        saveDelegation.mutate({
+            target_user_filter: form.target_user_filter,
+            zone_suffix: form.zone_suffix,
+            description: form.description || undefined,
+        });
     }
 
     return (
@@ -576,7 +542,7 @@ function DelegationFormModal({ delegationToEdit, onSuccess, onClose }) {
                         <TextInput label="Description (optional)" name="description" value={form.description || ''} onChange={handleChange} placeholder="e.g. Uni-Mannheim DNS admins" />
                         <Group justify="flex-end" mt="md">
                             <Button variant="default" onClick={onClose}>Cancel</Button>
-                            <Button type="submit" loading={loading} disabled={!userValid || !zoneValid}>{isEdit ? 'Save' : 'Create'}</Button>
+                            <Button type="submit" loading={saveDelegation.isPending} disabled={!userValid || !zoneValid}>{isEdit ? 'Save' : 'Create'}</Button>
                         </Group>
                     </Stack>
                 </form>
@@ -591,23 +557,19 @@ function DelegationFormModal({ delegationToEdit, onSuccess, onClose }) {
 // client (endpoints not in the generated SDK).
 // ============================================================
 function OrphanedZonesPanel() {
-    const { client } = useClient('dyndns');
-    const { showError } = useErrorModal();
+    const api = useZonesApi();
     const confirm = useConfirm();
-    const [zones, setZones] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [reload, setReload] = useState(true);
-    const [deleting, setDeleting] = useState(null);
 
-    useEffect(() => {
-        (async () => {
-            setLoading(true);
-            const res = await client.get({ url: '/v1/policies/orphaned-zones' });
-            const err = sdkError(res);
-            if (err) { showError(err); } else { setZones(res.data?.zones || []); }
-            setLoading(false);
-        })();
-    }, [client, reload]);
+    const orphanedQuery = useQuery({
+        queryKey: dyndnsKeys.orphanedZones(),
+        queryFn: async () => (await api.listOrphanedZones())?.zones ?? [],
+        enabled: !!api,
+    });
+
+    const deleteZone = useApiMutation({
+        mutationFn: (zone) => api.deleteOrphanedZone(zone),
+        invalidates: [dyndnsKeys.orphanedZones(), dyndnsKeys.zones()],
+    });
 
     async function handleDelete(zone) {
         const ok = await confirm({
@@ -615,15 +577,13 @@ function OrphanedZonesPanel() {
             confirmLabel: 'Delete zone',
             message: (<Text size="sm">This permanently deletes the zone <b>{zone}</b> and all of its DNS records. This cannot be undone.</Text>),
         });
-        if (!ok) return;
-        setDeleting(zone);
-        const res = await client.delete({ url: '/v1/policies/orphaned-zones/{zone}', path: { zone } });
-        const err = sdkError(res) ?? (res.response && res.response.status >= 400 ? res.response.statusText : null);
-        if (err) { showError(err); } else { setReload(p => !p); }
-        setDeleting(null);
+        if (ok) deleteZone.mutate(zone);
     }
 
-    if (loading) return (<Delayed><Loader size="lg" /></Delayed>);
+    if (!api || orphanedQuery.isPending) return <Loading />;
+    if (orphanedQuery.isError) return <LoadError query={orphanedQuery} title="Could not load orphaned zones" />;
+
+    const zones = orphanedQuery.data ?? [];
 
     return (
         <Stack gap="md">
@@ -643,7 +603,8 @@ function OrphanedZonesPanel() {
                                     <Text size="xs" c="dimmed">owner: {z.user}</Text>
                                 </div>
                                 <Button size="xs" color="red" variant="light" leftSection={<Trash2 size="14" />}
-                                    loading={deleting === z.zone} onClick={() => handleDelete(z.zone)}>Delete</Button>
+                                    loading={deleteZone.isPending && deleteZone.variables === z.zone}
+                                    onClick={() => handleDelete(z.zone)}>Delete</Button>
                             </Group>
                         </Paper>
                     ))}

@@ -14,6 +14,7 @@ import { CloudConfigProvider } from '/providers/cloud-config.jsx';
 import { useAuth, AuthProvider } from '/providers/auth.jsx';
 import { ErrorModalProvider } from '/providers/error-modal.jsx';
 import { ConfirmProvider } from '/providers/confirm.jsx';
+import { QueryProvider } from '/providers/query.jsx';
 
 import { Header } from '/header.jsx';
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
@@ -65,17 +66,19 @@ createRoot(document.getElementById('app')).render(
 
 function App() {
     return (
-        <ErrorModalProvider>
-            <ConfirmProvider>
-                <DynDnsConfigProvider>
-                    <CloudConfigProvider>
-                        <AuthProvider>
-                            <Main />
-                        </AuthProvider>
-                    </CloudConfigProvider>
-                </DynDnsConfigProvider>
-            </ConfirmProvider>
-        </ErrorModalProvider>
+        <QueryProvider>
+            <ErrorModalProvider>
+                <ConfirmProvider>
+                    <DynDnsConfigProvider>
+                        <CloudConfigProvider>
+                            <AuthProvider>
+                                <Main />
+                            </AuthProvider>
+                        </CloudConfigProvider>
+                    </DynDnsConfigProvider>
+                </ConfirmProvider>
+            </ErrorModalProvider>
+        </QueryProvider>
     );
 }
 

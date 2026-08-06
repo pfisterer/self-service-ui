@@ -1,8 +1,9 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, Fragment } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Route, Switch, Link, useRoute, useLocation, Redirect } from 'wouter';
-import { Delayed } from '/helper/delayed.jsx';
-import { useClient } from '/providers/client.jsx';
-import { useErrorModal } from '/providers/error-modal.jsx';
+import { useZonesApi } from '/dyndns/api-zones.jsx';
+import { dyndnsKeys } from '/dyndns/query-keys.js';
+import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { ShowKeys } from '/dyndns/zones/keys.jsx';
@@ -15,18 +16,12 @@ import { AlertCircle, Globe, CornerDownRight, Plus, Users, RefreshCw, LogOut } f
 import { subzoneLabelError } from '/helper/dns-validation.js';
 import { CopyableText } from '/helper/copyable-text.jsx';
 
-const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
 // ----------------------------------------
 // DynDnsZones
 // ----------------------------------------
 export function DynDnsZones() {
-    const { client, sdk } = useClient('dyndns');
-    const { showError } = useErrorModal();
-    const [zones, setZones] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [loadFailed, setLoadFailed] = useState(false);
-    const [reloadTrigger, setReloadTrigger] = useState(true);
+    const api = useZonesApi();
     // Parent zone whose "create subzone" modal is currently open (null = closed).
     const [subzoneParent, setSubzoneParent] = useState(null);
     const [match, params] = useRoute("/zone/:name/*?");
@@ -35,28 +30,16 @@ export function DynDnsZones() {
     const [, navigate] = useLocation();
     const activeZoneName = match ? params.name : null;
 
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            setLoading(true);
-            setLoadFailed(false);
+    const zonesQuery = useQuery({
+        queryKey: dyndnsKeys.zones(),
+        queryFn: () => api.listZones(),
+        enabled: !!api,
+    });
 
-            const res = await sdk.listZones({ client });
-            const err = sdkError(res);
-            if (!cancelled) {
-                if (err) { showError(err); setLoadFailed(true); }
-                else if (!res.data?.zones) { showError("Unable to load zones"); setLoadFailed(true); }
-                else { setZones(res.data.zones); }
-                setLoading(false);
-            }
-        })();
+    if (!api || zonesQuery.isPending) return <Loading />;
+    if (zonesQuery.isError) return <LoadError query={zonesQuery} title="Could not load zones" />;
 
-        //Add cleanup function to prevent state updates after unmount
-        return () => { cancelled = true; };
-    }, [client, reloadTrigger]);
-
-    if (loading) return (<Delayed><Loader size="lg" /></Delayed>);
-    if (loadFailed) return (<Button onClick={() => setReloadTrigger(!reloadTrigger)}>Retry Load</Button>);
+    const zones = zonesQuery.data ?? [];
 
     // Group zones: policy base zones (no parent) plus the user's created subzones
     // grouped under their parent base zone (shown indented by label depth).
@@ -66,7 +49,6 @@ export function DynDnsZones() {
         if (z.parent) (subzonesByParent[z.parent] ??= []).push(z);
     }
     for (const k in subzonesByParent) subzonesByParent[k].sort((a, b) => a.name.localeCompare(b.name));
-    const reload = () => setReloadTrigger(t => !t);
 
     return (
         <Container size="xl" py="md">
@@ -130,9 +112,13 @@ export function DynDnsZones() {
                 </Paper>
 
                 <SubzoneModal
+                    // Remounting per parent resets the field: React's own way of
+                    // saying "this is a different form now", instead of an effect
+                    // that writes state on every open.
+                    key={subzoneParent}
                     parent={subzoneParent}
                     onClose={() => setSubzoneParent(null)}
-                    onCreated={() => { setSubzoneParent(null); reload(); }}
+                    onCreated={() => setSubzoneParent(null)}
                 />
 
                 <Switch>
@@ -144,8 +130,7 @@ export function DynDnsZones() {
                             return zone ?
                                 <AvailableDomain
                                     zone={zone}
-                                    onChange={() => setReloadTrigger(!reloadTrigger)}
-                                    onDeleted={() => { navigate('/'); setReloadTrigger(t => !t); }}
+                                    onDeleted={() => navigate('/')}
                                 /> :
                                 <Redirect to="/" replace />
                         }}
@@ -176,25 +161,22 @@ function subzoneDepth(name, base) {
 // Opened by the "Subzone" button on a zone row; `parent` null = closed.
 // ----------------------------------------
 function SubzoneModal({ parent, onClose, onCreated }) {
-    const { client, sdk } = useClient('dyndns');
-    const { showError } = useErrorModal();
+    const api = useZonesApi();
     const [label, setLabel] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    // Reset the field whenever a different parent opens the modal.
-    useEffect(() => { setLabel(''); }, [parent]);
 
     const validationError = subzoneLabelError(label, parent);
     const valid = validationError === null;
 
-    async function add() {
+    const createZone = useApiMutation({
+        mutationFn: (zone) => api.createZone(zone),
+        invalidates: [dyndnsKeys.zones()],
+        onSuccess: () => onCreated(),
+    });
+
+    function add() {
         if (!valid) return;
         const sub = label.trim().replace(/\.+$/, '');
-        setLoading(true);
-        const res = await sdk.createZone({ path: { zone: `${sub}.${parent}` }, client });
-        const err = sdkError(res) ?? (res.response.status !== 201 ? res.response.statusText : null);
-        setLoading(false);
-        if (err) { showError(err); } else { onCreated(); }
+        createZone.mutate(`${sub}.${parent}`);
     }
 
     const preview = label.trim().replace(/\.+$/, '');
@@ -222,7 +204,7 @@ function SubzoneModal({ parent, onClose, onCreated }) {
                 </Text>
                 <Group justify="flex-end" gap="sm" mt="xs">
                     <Button variant="default" onClick={onClose}>Cancel</Button>
-                    <Button onClick={add} loading={loading} disabled={!valid} leftSection={<Plus size="16" />}>
+                    <Button onClick={add} loading={createZone.isPending} disabled={!valid} leftSection={<Plus size="16" />}>
                         Create subzone
                     </Button>
                 </Group>
@@ -234,17 +216,19 @@ function SubzoneModal({ parent, onClose, onCreated }) {
 // ----------------------------------------
 // Available Domain List
 // ----------------------------------------
-function AvailableDomain({ zone, onChange, onDeleted }) {
+function AvailableDomain({ zone, onDeleted }) {
     let response;
 
+    // No onChange prop any more: activating, joining and leaving all invalidate
+    // the zone list through their mutation, so nothing has to be told to reload.
     if (zone.already_taken_by_someone_else) {
         response = (<Alert icon={<AlertCircle size="16" />} color="red">This zone is already taken by someone else.</Alert>)
     } else if (zone.exists) {
-        response = (<ActiveDomain zone={zone.name} onChange={onChange} onDeleted={onDeleted} />)
+        response = (<ActiveDomain zone={zone.name} onDeleted={onDeleted} />)
     } else if (zone.can_join) {
-        response = (<Paper p="md"><JoinZone zone={zone.name} owners={zone.owners} onChange={onChange} /></Paper>)
+        response = (<Paper p="md"><JoinZone zone={zone.name} owners={zone.owners} /></Paper>)
     } else {
-        response = (<Paper p="md"><ActivateZone zone={zone.name} onChange={onChange} /></Paper>)
+        response = (<Paper p="md"><ActivateZone zone={zone.name} /></Paper>)
     }
 
     return (
@@ -257,41 +241,25 @@ function AvailableDomain({ zone, onChange, onDeleted }) {
 // ----------------------------------------
 // Activate Zone
 // ----------------------------------------
-function ActivateZone({ zone, onChange }) {
-    const { client, sdk } = useClient('dyndns');
-    const { showError } = useErrorModal();
-    const [loading, setLoading] = useState(false);
+function ActivateZone({ zone }) {
+    const api = useZonesApi();
+    const activate = useApiMutation({
+        mutationFn: () => api.createZone(zone),
+        invalidates: [dyndnsKeys.zones()],
+    });
 
-    async function activate() {
-        setLoading(true);
-        const res = await sdk.createZone({ path: { zone }, client });
-        const err = sdkError(res) ?? (res.response.status !== 201 ? res.response.statusText : null);
-        if (err) { showError(err); } else { onChange(zone); }
-        setLoading(false);
-    }
-
-    if (loading) return (<Delayed><Loader size="sm" /></Delayed>);
-
-    return (<Button onClick={activate}>Activate</Button>);
+    return (<Button onClick={() => activate.mutate()} loading={activate.isPending}>Activate</Button>);
 }
 
 // ----------------------------------------
 // Join Zone — explicitly become a co-owner of an existing shared zone.
 // ----------------------------------------
-function JoinZone({ zone, owners, onChange }) {
-    const { client } = useClient('dyndns');
-    const { showError } = useErrorModal();
-    const [loading, setLoading] = useState(false);
-
-    async function join() {
-        setLoading(true);
-        const res = await client.post({ url: '/v1/zones/{zone}/join', path: { zone } });
-        const err = sdkError(res) ?? (res.response && res.response.status >= 400 ? (res.data?.error || res.response.statusText) : null);
-        if (err) { showError(err); } else { onChange(zone); }
-        setLoading(false);
-    }
-
-    if (loading) return (<Delayed><Loader size="sm" /></Delayed>);
+function JoinZone({ zone, owners }) {
+    const api = useZonesApi();
+    const join = useApiMutation({
+        mutationFn: () => api.joinZone(zone),
+        invalidates: [dyndnsKeys.zones(), dyndnsKeys.zone(zone)],
+    });
 
     return (
         <Stack gap="sm">
@@ -300,7 +268,7 @@ function JoinZone({ zone, owners, onChange }) {
                 Join it to co-manage its DNS records — you'll get your own TSIG key.
             </Text>
             <Group>
-                <Button leftSection={<Users size={16} />} onClick={join}>Join zone</Button>
+                <Button leftSection={<Users size={16} />} onClick={() => join.mutate()} loading={join.isPending}>Join zone</Button>
             </Group>
         </Stack>
     );
@@ -310,14 +278,9 @@ function JoinZone({ zone, owners, onChange }) {
 // ----------------------------------------
 // Active Domain Tabs
 // ----------------------------------------
-function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
-    const [zone, setZone] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [loadFailed, setLoadFailed] = useState(false);
-    const [message, setMessage] = useState("Loading zone details...");
+function ActiveDomain({ zone: zoneName, onDeleted }) {
+    const api = useZonesApi();
     const [currentLocation, navigate] = useLocation()
-    const { client, sdk } = useClient('dyndns');
-    const { showError } = useErrorModal();
     const confirm = useConfirm();
     const { user } = useAuth();
     const [shareOpen, setShareOpen] = useState(false);
@@ -330,33 +293,37 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
         { name: "TLS Certificates", path: "/tls" }
     ];
 
-    // Fetch zone data. Depend only on the client and the zone — NOT on
-    // currentLocation. The tabs are nested routes, so including currentLocation
-    // made every tab click refetch the whole zone and replace the content with
-    // a loader, collapsing the layout (the footer visibly jumped). All tab
-    // contents render from the already-loaded `zone` (records load themselves),
-    // so switching tabs needs no refetch.
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            setLoading(true);
-            setLoadFailed(false);
-            const res = await sdk.getZone({ path: { zone: zoneName }, client });
-            if (cancelled) return;
-            const err = sdkError(res);
-            if (err) { showError(err); setLoadFailed(true); }
-            else if (!res.data) { showError(`Zone ${zoneName} not found`); setLoadFailed(true); }
-            else { setZone(res.data); }
-            setLoading(false);
-        })();
-        return () => { cancelled = true; };
-    }, [client, zoneName]);
+    // Keyed by zone name only. Switching TABS does not refetch: the tabs are
+    // nested routes, and keying this on the location used to replace the whole
+    // content with a loader on every tab click (the layout collapsed and the
+    // footer jumped). All tab contents render from this one result.
+    const zoneQuery = useQuery({
+        queryKey: dyndnsKeys.zone(zoneName),
+        queryFn: () => api.getZone(zoneName),
+        enabled: !!api,
+    });
+    const zone = zoneQuery.data;
 
-    // Re-fetch the zone (e.g. after owners changed) to refresh the header.
-    async function refreshZone() {
-        const res = await sdk.getZone({ path: { zone: zoneName }, client });
-        if (!sdkError(res) && res.data) setZone(res.data);
-    }
+    const zoneKeys = [dyndnsKeys.zones(), dyndnsKeys.zone(zoneName)];
+
+    const deleteZone = useApiMutation({
+        mutationFn: () => api.deleteZone(zone.zoneData.zone),
+        invalidates: zoneKeys,
+        // On success leave the (now-gone) zone URL and return to the overview,
+        // otherwise the nested route renders "Zone Not Found".
+        onSuccess: () => onDeleted?.(),
+    });
+
+    const rotateKeys = useApiMutation({
+        mutationFn: () => api.rotateKeys(zone.zoneData.zone),
+        invalidates: zoneKeys,
+    });
+
+    const leaveZone = useApiMutation({
+        mutationFn: () => api.leaveZone(zone.zoneData.zone, (user?.profile?.email || '').toLowerCase()),
+        invalidates: zoneKeys,
+        onSuccess: () => onDeleted?.(),
+    });
 
     async function handleDeleteClick() {
         const ok = await confirm({
@@ -364,15 +331,7 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
             confirmLabel: 'Delete zone',
             message: (<Text size="sm">This permanently deletes the zone <b>{zone.zoneData.zone}</b> and all of its DNS records{zone.owners?.length > 1 ? <> for <b>all {zone.owners.length} owners</b></> : ''}. This cannot be undone.{zone.owners?.length > 1 ? ' To remove only yourself, use "Leave zone" instead.' : ''}</Text>),
         });
-        if (!ok) return;
-        setLoading(true);
-        setMessage("Deleting zone...");
-        const res = await sdk.deleteZone({ path: { zone: zone.zoneData.zone }, client });
-        const err = sdkError(res) ?? (res.response.status !== 204 ? res.response.statusText : null);
-        // On success leave the (now-gone) zone URL and return to the overview,
-        // otherwise the nested route renders "Zone Not Found". Fall back to
-        // onChange if no onDeleted handler was provided.
-        if (err) { showError(err); setLoading(false); } else { (onDeleted || onChange)(); }
+        if (ok) deleteZone.mutate();
     }
 
     async function handleRotateKeys() {
@@ -381,29 +340,22 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
             confirmLabel: 'Rotate keys',
             message: 'This regenerates the TSIG key of every owner of this zone. Consider it if a key was used in a shared/untrusted environment or may be compromised. All owners (external-dns secrets, scripts, nsupdate) must re-fetch their key afterwards.',
         });
-        if (!ok) return;
-        const res = await client.post({ url: '/v1/zones/{zone}/keys/rotate', path: { zone: zone.zoneData.zone } });
-        const err = sdkError(res) ?? (res.response && res.response.status >= 400 ? (res.data?.error || res.response.statusText) : null);
-        if (err) { showError(err); } else { refreshZone(); }
+        if (ok) rotateKeys.mutate();
     }
 
     // Co-owner leaving a shared zone: remove only themselves (their key), the zone
     // and other owners are unaffected.
     async function handleLeave() {
-        const me = (user?.profile?.email || '').toLowerCase();
         const ok = await confirm({
             title: 'Leave this zone?',
             confirmLabel: 'Leave zone',
             message: (<Text size="sm">Remove yourself as an owner of <b>{zone.zoneData.zone}</b>? Your TSIG key is deleted and you lose access immediately. The zone and its other owners are unaffected.</Text>),
         });
-        if (!ok) return;
-        const res = await client.delete({ url: '/v1/zones/{zone}/owners/{owner}', path: { zone: zone.zoneData.zone, owner: me } });
-        const err = sdkError(res) ?? (res.response && res.response.status >= 400 ? (res.data?.error || res.response.statusText) : null);
-        if (err) { showError(err); } else { (onDeleted || onChange)(); }
+        if (ok) leaveZone.mutate();
     }
 
-    if (loading) return (<Delayed><Text>{message}</Text></Delayed>);
-    if (loadFailed) return (<Alert icon={<AlertCircle size="16" />} color="red">Failed to load zone. Check the error dialog for details.</Alert>);
+    if (!api || zoneQuery.isPending) return <Loading size="sm" />;
+    if (zoneQuery.isError) return <LoadError query={zoneQuery} title={`Could not load ${zoneName}`} />;
     if (!zone || !zone.zoneData) return (<Alert icon={<AlertCircle size="16" />} color="red">Zone data corrupted.</Alert>);
 
     const activeTab = tabs.find(t => currentLocation === t.path)?.name || "Manage";
@@ -452,7 +404,6 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
                 onClose={() => setShareOpen(false)}
                 zoneName={zone.zoneData.zone}
                 owners={zone.owners || []}
-                onChanged={() => { refreshZone(); onChange?.(); }}
             />
 
             <Tabs value={activeTab} onChange={(val) => navigate(tabs.find(t => t.name === val)?.path || '/')}>
@@ -492,42 +443,43 @@ function ActiveDomain({ zone: zoneName, onChange, onDeleted }) {
 // Share Zone Modal — manage co-owners (equal rights) and rotate keys.
 // Each owner has their own TSIG key; removing an owner deletes only their key.
 // ----------------------------------------
-function ShareZoneModal({ opened, onClose, zoneName, owners: initialOwners, onChanged }) {
-    const { client } = useClient('dyndns');
-    const { showError } = useErrorModal();
+function ShareZoneModal({ opened, onClose, zoneName, owners }) {
+    const api = useZonesApi();
     const confirm = useConfirm();
     const { user } = useAuth();
-    const [owners, setOwners] = useState(initialOwners || []);
     const [email, setEmail] = useState('');
-    const [busy, setBusy] = useState(false);
-
-    useEffect(() => { setOwners(initialOwners || []); }, [initialOwners, opened]);
 
     const me = (user?.profile?.email || '').toLowerCase();
-    const resError = (res) => sdkError(res) ?? (res.response && res.response.status >= 400 ? (res.data?.error || res.response.statusText) : null);
+    // Both writes invalidate the zone, so the owner list this modal renders
+    // comes back through the parent's query. It used to be mirrored into local
+    // state and patched from each response — two sources for one list.
+    const zoneKeys = [dyndnsKeys.zones(), dyndnsKeys.zone(zoneName)];
 
-    async function addOwner() {
-        const e = email.trim().toLowerCase();
-        if (!e) return;
-        setBusy(true);
-        const res = await client.post({ url: '/v1/zones/{zone}/owners', path: { zone: zoneName }, body: { email: e } });
-        const err = resError(res);
-        if (err) { showError(err); } else { setOwners(res.data?.owners || owners); setEmail(''); onChanged?.(); }
-        setBusy(false);
+    const addOwner = useApiMutation({
+        mutationFn: (address) => api.addOwner(zoneName, address),
+        invalidates: zoneKeys,
+        onSuccess: () => setEmail(''),
+    });
+
+    const removeOwner = useApiMutation({
+        mutationFn: (owner) => api.leaveZone(zoneName, owner),
+        invalidates: zoneKeys,
+    });
+
+    const busy = addOwner.isPending || removeOwner.isPending;
+
+    function handleAdd() {
+        const address = email.trim().toLowerCase();
+        if (address) addOwner.mutate(address);
     }
 
-    async function removeOwner(owner) {
+    async function handleRemove(owner) {
         const ok = await confirm({
             title: 'Remove owner?',
             confirmLabel: 'Remove owner',
             message: `Remove ${owner} from this zone? Their TSIG key is deleted and they lose access immediately. Other owners are unaffected.`,
         });
-        if (!ok) return;
-        setBusy(true);
-        const res = await client.delete({ url: '/v1/zones/{zone}/owners/{owner}', path: { zone: zoneName, owner } });
-        const err = resError(res);
-        if (err) { showError(err); } else { setOwners(res.data?.owners || owners.filter(o => o !== owner)); onChanged?.(); }
-        setBusy(false);
+        if (ok) removeOwner.mutate(owner);
     }
 
     return (
@@ -543,7 +495,7 @@ function ShareZoneModal({ opened, onClose, zoneName, owners: initialOwners, onCh
                         <Group key={o} justify="space-between" wrap="nowrap">
                             <Text size="sm">{o}{o === me && <Text span c="dimmed"> (you)</Text>}</Text>
                             <Button size="compact-xs" color="red" variant="light" disabled={busy || owners.length <= 1}
-                                onClick={() => removeOwner(o)} title={owners.length <= 1 ? 'The last owner cannot be removed — delete the zone instead.' : undefined}>
+                                onClick={() => handleRemove(o)} title={owners.length <= 1 ? 'The last owner cannot be removed — delete the zone instead.' : undefined}>
                                 Remove
                             </Button>
                         </Group>
@@ -553,8 +505,8 @@ function ShareZoneModal({ opened, onClose, zoneName, owners: initialOwners, onCh
 
                 <Group gap="xs" align="flex-end">
                     <TextInput style={{ flex: 1 }} label="Add owner (email)" placeholder="user@dhbw.de" value={email}
-                        onChange={e => setEmail(e.currentTarget.value)} onKeyDown={e => { if (e.key === 'Enter') addOwner(); }} />
-                    <Button onClick={addOwner} loading={busy} disabled={!email.trim()} leftSection={<Plus size={16} />}>Add</Button>
+                        onChange={e => setEmail(e.currentTarget.value)} onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }} />
+                    <Button onClick={handleAdd} loading={busy} disabled={!email.trim()} leftSection={<Plus size={16} />}>Add</Button>
                 </Group>
 
                 <Group justify="flex-end" mt="xs">

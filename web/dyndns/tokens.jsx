@@ -1,53 +1,43 @@
-import { useState, useEffect } from 'react';
-import { useClient } from '/providers/client.jsx';
-import { useErrorModal } from '/providers/error-modal.jsx';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useZonesApi } from '/dyndns/api-zones.jsx';
+import { dyndnsKeys } from '/dyndns/query-keys.js';
+import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
-import { Delayed } from '../helper/delayed.jsx';
-import { Container, Title, Button, Checkbox, Stack, Group, Paper, Text, Loader, Divider, Alert, Code, CopyButton } from '@mantine/core';
+import { Container, Title, Button, Checkbox, Stack, Group, Paper, Text, Divider, Alert, Code, CopyButton } from '@mantine/core';
 
-const sdkError = (res) => res?.error?.detail ?? res?.error?.error ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
 export function Tokens() {
-    const { client, sdk } = useClient('dyndns');
-    const { showError } = useErrorModal();
+    const api = useZonesApi();
     const confirm = useConfirm();
-    const [tokens, setTokens] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [readOnly, setReadOnly] = useState(false);
     // The server stores only a hash, so a token exists in readable form exactly
     // once: in the response that created it. Keep those for this page view (id →
-    // token) and say plainly that they are gone after a reload.
+    // token) and say plainly that they are gone after a reload. This is the one
+    // piece of state here that is NOT server state — the API can never answer
+    // with it again, so it cannot live in the query cache.
     const [revealed, setRevealed] = useState({});
 
-    useEffect(() => {
-        (async () => {
-            setLoading(true);
-            const res = await sdk.listTokens({ client });
-            const err = sdkError(res);
-            if (err) { showError(err); } else { setTokens(res?.data?.tokens || []); }
-            setLoading(false);
-        })();
-    }, [client]);
+    const tokensQuery = useQuery({
+        queryKey: dyndnsKeys.tokens(),
+        queryFn: () => api.listTokens(),
+        enabled: !!api,
+    });
 
-    async function createToken() {
-        setLoading(true);
-        const res = await sdk.createToken({
-            client,
-            body: { read_only: readOnly },
-            headers: { "Content-Type": "application/json" }
-        });
-        const err = sdkError(res);
-        if (err) {
-            showError(err);
-        } else if (res?.data?.token) {
-            const created = res.data.token;
-            setTokens(prev => [...prev, created]);
-            if (created.token_string) {
+    const createMutation = useApiMutation({
+        mutationFn: () => api.createToken({ readOnly }),
+        invalidates: [dyndnsKeys.tokens()],
+        onSuccess: (created) => {
+            if (created?.token_string) {
                 setRevealed(prev => ({ ...prev, [created.id]: created.token_string }));
             }
-        }
-        setLoading(false);
-    }
+        },
+    });
+
+    const deleteMutation = useApiMutation({
+        mutationFn: (id) => api.deleteToken(id),
+        invalidates: [dyndnsKeys.tokens()],
+    });
 
     async function deleteToken(tokenId) {
         const ok = await confirm({
@@ -55,15 +45,13 @@ export function Tokens() {
             confirmLabel: 'Delete token',
             message: 'Any client still using this token will immediately stop working. This cannot be undone.',
         });
-        if (!ok) return;
-        setLoading(true);
-        const res = await sdk.deleteToken({ path: { id: tokenId }, client });
-        const err = sdkError(res);
-        if (err) { showError(err); } else { setTokens(prev => prev.filter(t => t.id !== tokenId)); }
-        setLoading(false);
+        if (ok) deleteMutation.mutate(tokenId);
     }
 
-    if (loading) return (<Delayed><Loader size="lg" /></Delayed>);
+    if (!api || tokensQuery.isPending) return <Loading />;
+    if (tokensQuery.isError) return <LoadError query={tokensQuery} title="Could not load API tokens" />;
+
+    const tokens = tokensQuery.data ?? [];
 
     return (
         <Container size="lg" py="xl">
@@ -73,7 +61,7 @@ export function Tokens() {
                 <Paper shadow="sm" radius="md" withBorder>
                     <Stack gap="md">
                         <Group p="md" align="center">
-                            <Button onClick={createToken}>Create Token</Button>
+                            <Button onClick={() => createMutation.mutate()} loading={createMutation.isPending}>Create Token</Button>
                             <Checkbox
                                 label="Read-only"
                                 checked={readOnly}
