@@ -66,6 +66,9 @@ export function ApproveModal({ opened, onClose, onDone, resources, node }) {
         invalidates: [projectKeys.tree()],
         reportErrors: 'inline',
         onSuccess: (result) => { onDone?.(result); onClose(); },
+        // A 409 means this dialog was acting on a node that has moved on; there
+        // is nothing here to correct, so close it and let the refreshed view speak.
+        onConflict: () => { onDone?.(); onClose(); },
     });
 
     if (!node) return null;

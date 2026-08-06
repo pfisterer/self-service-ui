@@ -2,7 +2,7 @@ import { Alert, Button, Group, Loader } from '@mantine/core';
 import { AlertCircle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Delayed } from '/helper/delayed.jsx';
-import { formatError } from '/helper/api-error.js';
+import { CONFLICT, formatError } from '/helper/api-error.js';
 import { useErrorModal } from '/providers/error-modal.jsx';
 
 // The two states every list view has to render before it can render anything,
@@ -47,18 +47,34 @@ export function LoadError({ query, title = 'Could not load' }) {
  *   'inline' — the caller renders `mutation.error` itself. Right inside a
  *             dialog: stacking an error modal on top of the form the user is
  *             still looking at hides the fields they need to correct.
+ *
+ * A 409 never follows `reportErrors`. It does not mean the input was wrong, so
+ * showing it inline next to the fields invites the user to "fix" something that
+ * was never broken — the request simply lost a race against someone else's
+ * decision. It is handled here for every write at once: refresh what the write
+ * would have changed, tell the user in the shared dialog, and let `onConflict`
+ * dismiss whatever form they were looking at.
  */
-export function useApiMutation({ mutationFn, invalidates = [], onSuccess, onError, reportErrors = 'modal' }) {
+export function useApiMutation({ mutationFn, invalidates = [], onSuccess, onError, onConflict, reportErrors = 'modal' }) {
     const queryClient = useQueryClient();
     const { showError } = useErrorModal();
+
+    const invalidateAll = () =>
+        Promise.all(invalidates.map(key => queryClient.invalidateQueries({ queryKey: key })));
 
     return useMutation({
         mutationFn,
         onSuccess: async (data, variables, context) => {
-            await Promise.all(invalidates.map(key => queryClient.invalidateQueries({ queryKey: key })));
+            await invalidateAll();
             await onSuccess?.(data, variables, context);
         },
-        onError: (error, variables, context) => {
+        onError: async (error, variables, context) => {
+            if (error?.status === CONFLICT) {
+                await invalidateAll();
+                onConflict?.(error, variables, context);
+                showError(`${formatError(error)} — the view has been refreshed.`);
+                return;
+            }
             if (onError) onError(error, variables, context);
             else if (reportErrors === 'modal') showError(formatError(error));
         },

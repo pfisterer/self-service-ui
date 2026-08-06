@@ -36,3 +36,20 @@ export function apiErrorMessage(res) {
 export function formatError(err) {
     return err?.message ?? String(err);
 }
+
+// apiError builds the exception the facades throw, carrying the HTTP status
+// alongside the message.
+//
+// The status is what lets a caller tell "your input is wrong" (400) from "the
+// world moved on while this form was open" (409) — the same distinction the API
+// started drawing when its lifecycle guards stopped answering 400. Without it
+// every failure is just a string, and a stale approval reads like a validation
+// error the user is supposed to fix.
+export function apiError(res) {
+    const err = new Error(apiErrorMessage(res) ?? 'Request failed');
+    err.status = res?.response?.status;
+    return err;
+}
+
+// CONFLICT is the HTTP status the APIs use for "this no longer applies".
+export const CONFLICT = 409;

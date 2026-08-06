@@ -249,6 +249,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         invalidates: [projectKeys.tree()],
         reportErrors: 'inline',
         onSuccess: (result) => { if (result) onDone?.(result); onClose(); },
+        // A 409 means this dialog was acting on a node that has moved on; there
+        // is nothing here to correct, so close it and let the refreshed view speak.
+        onConflict: () => { onDone?.(); onClose(); },
     });
 
     // Jump to the problem instead of leaving the button looking broken: the

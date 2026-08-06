@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { apiErrorMessage } from '/helper/api-error.js';
+import { apiError, apiErrorMessage } from '/helper/api-error.js';
 import { useClient } from '../providers/client.jsx';
 import { normalizeObjectResponse } from './util-project.jsx';
 
@@ -14,22 +14,19 @@ import { normalizeObjectResponse } from './util-project.jsx';
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
 function unwrapObject(res) {
-    const err = apiErrorMessage(res);
-    if (err) throw new Error(err);
+    if (apiErrorMessage(res)) throw apiError(res);
     return normalizeObjectResponse(res);
 }
 
 function unwrapVoid(res) {
-    const err = apiErrorMessage(res);
-    if (err) throw new Error(err);
+    if (apiErrorMessage(res)) throw apiError(res);
 }
 
 // Every listing answers with { items, total }: total counts the matches BEFORE
 // the page was cut, so a caller can always tell a complete list from the first
 // page of a longer one. Nothing in this UI may show a list without knowing that.
 function unwrapPage(res) {
-    const err = apiErrorMessage(res);
-    if (err) throw new Error(err);
+    if (apiErrorMessage(res)) throw apiError(res);
     const data = normalizeObjectResponse(res);
     const items = Array.isArray(data.items) ? data.items : [];
     return { items, total: Number.isInteger(data.total) ? data.total : items.length };
