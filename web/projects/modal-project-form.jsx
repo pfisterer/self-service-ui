@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Select, Stack, Text, Textarea, TextInput } from '@mantine/core';
+import { Alert, Select, Stack, Text, Textarea, TextInput } from '@mantine/core';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { useApiMutation } from '/helper/query-state.jsx';
@@ -309,13 +309,45 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         </Stack>
     );
 
+    // Resources the project already consumes in OpenStack that the new figures
+    // would fall below. OpenStack accepts such a quota silently — the servers
+    // keep running, only new ones are refused — so nothing tells the requester
+    // afterwards. Only resources OpenStack actually measures appear in
+    // os_in_use, so an absent entry means "unknown", not "zero".
+    const overcommitted = useMemo(() => {
+        const inUse = node?.os_in_use;
+        if (!inUse) return [];
+        return (resources || [])
+            .filter(r => typeof inUse[r.id] === 'number' && (quota[r.id] ?? 0) < inUse[r.id])
+            .map(r => ({ ...r, used: inUse[r.id], requested: quota[r.id] ?? 0 }));
+    }, [node, resources, quota]);
+
     const resourcesTab = (
-        <QuotaInputs
-            resources={resources}
-            value={quota}
-            errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
-            onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}
-        />
+        <Stack>
+            {overcommitted.length > 0 && (
+                <Alert color={COLOR.negative} variant="light" title="Below what the project already uses">
+                    <Stack gap="4">
+                        <Text size="sm">
+                            OpenStack keeps the existing servers running and only refuses new ones, so
+                            this does not free anything up — the project stays over its quota until the
+                            resources are actually released.
+                        </Text>
+                        {overcommitted.map(r => (
+                            <Text key={r.id} size="sm">
+                                <b>{r.name}</b>: {r.requested}{r.unit ? ` ${r.unit}` : ''} requested,
+                                {' '}{r.used}{r.unit ? ` ${r.unit}` : ''} in use
+                            </Text>
+                        ))}
+                    </Stack>
+                </Alert>
+            )}
+            <QuotaInputs
+                resources={resources}
+                value={quota}
+                errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
+                onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}
+            />
+        </Stack>
     );
 
     const membersTab = (
