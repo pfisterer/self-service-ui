@@ -123,7 +123,7 @@ export function MyProjectsView() {
                 myProjects={projects.items}
             />
             <ProjectFormModal
-                key={dlg.key}
+                key={`change:${dlg.key}`}
                 opened={dlg.is('change')}
                 onClose={dlg.close}
                 resources={resources}
@@ -131,7 +131,7 @@ export function MyProjectsView() {
                 node={dlg.node}
             />
             {/* One modal for both triggers: the History button opens it on that tab. */}
-            <NodeInspectModal key={dlg.key} opened={dlg.is('details') || dlg.is('history')}
+            <NodeInspectModal key={`inspect:${dlg.key}`} opened={dlg.is('details') || dlg.is('history')}
                 initialTab={dlg.is('history') ? TAB_HISTORY : TAB_DETAILS}
                 onClose={dlg.close} node={dlg.node} resources={resources} />
         </Stack>

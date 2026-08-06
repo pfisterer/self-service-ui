@@ -497,16 +497,16 @@ export function MyBudgetsView() {
                 eligibleBudgets={budgetRequestTargets}
                 currentUserEmail={userEmail}
             />
-            <ApproveModal key={dlg.key} opened={dlg.is('approve')} onClose={dlg.close} onDone={refresh}
+            <ApproveModal key={`approvemodal:${dlg.key}`} opened={dlg.is('approve')} onClose={dlg.close} onDone={refresh}
                 resources={resources} node={dlg.node} />
-            <RejectModal key={dlg.key} opened={dlg.is('reject')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
-            <MoveModal key={dlg.key} opened={dlg.is('move')} onClose={dlg.close} onDone={refresh}
+            <RejectModal key={`rejectmodal:${dlg.key}`} opened={dlg.is('reject')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
+            <MoveModal key={`movemodal:${dlg.key}`} opened={dlg.is('move')} onClose={dlg.close} onDone={refresh}
                 node={dlg.node} targetBudgets={moveTargets} />
-            <TransferOwnerModal key={dlg.key} opened={dlg.is('transfer')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
-            <AdoptModal key={dlg.key} opened={dlg.is('adopt')} onClose={dlg.close} onDone={refresh}
+            <TransferOwnerModal key={`transferownermodal:${dlg.key}`} opened={dlg.is('transfer')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
+            <AdoptModal key={`adoptmodal:${dlg.key}`} opened={dlg.is('adopt')} onClose={dlg.close} onDone={refresh}
                 resources={resources} node={dlg.node} myBudgets={myBudgets.items} />
             {/* One modal for both triggers: the History button opens it on that tab. */}
-            <NodeInspectModal key={dlg.key} opened={dlg.is('details') || dlg.is('history')}
+            <NodeInspectModal key={`nodeinspectmodal:${dlg.key}`} opened={dlg.is('details') || dlg.is('history')}
                 initialTab={dlg.is('history') ? TAB_HISTORY : TAB_DETAILS}
                 onClose={dlg.close} node={dlg.node} resources={resources} />
         </Stack>
