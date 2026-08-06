@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { apiErrorMessage } from '/helper/api-error.js';
 import { useClient } from '../providers/client.jsx';
 import { normalizeObjectResponse } from './util-project.jsx';
 
@@ -12,20 +13,14 @@ import { normalizeObjectResponse } from './util-project.jsx';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
-// Extracts the server's error message from a hey-api result envelope.
-function errorOf(res) {
-    return res?.error?.error ?? res?.error?.detail ?? res?.error?.message
-        ?? (res?.error ? String(res.error) : null);
-}
-
 function unwrapObject(res) {
-    const err = errorOf(res);
+    const err = apiErrorMessage(res);
     if (err) throw new Error(err);
     return normalizeObjectResponse(res);
 }
 
 function unwrapVoid(res) {
-    const err = errorOf(res);
+    const err = apiErrorMessage(res);
     if (err) throw new Error(err);
 }
 
@@ -33,7 +28,7 @@ function unwrapVoid(res) {
 // the page was cut, so a caller can always tell a complete list from the first
 // page of a longer one. Nothing in this UI may show a list without knowing that.
 function unwrapPage(res) {
-    const err = errorOf(res);
+    const err = apiErrorMessage(res);
     if (err) throw new Error(err);
     const data = normalizeObjectResponse(res);
     const items = Array.isArray(data.items) ? data.items : [];
@@ -133,7 +128,7 @@ export function useNodesApi() {
             // only, and only for a non-empty query — staff are not browsable).
             searchPrincipals: async (q, limit = 50) => {
                 const res = await sdk.searchPrincipals({ client, query: { q, limit } });
-                const err = errorOf(res);
+                const err = apiErrorMessage(res);
                 if (err) throw new Error(err);
                 return [
                     ...(res?.data?.groups || []).map(g => g?.token).filter(Boolean),

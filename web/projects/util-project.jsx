@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatError } from '/helper/api-error.js';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -243,10 +244,11 @@ export function requestType(node) {
     return isBudget(node) ? 'budget' : 'project';
 }
 
-// Extracts a user-friendly error message from a thrown value.
-export function formatError(err) {
-    return err?.message ?? String(err);
-}
+// Re-exported so the existing `import { formatError } from './util-project.jsx'`
+// call sites keep working; the implementation lives with its sibling
+// apiErrorMessage in /helper/api-error.js. Imported rather than re-exported
+// straight through because useAsyncRefresh below calls it locally.
+export { formatError };
 
 // Custom hook that wraps an async fetcher with loading and error state.
 // `loaded` flips true after the first attempt completes and stays true, so

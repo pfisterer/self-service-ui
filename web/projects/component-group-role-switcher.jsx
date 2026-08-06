@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { apiErrorMessage } from '/helper/api-error.js';
 import { ActionIcon, Badge, Button, Group, Loader, Paper, Text, TextInput } from '@mantine/core';
 import { Repeat, X } from 'lucide-react';
 import { useClient } from '../providers/client.jsx';
@@ -14,7 +15,6 @@ const DEV_MODE = import.meta.env.DEV;
 // every /projects page, so it must not grow with the directory.
 const MAX_PICKS = 10;
 
-const sdkError = (res) => res?.error?.error ?? res?.error?.detail ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
 // The panel and the button live in two different places — the panel spans the
 // content, the button belongs in the top-right gutter next to a view's own
@@ -36,7 +36,7 @@ export function RoleSwitchProvider({ children }) {
     const refreshState = async () => {
         setLoading(true);
         const res = await sdk.getRoleSwitch({ client });
-        const err = sdkError(res);
+        const err = apiErrorMessage(res);
         if (err) { showError(err); } else { setState(res?.data || {}); }
         setLoading(false);
     };
@@ -54,7 +54,7 @@ export function RoleSwitchProvider({ children }) {
             return;
         }
         const res = await sdk.searchPrincipals({ client, query: { q, limit: MAX_PICKS + 1 } });
-        const err = sdkError(res);
+        const err = apiErrorMessage(res);
         if (err) { showError(err); return; }
         setIdentities((res?.data?.users || []).map(email => ({ email, label: email })));
     };
@@ -66,7 +66,7 @@ export function RoleSwitchProvider({ children }) {
             body: { impersonate_user: email },
             headers: { 'Content-Type': 'application/json' },
         });
-        const err = sdkError(res);
+        const err = apiErrorMessage(res);
         if (err) { showError(err); setUpdating(false); return; }
         window.location.reload();
     };
@@ -133,7 +133,7 @@ export function RoleSwitchProvider({ children }) {
     const clearOverride = async () => {
         setUpdating(true);
         const res = await sdk.clearRoleSwitch({ client });
-        const err = sdkError(res);
+        const err = apiErrorMessage(res);
         if (err) { showError(err); setUpdating(false); return; }
         window.location.reload();
     };

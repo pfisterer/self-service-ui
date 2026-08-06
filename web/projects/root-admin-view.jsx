@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { apiErrorMessage } from '/helper/api-error.js';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { Alert, Badge, Button, Group, Loader, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { Delayed } from '/helper/delayed.jsx';
@@ -7,7 +8,6 @@ import { useErrorModal } from '/providers/error-modal.jsx';
 import { COLOR } from './util-project.jsx';
 import { RoleSwitchButton } from './component-group-role-switcher.jsx';
 
-const sdkError = (res) => res?.error?.error ?? res?.error?.detail ?? res?.error?.message ?? (res?.error ? String(res.error) : null);
 
 export function RootAdminView() {
     const { client, sdk } = useClient('projects');
@@ -23,7 +23,7 @@ export function RootAdminView() {
         try {
             const res = await sdk.getAdminReconcileStatus({ client });
             if (res.response?.status === 503) { setStatus(null); return; }
-            const err = sdkError(res);
+            const err = apiErrorMessage(res);
             if (err) { showError(err); setLoadFailed(true); } else { setStatus(res.data); }
         } finally {
             setLoaded(true);
@@ -36,7 +36,7 @@ export function RootAdminView() {
         setTriggering(true);
         setTriggerSuccess(false);
         const res = await sdk.triggerAdminReconcile({ client });
-        const err = sdkError(res);
+        const err = apiErrorMessage(res);
         if (err) { showError(`Failed to trigger sync: ${err}`); } else { setTriggerSuccess(true); }
         setTriggering(false);
     };
