@@ -477,13 +477,13 @@ export function MyBudgetsView() {
                 eligibleBudgets={budgetRequestTargets}
                 currentUserEmail={userEmail}
             />
-            <ApproveModal opened={dlg.is('approve')} onClose={dlg.close} onDone={refresh}
+            <ApproveModal key={dlg.key} opened={dlg.is('approve')} onClose={dlg.close} onDone={refresh}
                 resources={resources} node={dlg.node} />
-            <RejectModal opened={dlg.is('reject')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
-            <MoveModal opened={dlg.is('move')} onClose={dlg.close} onDone={refresh}
+            <RejectModal key={dlg.key} opened={dlg.is('reject')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
+            <MoveModal key={dlg.key} opened={dlg.is('move')} onClose={dlg.close} onDone={refresh}
                 node={dlg.node} targetBudgets={moveTargets} />
-            <TransferOwnerModal opened={dlg.is('transfer')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
-            <AdoptModal opened={dlg.is('adopt')} onClose={dlg.close} onDone={refresh}
+            <TransferOwnerModal key={dlg.key} opened={dlg.is('transfer')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
+            <AdoptModal key={dlg.key} opened={dlg.is('adopt')} onClose={dlg.close} onDone={refresh}
                 resources={resources} node={dlg.node} myBudgets={myBudgets.items} />
             {/* One modal for both triggers: the History button opens it on that tab. */}
             <NodeInspectModal opened={dlg.is('details') || dlg.is('history')}

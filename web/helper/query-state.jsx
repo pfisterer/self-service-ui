@@ -39,8 +39,16 @@ export function LoadError({ query, title = 'Could not load' }) {
  *
  * Views used to do this by hand — a try/catch around the call plus a `reload`
  * callback threaded down through props to tell a sibling component to refetch.
+ *
+ * `reportErrors`:
+ *   'modal'  (default) — failures open the shared error dialog. Right for a
+ *             write triggered from a page, where there is no obvious place to
+ *             put the message.
+ *   'inline' — the caller renders `mutation.error` itself. Right inside a
+ *             dialog: stacking an error modal on top of the form the user is
+ *             still looking at hides the fields they need to correct.
  */
-export function useApiMutation({ mutationFn, invalidates = [], onSuccess, onError }) {
+export function useApiMutation({ mutationFn, invalidates = [], onSuccess, onError, reportErrors = 'modal' }) {
     const queryClient = useQueryClient();
     const { showError } = useErrorModal();
 
@@ -52,7 +60,7 @@ export function useApiMutation({ mutationFn, invalidates = [], onSuccess, onErro
         },
         onError: (error, variables, context) => {
             if (onError) onError(error, variables, context);
-            else showError(formatError(error));
+            else if (reportErrors === 'modal') showError(formatError(error));
         },
     });
 }

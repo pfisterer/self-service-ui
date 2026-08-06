@@ -42,12 +42,19 @@ export function FormTabs({ value, onChange, tabs }) {
 }
 
 /**
- * FormModal is the modal + form frame. `children` are the form's contents
- * (typically a FormTabs plus anything shown below the tabs).
+ * FormModal is the modal + form frame for EVERY dialog in this section — the
+ * two big tabbed forms and the small single-purpose ones (approve, reject,
+ * move, transfer, adopt) alike. Those five used to build the same frame by
+ * hand: a Modal, a form, a Stack, an error line and a Cancel/Submit pair,
+ * about 35 identical lines each, differing only in their fields.
+ *
+ * `submitting`/`submitError` are primitives rather than a mutation object so
+ * the component stays dumb; callers pass `m.isPending` and
+ * `formatError(m.error)`.
  */
 export function FormModal({
     opened, onClose, title, size = 'lg',
-    onSubmit, submitting, submitError, submitLabel,
+    onSubmit, submitting, submitError, submitLabel, submitColor,
     children,
 }) {
     return (
@@ -66,7 +73,7 @@ export function FormModal({
 
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" type="button" onClick={onClose}>Cancel</Button>
-                        <Button type="submit" loading={submitting}>{submitLabel}</Button>
+                        <Button type="submit" color={submitColor} loading={submitting}>{submitLabel}</Button>
                     </Group>
                 </Stack>
             </form>
