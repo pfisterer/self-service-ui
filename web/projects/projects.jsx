@@ -1,13 +1,13 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext } from 'react';
 import { Route, Switch, useRoute, Redirect } from 'wouter';
 import { Container } from '@mantine/core';
-import { useAuth } from '/providers/auth.jsx';
-import { useClient } from '../providers/client.jsx';
+import { useQuery } from '@tanstack/react-query';
+import { useNodesApi } from './api-nodes.jsx';
+import { projectKeys } from './query-keys.js';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
 import { RoleSwitchProvider, RoleSwitchPanel } from './component-group-role-switcher.jsx';
 import { TokenLabelProvider } from './token-labels.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
-import { normalizeObjectResponse } from './util-project.jsx';
 
 import { MyProjectsView } from './view-my-projects.jsx';
 import { MyBudgetsView } from './view-my-budgets.jsx';
@@ -22,10 +22,10 @@ export function useProjectConfig() {
 
 // CloudProjectManagement is the cloud resources section: one budget tree in
 // which budgets are delegated downwards and projects hang as leaves.
+const EMPTY_CONFIG = { resources: [], openstackRoles: [], dummyDevUsers: [] };
+
 export function CloudProjectManagement() {
-    const { client, sdk } = useClient('projects');
-    const { user, dev_user, useDummyAuth } = useAuth();
-    const [projectConfig, setProjectConfig] = useState(null);
+    const api = useNodesApi();
     const { isRoot } = useCloudStatus();
 
     // Which section is showing — used to key the error boundary, so a crash in
@@ -41,17 +41,18 @@ export function CloudProjectManagement() {
         return '';
     }
 
-    useEffect(() => {
-        (async () => {
-            const defaultResponse = { resources: [], openstackRoles: [], dummyDevUsers: [] };
-            try {
-                const cfgRes = await sdk.getConfig({ client });
-                setProjectConfig(normalizeObjectResponse(cfgRes, defaultResponse));
-            } catch {
-                setProjectConfig(defaultResponse);
-            }
-        })();
-    }, [client, sdk, user?.email, dev_user, useDummyAuth]);
+    // Through the facade like everything else, and cached: the config is asked
+    // for by several views. A failure falls back to empty lists rather than
+    // blocking the section — the views degrade to "nothing configured".
+    const configQuery = useQuery({
+        queryKey: projectKeys.config(),
+        queryFn: () => api.getConfig(),
+        enabled: !!api,
+        retry: false,
+    });
+    const projectConfig = api
+        ? (configQuery.isPending ? null : (configQuery.data ?? EMPTY_CONFIG))
+        : null;
 
     return (
         <ProjectConfigContext.Provider value={projectConfig}>

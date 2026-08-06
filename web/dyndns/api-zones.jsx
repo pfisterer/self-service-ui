@@ -8,8 +8,14 @@ import { useClient } from '/providers/client.jsx';
 // hey-api envelope, never repeat the error extraction, and never assemble
 // headers themselves.
 //
-// Before this, four files called `sdk.*` directly and each re-derived the error
-// from the envelope inline.
+// EVERY call goes through the generated SDK. Ten of these used to be hand-built
+// `client.get/post/put/delete` calls with the URL and path template spelled out
+// at the call site — four of them for operations the SDK already had, six for
+// endpoints missing from the spec because their Go handlers carried no swagger
+// annotations. Both were fixed at the source (see routes_delegation.go). When
+// an operation is missing here, the fix is to annotate the handler and
+// regenerate (`make bundle` in the API repo), never to reach past the SDK: a
+// hand-written URL is a second, silent copy of the API contract.
 //
 // Returns null until the SDK module has loaded; callers render a loader.
 
@@ -49,18 +55,13 @@ export function useZonesApi() {
             createZone: async (zone) => unwrap(await sdk.createZone({ client, path: { zone } })),
             deleteZone: async (zone) => unwrap(await sdk.deleteZone({ client, path: { zone } })),
 
-            // Sharing operations the generated SDK does not cover, so they go
-            // through the raw client. They were spelled out inline in zones.jsx
-            // with their own ad-hoc status handling; the URLs belong here with
-            // the rest of the transport.
-            joinZone: async (zone) =>
-                unwrap(await client.post({ url: '/v1/zones/{zone}/join', path: { zone } })),
+            // Zone sharing.
+            joinZone: async (zone) => unwrap(await sdk.joinZone({ client, path: { zone } })),
             leaveZone: async (zone, owner) =>
-                unwrap(await client.delete({ url: '/v1/zones/{zone}/owners/{owner}', path: { zone, owner } })),
-            rotateKeys: async (zone) =>
-                unwrap(await client.post({ url: '/v1/zones/{zone}/keys/rotate', path: { zone } })),
+                unwrap(await sdk.removeZoneOwner({ client, path: { zone, owner } })),
+            rotateKeys: async (zone) => unwrap(await sdk.rotateZoneKeys({ client, path: { zone } })),
             addOwner: async (zone, email) =>
-                unwrap(await client.post({ url: '/v1/zones/{zone}/owners', path: { zone }, body: { email } })),
+                unwrap(await sdk.addZoneOwner({ client, path: { zone }, body: { email }, headers: JSON_HEADERS })),
 
             // ── API tokens ───────────────────────────────────────────────
             listTokens: async () => unwrap(await sdk.listTokens({ client }))?.tokens ?? [],
@@ -83,19 +84,18 @@ export function useZonesApi() {
                 unwrap(await sdk.deletePolicyRule({ client, path: { id } })),
 
             // ── Delegations and orphaned zones (super-admin) ─────────────
-            // Not in the generated SDK yet, so these use the raw client too.
             listDelegations: async () =>
-                unwrap(await client.get({ url: '/v1/policies/delegations' }))?.delegations ?? [],
+                unwrap(await sdk.listDelegations({ client }))?.delegations ?? [],
             createDelegation: async (body) =>
-                unwrap(await client.post({ url: '/v1/policies/delegations', body })),
+                unwrap(await sdk.createDelegation({ client, body, headers: JSON_HEADERS })),
             updateDelegation: async (id, body) =>
-                unwrap(await client.put({ url: '/v1/policies/delegations/{id}', path: { id }, body })),
+                unwrap(await sdk.updateDelegation({ client, path: { id }, body, headers: JSON_HEADERS })),
             deleteDelegation: async (id) =>
-                unwrap(await client.delete({ url: '/v1/policies/delegations/{id}', path: { id } })),
+                unwrap(await sdk.deleteDelegation({ client, path: { id } })),
             listOrphanedZones: async () =>
-                unwrap(await client.get({ url: '/v1/policies/orphaned-zones' })),
+                unwrap(await sdk.listOrphanedZones({ client }))?.zones ?? [],
             deleteOrphanedZone: async (zone) =>
-                unwrap(await client.delete({ url: '/v1/policies/orphaned-zones/{zone}', path: { zone } })),
+                unwrap(await sdk.deleteOrphanedZone({ client, path: { zone } })),
 
             // ── DNS records ──────────────────────────────────────────────
             // No Authorization header is assembled here: the client interceptor

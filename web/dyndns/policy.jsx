@@ -562,7 +562,7 @@ function OrphanedZonesPanel() {
 
     const orphanedQuery = useQuery({
         queryKey: dyndnsKeys.orphanedZones(),
-        queryFn: async () => (await api.listOrphanedZones())?.zones ?? [],
+        queryFn: () => api.listOrphanedZones(),
         enabled: !!api,
     });
 

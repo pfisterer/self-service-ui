@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { useClient } from '../providers/client.jsx';
+import { useNodesApi } from './api-nodes.jsx';
 
 // Tokens are what the system stores ("group:dept_bio"), but not what a person
 // recognises. The group catalog knows a display name for every group, so the UI
@@ -47,7 +47,7 @@ export function tokenDisplay(token, label) {
 }
 
 export function TokenLabelProvider({ children }) {
-    const { sdk, client } = useClient('projects');
+    const api = useNodesApi();
     // token → label ('' means "asked, no label exists"), so a group without a
     // display name is not looked up again on every render.
     const [labels, setLabels] = useState({});
@@ -69,8 +69,8 @@ export function TokenLabelProvider({ children }) {
             inFlight.current.add(token);
             try {
                 const id = token.slice(GROUP_PREFIX.length);
-                const res = await sdk.searchPrincipals({ client, query: { q: id, limit: 10 } });
-                const hit = (res?.data?.groups || []).find(g => g?.token === token);
+                const hits = await api.searchPrincipalDetails(id, 10);
+                const hit = hits.find(g => g?.token === token);
                 setLabels(prev => {
                     const next = { ...prev, [token]: hit?.label || '' };
                     known.current = next;
@@ -88,7 +88,7 @@ export function TokenLabelProvider({ children }) {
                 inFlight.current.delete(token);
             }
         });
-    }, [sdk, client]);
+    }, [api]);
 
     const value = useMemo(() => ({ labels, request }), [labels, request]);
     return <TokenLabelContext.Provider value={value}>{children}</TokenLabelContext.Provider>;
