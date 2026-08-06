@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Autocomplete, Loader, Stack, Text } from '@mantine/core';
-import { useClient } from '../providers/client.jsx';
+import { useNodesApi } from './api-nodes.jsx';
 
 /**
  * PrincipalTokenAutocomplete
@@ -24,42 +25,24 @@ import { useClient } from '../providers/client.jsx';
  *   limit?: number
  */
 export function PrincipalTokenAutocomplete({ value, onChange, onSelect, placeholder = 'e.g. group:cs-students', limit = 10 }) {
-    const { sdk, client } = useClient('projects');
-    const [groups, setGroups] = useState([]);
-    const [loading, setLoading] = useState(false);
-    // A directory that is down looks exactly like "no group matches" — both show
-    // an empty dropdown — so the failure is stated instead of swallowed.
-    const [failed, setFailed] = useState(false);
+    const api = useNodesApi();
     const [search, setSearch] = useState(value || '');
 
-    useEffect(() => {
-        if (!search) {
-            setGroups([]);
-            return;
-        }
+    // The search term is part of the cache key, so typing back to something
+    // already looked up answers from the cache instead of the network, and a
+    // slow response for an old term can no longer overwrite a newer one. That
+    // race was the reason the effect below carried its own bookkeeping.
+    const suggestionsQuery = useQuery({
+        queryKey: ['projects', 'principals', search, limit],
+        queryFn: () => api.searchPrincipalDetails(search, limit),
+        enabled: !!api && !!search,
+    });
 
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-                try {
-                    const res = await sdk.searchPrincipals({ client, query: { q: search, limit } });
-                    setGroups([
-                        ...(res?.data?.groups || []).filter(g => g?.token),
-                        ...(res?.data?.users || []).map(email => ({ token: `user:${email}`, description: 'Individual person' })),
-                    ]);
-                    setFailed(false);
-                } catch (err) {
-                    console.error('Error fetching group suggestions:', err);
-                    setGroups([]);
-                    setFailed(true);
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [search, client, sdk, limit]);
+    const groups = search ? (suggestionsQuery.data ?? []) : [];
+    const loading = suggestionsQuery.isFetching;
+    // A directory that is down looks exactly like "no group matches" — both show
+    // an empty dropdown — so the failure is stated instead of swallowed.
+    const failed = suggestionsQuery.isError;
 
     // Secondary line: "description (display name)", with either part omitted when
     // it is missing — imported groups usually carry only a description, since

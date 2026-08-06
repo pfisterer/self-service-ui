@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { Route, Switch, useLocation, useRoute, Redirect } from 'wouter';
+import { Route, Switch, useRoute, Redirect } from 'wouter';
 import { Container } from '@mantine/core';
 import { useAuth } from '/providers/auth.jsx';
 import { useClient } from '../providers/client.jsx';
@@ -24,7 +24,6 @@ export function useProjectConfig() {
 // which budgets are delegated downwards and projects hang as leaves.
 export function CloudProjectManagement() {
     const { client, sdk } = useClient('projects');
-    const [, navigate] = useLocation();
     const { user, dev_user, useDummyAuth } = useAuth();
     const [projectConfig, setProjectConfig] = useState(null);
     const { isRoot } = useCloudStatus();
@@ -48,7 +47,7 @@ export function CloudProjectManagement() {
             try {
                 const cfgRes = await sdk.getConfig({ client });
                 setProjectConfig(normalizeObjectResponse(cfgRes, defaultResponse));
-            } catch (_) {
+            } catch {
                 setProjectConfig(defaultResponse);
             }
         })();

@@ -1,69 +1,36 @@
-import { useEffect, useState } from 'react';
-import { apiErrorMessage } from '/helper/api-error.js';
+import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
-import { Alert, Badge, Button, Group, Loader, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
-import { Delayed } from '/helper/delayed.jsx';
-import { useClient } from '../providers/client.jsx';
-import { useErrorModal } from '/providers/error-modal.jsx';
+import { Alert, Badge, Button, Group, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
+import { useNodesApi } from './api-nodes.jsx';
+import { projectKeys } from './query-keys.js';
 import { COLOR } from './util-project.jsx';
 import { RoleSwitchButton } from './component-group-role-switcher.jsx';
 
 
 export function RootAdminView() {
-    const { client, sdk } = useClient('projects');
-    const { showError } = useErrorModal();
-    const [status, setStatus] = useState(null);
-    const [loaded, setLoaded] = useState(false);
-    const [loadFailed, setLoadFailed] = useState(false);
-    const [triggering, setTriggering] = useState(false);
-    const [triggerSuccess, setTriggerSuccess] = useState(false);
+    const api = useNodesApi();
 
-    const fetchStatus = async () => {
-        setLoadFailed(false);
-        try {
-            const res = await sdk.getAdminReconcileStatus({ client });
-            if (res.response?.status === 503) { setStatus(null); return; }
-            const err = apiErrorMessage(res);
-            if (err) { showError(err); setLoadFailed(true); } else { setStatus(res.data); }
-        } finally {
-            setLoaded(true);
-        }
-    };
+    const statusQuery = useQuery({
+        queryKey: projectKeys.rootStatus().concat('reconcile'),
+        queryFn: () => api.getReconcileStatus(),
+        enabled: !!api,
+    });
 
-    useEffect(() => { if (client && sdk) fetchStatus(); }, [client, sdk]);
-
-    const handleTrigger = async () => {
-        setTriggering(true);
-        setTriggerSuccess(false);
-        const res = await sdk.triggerAdminReconcile({ client });
-        const err = apiErrorMessage(res);
-        if (err) { showError(`Failed to trigger sync: ${err}`); } else { setTriggerSuccess(true); }
-        setTriggering(false);
-    };
+    const trigger = useApiMutation({
+        mutationFn: () => api.triggerReconcile(),
+        invalidates: [projectKeys.rootStatus()],
+    });
 
     // Loader only until the first status fetch resolves; the manual "Refresh"
     // button re-fetches without blanking the panel.
-    if (!loaded) {
-        return (
-            <Delayed>
-                <Group gap="xs" align="center">
-                    <Loader size="sm" />
-                    <Text size="sm">Loading sync status...</Text>
-                </Group>
-            </Delayed>
-        );
-    }
+    if (!api || statusQuery.isPending) return <Loading size="sm" />;
+    if (statusQuery.isError) return <LoadError query={statusQuery} title="Could not load sync status" />;
 
-    if (!loadFailed && status === null) {
+    // null (a 503 from the API) means the reconciler is switched off here.
+    const status = statusQuery.data;
+    if (status === null) {
         return (<Text size="sm" c="dimmed">Reconciler is disabled.</Text>);
-    }
-
-    if (loadFailed) {
-        return (
-            <Button size="sm" variant="light" leftSection={<RefreshCw size="14" />} onClick={fetchStatus}>
-                Retry
-            </Button>
-        );
     }
 
     const lastRun = status?.last_run_at ? new Date(status.last_run_at).toLocaleString() : '—';
@@ -79,14 +46,15 @@ export function RootAdminView() {
                         size="sm"
                         variant="light"
                         leftSection={<RefreshCw size="14" />}
-                        onClick={fetchStatus}
+                        onClick={() => statusQuery.refetch()}
+                        loading={statusQuery.isFetching}
                     >
                         Refresh
                     </Button>
                     <Button
                         size="sm"
-                        loading={triggering}
-                        onClick={handleTrigger}
+                        loading={trigger.isPending}
+                        onClick={() => trigger.mutate()}
                         disabled={status?.running}
                     >
                         Trigger Sync
@@ -94,7 +62,7 @@ export function RootAdminView() {
                 </Group>
             </Group>
 
-            {triggerSuccess ? (
+            {trigger.isSuccess ? (
                 <Alert color={COLOR.positive}>
                     Sync triggered. Refresh status in a moment.
                 </Alert>

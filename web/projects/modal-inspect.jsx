@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AlertCircle, ArrowRight, ArrowRightLeft, Check, FileText, FolderInput, LogOut, Pencil, Rocket, X } from 'lucide-react';
 import { Badge, Button, Divider, Group, Modal, Paper, Stack, Table, Tabs, Text, Timeline } from '@mantine/core';
 import dayjs from 'dayjs';
@@ -211,14 +211,11 @@ function NodeHistoryPanel({ node, resources }) {
  * directly on the timeline instead of making the user switch tabs.
  */
 export function NodeInspectModal({ opened, onClose, node, resources, initialTab = TAB_DETAILS }) {
-    const [tab, setTab] = useState(initialTab);
-
     // Opening again — for another node, or via the other trigger — must land on
-    // the requested tab, not on whatever was open the last time. Hooks run before
-    // the null check below, which is why the guard is not at the top.
-    useEffect(() => {
-        if (opened) setTab(initialTab);
-    }, [opened, initialTab, node?.id]);
+    // the requested tab, not on whatever was open the last time. The call sites
+    // key this modal on (action, node), so a fresh open is a fresh mount and
+    // `initialTab` is simply the initial state.
+    const [tab, setTab] = useState(initialTab);
 
     if (!node) return null;
     const hasHistory = (node.history || []).length > 0;

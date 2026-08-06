@@ -42,6 +42,9 @@ export function DynamicZonesApiSwagger() {
                 displayOperationId: false
             });
         }
+        // Mount-only on purpose: SwaggerUIBundle takes over the container DOM
+        // node itself, so re-running this would build a second UI inside it.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Render container div

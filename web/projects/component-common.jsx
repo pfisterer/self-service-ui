@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Calendar } from 'lucide-react';
 import { DatePickerInput } from '@mantine/dates';
 import { Badge, Box, Checkbox, Group, NumberInput, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
@@ -313,45 +313,39 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
     const currentDate = value;
     // No date means no duration to show: a number standing next to an empty date
     // field claims something that is not stored anywhere.
-    const [durationValue, setDurationValue] = useState(currentDate ? DEFAULT_DURATION_DAYS : null);
-    const [durationUnit, setDurationUnit] = useState('days');
-    // Once the user picks a unit it sticks. Deriving it from the date instead
-    // fights them: "Weeks" + 4 is 28 days, and the thresholds below would snap
-    // that straight back to "Days" — the number jumped and the unit reset on
-    // every keystroke.
-    const [unitPicked, setUnitPicked] = useState(false);
+    // The unit the user PICKED, or null for "whichever states the span in the
+    // fewest digits". Picking one has to stick: deriving it from the date on
+    // every render fights the user, because "Weeks" + 4 is 28 days and the
+    // thresholds below would snap that straight back to "Days" — the number
+    // jumped and the unit reset on every keystroke.
+    //
+    // That protection used to exist as a `unitPicked` flag which nothing ever
+    // set to true, so it never worked; the duration was written into state from
+    // an effect that also re-chose the unit. Both are derived here instead.
+    const [pickedUnit, setPickedUnit] = useState(null);
+
     const selectData = [
         { value: 'days', label: 'Days' },
         { value: 'weeks', label: 'Weeks' },
         { value: 'months', label: 'Months' },
     ];
 
-    useEffect(() => {
-        if (!currentDate) {
-            setDurationValue(null);
-            return;
-        }
-        const diffDays = Math.ceil((new Date(currentDate) - new Date()) / (1000 * 60 * 60 * 24));
-        if (unitPicked) {
-            // Keep the chosen unit, only restate the date in it.
-            setDurationValue(durationUnit === 'weeks' ? Math.round(diffDays / 7)
-                : durationUnit === 'months' ? Math.round(diffDays / 30)
-                    : diffDays);
-            return;
-        }
-        // No choice made yet (opening the form, or a date set from elsewhere):
-        // pick the unit that states the span in the fewest digits.
-        if (diffDays < 60) {
-            setDurationValue(diffDays);
-            setDurationUnit('days');
-        } else if (diffDays < 365) {
-            setDurationValue(Math.round(diffDays / 7));
-            setDurationUnit('weeks');
-        } else {
-            setDurationValue(Math.round(diffDays / 30));
-            setDurationUnit('months');
-        }
-    }, [currentDate, unitPicked, durationUnit]);
+    const daysUntil = currentDate
+        ? Math.ceil((new Date(currentDate) - new Date()) / (1000 * 60 * 60 * 24))
+        : null;
+
+    const autoUnit = daysUntil === null ? 'days'
+        : daysUntil < 60 ? 'days'
+            : daysUntil < 365 ? 'weeks'
+                : 'months';
+    const durationUnit = pickedUnit ?? autoUnit;
+
+    // No date means no duration to show: a number standing next to an empty
+    // date field claims something that is not stored anywhere.
+    const durationValue = daysUntil === null ? null
+        : durationUnit === 'weeks' ? Math.round(daysUntil / 7)
+            : durationUnit === 'months' ? Math.round(daysUntil / 30)
+                : daysUntil;
 
     const dateFromDuration = (val, unit) => {
         const days = unit === 'weeks' ? val * 7 : unit === 'months' ? val * 30 : val;
@@ -391,10 +385,10 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
                 value={durationValue ?? ''}
                 placeholder="—"
                 disabled={!hasEndDate}
-                onChange={(v) => { setDurationValue(v); updateDateFromDuration(v, durationUnit); }} />
+                onChange={(v) => updateDateFromDuration(v, durationUnit)} />
             <Select size="xs" label="Unit" w={110} value={durationUnit} data={selectData}
                 disabled={!hasEndDate}
-                onChange={(u) => { setDurationUnit(u); updateDateFromDuration(durationValue, u); }} />
+                onChange={(u) => { setPickedUnit(u); updateDateFromDuration(durationValue, u); }} />
         </Group>
     );
 

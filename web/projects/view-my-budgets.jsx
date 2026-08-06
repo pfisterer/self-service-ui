@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Inbox, Search, X } from 'lucide-react';
 import { ActionIcon, Alert, Badge, Button, Checkbox, Grid, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, useTree } from '@mantine/core';
-import { Delayed } from '/helper/delayed.jsx';
+import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useDebouncedValue } from '@mantine/hooks';
 import { PAGE_SIZE, useNodesApi } from './api-nodes.jsx';
+import { projectKeys } from './query-keys.js';
 import { BudgetCard } from './card-budget.jsx';
 import { ProjectCard } from './card-project.jsx';
 import { BudgetTree, NodeResultList, budgetsToTreeData } from './component-budget-tree.jsx';
@@ -19,7 +22,7 @@ import { RejectModal } from './modal-reject.jsx';
 import { TransferOwnerModal } from './modal-transfer-owner.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
-import { COLOR, formatError, getAuthUserEmail, isBudget, REQUEST_TYPES, requestType, useAsyncRefresh } from './util-project.jsx';
+import { COLOR, formatError, getAuthUserEmail, isBudget, REQUEST_TYPES, requestType } from './util-project.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
 // How long typing pauses before a search is sent.
@@ -39,8 +42,11 @@ const SEARCH_DEBOUNCE_MS = 300;
 // Search and the waiting inbox are flat because the tree is no longer loaded in
 // full: it cannot be filtered in the browser, and unfolding it down to a few
 // matches would be slower and harder to read than naming their budget.
+const EMPTY_PAGE = { items: [], total: 0 };
+
 export function MyBudgetsView() {
     const api = useNodesApi();
+    const queryClient = useQueryClient();
     const { user } = useAuth();
     const { showError } = useErrorModal();
     const confirm = useConfirm();
@@ -48,21 +54,34 @@ export function MyBudgetsView() {
     const cloudStatus = useCloudStatus();
     const userEmail = getAuthUserEmail(user);
 
-    const [myBudgets, setMyBudgets] = useState({ items: [], total: 0 });
-    const [eligibleBudgets, setEligibleBudgets] = useState([]);
+    const [includeSubtree, setIncludeSubtree] = useState(false);
+    const scope = includeSubtree ? 'subtree' : 'direct';
+
+    // The three lists this view is built from. Independent queries, so a
+    // failing eligible-budget lookup does not blank out the tree.
+    const [myBudgetsQuery, eligibleQuery, waitingQuery] = useQueries({
+        queries: [
+            { queryKey: projectKeys.myBudgets(), queryFn: () => api.listMyBudgets(), enabled: !!api },
+            { queryKey: projectKeys.eligibleForMe(), queryFn: () => api.listEligibleForMe(), enabled: !!api },
+            { queryKey: projectKeys.toManage(scope), queryFn: () => api.listToManage(scope), enabled: !!api },
+        ],
+    });
+    // `?? EMPTY_PAGE` rather than an inline literal: a fresh object each render
+    // would defeat every useMemo downstream that keys on this.
+    const myBudgets = myBudgetsQuery.data ?? EMPTY_PAGE;
+    const waiting = waitingQuery.data ?? EMPTY_PAGE;
     // Budgets that accept a request for a sub-budget — a budget may take project
     // requests while refusing sub-budgets (allow_sub_budget_requests). Offering
     // one anyway would produce a request the server rejects.
     const budgetRequestTargets = useMemo(
-        () => eligibleBudgets.filter(b => b.allow_sub_budget_requests !== false),
-        [eligibleBudgets]);
+        () => (eligibleQuery.data?.items ?? []).filter(b => b.allow_sub_budget_requests !== false),
+        [eligibleQuery.data]);
     // The pages of children loaded so far, per node: { items, total }. Expansion,
     // per-node loading and load errors are owned by the Mantine tree controller.
     const [childrenMap, setChildrenMap] = useState(new Map());
-    const [selected, setSelected] = useState(null);
+    const [selectedNode, setSelectedNode] = useState(null);
     const [search, setSearch] = useState('');
-    const [results, setResults] = useState(null); // { items, total } | null
-    const [searchBusy, setSearchBusy] = useState(false);
+    const [extraResults, setExtraResults] = useState([]);
     // '' = the whole tree; 'waiting' = everything that needs a decision; the
     // rest narrow that down to one kind of request (see REQUEST_TYPES).
     const [filter, setFilter] = useState('');
@@ -71,9 +90,6 @@ export function MyBudgetsView() {
     // what nobody else manages; a request inside a delegated sub-budget belongs
     // to its manager and would otherwise bury the own ones (a root admin would
     // see the whole organization).
-    const [waiting, setWaiting] = useState({ items: [], total: 0 });
-    const [includeSubtree, setIncludeSubtree] = useState(false);
-    const scope = includeSubtree ? 'subtree' : 'direct';
     const dlg = useNodeDialog();
     const [budgetForm, setBudgetForm] = useState(null); // { mode, parent?, node? } | null
 
@@ -82,8 +98,16 @@ export function MyBudgetsView() {
     // as a top-level root would show those nested budgets twice. Keep only the
     // budgets whose direct parent is not itself in the managed set; the rest
     // appear in their natural place when their parent is expanded.
-    const managedIds = new Set(myBudgets.items.map(b => b.id));
-    const rootBudgets = myBudgets.items.filter(b => !managedIds.has(b.parent_id));
+    const rootBudgets = useMemo(() => {
+        const managedIds = new Set(myBudgets.items.map(b => b.id));
+        return myBudgets.items.filter(b => !managedIds.has(b.parent_id));
+    }, [myBudgets]);
+
+    // Nothing picked yet falls back to the first root, so the detail panel is
+    // never empty for someone who manages something. Derived rather than written
+    // into state when the roots arrive: an effect that "selects the first one"
+    // also has to decide what to do when the list changes under it.
+    const selected = selectedNode ?? rootBudgets[0] ?? null;
 
     // Lazy loading: the tree calls this the first time a node with children is
     // opened, and it fetches the FIRST page only. Errors propagate on purpose —
@@ -119,43 +143,41 @@ export function MyBudgetsView() {
     // usage bars and statuses are fresh after every action. Each expanded node
     // is refetched with as many rows as were loaded, so a refresh does not
     // silently fold pages the user opened back up.
-    const { loaded, refresh } = useAsyncRefresh(async () => {
-        const [budgets, eligible, toManage] = await Promise.all([
-            api.listMyBudgets(),
-            api.listEligibleForMe(),
-            api.listToManage(scope),
-        ]);
-        setMyBudgets(budgets);
-        setEligibleBudgets(eligible.items);
-        setWaiting(toManage);
-        // The header badge shows the same number; a decision made here must not
-        // leave it stale.
-        cloudStatus.refresh();
+    // Reloads the lists AND everything currently visible in the tree, so the
+    // usage bars and statuses are fresh after every action. Each expanded node
+    // is refetched with as many rows as were loaded, so a refresh does not
+    // silently fold pages the user opened back up.
+    //
+    // The lists come from the query cache (a write invalidates them on its own);
+    // what still has to be done by hand is the lazily loaded tree, which is not
+    // server state a key can describe — it is "the pages this user happened to
+    // open".
+    const refresh = async () => {
+        try {
+            await queryClient.invalidateQueries({ queryKey: projectKeys.tree() });
+            // The header badge shows the same number; a decision made here must
+            // not leave it stale.
+            cloudStatus.refresh();
 
-        const ids = Object.entries(tree.expandedState).filter(([, open]) => open).map(([id]) => id);
-        const pages = await Promise.all(ids.map(id => {
-            const shown = childrenMap.get(id)?.items.length || 0;
-            const limit = Math.max(PAGE_SIZE, Math.ceil(shown / PAGE_SIZE) * PAGE_SIZE);
-            return api.listChildren(id, { limit }).catch(() => null);
-        }));
-        const map = new Map();
-        ids.forEach((id, i) => { if (pages[i]) map.set(id, pages[i]); });
-        setChildrenMap(map);
+            const ids = Object.entries(tree.expandedState).filter(([, open]) => open).map(([id]) => id);
+            const pages = await Promise.all(ids.map(id => {
+                const shown = childrenMap.get(id)?.items.length || 0;
+                const limit = Math.max(PAGE_SIZE, Math.ceil(shown / PAGE_SIZE) * PAGE_SIZE);
+                return api.listChildren(id, { limit }).catch(() => null);
+            }));
+            const map = new Map();
+            ids.forEach((id, i) => { if (pages[i]) map.set(id, pages[i]); });
+            setChildrenMap(map);
 
-        // Refresh the selected node too; drop the selection if it vanished
-        // (deleted, released, moved out of sight).
-        if (selected) {
-            setSelected(await api.getNode(selected.id).catch(() => null));
+            // Refresh the selected node too; drop the selection if it vanished
+            // (deleted, released, moved out of sight).
+            if (selectedNode) {
+                setSelectedNode(await api.getNode(selectedNode.id).catch(() => null));
+            }
+        } catch (e) {
+            showError(formatError(e));
         }
-    }, showError);
-
-    useEffect(() => { if (api) refresh(); }, [api, userEmail]);
-
-    // Select the first budget once the roots arrive, so the panel is never
-    // empty for users who manage something.
-    useEffect(() => {
-        if (!selected && rootBudgets.length > 0) setSelected(rootBudgets[0]);
-    }, [myBudgets]);
+    };
 
     // The first level is always open. Collapsed, the tree shows a manager their
     // own budgets and nothing about what is in them — and the first click is
@@ -176,7 +198,11 @@ export function MyBudgetsView() {
         openable
             .filter(b => !childrenMap.has(b.id))
             .forEach(b => { loadChildren(b.id).catch(() => { }); });
-    }, [myBudgets]);
+        // Deliberately keyed on the ROOTS only. `tree` and `childrenMap` are
+        // read to decide what still has to be opened/loaded; listing them would
+        // re-run this on every expand and fight the user's own collapsing.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [rootBudgets]);
 
     // ── Search ──────────────────────────────────────────────────────────────
     // Server-side: the tree holds only the pages that were opened, so there is
@@ -185,28 +211,26 @@ export function MyBudgetsView() {
     const searching = query.length > 0;
     const filtering = filter !== '';
 
-    useEffect(() => {
-        if (!api) return;
-        if (!searching) { setResults(null); return; }
-        let cancelled = false;
-        setSearchBusy(true);
-        const timer = setTimeout(async () => {
-            try {
-                const page = await api.searchNodes(query);
-                if (!cancelled) setResults(page);
-            } catch (e) {
-                if (!cancelled) showError(formatError(e));
-            } finally {
-                if (!cancelled) setSearchBusy(false);
-            }
-        }, SEARCH_DEBOUNCE_MS);
-        return () => { cancelled = true; clearTimeout(timer); };
-    }, [query, api, userEmail]);
+    // Debounced through the cache key instead of a timer that writes state:
+    // typing back to an earlier term answers from the cache, and a slow response
+    // for an old term can no longer overwrite a newer one.
+    const [debouncedQuery] = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
+    const searchQuery = useQuery({
+        queryKey: projectKeys.search(debouncedQuery, 0),
+        queryFn: () => api.searchNodes(debouncedQuery),
+        enabled: !!api && debouncedQuery.length > 0,
+    });
+    // `extraResults` holds the pages appended by "show more"; the query owns the
+    // first page, so a new search discards them by itself.
+    const results = searching && searchQuery.data
+        ? { items: [...searchQuery.data.items, ...extraResults], total: searchQuery.data.total }
+        : null;
+    const searchBusy = searching && (searchQuery.isFetching || query !== debouncedQuery);
 
     const loadMoreResults = async () => {
         try {
             const page = await api.searchNodes(query, { offset: results.items.length });
-            setResults(r => ({ items: [...r.items, ...page.items], total: page.total }));
+            setExtraResults(prev => [...prev, ...page.items]);
         } catch (e) {
             showError(formatError(e));
         }
@@ -216,6 +240,7 @@ export function MyBudgetsView() {
     // would silently mean two filters at once, and neither control would say so.
     const changeSearch = (value) => {
         setSearch(value);
+        setExtraResults([]);
         if (value.trim()) setFilter('');
     };
     const changeFilter = (value) => {
@@ -225,19 +250,13 @@ export function MyBudgetsView() {
 
     const treeData = useMemo(
         () => budgetsToTreeData(rootBudgets, childrenMap),
-        [myBudgets, childrenMap],
+        [rootBudgets, childrenMap],
     );
 
-    // Widening the scope only changes the inbox, not the tree — so reload just
-    // that instead of going through the full refresh.
-    const changeScope = async (subtree) => {
-        setIncludeSubtree(subtree);
-        try {
-            setWaiting(await api.listToManage(subtree ? 'subtree' : 'direct'));
-        } catch (e) {
-            showError(formatError(e));
-        }
-    };
+    // Widening the scope only changes the inbox, not the tree. The scope is part
+    // of that list's query key, so switching it IS the reload — no separate
+    // fetch, and the previous scope stays cached for switching back.
+    const changeScope = (subtree) => setIncludeSubtree(subtree);
 
     // Counts come from the inbox, not from the loaded tree: they must be right
     // before anything is expanded.
@@ -252,7 +271,7 @@ export function MyBudgetsView() {
 
     // Clicking a row selects it. Expanding is handled by the tree itself
     // (expandOnClick), which also triggers onLoadChildren on first open.
-    const select = (node) => setSelected(node);
+    const select = (node) => setSelectedNode(node);
 
     const handleDelete = async (node) => {
         const ok = await confirm({
@@ -276,7 +295,8 @@ export function MyBudgetsView() {
         dlg.open(action, node);
     };
 
-    if (!config || !loaded) return (<Delayed><Loader /></Delayed>);
+    if (!api || !config || myBudgetsQuery.isPending) return <Loading />;
+    if (myBudgetsQuery.isError) return <LoadError query={myBudgetsQuery} title="Could not load your budgets" />;
 
     const resources = config.resources || [];
     // Move targets: every budget visible in the tree.
@@ -486,7 +506,7 @@ export function MyBudgetsView() {
             <AdoptModal key={dlg.key} opened={dlg.is('adopt')} onClose={dlg.close} onDone={refresh}
                 resources={resources} node={dlg.node} myBudgets={myBudgets.items} />
             {/* One modal for both triggers: the History button opens it on that tab. */}
-            <NodeInspectModal opened={dlg.is('details') || dlg.is('history')}
+            <NodeInspectModal key={dlg.key} opened={dlg.is('details') || dlg.is('history')}
                 initialTab={dlg.is('history') ? TAB_HISTORY : TAB_DETAILS}
                 onClose={dlg.close} node={dlg.node} resources={resources} />
         </Stack>

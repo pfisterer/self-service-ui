@@ -71,7 +71,10 @@ export function AuthProvider({ children }) {
                 setLoading(false);
             }
         })();
-        // Intentionally not depending on `user` — the effect must not re-run on login.
+        // Intentionally not depending on `user` — the effect must not re-run on
+        // login, which is exactly what it sets. (`urlParams` is derived from the
+        // location and is read once, on the same grounds.)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [useDummyAuth, emailParam]);
 
     // Dummy (dev) mode: login/logout toggle the local user (preview signed-out state).

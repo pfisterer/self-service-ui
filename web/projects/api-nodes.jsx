@@ -122,10 +122,47 @@ export function useNodesApi() {
             deleteNode: async (id) =>
                 unwrapVoid(await sdk.deleteNode({ client, path: { id } })),
 
+            // ── Root-admin surface ───────────────────────────────────────
+            // Role-switch eligibility doubles as "is a root admin".
+            getRoleSwitch: async () => unwrapObject(await sdk.getRoleSwitch({ client })),
+            // Only the COUNT is wanted, so ask for one row: the listing reports
+            // how many matches it was cut from, which makes the badge exact
+            // without fetching a single row it would ever show.
+            countToManage: async (scope = 'direct') =>
+                unwrapPage(await sdk.listNodesToManage({ client, query: { limit: 1, offset: 0, scope } })).total,
+            getReconcileStatus: async () => {
+                const res = await sdk.getAdminReconcileStatus({ client });
+                // 503 = the reconciler is switched off in this environment. Not
+                // an error: the panel simply has nothing to show.
+                if (res.response?.status === 503) return null;
+                return unwrapObject(res);
+            },
+            triggerReconcile: async () => unwrapObject(await sdk.triggerAdminReconcile({ client })),
+            clearRoleSwitch: async () => unwrapObject(await sdk.clearRoleSwitch({ client })),
+            setRoleSwitch: async (body) =>
+                unwrapObject(await sdk.setRoleSwitch({ client, body, headers: JSON_HEADERS })),
+            // Impersonation candidates come from the same principal search that
+            // fills every token field — there is no separate "assumable
+            // identities" list, because it would expose the same addresses
+            // behind a second door.
+            searchIdentities: async (q, limit) => {
+                const data = unwrapObject(await sdk.searchPrincipals({ client, query: { q, limit } }));
+                return (data?.users || []).map(email => ({ email, label: email }));
+            },
+
             // ── Principal search (token pickers) ─────────────────────────
             // Returns ready-to-use tokens: groups (matched on name, display name
             // or description) followed by users (matched on their email address
             // only, and only for a non-empty query — staff are not browsable).
+            // Same endpoint as searchPrincipals, but keeping the group labels
+            // and descriptions the autocomplete shows under each option.
+            searchPrincipalDetails: async (q, limit = 10) => {
+                const data = unwrapObject(await sdk.searchPrincipals({ client, query: { q, limit } }));
+                return [
+                    ...(data?.groups || []).filter(g => g?.token),
+                    ...(data?.users || []).map(email => ({ token: `user:${email}`, description: 'Individual person' })),
+                ];
+            },
             searchPrincipals: async (q, limit = 50) => {
                 const res = await sdk.searchPrincipals({ client, query: { q, limit } });
                 const err = apiErrorMessage(res);

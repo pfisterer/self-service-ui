@@ -79,6 +79,10 @@ export function ClientProvider({ children, name = 'dyndns', baseURL }) {
                 setState(s => ({ ...s, error: { message: 'Load failed', details: e.message } }));
             }
         })();
+        // `auth.useDummyAuth` is read inside the interceptors but is a build-time
+        // constant (import.meta.env.DEV && config), so it cannot change while
+        // this provider is mounted; listing it would only rebuild the client.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [auth?.loading, auth?.user, baseURL, auth.dev_user]);
 
     const newValue = { ...parentContext, [name]: state };

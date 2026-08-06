@@ -1,6 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '/providers/auth.jsx';
-import { useClient } from '../providers/client.jsx';
+import { useNodesApi } from './api-nodes.jsx';
+import { projectKeys } from './query-keys.js';
 
 // What the header has to know about the cloud section without opening it:
 //
@@ -17,40 +19,43 @@ const CloudStatusContext = createContext(null);
 const EMPTY = { isRoot: false, pending: 0, refresh: () => {} };
 
 export function CloudStatusProvider({ children }) {
-    const { sdk, client } = useClient('projects');
+    const api = useNodesApi();
     const { user } = useAuth();
-    const [state, setState] = useState({ isRoot: false, pending: 0 });
 
-    const refresh = useCallback(async () => {
-        if (!client || !sdk || !user) return;
-        // Role-switch eligibility is the proxy for "is a root admin": `allowed`
-        // reflects the REAL caller (it stays true while impersonating, so they
-        // can still reset), but an impersonated identity has dropped root, so
-        // the entry must follow the impersonated user instead.
-        const [role, toManage] = await Promise.allSettled([
-            sdk.getRoleSwitch({ client }),
-            // 'direct': the badge counts what is this user's to decide. Requests
-            // inside delegated sub-budgets belong to their manager — counting
-            // them would nag a root admin with the whole organization.
-            //
-            // limit=1 because only the count is wanted: the listing reports how
-            // many matches it was cut from, so the badge is exact without
-            // fetching a single row it would ever show.
-            sdk.listNodesToManage({ client, query: { limit: 1, offset: 0, scope: 'direct' } }),
-        ]);
-        setState({
-            isRoot: role.status === 'fulfilled'
-                && !!role.value?.data?.allowed
-                && !role.value?.data?.impersonated_user,
-            pending: toManage.status === 'fulfilled'
-                ? (toManage.value?.data?.total ?? 0)
-                : 0,
-        });
-    }, [client, sdk, user]);
+    // Two independent questions, answered together and cached under one key so
+    // the header does not re-ask on every render. Promise.allSettled keeps the
+    // old behaviour: either half failing degrades that half to its default
+    // rather than emptying the badge.
+    const statusQuery = useQuery({
+        queryKey: projectKeys.rootStatus(),
+        queryFn: async () => {
+            const [role, pending] = await Promise.allSettled([
+                // `allowed` reflects the REAL caller (it stays true while
+                // impersonating, so they can still reset), but an impersonated
+                // identity has dropped root, so the entry follows the
+                // impersonated user instead.
+                api.getRoleSwitch(),
+                // 'direct': what is this user's to decide. Requests inside
+                // delegated sub-budgets belong to their manager — counting them
+                // would nag a root admin with the whole organization.
+                api.countToManage('direct'),
+            ]);
+            return {
+                isRoot: role.status === 'fulfilled'
+                    && !!role.value?.allowed
+                    && !role.value?.impersonated_user,
+                pending: pending.status === 'fulfilled' ? (pending.value ?? 0) : 0,
+            };
+        },
+        enabled: !!api && !!user,
+    });
 
-    useEffect(() => { refresh(); }, [refresh]);
+    const value = useMemo(() => ({
+        isRoot: statusQuery.data?.isRoot ?? false,
+        pending: statusQuery.data?.pending ?? 0,
+        refresh: statusQuery.refetch,
+    }), [statusQuery.data, statusQuery.refetch]);
 
-    const value = useMemo(() => ({ ...state, refresh }), [state, refresh]);
     return <CloudStatusContext.Provider value={value}>{children}</CloudStatusContext.Provider>;
 }
 

@@ -1,9 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { apiErrorMessage } from '/helper/api-error.js';
+import { createContext, useContext, useMemo, useState } from 'react';
 import { ActionIcon, Badge, Button, Group, Loader, Paper, Text, TextInput } from '@mantine/core';
 import { Repeat, X } from 'lucide-react';
-import { useClient } from '../providers/client.jsx';
-import { useErrorModal } from '/providers/error-modal.jsx';
+import { useQuery } from '@tanstack/react-query';
+import { useDebouncedValue } from '@mantine/hooks';
+import { useNodesApi } from './api-nodes.jsx';
+import { projectKeys } from './query-keys.js';
+import { useApiMutation } from '/helper/query-state.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { COLOR } from './util-project.jsx';
 
@@ -23,67 +25,47 @@ const MAX_PICKS = 10;
 const RoleSwitchContext = createContext(null);
 
 export function RoleSwitchProvider({ children }) {
-    const { client, sdk } = useClient('projects');
-    const { showError } = useErrorModal();
-    const [loading, setLoading] = useState(true);
-    const [state, setState] = useState(null);
-    const [updating, setUpdating] = useState(false);
-    const [identities, setIdentities] = useState([]);
+    const api = useNodesApi();
     const [query, setQuery] = useState('');
+    const [debouncedQuery] = useDebouncedValue(query, 250);
     const [expanded, setExpanded] = useState(false);
     const projectConfig = useProjectConfig();
 
-    const refreshState = async () => {
-        setLoading(true);
-        const res = await sdk.getRoleSwitch({ client });
-        const err = apiErrorMessage(res);
-        if (err) { showError(err); } else { setState(res?.data || {}); }
-        setLoading(false);
-    };
+    const stateQuery = useQuery({
+        queryKey: projectKeys.rootStatus().concat('role-switch'),
+        queryFn: () => api.getRoleSwitch(),
+        enabled: !!api,
+    });
+    const state = stateQuery.data;
+    const loading = stateQuery.isPending;
 
-    // Full-identity impersonation (root admins only). Suggestions come from the
-    // same principal search that fills every token field — there is no separate
-    // "assumable identities" list, because it would expose exactly the same
-    // addresses behind a second door. Consequence: an empty query yields nothing
-    // (the API does not hand out people without something to match on), so the
-    // chips appear as soon as you type. One over MAX_PICKS is requested so "there
-    // are more" can be stated without asking for a count.
-    const fetchIdentities = async (q) => {
-        if (!state?.allowed || !q) {
-            setIdentities([]);
-            return;
-        }
-        const res = await sdk.searchPrincipals({ client, query: { q, limit: MAX_PICKS + 1 } });
-        const err = apiErrorMessage(res);
-        if (err) { showError(err); return; }
-        setIdentities((res?.data?.users || []).map(email => ({ email, label: email })));
-    };
+    // Debounced through the cache key rather than a timer in an effect: typing
+    // back to an earlier term is answered from the cache, and a slow response
+    // for an old term cannot overwrite a newer one. One over MAX_PICKS is
+    // requested so "there are more" can be stated without asking for a count.
+    const identitiesQuery = useQuery({
+        queryKey: ['projects', 'identities', debouncedQuery.trim()],
+        queryFn: () => api.searchIdentities(debouncedQuery.trim(), MAX_PICKS + 1),
+        enabled: !!api && !!state?.allowed && !!debouncedQuery.trim(),
+    });
+    const identitiesData = identitiesQuery.data;
 
-    const impersonate = async (email) => {
-        setUpdating(true);
-        const res = await sdk.setRoleSwitch({
-            client,
-            body: { impersonate_user: email },
-            headers: { 'Content-Type': 'application/json' },
-        });
-        const err = apiErrorMessage(res);
-        if (err) { showError(err); setUpdating(false); return; }
-        window.location.reload();
-    };
+    const impersonateMutation = useApiMutation({
+        mutationFn: (email) => api.setRoleSwitch({ impersonate_user: email }),
+        // A full reload is the point: every view has to re-read the world as the
+        // impersonated user, so there is nothing worth invalidating first.
+        onSuccess: () => window.location.reload(),
+    });
+    const clearMutation = useApiMutation({
+        mutationFn: () => api.clearRoleSwitch(),
+        onSuccess: () => window.location.reload(),
+    });
+    const updating = impersonateMutation.isPending || clearMutation.isPending;
+    const impersonate = (email) => impersonateMutation.mutate(email);
 
     const submitQuery = () => {
         if (submitTarget) impersonate(submitTarget);
     };
-
-    useEffect(() => {
-        refreshState();
-    }, [client]);
-
-    // Debounced so typing does not fire one directory search per keystroke.
-    useEffect(() => {
-        const timer = setTimeout(() => fetchIdentities(query.trim()), 250);
-        return () => clearTimeout(timer);
-    }, [state?.allowed, query]);
 
     const selectedGroup = useMemo(() => state?.override_group_token || null, [state]);
     const impersonatedUser = useMemo(() => state?.impersonated_user || null, [state]);
@@ -93,7 +75,10 @@ export function RoleSwitchProvider({ children }) {
     // runs with dummy auth, i.e. localhost — those are fictional, so they may be
     // listed without a query). Both click through to impersonate() — one
     // mechanism, so dev and prod behave identically.
-    const quickPicks = useMemo(() => {
+    // Not memoised: this merges at most a dozen entries, and the previous
+    // useMemo could not be preserved by the compiler anyway.
+    const quickPicks = (() => {
+        const identities = state?.allowed ? (identitiesData ?? []) : [];
         const byEmail = new Map();
         for (const id of identities) {
             if (id?.email) byEmail.set(id.email.toLowerCase(), { email: id.email, label: id.label || id.email });
@@ -104,7 +89,7 @@ export function RoleSwitchProvider({ children }) {
             if (email && !byEmail.has(key)) byEmail.set(key, { email, label: email });
         }
         return [...byEmail.values()].sort((a, b) => a.label.localeCompare(b.label));
-    }, [identities, projectConfig?.dummyDevUsers]);
+    })();
 
     // The server already narrowed the identities; only the locally configured dev
     // users still need filtering. Never more than MAX_PICKS chips on screen.
@@ -130,13 +115,7 @@ export function RoleSwitchProvider({ children }) {
     const isSwitched = Boolean(impersonatedUser || selectedGroup);
     const open = expanded || isSwitched || DEV_MODE;
 
-    const clearOverride = async () => {
-        setUpdating(true);
-        const res = await sdk.clearRoleSwitch({ client });
-        const err = apiErrorMessage(res);
-        if (err) { showError(err); setUpdating(false); return; }
-        window.location.reload();
-    };
+    const clearOverride = () => clearMutation.mutate();
 
     // Everything the two consumers need, so neither owns state of its own. Both
     // draw nothing until the role switch is known to be available — for everyone
