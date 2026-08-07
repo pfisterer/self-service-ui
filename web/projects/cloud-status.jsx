@@ -20,7 +20,7 @@ import { projectKeys } from './query-keys.js';
 // what just happened.
 
 const CloudStatusContext = createContext(null);
-const EMPTY = { isRoot: false, pending: 0, hasBudgets: false, refresh: () => {} };
+const EMPTY = { isRoot: false, pending: 0, hasBudgets: false, ready: false, refresh: () => {} };
 
 export function CloudStatusProvider({ children }) {
     const api = useNodesApi();
@@ -63,8 +63,14 @@ export function CloudStatusProvider({ children }) {
         isRoot: statusQuery.data?.isRoot ?? false,
         pending: statusQuery.data?.pending ?? 0,
         hasBudgets: statusQuery.data?.hasBudgets ?? false,
+        // Whether the answers above are KNOWN yet. Until the query settles,
+        // isRoot is false because nothing has been asked — not because the user
+        // is not root. Anything that acts on the difference (a route that
+        // unregisters, a redirect) has to wait for this, or it fires on every
+        // page load before the answer arrives.
+        ready: statusQuery.isSuccess || statusQuery.isError,
         refresh: statusQuery.refetch,
-    }), [statusQuery.data, statusQuery.refetch]);
+    }), [statusQuery.data, statusQuery.isSuccess, statusQuery.isError, statusQuery.refetch]);
 
     return <CloudStatusContext.Provider value={value}>{children}</CloudStatusContext.Provider>;
 }

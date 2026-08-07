@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
+import { Loading } from '/helper/query-state.jsx';
 import { RoleSwitchPanel } from './component-group-role-switcher.jsx';
 import { TokenLabelProvider } from './token-labels.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
@@ -31,7 +32,7 @@ const EMPTY_CONFIG = { resources: [], openstackRoles: [], dummyDevUsers: [] };
 
 export function CloudProjectManagement() {
     const api = useNodesApi();
-    const { isRoot } = useCloudStatus();
+    const { isRoot, ready } = useCloudStatus();
 
     // Which section is showing — used to key the error boundary, so a crash in
     // one section resets when the user navigates to another.
@@ -90,17 +91,22 @@ export function CloudProjectManagement() {
                             <Route path="/budgets" component={MyBudgetsView} />
                             {isRoot ? <Route path="/admin-sync" component={RootAdminView} /> : null}
                             <Route path="/api-doc" component={CloudProjectsApiSwagger} />
-                            {/* Catch-all, not just "/": the admin route above
-                                UNREGISTERS the moment isRoot goes false, which is
-                                exactly what impersonating a student does — and the
-                                admin was standing on it when they clicked. Without
-                                this, the content area goes blank on a URL that no
-                                longer matches anything, and the way back (the role
-                                switch panel above) is all that is left on the page.
-                                Land on My Projects instead: it is the page the
-                                impersonated user would have opened anyway. */}
-                            <Route>
+                            {/* /projects itself, before anything is known. */}
+                            <Route path="/">
                                 <Redirect to="/projects" replace />
+                            </Route>
+                            {/* Catch-all: the admin route above UNREGISTERS the
+                                moment isRoot goes false, which is what impersonating
+                                a student does — from the page the admin was standing
+                                on. Without this the content area goes blank on a URL
+                                that no longer matches anything.
+
+                                Only once the status is KNOWN, though. isRoot starts
+                                false on every page load, so redirecting before the
+                                answer arrives throws a root admin off /admin-sync on
+                                every single reload — which is exactly what it did. */}
+                            <Route>
+                                {ready ? <Redirect to="/projects" replace /> : <Loading size="sm" />}
                             </Route>
                         </Switch>
                     </Suspense>
