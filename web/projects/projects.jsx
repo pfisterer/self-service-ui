@@ -90,7 +90,16 @@ export function CloudProjectManagement() {
                             <Route path="/budgets" component={MyBudgetsView} />
                             {isRoot ? <Route path="/admin-sync" component={RootAdminView} /> : null}
                             <Route path="/api-doc" component={CloudProjectsApiSwagger} />
-                            <Route path="/">
+                            {/* Catch-all, not just "/": the admin route above
+                                UNREGISTERS the moment isRoot goes false, which is
+                                exactly what impersonating a student does — and the
+                                admin was standing on it when they clicked. Without
+                                this, the content area goes blank on a URL that no
+                                longer matches anything, and the way back (the role
+                                switch panel above) is all that is left on the page.
+                                Land on My Projects instead: it is the page the
+                                impersonated user would have opened anyway. */}
+                            <Route>
                                 <Redirect to="/projects" replace />
                             </Route>
                         </Switch>
