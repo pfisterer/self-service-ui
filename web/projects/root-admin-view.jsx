@@ -1,11 +1,34 @@
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { Alert, Badge, Button, Group, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { CodeBlock } from '/helper/codeblock.jsx';
 import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { COLOR } from './util-project.jsx';
 
+
+// The reconciler publishes each project's termination date as a Keystone tag, so
+// "what has run out" is answerable from a shell with OpenStack credentials — no
+// account here, no database access. The query is shown rather than run: it reads
+// the cloud directly, which is the point of having it, and an admin holding those
+// credentials is who it is for.
+//
+// Notes on the shape: /v3/projects is used instead of `openstack project list`
+// because the CLI does not print tags; the timestamps are RFC3339 in UTC, which
+// sorts and compares as plain text, so `<` against the current time is enough.
+function overdueQuery(prefix) {
+    return [
+        'TOKEN=$(openstack token issue -f value -c id) &&',
+        'curl -s -H "X-Auth-Token: $TOKEN" "$OS_AUTH_URL/projects" \\',
+        `  | jq -r --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '`,
+        '      .projects[]',
+        `      | (.tags[]? | select(startswith("${prefix}")) | ltrimstr("${prefix}")) as $due`,
+        '      | select($due < $now)',
+        "      | [$due, .name, .description] | @tsv' \\",
+        '  | sort',
+    ].join('\n');
+}
 
 export function RootAdminView() {
     const api = useNodesApi();
@@ -100,6 +123,21 @@ export function RootAdminView() {
                     </Stack>
                 </SimpleGrid>
             </Paper>
+
+            {status?.termination_tag_prefix ? (
+                <Paper withBorder p="md" radius="sm">
+                    <Stack gap="xs">
+                        <Title order={5}>Overdue projects, from the command line</Title>
+                        <Text size="sm" c="dimmed">
+                            Every managed project carries its termination date as the tag{' '}
+                            <Text span ff="monospace" size="sm">{status.termination_tag_prefix}&lt;timestamp&gt;</Text>,
+                            so this lists what has run out — straight from OpenStack, with your own
+                            credentials sourced. Projects without a date carry no tag and never appear.
+                        </Text>
+                        <CodeBlock language="bash" code={overdueQuery(status.termination_tag_prefix)} />
+                    </Stack>
+                </Paper>
+            ) : null}
 
             {/* Users whose Keystone account could not be resolved without guessing.
                 Their role was NOT assigned — without this panel that stays invisible
