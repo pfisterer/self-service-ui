@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, lazy, Suspense } from 'react';
 import { Route, Switch, useRoute, Redirect } from 'wouter';
 import { Container } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
@@ -12,6 +12,11 @@ import { useCloudStatus } from './cloud-status.jsx';
 import { MyProjectsView } from './view-my-projects.jsx';
 import { MyBudgetsView } from './view-my-budgets.jsx';
 import { RootAdminView } from './root-admin-view.jsx';
+
+// Swagger UI is ~1 MB — load it only when the API-doc route is opened. Same
+// component as the dyndns section's, pointed at the other API.
+const CloudProjectsApiSwagger = lazy(() =>
+    import('/swagger/swagger.jsx').then(m => ({ default: m.CloudProjectsApiSwagger })));
 
 // ProjectConfigContext distributes /v1/config (resource definitions, OpenStack
 // roles, dev users) to every view below.
@@ -33,11 +38,13 @@ export function CloudProjectManagement() {
     const [matchProjects] = useRoute('/projects');
     const [matchBudgets] = useRoute('/budgets');
     const [matchAdminSync] = useRoute('/admin-sync');
+    const [matchApiDoc] = useRoute('/api-doc');
 
     function getActiveSection() {
         if (matchProjects) return 'projects';
         if (matchBudgets) return 'budgets';
         if (matchAdminSync) return 'admin-sync';
+        if (matchApiDoc) return 'api-doc';
         return '';
     }
 
@@ -77,14 +84,17 @@ export function CloudProjectManagement() {
                     title="This view failed to render"
                     message="Switch to another section or reload the page. If it persists, a record here may be malformed."
                 >
-                    <Switch>
-                        <Route path="/projects" component={MyProjectsView} />
-                        <Route path="/budgets" component={MyBudgetsView} />
-                        {isRoot ? <Route path="/admin-sync" component={RootAdminView} /> : null}
-                        <Route path="/">
-                            <Redirect to="/projects" replace />
-                        </Route>
-                    </Switch>
+                    <Suspense fallback={<div style={{ padding: '2rem' }}>Lädt…</div>}>
+                        <Switch>
+                            <Route path="/projects" component={MyProjectsView} />
+                            <Route path="/budgets" component={MyBudgetsView} />
+                            {isRoot ? <Route path="/admin-sync" component={RootAdminView} /> : null}
+                            <Route path="/api-doc" component={CloudProjectsApiSwagger} />
+                            <Route path="/">
+                                <Redirect to="/projects" replace />
+                            </Route>
+                        </Switch>
+                    </Suspense>
                 </ErrorBoundary>
             </Container>
             </RoleSwitchProvider>

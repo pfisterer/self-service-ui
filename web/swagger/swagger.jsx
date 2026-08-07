@@ -6,14 +6,24 @@ import SwaggerUIBundle from 'swagger-ui-dist/swagger-ui-bundle.js';
 import SwaggerUIStandalonePreset from 'swagger-ui-dist/swagger-ui-standalone-preset.js';
 import 'swagger-ui-dist/swagger-ui.css';
 
+// Both APIs of this UI serve the same three things at their base — /swagger.json,
+// /client/*, and the endpoints themselves (see api_static.go on either side) — so
+// one component documents either of them. The two exports below name which.
 export function DynamicZonesApiSwagger() {
-    // All resolved RELATIVE to baseUrl (dynamicZonesBaseUrl, which has a trailing
-    // slash). In BFF mode baseUrl is "https://<ui>/api/dyndns/", so these become
+    return <ApiDocumentation baseUrl={window.appconfig.dynamicZonesBaseUrl} title="Dynamic Zones API" />;
+}
+
+export function CloudProjectsApiSwagger() {
+    return <ApiDocumentation baseUrl={window.appconfig.cloudResourcesBaseUrl} title="Cloud Projects API" />;
+}
+
+function ApiDocumentation({ baseUrl, title }) {
+    // All resolved RELATIVE to baseUrl (which has a trailing slash). In BFF mode
+    // baseUrl is "https://<ui>/api/dyndns/", so these become
     // ".../api/dyndns/client/..." and ".../api/dyndns/swagger.json" — same origin,
     // through Caddy to the API. A LEADING SLASH ("/swagger.json") or "../client/"
     // would escape the /api/dyndns/ path and hit the UI root (404 -> index.html ->
     // "not a valid version field"). Matches how client.jsx loads the SDK.
-    const baseUrl = window.appconfig.dynamicZonesBaseUrl
     const jsSdkUrl = new URL('client/sdk.gen.js', baseUrl).href;
     const jsClientUrl = new URL('client/client.gen.js', baseUrl).href;
     const mjsSdkUrl = new URL('client/sdk.gen.mjs', baseUrl).href;
@@ -64,7 +74,7 @@ export function DynamicZonesApiSwagger() {
                     <Paper shadow="sm" radius="md" withBorder>
                         <Stack gap="md">
                             <Paper p="md" withBorder style={{ backgroundColor: '#f8f9fa' }}>
-                                <Title order={4}>Dynamic Zones API</Title>
+                                <Title order={4}>{title}</Title>
                             </Paper>
 
                             <Box p="md">

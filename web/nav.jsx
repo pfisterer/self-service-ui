@@ -50,6 +50,7 @@ export function useNav() {
                 // for everybody else the page is a single "nothing here" box.
                 hasBudgets && { label: 'My Budgets', href: '/projects/budgets', dot: pending > 0 },
                 isRoot && { label: 'Root Admin', href: '/projects/admin-sync' },
+                { label: 'API Documentation', href: '/projects/api-doc' },
             ].filter(Boolean),
         },
         {
