@@ -5,7 +5,6 @@ import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { COLOR } from './util-project.jsx';
-import { RoleSwitchButton } from './component-group-role-switcher.jsx';
 
 
 export function RootAdminView() {
@@ -40,7 +39,6 @@ export function RootAdminView() {
             <Group justify="space-between" align="center">
                 <Title order={4}>OpenStack Sync Status</Title>
                 <Group gap="xs">
-                    <RoleSwitchButton />
                     {status?.running ? <Badge color={COLOR.info} variant="light">Running...</Badge> : null}
                     <Button
                         size="sm"

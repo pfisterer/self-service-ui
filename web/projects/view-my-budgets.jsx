@@ -15,7 +15,6 @@ import { BudgetTree, NodeResultList, budgetsToTreeData } from './component-budge
 import { AdoptModal } from './modal-adopt.jsx';
 import { ApproveModal } from './modal-approve.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
-import { RoleSwitchButton } from './component-group-role-switcher.jsx';
 import { NodeInspectModal, TAB_DETAILS, TAB_HISTORY } from './modal-inspect.jsx';
 import { MoveModal } from './modal-move.jsx';
 import { RejectModal } from './modal-reject.jsx';
@@ -313,15 +312,12 @@ export function MyBudgetsView() {
                     The budgets you manage, as a tree. Select a node to inspect it;
                     delegate by creating a sub-budget with someone else in “Managed by”.
                 </Text>
-                <Group gap="xs" wrap="nowrap">
-                    {budgetRequestTargets.length > 0 && (
-                        <Button size="xs" variant="light" leftSection={<Inbox size="14" />}
-                            onClick={() => setBudgetForm({ mode: 'request' })}>
-                            Request budget
-                        </Button>
-                    )}
-                    <RoleSwitchButton />
-                </Group>
+                {budgetRequestTargets.length > 0 && (
+                    <Button size="xs" variant="light" leftSection={<Inbox size="14" />}
+                        onClick={() => setBudgetForm({ mode: 'request' })}>
+                        Request budget
+                    </Button>
+                )}
             </Group>
 
             {myBudgets.items.length === 0 && (

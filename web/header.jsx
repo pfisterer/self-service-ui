@@ -3,6 +3,7 @@ import { Link } from 'wouter';
 import { useAuth } from '/providers/auth.jsx';
 import { User } from "lucide-react";
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
+import { RoleSwitchButton } from '/projects/component-group-role-switcher.jsx';
 import { Burger, Group, Button, Menu, Image, Box, Divider, Stack, Text } from '@mantine/core';
 
 import dhbwLogoUrl from '/img/DHBW-Logo.svg';
@@ -153,7 +154,14 @@ export function Header() {
                         )}
                     </Box>
 
-                    <Box h={HEADER_HEIGHT} style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+                    {/* The right-hand column mirrors the navigation column on the
+                        left: the account on the first row, the current section's
+                        actions on the second, both ending on the same right edge.
+                        That is what puts the role switch directly under the user —
+                        it is a "who am I acting as" control, and it belongs with
+                        the identity it changes rather than at the end of the tabs. */}
+                    <Box style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                    <Box h={HEADER_HEIGHT} style={{ display: 'flex', alignItems: 'center' }}>
                         {user ? (
                             <Menu trigger="hover" openDelay={100} closeDelay={200}>
                                 <Menu.Target>
@@ -173,6 +181,19 @@ export function Header() {
                             </Menu>
                         ) : (
                             <Button onClick={login} size="sm">Login</Button>
+                        )}
+                    </Box>
+
+                        {/* Second row of this column, next to the tabs on the left.
+                            The role switch is not app-wide — only the cloud API
+                            knows about impersonation — so it appears solely while
+                            that section is open, and draws nothing for anyone who
+                            may not switch or while the full panel is open below. */}
+                        {hasSubNav && (
+                            <Box visibleFrom={NAV_BREAKPOINT} h={SUBNAV_HEIGHT}
+                                style={{ display: 'flex', alignItems: 'center' }}>
+                                {activeSection?.id === 'projects' && <RoleSwitchButton />}
+                            </Box>
                         )}
                     </Box>
                 </Group>

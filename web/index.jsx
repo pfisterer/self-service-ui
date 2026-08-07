@@ -20,6 +20,7 @@ import { Header } from '/header.jsx';
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
 import { Footer } from '/footer.jsx';
 import { CloudStatusProvider } from './projects/cloud-status.jsx';
+import { RoleSwitchProvider } from './projects/component-group-role-switcher.jsx';
 import { Home } from '/home/home.jsx';
 import { Delayed } from '/helper/delayed.jsx';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
@@ -130,6 +131,11 @@ function Main() {
         <ClientProvider name="dyndns" baseURL={window?.appconfig?.dynamicZonesBaseUrl}>
         <ClientProvider name="projects" baseURL={window?.appconfig?.cloudResourcesBaseUrl}>
         <CloudStatusProvider>
+        {/* Above the header, because the role switch is offered IN the header —
+            at the right end of the Cloud Projects nav bar. It stays scoped to
+            that section (only that API knows about impersonation); this is just
+            where the state has to live so the bar can render it. */}
+        <RoleSwitchProvider>
         <Shell footer={footer}>
                     {!user ? (
                         <Delayed waitMs={200}>
@@ -181,6 +187,7 @@ function Main() {
                         <AppRoutes />
                     )}
         </Shell>
+        </RoleSwitchProvider>
         </CloudStatusProvider>
         </ClientProvider>
         </ClientProvider>

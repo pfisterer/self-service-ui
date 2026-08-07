@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState } from 'react';
+import { useLocation } from 'wouter';
 import { ActionIcon, Badge, Button, Group, Loader, Paper, Text, TextInput } from '@mantine/core';
 import { Repeat, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -6,12 +7,7 @@ import { useDebouncedValue } from '@mantine/hooks';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { useApiMutation } from '/helper/query-state.jsx';
-import { useProjectConfig } from './projects.jsx';
 import { COLOR } from './util-project.jsx';
-
-// A dev build is where impersonation is the everyday workflow, so the panel
-// stays open there. False in every `vite build` artifact (staging/prod).
-const DEV_MODE = import.meta.env.DEV;
 
 // How many identity chips the panel ever shows at once. This bar sits on top of
 // every /projects page, so it must not grow with the directory.
@@ -19,9 +15,11 @@ const MAX_PICKS = 10;
 
 
 // The panel and the button live in two different places — the panel spans the
-// content, the button belongs in the top-right gutter next to a view's own
-// header row — but they share one piece of state and, more to the point, one set
-// of API calls. Mounting the component twice would query the role switch twice.
+// content of a /projects page, the button sits at the right end of that
+// section's nav bar, which the HEADER renders — but they share one piece of
+// state and, more to the point, one set of API calls. Mounting the component
+// twice would query the role switch twice. That split is why the provider is
+// mounted above the shell (index.jsx) rather than inside the section.
 const RoleSwitchContext = createContext(null);
 
 export function RoleSwitchProvider({ children }) {
@@ -29,12 +27,32 @@ export function RoleSwitchProvider({ children }) {
     const [query, setQuery] = useState('');
     const [debouncedQuery] = useDebouncedValue(query, 250);
     const [expanded, setExpanded] = useState(false);
-    const projectConfig = useProjectConfig();
+    const [currentPath] = useLocation();
+
+    // This provider sits above the whole shell now, but the role switch is a
+    // cloud-section control: only that API knows about impersonation. So it
+    // asks the section's questions only while the section is open, instead of
+    // adding two requests to every page in the app.
+    const inSection = currentPath === '/projects' || currentPath.startsWith('/projects/');
+
+    // The dev users below come from /v1/config. Read through the query cache
+    // rather than through ProjectConfigContext: this provider sits ABOVE the
+    // /projects section now (the button lives in the section's nav bar, which
+    // the header renders), so that context is out of scope here — and taking a
+    // dependency on projects.jsx would pull every view into the eager bundle.
+    // Same key as CloudProjectManagement, so it is the same cached response.
+    const configQuery = useQuery({
+        queryKey: projectKeys.config(),
+        queryFn: () => api.getConfig(),
+        enabled: !!api && inSection,
+        retry: false,
+    });
+    const projectConfig = configQuery.data;
 
     const stateQuery = useQuery({
         queryKey: projectKeys.rootStatus().concat('role-switch'),
         queryFn: () => api.getRoleSwitch(),
-        enabled: !!api,
+        enabled: !!api && inSection,
     });
     const state = stateQuery.data;
     const loading = stateQuery.isPending;
@@ -110,10 +128,12 @@ export function RoleSwitchProvider({ children }) {
     const submitTarget = typed.includes('@') ? typed
         : (matches.length === 1 ? matches[0].email : null);
 
-    // Open when the user asked for it, when a switch is active (that state must
-    // never be invisible), or always in a dev build.
+    // Open when the user asked for it, or when a switch is active — that state
+    // must never be invisible. A dev build no longer forces it open: the button
+    // now sits in the section's nav bar, always in the same place and one click
+    // away, which is what forcing the panel open was compensating for.
     const isSwitched = Boolean(impersonatedUser || selectedGroup);
-    const open = expanded || isSwitched || DEV_MODE;
+    const open = expanded || isSwitched;
 
     const clearOverride = () => clearMutation.mutate();
 
@@ -125,7 +145,8 @@ export function RoleSwitchProvider({ children }) {
         open,
         expand: () => setExpanded(true),
         collapse: () => setExpanded(false),
-        canCollapse: !isSwitched && !DEV_MODE,
+        // An ACTIVE switch may not be collapsed away; anything else may.
+        canCollapse: !isSwitched,
         isSwitched, impersonatedUser, selectedGroup,
         query, setQuery, submitQuery, submitTarget,
         shown, hasMore, matches, updating, impersonate, clearOverride,

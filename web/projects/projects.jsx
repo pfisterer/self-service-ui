@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
-import { RoleSwitchProvider, RoleSwitchPanel } from './component-group-role-switcher.jsx';
+import { RoleSwitchPanel } from './component-group-role-switcher.jsx';
 import { TokenLabelProvider } from './token-labels.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
@@ -66,13 +66,13 @@ export function CloudProjectManagement() {
             {/* Group labels are resolved once per token and shared by every view
                 below, so moving between sections does not look them up again. */}
             <TokenLabelProvider>
-            <RoleSwitchProvider>
             <Container size="xl" py="md">
 
                 {/* Open, the role switch is a bar across the content. Collapsed,
-                    it is a button that each view puts into its own header row
-                    (<RoleSwitchButton />), so it costs neither a row nor a column
-                    of width. */}
+                    it is a single button at the right end of this section's nav
+                    bar (see header.jsx), so it costs neither a row nor a column
+                    of width — and it stays reachable when the page under it
+                    changes, which is what impersonating drops you into. */}
                 <RoleSwitchPanel />
 
                 {/* Per-section boundary: a render crash in one section keeps the
@@ -106,7 +106,6 @@ export function CloudProjectManagement() {
                     </Suspense>
                 </ErrorBoundary>
             </Container>
-            </RoleSwitchProvider>
             </TokenLabelProvider>
         </ProjectConfigContext.Provider>
     );
