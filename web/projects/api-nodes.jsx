@@ -127,6 +127,19 @@ export function useNodesApi() {
             // without fetching a single row it would ever show.
             countToManage: async (scope = 'direct') =>
                 unwrapPage(await sdk.listNodesToManage({ client, query: { limit: 1, offset: 0, scope } })).total,
+            // Same trick, for the two questions the header asks about the
+            // budget view: does this user manage anything, and — if not —
+            // could they ask for a budget? Rows are not wanted, only whether
+            // there are any.
+            countMyBudgets: async () =>
+                unwrapPage(await sdk.listMyBudgets({ client, query: { limit: 1, offset: 0 } })).total,
+            // Counts every budget that would take a request from this user,
+            // including the ones that accept project requests but no
+            // sub-budgets (allow_sub_budget_requests) — that flag sits on the
+            // rows this deliberately does not fetch. Erring towards offering
+            // the view: the worst case is a page that says "nobody to ask".
+            countEligibleForMe: async () =>
+                unwrapPage(await sdk.listEligibleBudgets({ client, query: { limit: 1, offset: 0 } })).total,
             getReconcileStatus: async () => {
                 const res = await sdk.getAdminReconcileStatus({ client });
                 // 503 = the reconciler is switched off in this environment. Not

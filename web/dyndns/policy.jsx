@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { formatError } from '/helper/api-error.js';
 import { useQuery } from '@tanstack/react-query';
 import { useZonesApi } from '/dyndns/api-zones.jsx';
+import { usePolicyRulesQuery } from '/dyndns/use-policy.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
 import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -20,18 +21,9 @@ export function DnsPolicy() {
 
     // The rules AND the caller's permissions come from one response, so they
     // stay one cache entry — three separate useStates used to hold them and
-    // could in principle disagree.
-    const policyQuery = useQuery({
-        queryKey: dyndnsKeys.policyRules(),
-        queryFn: async () => {
-            const data = await api.listPolicyRules();
-            if (!data || !Array.isArray(data.rules)) {
-                throw new Error("Invalid response format: 'rules' array missing.");
-            }
-            return data;
-        },
-        enabled: !!api,
-    });
+    // could in principle disagree. The header asks the same question to decide
+    // whether to offer this page, hence the shared hook.
+    const policyQuery = usePolicyRulesQuery();
 
     // Closing the dialog is all that is left to do here: the mutations
     // invalidate the rule list themselves.

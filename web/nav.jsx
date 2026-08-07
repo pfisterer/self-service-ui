@@ -1,5 +1,6 @@
 import { useLocation } from 'wouter';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
+import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
 
 // The whole navigation as data, in one place: the header renders it two ways
 // (two bars on a wide screen, one vertical list in the burger) and the shell
@@ -25,9 +26,12 @@ export const NAV_BREAKPOINT = 'md';
 // item the current URL is in. Availability is decided here so no caller has to
 // repeat it: Cloud Projects only exists where the backend is configured (its
 // route is not even registered otherwise), Root Admin only for root admins.
+// An entry left out here is still reachable by URL — this decides what the
+// menu offers, not what exists.
 export function useNav() {
     const [currentPath] = useLocation();
-    const { isRoot, pending } = useCloudStatus();
+    const { isRoot, pending, hasBudgets } = useCloudStatus();
+    const { hasPolicy } = useDnsPolicyStatus();
 
     const cloudProjectsEnabled = Boolean(window?.appconfig?.cloudResourcesBaseUrl);
 
@@ -42,7 +46,9 @@ export function useNav() {
             dot: pending > 0,
             items: [
                 { label: 'My Projects', href: '/projects/projects' },
-                { label: 'My Budgets', href: '/projects/budgets', dot: pending > 0 },
+                // Only for someone who manages a budget or may request one —
+                // for everybody else the page is a single "nothing here" box.
+                hasBudgets && { label: 'My Budgets', href: '/projects/budgets', dot: pending > 0 },
                 isRoot && { label: 'Root Admin', href: '/projects/admin-sync' },
             ].filter(Boolean),
         },
@@ -53,9 +59,11 @@ export function useNav() {
             items: [
                 { label: 'Zone Management', href: '/dyndns/zones' },
                 { label: 'API Tokens', href: '/dyndns/tokens' },
-                { label: 'DNS Policy', href: '/dyndns/policy' },
+                // Read-only for most users, and worth reading only if a rule
+                // actually applies to them; empty for a student.
+                hasPolicy && { label: 'DNS Policy', href: '/dyndns/policy' },
                 { label: 'API Documentation', href: '/dyndns/api-doc' },
-            ],
+            ].filter(Boolean),
         },
     ].filter(Boolean).map(s => ({ ...s, href: s.href ?? s.items[0]?.href ?? '/' }));
 
