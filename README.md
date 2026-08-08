@@ -1,42 +1,199 @@
-# Self-Service UI
+# dhbwCloud Self Service
 
-> Web interface for self-service management of DNS zones, DNS policies, and cloud resources in private cloud environments.
+## Why
 
-## Overview
+Getting a virtual machine or a DNS name at a university usually means writing an
+email and waiting. Someone with administrative rights reads it, decides, clicks it
+together by hand, and answers — if they have time.
 
-The Self-Service UI lets users manage their own DNS names, policies, and cloud
-resources from a single interface — without administrative intervention. It is
-the frontend for the DHBW private-cloud self-service platform.
+Where a default allocation exists at all, it rarely matches what the work actually
+needs: too small for a course with 24 students, far too large for a one-afternoon
+demo, and never the right storage. So almost every real request leaves the default
+behind — and lands in a ticket queue, which means waiting again, this time for
+someone who has to understand the request before they can size it.
 
-### Features
+The deeper problem is that the deciding happens centrally. A handful of people in
+the data centre approve capacity for an entire university, although the person who
+knows whether a request is reasonable is usually the lecturer who set the
+assignment, not an administrator reading a ticket. Central allocation is not a
+policy anyone chose; it is what happens when the platform has no way to hand
+authority over resources to someone else.
 
-- **DNS management** — create, edit, and delete DNS zones and records
-- **Policy configuration** — define and enforce DNS policies, subzones, and delegations
-- **Cloud resources** — provision and manage cloud projects and quotas ⚠️ *(WIP)*
+This platform gives it that way. Capacity is handed out as **delegated pools**: a
+department gets a share it may pass on, a lecturer carves out a slice for a course
+and decides on requests against it, without asking the data centre. And for the
+common small case, nobody needs to decide at all — a pool can carry an
+**auto-approval** cap per person, so requests within it are granted immediately and
+only what exceeds it reaches a human.
 
-> ⚠️ Work in progress — features and APIs may change.
+This is the web interface for that: people request what they need, whoever owns the
+budget decides — or the policy decides for them — and both sides can see the state
+and its history at any time.
 
-## Related projects
+## What it does
 
-- [dynamic-zones](https://github.com/pfisterer/dynamic-zones) — DNS zones & policy API (backend for DNS management)
-- [role-provider-service](https://github.com/pfisterer/role-provider-service) — group/role authorization (Zanzibar-style tuple store)
-- [openstack-management-api](https://github.com/pfisterer/openstack-management-api) — cloud project & quota management backend
+Two areas, one login:
 
-## Development
+**Cloud Projects** — resources are handed out along a *budget tree*. A budget is
+a delegated pool of capacity; passing capacity on means creating a sub-budget
+with someone else as its manager. A project is a leaf: a concrete allocation with
+one owner, which the platform turns into a real OpenStack project. Requests, the
+approval of them, adjusted approvals, changes and release all live here, and each
+node keeps its own history.
 
-**Prerequisites:** Node.js 20+ and npm.
+**DNS Zones** — self-service DNS. Users create zones they are entitled to by
+policy, edit records in the browser, and get per-zone TSIG keys plus API tokens
+so that Kubernetes, `external-dns` or `cert-manager` can keep the records up to
+date via RFC 2136 without a human in the loop.
 
-```bash
-npm install     # install dependencies
-npm run dev     # start dev server (Vite)
-npm run build   # build for production
+|  |  |
+|---|---|
+| ![My projects](docs/img/01-my-projects.png) | *My Projects* — a person's own projects, with what they cost and what can be done with them. |
+| ![Budget tree](docs/img/02-budget-tree.png) | *My Budgets* — the tree resources are paid from. Selecting a node shows its usage, who manages it and who may request from it. |
+| ![Approval with budget impact](docs/img/03-approve-impact.png) | Before granting a request, the manager sees what it does to the funding budget — and can grant a smaller amount instead of rejecting. |
+| ![DNS zones](docs/img/04-dns-zones.png) | *DNS Zones* — zones, records and the keys that let machines update them. |
+| ![Root admin](docs/img/05-root-admin.png) | *Root Admin* — state of the OpenStack reconciliation, and the CLI query for projects past their termination date. |
+
+## How it fits together
+
+This is a static single-page application. It holds no business logic and no
+database of its own: every rule about who may request, approve or delegate
+anything lives in the two APIs behind it, and this app renders their answers.
+
+```
+      browser
+         │  (1) HTML/JS, config.js
+         ▼
+   ┌───────────────┐        ┌──────────────────────────┐
+   │ oauth2-proxy  │──────▶ │ this app (Caddy, static) │
+   │  (BFF)        │        └──────────────────────────┘
+   └───────┬───────┘
+           │  (2) /api/... with a server-side injected Bearer
+           │
+           ├──────────────▶ openstack-management-api ──▶ OpenStack
+           │                 budgets, projects,          (Keystone, Nova,
+           │                 approvals, reconciler        Cinder, Neutron)
+           │                        │
+           │                        └──▶ role-provider-service
+           │                              group membership
+           │
+           └──────────────▶ dynamic-zones-api ────────▶ PowerDNS
+                             zones, records, policy      (authoritative DNS)
 ```
 
-See the [Makefile](./Makefile) for more.
+- **[openstack-management-api](https://github.com/pfisterer/openstack-management-api)**
+  owns the budget tree and the project lifecycle. Everything under *Cloud
+  Projects* is its state: which budgets you manage, what a request would cost the
+  funding budget, who may approve it — and it is what turns an approved project
+  into a real OpenStack project.
+- **[dynamic-zones](https://github.com/pfisterer/dynamic-zones)** owns zones,
+  records, TSIG keys and DNS policy. Everything under *DNS Zones* is its state.
+- **[role-provider-service](https://github.com/pfisterer/role-provider-service)**
+  answers which groups a person belongs to. This app never calls it directly — it
+  reaches it through the projects API, which is where group search in the
+  "managed by" and "can request" fields comes from.
 
-## Contributing
+Whether the *Cloud Projects* section exists at all depends on configuration: with
+no `CLOUD_RESOURCES_BASE_URL` set, the section and its routes are not registered,
+and the app is a pure DNS self-service.
 
-Issues and pull requests are welcome.
+Two consequences of this split are worth knowing before changing anything:
+
+- **No token lives in the browser.** In production an `oauth2-proxy` sits in
+  front of the app (Backend-for-Frontend): it authenticates the user, keeps the
+  session in a cookie and injects the bearer token into API calls server-side.
+  The app reads the user's identity from `/oauth2/userinfo`, nothing more. A
+  `401` from an API therefore means "the proxy session expired", and the app says
+  so instead of navigating away silently.
+- **The API clients are loaded at runtime.** Both APIs serve a generated
+  TypeScript SDK under `/client/`, and the app imports it on startup. So a new
+  API operation becomes usable without rebuilding this app — at the price that a
+  version mismatch shows up at runtime rather than at build time (see `d6` in the
+  deployment repo's TODOs).
+
+The navigation is data, defined once in [`web/nav.jsx`](web/nav.jsx): which
+sections exist, which entries a given user gets, which of them the URL is in. The
+header renders it twice (two bars on a wide screen, one list in the burger) and
+the shell derives its height from it. Entries with nothing behind them for the
+current user are left out rather than shown leading to an empty page.
+
+Server state lives in a query cache (TanStack Query), never in `useState` — see
+the reasoning in [`web/providers/query.jsx`](web/providers/query.jsx).
+
+## Running it locally
+
+**Prerequisites:** Node.js 20+, npm. For anything beyond the shell of the app you
+also need the two APIs; the deployment repo ships a script that starts all of
+them together (`run-development.sh`).
+
+```bash
+npm install
+npm run dev        # Vite dev server on http://localhost:8084
+```
+
+Configuration comes from `.env` (and `.env.local`, which takes precedence — mind
+that when ports do not match what your APIs actually serve):
+
+```ini
+DYNAMIC_ZONE_BASE_URL=http://localhost:8082/
+CLOUD_RESOURCES_BASE_URL=http://localhost:8083/
+DUMMY_AUTH=true
+OIDC_CLIENT_ID=dev
+OIDC_ISSUER_URL=https://sso.example/realms/x
+```
+
+`DUMMY_AUTH=true` **plus a dev build** enables the dev login, where you sign in
+as any address (`?dev_user=<email>` works too) and the APIs accept that identity
+via an `X-Dummy-Auth-User` header. It is compiled out of every `vite build`
+artifact — `import.meta.env.DEV` is false there, so no runtime configuration can
+re-enable the bypass in a staging or production image.
+
+Vite writes `web/config.js` from those variables on start; in a container the
+same file is generated by [`docker-entrypoint.sh`](docker-entrypoint.sh).
+
+```bash
+npm run build       # production bundle into dist/
+npx eslint web/     # lint (no test suite yet — see d5 in the TODOs)
+make docker-build   # container image
+```
+
+## Deployment
+
+The image serves `dist/` through Caddy and generates `config.js` at container
+start, so one image works in every environment. Required and optional variables:
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `DYN_ZONES_BASE_URL` | yes | Base URL of dynamic-zones-api, with trailing slash |
+| `CLOUD_RESOURCES_BASE_URL` | no | Base URL of openstack-management-api; empty hides the Cloud Projects section entirely |
+| `OIDC_CLIENT_ID`, `OIDC_ISSUER_URL` | yes | Shown to the app; the actual login is done by the proxy in front |
+| `ACME_SERVER` | no | ACME endpoint advertised in the certificate instructions |
+| `DUMMY_AUTH` | no | Ignored by production builds (see above) |
+
+In BFF mode the app must be reached **through** the `oauth2-proxy`, and
+`/oauth2/*` must be routed to it — the app calls `/oauth2/userinfo` for the
+identity, `/oauth2/auth` to notice an expired session, and `/oauth2/start` to
+begin a new one.
+
+A Helm chart lives in [`helm-chart/`](helm-chart) (`selfServiceUI`, `auth`,
+`ingress`), and the DHBW deployment drives it from Ansible. Images are published
+to `ghcr.io/pfisterer/self-service-ui`; `-test.N` tags are the staging channel,
+plain semver is production.
+
+## Repository layout
+
+```
+web/
+  index.jsx            app shell, providers, routes
+  nav.jsx              the navigation as data (single source)
+  header.jsx           both navigation levels + account column
+  providers/           auth, session, API clients, query cache, modals
+  projects/            Cloud Projects: budget tree, cards, dialogs, API facade
+  dyndns/              DNS Zones: zones, records, tokens, policy
+  helper/              validation, error formatting, code blocks
+docs/img/              screenshots used in this README
+helm-chart/            deployment chart
+```
 
 ## License
 
