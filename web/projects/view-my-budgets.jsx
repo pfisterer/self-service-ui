@@ -15,7 +15,8 @@ import { BudgetTree, NodeResultList, budgetsToTreeData } from './component-budge
 import { AdoptModal } from './modal-adopt.jsx';
 import { ApproveModal } from './modal-approve.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
-import { NodeInspectModal, TAB_DETAILS, TAB_HISTORY } from './modal-inspect.jsx';
+import { ProjectFormModal } from './modal-project-form.jsx';
+import { NodeInspectModal } from './modal-inspect.jsx';
 import { MoveModal } from './modal-move.jsx';
 import { RejectModal } from './modal-reject.jsx';
 import { TransferOwnerModal } from './modal-transfer-owner.jsx';
@@ -509,9 +510,21 @@ export function MyBudgetsView() {
             <TransferOwnerModal key={`transferownermodal:${dlg.key}`} opened={dlg.is('transfer')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
             <AdoptModal key={`adoptmodal:${dlg.key}`} opened={dlg.is('adopt')} onClose={dlg.close} onDone={refresh}
                 resources={resources} node={dlg.node} myBudgets={myBudgets.items} />
-            {/* One modal for both triggers: the History button opens it on that tab. */}
-            <NodeInspectModal key={`nodeinspectmodal:${dlg.key}`} opened={dlg.is('details') || dlg.is('history')}
-                initialTab={dlg.is('history') ? TAB_HISTORY : TAB_DETAILS}
+            {/* A manager may edit a project of theirs, so the change dialog has to
+                exist on this side too — not only in My Projects. On a pending
+                request it amends in place; on an approved one it files a change
+                for them to approve. */}
+            <ProjectFormModal
+                key={`change:${dlg.key}`}
+                opened={dlg.is('change')}
+                onClose={dlg.close}
+                onDone={refresh}
+                resources={resources}
+                openstackRoles={config.openstackRoles}
+                node={dlg.node}
+            />
+            {/* History is a tab in here, not a button of its own outside. */}
+            <NodeInspectModal key={`nodeinspectmodal:${dlg.key}`} opened={dlg.is('details')}
                 onClose={dlg.close} node={dlg.node} resources={resources} />
         </Stack>
     );

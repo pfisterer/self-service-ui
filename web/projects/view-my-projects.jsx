@@ -8,7 +8,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { ProjectCard } from './card-project.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
-import { NodeInspectModal, TAB_DETAILS, TAB_HISTORY } from './modal-inspect.jsx';
+import { NodeInspectModal } from './modal-inspect.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { COLOR } from './util-project.jsx';
@@ -126,9 +126,8 @@ export function MyProjectsView() {
                 openstackRoles={config.openstackRoles}
                 node={dlg.node}
             />
-            {/* One modal for both triggers: the History button opens it on that tab. */}
-            <NodeInspectModal key={`inspect:${dlg.key}`} opened={dlg.is('details') || dlg.is('history')}
-                initialTab={dlg.is('history') ? TAB_HISTORY : TAB_DETAILS}
+            {/* History is a tab in here, not a button of its own outside. */}
+            <NodeInspectModal key={`inspect:${dlg.key}`} opened={dlg.is('details')}
                 onClose={dlg.close} node={dlg.node} resources={resources} />
         </Stack>
     );

@@ -1,4 +1,4 @@
-import { Check, Eye, FolderInput, FolderOpen, History, Pencil, Plus, Trash2, X, Zap } from 'lucide-react';
+import { Check, Eye, FolderInput, FolderOpen, Pencil, Plus, Trash2, X, Zap } from 'lucide-react';
 import { Badge, Button, Card, Divider, Group, Stack, Text } from '@mantine/core';
 import { FactRow, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
 import { COLOR, expiryTone, expiryValue, resourceSummaryText } from './util-project.jsx';
@@ -18,7 +18,6 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
     // for a sub-budget, or proposed a change to an existing one.
     const isPending = node.status === 'pending';
     const isChangePending = node.status === 'change_pending';
-    const hasHistory = (node.history || []).length > 0;
     const autoApprove = node.auto_approve?.per_requester_limit;
     const hasRequesters = (node.eligible_requesters || []).length > 0;
 
@@ -118,9 +117,6 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                     )}
                     <Button variant="light" size="xs" onClick={() => act('details')}>
                         <Eye size="13" style={{ marginRight: 4 }} />Details
-                    </Button>
-                    <Button variant="light" size="xs" disabled={!hasHistory} onClick={() => act('history')}>
-                        <History size="13" style={{ marginRight: 4 }} />History
                     </Button>
                     {manageable && (isPending || isChangePending) && (
                         <>

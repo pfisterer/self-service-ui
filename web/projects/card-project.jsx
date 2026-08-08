@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRightLeft, Check, Eye, FolderInput, History, Pencil, Rocket, X } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, Check, Eye, FolderInput, Pencil, Rocket, X } from 'lucide-react';
 import { Alert, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge } from './component-common.jsx';
 import { COLOR, expiryTone, expiryValue, isImported, isProvisioning, ownerEmail, resourceSummaryText } from './util-project.jsx';
@@ -135,15 +135,19 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
             {/* ── Actions ────────────────────────────────────────────────── */}
             <Card.Section withBorder inheritPadding py="xs" mt="auto">
                 <Group grow>
+                    {/* Details carries the history with it, as a tab. Two buttons
+                        for one dialog only made the row longer. */}
                     <Button variant="light" size="xs" onClick={() => act('details')}>
                         <Eye size="13" style={{ marginRight: 4 }} />Details
                     </Button>
-                    <Button variant="light" size="xs" disabled={!hasHistory} onClick={() => act('history')}>
-                        <History size="13" style={{ marginRight: 4 }} />History
-                    </Button>
 
-                    {/* Owner actions */}
-                    {!isManager && (isApproved || isPending) && (
+                    {/* Editing is not an owner privilege: a manager of the funding
+                        chain may change a project too, and on a request that is
+                        still pending their edit amends it in place — which is how
+                        you trim an over-sized request instead of rejecting it.
+                        On an approved project the same edit becomes a proposal
+                        they then approve, for owners and managers alike. */}
+                    {(isApproved || isPending) && (
                         <Button variant="light" size="xs" onClick={() => act('change')}>
                             <Pencil size="13" style={{ marginRight: 4 }} />Edit
                         </Button>
