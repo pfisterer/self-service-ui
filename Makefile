@@ -60,11 +60,6 @@ helm-update:
 	helm lint helm-chart/
 	echo "✅ Helm chart linted successfully."
 
-	helm package helm-chart
-	mkdir -p docs/helm-repo
-	mv self-service-ui*.tgz docs/helm-repo/
-	helm repo index docs/helm-repo --url https://pfisterer.github.io/dynamic-zones/helm-repo
-	echo "✅ Helm chart linted successfully."
 
 # Cleanup target (removed local artifacts like the 'dist' folder)
 clean:
