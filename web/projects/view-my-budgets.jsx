@@ -482,7 +482,15 @@ export function MyBudgetsView() {
             )}
 
             {/* ── Dialogs (one instance per view) ────────────────────────── */}
+            {/* Keyed like every other dialog here, and for a sharper reason: this
+                form reads the node ONCE, into useForm's initialValues. Without a
+                key the instance mounted with the view — before anything was
+                selected — and every later "Edit" showed that first state: an empty
+                name, the default quota, an empty "Managed by". Saving it would
+                have renamed the budget to nothing and shrunk its limits to the
+                defaults. */}
             <BudgetFormModal
+                key={`budgetform:${budgetForm?.mode ?? 'closed'}:${budgetForm?.node?.id ?? budgetForm?.parent?.id ?? ''}`}
                 opened={!!budgetForm}
                 onClose={() => setBudgetForm(null)}
                 onDone={refresh}
