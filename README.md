@@ -48,6 +48,8 @@ date via RFC 2136 without a human in the loop.
 
 ## Screenshots
 
+### Cloud Projects
+
 **My Projects** — a person's own projects: what they cost, and what can be done
 with them.
 
@@ -63,14 +65,48 @@ before deciding, and can grant a smaller amount instead of rejecting.
 
 ![Approving a request](docs/img/03-approve-impact.webp)
 
-**DNS Zones** — zones, records, and the keys that let machines update them.
-
-![DNS Zones](docs/img/04-dns-zones.webp)
-
 **Root Admin** — state of the OpenStack reconciliation, and the shell query for
 projects past their termination date.
 
 ![Root Admin](docs/img/05-root-admin.webp)
+
+### DNS Zones
+
+**Zone Management** — everything policy entitles this user to. A zone that has
+not been created yet offers *Activate*; an existing one can be opened, shared or
+extended by a subzone.
+
+![Zone Management](docs/img/04-dns-zones.webp)
+
+**Subzones** — where a rule permits it, a zone can be split further. The subzone
+becomes a delegated zone of its own, with its own key, and appears indented under
+its parent.
+
+![Creating a subzone](docs/img/06-subzones.webp)
+
+**Records** — the records of an active zone, edited inline. Changes go straight
+into the authoritative nameserver.
+
+![DNS records of an active zone](docs/img/07-zone-records.webp)
+
+**Keys** — the TSIG keys of this zone: shared secrets that authenticate changes to
+it, and to nothing else. They can be rotated, which reissues them for every owner.
+
+![TSIG keys](docs/img/08-zone-keys.webp)
+
+**Dynamic DNS** — ready-made `nsupdate` and `ddclient` configuration for keeping a
+host's address current, pre-filled with this zone's nameserver and key.
+
+![Dynamic DNS configuration](docs/img/09-zone-dyndns.webp)
+
+**TLS certificates** — the same key issues certificates over DNS-01, wildcards
+included. The page hands out working snippets for certbot, acme.sh and
+cert-manager.
+
+![TLS certificate configuration](docs/img/10-zone-tls.webp)
+
+<sub>Screenshots are taken against the development stack with example data. Key
+material shown in the DNS tabs is redacted.</sub>
 
 ## How it fits together
 
