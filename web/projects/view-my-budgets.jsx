@@ -22,7 +22,7 @@ import { RejectModal } from './modal-reject.jsx';
 import { TransferOwnerModal } from './modal-transfer-owner.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
-import { COLOR, formatError, getAuthUserEmail, isBudget, REQUEST_TYPES, requestType } from './util-project.jsx';
+import { COLOR, formatError, getAuthUserEmail, isBudget, ownerEmail, REQUEST_TYPES, requestType } from './util-project.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
 // How long typing pauses before a search is sent.
@@ -287,9 +287,28 @@ export function MyBudgetsView() {
         }
     };
 
+    const handleRelease = async (node) => {
+        const owner = ownerEmail(node);
+        const ok = await confirm({
+            title: `Release project “${node.name || node.id}”?`,
+            confirmLabel: 'Release',
+            message: owner
+                ? `This hands ${owner}'s project back: it and its resources are removed from OpenStack. This cannot be undone.`
+                : 'Releasing removes the project and its resources from OpenStack. This cannot be undone.',
+        });
+        if (!ok) return;
+        try {
+            await api.release(node.id);
+            refresh();
+        } catch (e) {
+            showError(formatError(e));
+        }
+    };
+
     // Central action dispatch for both node kinds.
     const handleAction = (action, node) => {
         if (action === 'sub-budget') return setBudgetForm({ mode: 'create', parent: node });
+        if (action === 'release') return handleRelease(node);
         if (action === 'edit') return setBudgetForm({ mode: 'edit', node });
         if (action === 'delete') return handleDelete(node);
         dlg.open(action, node);

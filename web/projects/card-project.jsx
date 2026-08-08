@@ -152,7 +152,11 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             <Pencil size="13" style={{ marginRight: 4 }} />Edit
                         </Button>
                     )}
-                    {!isManager && isApproved && (
+                    {/* Also a manager's to do: they carry the budget it is paid
+                        from, and the API has always allowed a manager of the
+                        funding chain to release a leaf. Without the button they
+                        had to ask the owner to hand back resources. */}
+                    {isApproved && (
                         <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('release')}>
                             Release
                         </Button>
