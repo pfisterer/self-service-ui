@@ -46,23 +46,23 @@ policy, edit records in the browser, and get per-zone TSIG keys plus API tokens
 so that Kubernetes, `external-dns` or `cert-manager` can keep the records up to
 date via RFC 2136 without a human in the loop.
 
-![My Projects](docs/img/01-my-projects.png)
+![My Projects](docs/img/01-my-projects.webp)
 
 <sub>**My Projects** — a person's own projects: what they cost, and what can be done with them.</sub>
 
-![My Budgets](docs/img/02-budget-tree.png)
+![My Budgets](docs/img/02-budget-tree.webp)
 
 <sub>**My Budgets** — the tree resources are paid from. Selecting a node shows its usage, who manages it, and who may request from it.</sub>
 
-![Approving a request](docs/img/03-approve-impact.png)
+![Approving a request](docs/img/03-approve-impact.webp)
 
 <sub>**Approving a request** — the manager sees what it would do to the funding budget before deciding, and can grant a smaller amount instead of rejecting.</sub>
 
-![DNS Zones](docs/img/04-dns-zones.png)
+![DNS Zones](docs/img/04-dns-zones.webp)
 
 <sub>**DNS Zones** — zones, records, and the keys that let machines update them.</sub>
 
-![Root Admin](docs/img/05-root-admin.png)
+![Root Admin](docs/img/05-root-admin.webp)
 
 <sub>**Root Admin** — state of the OpenStack reconciliation, and the shell query for projects past their termination date.</sub>
 
