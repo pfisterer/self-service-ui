@@ -28,9 +28,10 @@ export const queryClient = new QueryClient({
             // real failure (403, a validation error) will not become a success
             // by asking again. A single retry only covers a dropped connection.
             retry: 1,
-            // The session can expire while the tab sits open. The client's 401
-            // interceptor navigates to the proxy sign-in, so a retry storm on
-            // an expired session would only race that redirect.
+            // The session can expire while the tab sits open. Every retry then
+            // fails the same way, and the 401 has already raised the sign-in
+            // dialog (see providers/session.jsx) — a retry storm would only add
+            // noise behind it.
             retryOnMount: false,
         },
         mutations: {

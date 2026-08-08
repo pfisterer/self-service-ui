@@ -12,6 +12,7 @@ import { LogIn } from 'lucide-react';
 import { DynDnsConfigProvider } from '/providers/dyndns-config.jsx';
 import { CloudConfigProvider } from '/providers/cloud-config.jsx';
 import { useAuth, AuthProvider } from '/providers/auth.jsx';
+import { SessionProvider } from '/providers/session.jsx';
 import { ErrorModalProvider } from '/providers/error-modal.jsx';
 import { ConfirmProvider } from '/providers/confirm.jsx';
 import { QueryProvider } from '/providers/query.jsx';
@@ -73,7 +74,11 @@ function App() {
                     <DynDnsConfigProvider>
                         <CloudConfigProvider>
                             <AuthProvider>
-                                <Main />
+                                {/* Above the clients, because their 401 interceptor
+                                    reports an expired session to it. */}
+                                <SessionProvider>
+                                    <Main />
+                                </SessionProvider>
                             </AuthProvider>
                         </CloudConfigProvider>
                     </DynDnsConfigProvider>

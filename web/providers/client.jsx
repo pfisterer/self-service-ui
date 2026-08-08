@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { createContext } from 'react';
 import { useAuth } from '/providers/auth.jsx';
+import { useSession } from '/providers/session.jsx';
 
 export const ClientContext = createContext({});
 
@@ -16,6 +17,7 @@ export function useClient(name = 'dyndns') {
 
 export function ClientProvider({ children, name = 'dyndns', baseURL }) {
     const auth = useAuth();
+    const { expire } = useSession();
     const parentContext = useContext(ClientContext);
     const [state, setState] = useState({ client: null, sdk: null, error: null });
 
@@ -59,12 +61,14 @@ export function ClientProvider({ children, name = 'dyndns', baseURL }) {
 
                 // BFF: a 401 means the oauth2-proxy session expired (it answers
                 // AJAX requests with 401 rather than a cross-origin redirect an XHR can't
-                // follow). Only a full-page navigation can re-run the OIDC login. Skipped
-                // in dummy/dev mode (there the API itself returns 401 for real auth errors).
+                // follow). Only a full-page navigation can re-run the OIDC login — but
+                // starting one from here, silently, is what made an expired session look
+                // like a hung page. Raise it instead and let the person choose the moment
+                // (see providers/session.jsx). Skipped in dummy/dev mode (there the API
+                // itself returns 401 for real auth errors).
                 const responseInterceptorId = myClient.interceptors.response.use(async (response) => {
                     if (response?.status === 401 && !auth?.useDummyAuth) {
-                        window.location.href = '/oauth2/start?rd=' +
-                            encodeURIComponent(window.location.pathname + window.location.search);
+                        expire();
                     }
                     return response;
                 });
@@ -83,7 +87,7 @@ export function ClientProvider({ children, name = 'dyndns', baseURL }) {
         // constant (import.meta.env.DEV && config), so it cannot change while
         // this provider is mounted; listing it would only rebuild the client.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [auth?.loading, auth?.user, baseURL, auth.dev_user]);
+    }, [auth?.loading, auth?.user, baseURL, auth.dev_user, expire]);
 
     const newValue = { ...parentContext, [name]: state };
 
