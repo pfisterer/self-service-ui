@@ -46,13 +46,25 @@ policy, edit records in the browser, and get per-zone TSIG keys plus API tokens
 so that Kubernetes, `external-dns` or `cert-manager` can keep the records up to
 date via RFC 2136 without a human in the loop.
 
-|  |  |
-|---|---|
-| ![My projects](docs/img/01-my-projects.png) | *My Projects* — a person's own projects, with what they cost and what can be done with them. |
-| ![Budget tree](docs/img/02-budget-tree.png) | *My Budgets* — the tree resources are paid from. Selecting a node shows its usage, who manages it and who may request from it. |
-| ![Approval with budget impact](docs/img/03-approve-impact.png) | Before granting a request, the manager sees what it does to the funding budget — and can grant a smaller amount instead of rejecting. |
-| ![DNS zones](docs/img/04-dns-zones.png) | *DNS Zones* — zones, records and the keys that let machines update them. |
-| ![Root admin](docs/img/05-root-admin.png) | *Root Admin* — state of the OpenStack reconciliation, and the CLI query for projects past their termination date. |
+![My Projects](docs/img/01-my-projects.png)
+
+<sub>**My Projects** — a person's own projects: what they cost, and what can be done with them.</sub>
+
+![My Budgets](docs/img/02-budget-tree.png)
+
+<sub>**My Budgets** — the tree resources are paid from. Selecting a node shows its usage, who manages it, and who may request from it.</sub>
+
+![Approving a request](docs/img/03-approve-impact.png)
+
+<sub>**Approving a request** — the manager sees what it would do to the funding budget before deciding, and can grant a smaller amount instead of rejecting.</sub>
+
+![DNS Zones](docs/img/04-dns-zones.png)
+
+<sub>**DNS Zones** — zones, records, and the keys that let machines update them.</sub>
+
+![Root Admin](docs/img/05-root-admin.png)
+
+<sub>**Root Admin** — state of the OpenStack reconciliation, and the shell query for projects past their termination date.</sub>
 
 ## How it fits together
 
