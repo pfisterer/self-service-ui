@@ -11,6 +11,10 @@ export function authHeaders(user) {
 // Dummy-auth (dev) user object — no real OIDC session.
 // name is what the header shows; a real OIDC session puts a display name there,
 // so the dev user carries the plain address and no "User:" label of its own.
+// Who a dev session signs in as without `?dev_user`. Exported because
+// providers/client.jsx seeds the same identity before React has mounted.
+export const DEV_DEFAULT_EMAIL = 'dennis.pfisterer@dhbw.de';
+
 const makeDummyUser = (email) => ({ profile: { email, name: email }, access_token: 'dummy-token' });
 
 export function AuthProvider({ children }) {
@@ -37,9 +41,8 @@ export function AuthProvider({ children }) {
                             setDevUser(emailParam);
                             setUser(makeDummyUser(emailParam));
                         } else {
-                            const defaultEMail = 'dennis.pfisterer@dhbw.de';
-                            setUser(makeDummyUser(defaultEMail));
-                            setDevUser(defaultEMail);
+                            setUser(makeDummyUser(DEV_DEFAULT_EMAIL));
+                            setDevUser(DEV_DEFAULT_EMAIL);
                         }
                     }
                 } else {

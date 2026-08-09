@@ -1,6 +1,17 @@
 import { useMemo } from 'react';
 import { apiErrorMessage } from '/helper/api-error.js';
 import { useClient } from '/providers/client.jsx';
+// Named imports, not `sdk.<op>`: a property access on a namespace is still
+// only wrong at runtime, while a missing named export fails the build — which
+// is the whole point of depending on the client by version (see d6).
+import {
+    addZoneOwner, createDelegation, createDnsRecord, createPolicyRule,
+    createToken, createZone, deleteDelegation, deleteDnsRecord,
+    deleteOrphanedZone, deletePolicyRule, deleteToken, deleteZone, getZone,
+    joinZone, listDelegations, listDnsRecords, listOrphanedZones,
+    listPolicyRules, listTokens, listZones, removeZoneOwner, rotateZoneKeys,
+    updateDelegation, updatePolicyRule,
+} from '@dhbw-cloud/dynamic-zones-client';
 
 // useZonesApi is to the dyndns section what useNodesApi is to projects: the one
 // place that knows the transport. Every call either returns clean data or
@@ -17,7 +28,6 @@ import { useClient } from '/providers/client.jsx';
 // regenerate (`make bundle` in the API repo), never to reach past the SDK: a
 // hand-written URL is a second, silent copy of the API contract.
 //
-// Returns null until the SDK module has loaded; callers render a loader.
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -43,59 +53,58 @@ const tsigBody = (tsigKey) => ({
 });
 
 export function useZonesApi() {
-    const { client, sdk } = useClient('dyndns');
+    const client = useClient('dyndns');
 
     return useMemo(() => {
-        if (!client || !sdk) return null;
 
         return {
             // ── Zones ────────────────────────────────────────────────────
-            listZones: async () => unwrap(await sdk.listZones({ client }))?.zones ?? [],
-            getZone: async (zone) => unwrap(await sdk.getZone({ client, path: { zone } })),
-            createZone: async (zone) => unwrap(await sdk.createZone({ client, path: { zone } })),
-            deleteZone: async (zone) => unwrap(await sdk.deleteZone({ client, path: { zone } })),
+            listZones: async () => unwrap(await listZones({ client }))?.zones ?? [],
+            getZone: async (zone) => unwrap(await getZone({ client, path: { zone } })),
+            createZone: async (zone) => unwrap(await createZone({ client, path: { zone } })),
+            deleteZone: async (zone) => unwrap(await deleteZone({ client, path: { zone } })),
 
             // Zone sharing.
-            joinZone: async (zone) => unwrap(await sdk.joinZone({ client, path: { zone } })),
+            joinZone: async (zone) => unwrap(await joinZone({ client, path: { zone } })),
             leaveZone: async (zone, owner) =>
-                unwrap(await sdk.removeZoneOwner({ client, path: { zone, owner } })),
-            rotateKeys: async (zone) => unwrap(await sdk.rotateZoneKeys({ client, path: { zone } })),
+                unwrap(await removeZoneOwner({ client, path: { zone, owner } })),
+            rotateKeys: async (zone) => unwrap(await rotateZoneKeys({ client, path: { zone } })),
             addOwner: async (zone, email) =>
-                unwrap(await sdk.addZoneOwner({ client, path: { zone }, body: { email }, headers: JSON_HEADERS })),
+                unwrap(await addZoneOwner({ client, path: { zone }, body: { email }, headers: JSON_HEADERS })),
 
             // ── API tokens ───────────────────────────────────────────────
-            listTokens: async () => unwrap(await sdk.listTokens({ client }))?.tokens ?? [],
+            listTokens: async () => unwrap(await listTokens({ client }))?.tokens ?? [],
             // The created token is the ONLY time the server returns the secret
             // in clear text (they are stored hashed) — the caller must show it
             // straight away or it is gone.
             createToken: async ({ readOnly = false } = {}) =>
-                unwrap(await sdk.createToken({
+                unwrap(await createToken({
                     client, body: { read_only: readOnly }, headers: JSON_HEADERS,
                 }))?.token,
-            deleteToken: async (id) => unwrap(await sdk.deleteToken({ client, path: { id } })),
+            deleteToken: async (id) => unwrap(await deleteToken({ client, path: { id } })),
 
             // ── Policy rules ─────────────────────────────────────────────
-            listPolicyRules: async () => unwrap(await sdk.listPolicyRules({ client })),
+            listPolicyRules: async () => unwrap(await listPolicyRules({ client })),
             createPolicyRule: async (body) =>
-                unwrap(await sdk.createPolicyRule({ client, body, headers: JSON_HEADERS })),
+                unwrap(await createPolicyRule({ client, body, headers: JSON_HEADERS })),
             updatePolicyRule: async (id, body) =>
-                unwrap(await sdk.updatePolicyRule({ client, path: { id }, body, headers: JSON_HEADERS })),
+                unwrap(await updatePolicyRule({ client, path: { id }, body, headers: JSON_HEADERS })),
             deletePolicyRule: async (id) =>
-                unwrap(await sdk.deletePolicyRule({ client, path: { id } })),
+                unwrap(await deletePolicyRule({ client, path: { id } })),
 
             // ── Delegations and orphaned zones (super-admin) ─────────────
             listDelegations: async () =>
-                unwrap(await sdk.listDelegations({ client }))?.delegations ?? [],
+                unwrap(await listDelegations({ client }))?.delegations ?? [],
             createDelegation: async (body) =>
-                unwrap(await sdk.createDelegation({ client, body, headers: JSON_HEADERS })),
+                unwrap(await createDelegation({ client, body, headers: JSON_HEADERS })),
             updateDelegation: async (id, body) =>
-                unwrap(await sdk.updateDelegation({ client, path: { id }, body, headers: JSON_HEADERS })),
+                unwrap(await updateDelegation({ client, path: { id }, body, headers: JSON_HEADERS })),
             deleteDelegation: async (id) =>
-                unwrap(await sdk.deleteDelegation({ client, path: { id } })),
+                unwrap(await deleteDelegation({ client, path: { id } })),
             listOrphanedZones: async () =>
-                unwrap(await sdk.listOrphanedZones({ client }))?.zones ?? [],
+                unwrap(await listOrphanedZones({ client }))?.zones ?? [],
             deleteOrphanedZone: async (zone) =>
-                unwrap(await sdk.deleteOrphanedZone({ client, path: { zone } })),
+                unwrap(await deleteOrphanedZone({ client, path: { zone } })),
 
             // ── DNS records ──────────────────────────────────────────────
             // No Authorization header is assembled here: the client interceptor
@@ -103,19 +112,19 @@ export function useZonesApi() {
             // the proxy injects it server-side anyway. dns-record-list.jsx used
             // to pass it a second time by hand.
             listDnsRecords: async (zone, tsigKey) =>
-                unwrap(await sdk.listDnsRecords({
+                unwrap(await listDnsRecords({
                     client, query: { zone }, headers: tsigHeaders(tsigKey),
                 }))?.records ?? [],
             // createDnsRecord is an upsert: the API replaces the record set, so
             // editing an existing record is the same call as creating one.
             saveDnsRecord: async (zone, tsigKey, fields) =>
-                unwrap(await sdk.createDnsRecord({
+                unwrap(await createDnsRecord({
                     client, body: { ...fields, zone, ...tsigBody(tsigKey) }, headers: JSON_HEADERS,
                 })),
             deleteDnsRecord: async (zone, tsigKey, fields) =>
-                unwrap(await sdk.deleteDnsRecord({
+                unwrap(await deleteDnsRecord({
                     client, body: { ...fields, zone, ...tsigBody(tsigKey) }, headers: JSON_HEADERS,
                 })),
         };
-    }, [client, sdk]);
+    }, [client]);
 }

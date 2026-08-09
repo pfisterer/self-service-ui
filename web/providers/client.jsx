@@ -1,99 +1,107 @@
-import { useState, useEffect, useContext } from 'react';
-import { createContext } from 'react';
-import { useAuth } from '/providers/auth.jsx';
+import { useEffect } from 'react';
+import { useAuth, DEV_DEFAULT_EMAIL } from '/providers/auth.jsx';
 import { useSession } from '/providers/session.jsx';
 
-export const ClientContext = createContext({});
+import { client as projectsClient } from '@dhbw-cloud/os-mgt-client';
+import { client as dyndnsClient } from '@dhbw-cloud/dynamic-zones-client';
 
-export function useClient(name = 'dyndns') {
-    const contexts = useContext(ClientContext);
-    const context = contexts[name];
+// The generated clients are build-time dependencies (see d6). They used to be
+// fetched from the API server at runtime, which meant a UI built against an
+// operation the deployed API does not have failed silently in the browser.
+//
+// WHERE the API lives is still runtime configuration — one image serves every
+// environment — so only setConfig happens here, not the import.
+//
+// This runs at module scope on purpose. config.js is a plain script tag ahead
+// of the bundle, so window.appconfig is already there; and doing it in an
+// effect would be too late: React runs CHILD effects before parent ones, so a
+// query in a route would have fired its first request before a provider effect
+// could have set the base URL. The old async gate hid that by not rendering
+// children until the client existed.
+projectsClient.setConfig({ baseUrl: window?.appconfig?.cloudResourcesBaseUrl });
+dyndnsClient.setConfig({ baseUrl: window?.appconfig?.dynamicZonesBaseUrl });
 
-    if (!context) {
-        throw new Error(`ClientProvider "${name}" not found. Ensure the Provider is configured with this name.`);
-    }
-    return context;
+const CLIENTS = { projects: projectsClient, dyndns: dyndnsClient };
+
+// The interceptors need values that live in React (the token, the dev user,
+// the session's expire callback) but must exist before the first request. So
+// they are registered once and read the current values through this holder,
+// which ClientProvider keeps up to date.
+//
+// Seeded from the same sources auth.jsx reads, because the first request can
+// happen before any effect has run (child effects precede parent ones). In BFF
+// mode the token is null anyway; what actually matters here is the dev identity,
+// without which the very first call in a dev session would go out unauthenticated.
+const useDummyAuth = import.meta.env.DEV && window.appconfig?.dummyAuth === true;
+const session = {
+    token: null,
+    useDummyAuth,
+    devUser: useDummyAuth
+        ? (new URLSearchParams(window.location.search).get('dev_user') || DEV_DEFAULT_EMAIL)
+        : null,
+    expire: () => { },
 };
 
-export function ClientProvider({ children, name = 'dyndns', baseURL }) {
-    const auth = useAuth();
-    const { expire } = useSession();
-    const parentContext = useContext(ClientContext);
-    const [state, setState] = useState({ client: null, sdk: null, error: null });
+for (const c of Object.values(CLIENTS)) {
+    c.interceptors.request.use((request) => {
+        // BFF mode: the SPA holds NO token, so no Authorization is set here and
+        // the oauth2-proxy in front injects the Bearer server-side. Pre-BFF, the
+        // SPA still sets it from the token.
+        session.token
+            ? request.headers.set('Authorization', `Bearer ${session.token}`)
+            : request.headers.delete('Authorization');
 
-    useEffect(() => {
-        if (auth?.loading) {
-            return;
+        // Dev/dummy auth only: assert an identity via header. Gated on
+        // useDummyAuth (false in every production build, see auth.jsx).
+        if (session.useDummyAuth && session.devUser) {
+            request.headers.set('X-Dummy-Auth-User', session.devUser);
         }
 
-        (async () => {
-            if (!baseURL) {
-                setState(s => ({ ...s, error: { message: 'No Base URL provided.' } }));
-                return;
-            }
+        return request;
+    });
 
-            const clientUrl = new URL("client/client.gen.mjs", baseURL).toString();
-            const sdkUrl = new URL("client/sdk.gen.mjs", baseURL).toString();
+    // BFF: a 401 means the oauth2-proxy session expired (it answers AJAX
+    // requests with 401 rather than a cross-origin redirect an XHR can't
+    // follow). Only a full-page navigation can re-run the OIDC login — but
+    // starting one from here, silently, is what made an expired session look
+    // like a hung page. Raise it instead and let the person choose the moment
+    // (see providers/session.jsx). Skipped in dummy/dev mode (there the API
+    // itself returns 401 for real auth errors).
+    c.interceptors.response.use((response) => {
+        if (response?.status === 401 && !session.useDummyAuth) {
+            session.expire();
+        }
+        return response;
+    });
+}
 
-            try {
-                const sdkMod = await import(/* @vite-ignore */ sdkUrl);
-                const clientMod = await import(/* @vite-ignore */ clientUrl);
-                const myClient = clientMod.client;
+// Returns the configured client for one API. It is the single place that maps
+// an API name to its package, so the facades do not import one each.
+export function useClient(name = 'dyndns') {
+    const client = CLIENTS[name];
 
-                myClient.setConfig({ baseUrl: baseURL });
+    if (!client) {
+        throw new Error(`No client named "${name}". Known: ${Object.keys(CLIENTS).join(', ')}.`);
+    }
+    return client;
+}
 
-                const interceptorId = myClient.interceptors.request.use(async (request) => {
-                    // BFF mode: the SPA holds NO token (access_token is null),
-                    // so no Authorization is set here; the oauth2-proxy in front injects
-                    // the Bearer server-side. Pre-BFF, the SPA still sets it from the token.
-                    const token = auth?.user?.access_token;
-                    token ? request.headers.set('Authorization', `Bearer ${token}`) : request.headers.delete('Authorization');
+// Keeps the interceptor holder current. It renders no UI and holds no state of
+// its own — the clients themselves are module singletons.
+export function ClientProvider({ children }) {
+    const auth = useAuth();
+    const { expire } = useSession();
 
-                    // Dev/dummy auth only: assert an identity via header. Gated on
-                    // useDummyAuth (false in every production build, see auth.jsx).
-                    if (auth?.useDummyAuth && auth?.dev_user) {
-                        console.debug(`ClientProvider: Adding dummy auth header for user '${auth.dev_user}'`);
-                        request.headers.set('X-Dummy-Auth-User', auth.dev_user);
-                    }
+    // In an effect, not during render: writing to module state while rendering
+    // is a side effect React is allowed to discard or repeat. The values that
+    // must be right before the first request are seeded above; this only keeps
+    // them current as the person signs in, switches dev user, or the session ends.
+    useEffect(() => {
+        session.token = auth?.user?.access_token ?? null;
+        session.useDummyAuth = Boolean(auth?.useDummyAuth);
+        session.devUser = auth?.dev_user ?? null;
+        session.expire = expire;
+    }, [auth?.user?.access_token, auth?.useDummyAuth, auth?.dev_user, expire]);
 
-                    return request;
-                });
-
-                // BFF: a 401 means the oauth2-proxy session expired (it answers
-                // AJAX requests with 401 rather than a cross-origin redirect an XHR can't
-                // follow). Only a full-page navigation can re-run the OIDC login — but
-                // starting one from here, silently, is what made an expired session look
-                // like a hung page. Raise it instead and let the person choose the moment
-                // (see providers/session.jsx). Skipped in dummy/dev mode (there the API
-                // itself returns 401 for real auth errors).
-                const responseInterceptorId = myClient.interceptors.response.use(async (response) => {
-                    if (response?.status === 401 && !auth?.useDummyAuth) {
-                        expire();
-                    }
-                    return response;
-                });
-
-                setState({ client: myClient, sdk: sdkMod, error: null });
-
-                return () => {
-                    myClient.interceptors.request.eject(interceptorId);
-                    myClient.interceptors.response.eject(responseInterceptorId);
-                };
-            } catch (e) {
-                setState(s => ({ ...s, error: { message: 'Load failed', details: e.message } }));
-            }
-        })();
-        // `auth.useDummyAuth` is read inside the interceptors but is a build-time
-        // constant (import.meta.env.DEV && config), so it cannot change while
-        // this provider is mounted; listing it would only rebuild the client.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [auth?.loading, auth?.user, baseURL, auth.dev_user, expire]);
-
-    const newValue = { ...parentContext, [name]: state };
-
-    return (
-        <ClientContext.Provider value={newValue}>
-            {children}
-        </ClientContext.Provider>
-    );
+    return children;
 }

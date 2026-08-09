@@ -25,7 +25,7 @@ import { RoleSwitchProvider } from './projects/component-group-role-switcher.jsx
 import { Home } from '/home/home.jsx';
 import { Delayed } from '/helper/delayed.jsx';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
-import { ClientProvider, useClient } from './providers/client.jsx';
+import { ClientProvider } from './providers/client.jsx';
 
 // Route-level code splitting: the projects and dyndns trees (swagger-ui lives
 // inside the latter) load as separate chunks only when their route is visited.
@@ -89,17 +89,14 @@ function App() {
 }
 
 function AppRoutes() {
-    const { client: projectClient, error: projectClientError } = useClient('projects');
     const [location] = useLocation();
 
-    // The /projects route only exists once its API client has been built, which
-    // happens asynchronously (the generated SDK is imported at runtime). Until
-    // then nothing matches /projects/... and the fall-through below would answer
-    // a deep link with "404: Page not found" for a moment — visible on every
-    // reload of a bookmarked budget page. So while the client is still on its
-    // way, an unmatched path is "not yet", not "not there".
-    const cloudConfigured = Boolean(window?.appconfig?.cloudResourcesBaseUrl);
-    const cloudPending = cloudConfigured && !projectClient && !projectClientError;
+    // Whether the Cloud Projects section exists at all. This used to be implied
+    // by "did the API client finish loading" — with the client bundled at build
+    // time that side effect is gone, so the gate has to be stated. Getting it
+    // wrong would open the section on an environment that deliberately hides it
+    // (production sets no cloudResourcesBaseUrl). nav.jsx reads the same thing.
+    const cloudProjectsEnabled = Boolean(window?.appconfig?.cloudResourcesBaseUrl);
 
     // Reset the error boundary only when switching between top-level sections
     // (/, /dyndns, /projects) — NOT on every sub-navigation. Keying on the full
@@ -114,8 +111,8 @@ function AppRoutes() {
                 <Switch>
                     <Route path="/" component={Home} />
                     <Route path="/dyndns" component={DynamicDnsManagement} nest />
-                    {projectClient && <Route path="/projects" component={CloudProjectManagement} nest />}
-                    <Route component={cloudPending ? Loading : NotFound} />
+                    {cloudProjectsEnabled && <Route path="/projects" component={CloudProjectManagement} nest />}
+                    <Route component={NotFound} />
                 </Switch>
             </ErrorBoundary>
         </Suspense>
@@ -133,8 +130,7 @@ function Main() {
     // from the same API the section below uses.
     return (
         <Router>
-        <ClientProvider name="dyndns" baseURL={window?.appconfig?.dynamicZonesBaseUrl}>
-        <ClientProvider name="projects" baseURL={window?.appconfig?.cloudResourcesBaseUrl}>
+        <ClientProvider>
         <CloudStatusProvider>
         {/* Above the header, because the role switch is offered IN the header —
             at the right end of the Cloud Projects nav bar. It stays scoped to
@@ -194,7 +190,6 @@ function Main() {
         </Shell>
         </RoleSwitchProvider>
         </CloudStatusProvider>
-        </ClientProvider>
         </ClientProvider>
         </Router>
     );

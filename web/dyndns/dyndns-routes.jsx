@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Route, Switch, Redirect } from 'wouter';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
-import { useClient } from '/providers/client.jsx';
 import { DynDnsZones } from '/dyndns/zones.jsx';
 import { Tokens } from '/dyndns/tokens.jsx';
 import { DnsPolicy } from '/dyndns/policy.jsx';
@@ -13,18 +12,12 @@ const DynamicZonesApiSwagger = lazy(() =>
 
 export function DynamicDnsManagement() {
     const { config: dynDnsConfig, error: configLoadError } = useDynDnsConfig();
-    const { client, sdk, error: clientLoadError } = useClient('dyndns');
-
-    const dynamicZonesLoaded = Boolean(dynDnsConfig && client && sdk);
+    // The client is a module singleton now; only the remote config is awaited.
+    const dynamicZonesLoaded = Boolean(dynDnsConfig);
 
     if (!dynamicZonesLoaded) {
         return (
-            <DynDnsLoadState
-                clientLoadError={clientLoadError}
-                configLoadError={configLoadError}
-                client={client}
-                sdk={sdk}
-            />
+            <DynDnsLoadState configLoadError={configLoadError} />
         );
     }
 

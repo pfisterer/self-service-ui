@@ -23,7 +23,12 @@ function ApiDocumentation({ baseUrl, title }) {
     // ".../api/dyndns/client/..." and ".../api/dyndns/swagger.json" — same origin,
     // through Caddy to the API. A LEADING SLASH ("/swagger.json") or "../client/"
     // would escape the /api/dyndns/ path and hit the UI root (404 -> index.html ->
-    // "not a valid version field"). Matches how client.jsx loads the SDK.
+    // "not a valid version field").
+    //
+    // These are a DOWNLOAD offer for third-party API consumers, not how this
+    // app loads its own client — that is an npm dependency now (see d6). They
+    // break the day the services stop embedding client-dist, so that step has
+    // to replace them (with the package name and version, presumably).
     const jsSdkUrl = new URL('client/sdk.gen.js', baseUrl).href;
     const jsClientUrl = new URL('client/client.gen.js', baseUrl).href;
     const mjsSdkUrl = new URL('client/sdk.gen.mjs', baseUrl).href;

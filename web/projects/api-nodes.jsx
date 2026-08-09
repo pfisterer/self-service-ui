@@ -1,6 +1,18 @@
 import { useMemo } from 'react';
 import { apiError, apiErrorMessage } from '/helper/api-error.js';
 import { useClient } from '../providers/client.jsx';
+// Named imports, not `sdk.<op>`: a property access on a namespace is still
+// only wrong at runtime, while a missing named export fails the build — which
+// is the whole point of depending on the client by version (see d6).
+import {
+    approveNode, clearRoleSwitch, createNode, deleteNode,
+    getAdminReconcileStatus, getConfig, getNode, getRoleSwitch,
+    listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
+    listMyNodes, listNodeChildren, listNodesToManage, promoteNode,
+    rejectNode, releaseNode, reparentNode, requestNodeChange, searchNodes,
+    searchPrincipals, setRoleSwitch, transferNodeOwner,
+    triggerAdminReconcile, updateNode,
+} from '@dhbw-cloud/os-mgt-client';
 import { normalizeObjectResponse } from './util-project.jsx';
 
 // useNodesApi wraps every node-tree SDK operation with uniform error handling,
@@ -9,7 +21,6 @@ import { normalizeObjectResponse } from './util-project.jsx';
 // Error with the server's message — callers handle errors in one place
 // (typically useAsyncRefresh's onError or a try/catch around a submit).
 //
-// Returns null until the SDK module is loaded; callers should render a loader.
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
@@ -38,10 +49,9 @@ function unwrapPage(res) {
 export const PAGE_SIZE = 50;
 
 export function useNodesApi() {
-    const { client, sdk } = useClient('projects');
+    const client = useClient('projects');
 
     return useMemo(() => {
-        if (!client || !sdk) return null;
 
         // Lists that grow with one person's own work — the projects they own,
         // the budgets delegated to them, the decisions on their desk. These are
@@ -53,110 +63,110 @@ export function useNodesApi() {
         return {
             // ── Configuration ────────────────────────────────────────────
             getConfig: async () =>
-                unwrapObject(await sdk.getConfig({ client })),
+                unwrapObject(await getConfig({ client })),
 
             // ── Reading the tree ─────────────────────────────────────────
             getNode: async (id) =>
-                unwrapObject(await sdk.getNode({ client, path: { id } })),
+                unwrapObject(await getNode({ client, path: { id } })),
             // The one list that has no natural bound: a course budget holds as
             // many projects as it has students. Loaded one page at a time.
             listChildren: async (id, { limit = PAGE_SIZE, offset = 0 } = {}) =>
-                unwrapPage(await sdk.listNodeChildren({ client, path: { id }, query: { limit, offset } })),
+                unwrapPage(await listNodeChildren({ client, path: { id }, query: { limit, offset } })),
             // Full-text search over everything below the budgets the caller
             // manages. Server-side because the tree is no longer fully loaded.
             searchNodes: async (q, { limit = PAGE_SIZE, offset = 0 } = {}) =>
-                unwrapPage(await sdk.searchNodes({ client, query: { q, limit, offset } })),
+                unwrapPage(await searchNodes({ client, query: { q, limit, offset } })),
             listMine: async () =>
-                unwrapPage(await sdk.listMyNodes({ client, query: BOUNDED })),
+                unwrapPage(await listMyNodes({ client, query: BOUNDED })),
             listMyBudgets: async () =>
-                unwrapPage(await sdk.listMyBudgets({ client, query: BOUNDED })),
+                unwrapPage(await listMyBudgets({ client, query: BOUNDED })),
             // scope 'direct' = requests nobody else manages, 'subtree' = everything
             // below my budgets, including what a sub-budget's manager should handle.
             listToManage: async (scope = 'direct') =>
-                unwrapPage(await sdk.listNodesToManage({ client, query: { ...BOUNDED, scope } })),
+                unwrapPage(await listNodesToManage({ client, query: { ...BOUNDED, scope } })),
             listEligibleForMe: async () =>
-                unwrapPage(await sdk.listEligibleBudgets({ client, query: BOUNDED })),
+                unwrapPage(await listEligibleBudgets({ client, query: BOUNDED })),
             listEligibleForOwner: async (ownerTokens) =>
-                unwrapPage(await sdk.listEligibleBudgetsForOwner({
+                unwrapPage(await listEligibleBudgetsForOwner({
                     client, query: { ...BOUNDED, owner_token: ownerTokens },
                 })),
 
             // ── Creating and editing ─────────────────────────────────────
             createNode: async (body) =>
-                unwrapObject(await sdk.createNode({ client, body, headers: JSON_HEADERS })),
+                unwrapObject(await createNode({ client, body, headers: JSON_HEADERS })),
             updateNode: async (id, body) =>
-                unwrapObject(await sdk.updateNode({ client, path: { id }, body, headers: JSON_HEADERS })),
+                unwrapObject(await updateNode({ client, path: { id }, body, headers: JSON_HEADERS })),
             requestChange: async (id, body) =>
-                unwrapObject(await sdk.requestNodeChange({ client, path: { id }, body, headers: JSON_HEADERS })),
+                unwrapObject(await requestNodeChange({ client, path: { id }, body, headers: JSON_HEADERS })),
 
             // ── Lifecycle decisions ──────────────────────────────────────
             approve: async (id, modifiedLimit = null) =>
-                unwrapObject(await sdk.approveNode({
+                unwrapObject(await approveNode({
                     client, path: { id },
                     body: modifiedLimit ? { modified_limit: modifiedLimit } : {},
                     headers: JSON_HEADERS,
                 })),
             reject: async (id, reason) =>
-                unwrapObject(await sdk.rejectNode({
+                unwrapObject(await rejectNode({
                     client, path: { id },
                     body: reason ? { reason } : {},
                     headers: JSON_HEADERS,
                 })),
             release: async (id) =>
-                unwrapObject(await sdk.releaseNode({ client, path: { id } })),
+                unwrapObject(await releaseNode({ client, path: { id } })),
 
             // ── Structural operations ────────────────────────────────────
             move: async (id, newParentId) =>
-                unwrapObject(await sdk.reparentNode({
+                unwrapObject(await reparentNode({
                     client, path: { id }, body: { new_parent_id: newParentId }, headers: JSON_HEADERS,
                 })),
             transferOwner: async (id, newOwner) =>
-                unwrapObject(await sdk.transferNodeOwner({
+                unwrapObject(await transferNodeOwner({
                     client, path: { id }, body: { new_owner: newOwner }, headers: JSON_HEADERS,
                 })),
             adopt: async (id, body) =>
-                unwrapObject(await sdk.promoteNode({ client, path: { id }, body, headers: JSON_HEADERS })),
+                unwrapObject(await promoteNode({ client, path: { id }, body, headers: JSON_HEADERS })),
             deleteNode: async (id) =>
-                unwrapVoid(await sdk.deleteNode({ client, path: { id } })),
+                unwrapVoid(await deleteNode({ client, path: { id } })),
 
             // ── Root-admin surface ───────────────────────────────────────
             // Role-switch eligibility doubles as "is a root admin".
-            getRoleSwitch: async () => unwrapObject(await sdk.getRoleSwitch({ client })),
+            getRoleSwitch: async () => unwrapObject(await getRoleSwitch({ client })),
             // Only the COUNT is wanted, so ask for one row: the listing reports
             // how many matches it was cut from, which makes the badge exact
             // without fetching a single row it would ever show.
             countToManage: async (scope = 'direct') =>
-                unwrapPage(await sdk.listNodesToManage({ client, query: { limit: 1, offset: 0, scope } })).total,
+                unwrapPage(await listNodesToManage({ client, query: { limit: 1, offset: 0, scope } })).total,
             // Same trick, for the two questions the header asks about the
             // budget view: does this user manage anything, and — if not —
             // could they ask for a budget? Rows are not wanted, only whether
             // there are any.
             countMyBudgets: async () =>
-                unwrapPage(await sdk.listMyBudgets({ client, query: { limit: 1, offset: 0 } })).total,
+                unwrapPage(await listMyBudgets({ client, query: { limit: 1, offset: 0 } })).total,
             // Counts every budget that would take a request from this user,
             // including the ones that accept project requests but no
             // sub-budgets (allow_sub_budget_requests) — that flag sits on the
             // rows this deliberately does not fetch. Erring towards offering
             // the view: the worst case is a page that says "nobody to ask".
             countEligibleForMe: async () =>
-                unwrapPage(await sdk.listEligibleBudgets({ client, query: { limit: 1, offset: 0 } })).total,
+                unwrapPage(await listEligibleBudgets({ client, query: { limit: 1, offset: 0 } })).total,
             getReconcileStatus: async () => {
-                const res = await sdk.getAdminReconcileStatus({ client });
+                const res = await getAdminReconcileStatus({ client });
                 // 503 = the reconciler is switched off in this environment. Not
                 // an error: the panel simply has nothing to show.
                 if (res.response?.status === 503) return null;
                 return unwrapObject(res);
             },
-            triggerReconcile: async () => unwrapObject(await sdk.triggerAdminReconcile({ client })),
-            clearRoleSwitch: async () => unwrapObject(await sdk.clearRoleSwitch({ client })),
+            triggerReconcile: async () => unwrapObject(await triggerAdminReconcile({ client })),
+            clearRoleSwitch: async () => unwrapObject(await clearRoleSwitch({ client })),
             setRoleSwitch: async (body) =>
-                unwrapObject(await sdk.setRoleSwitch({ client, body, headers: JSON_HEADERS })),
+                unwrapObject(await setRoleSwitch({ client, body, headers: JSON_HEADERS })),
             // Impersonation candidates come from the same principal search that
             // fills every token field — there is no separate "assumable
             // identities" list, because it would expose the same addresses
             // behind a second door.
             searchIdentities: async (q, limit) => {
-                const data = unwrapObject(await sdk.searchPrincipals({ client, query: { q, limit } }));
+                const data = unwrapObject(await searchPrincipals({ client, query: { q, limit } }));
                 return (data?.users || []).map(email => ({ email, label: email }));
             },
 
@@ -167,14 +177,14 @@ export function useNodesApi() {
             // Same endpoint as searchPrincipals, but keeping the group labels
             // and descriptions the autocomplete shows under each option.
             searchPrincipalDetails: async (q, limit = 10) => {
-                const data = unwrapObject(await sdk.searchPrincipals({ client, query: { q, limit } }));
+                const data = unwrapObject(await searchPrincipals({ client, query: { q, limit } }));
                 return [
                     ...(data?.groups || []).filter(g => g?.token),
                     ...(data?.users || []).map(email => ({ token: `user:${email}`, description: 'Individual person' })),
                 ];
             },
             searchPrincipals: async (q, limit = 50) => {
-                const res = await sdk.searchPrincipals({ client, query: { q, limit } });
+                const res = await searchPrincipals({ client, query: { q, limit } });
                 const err = apiErrorMessage(res);
                 if (err) throw new Error(err);
                 return [
@@ -183,5 +193,5 @@ export function useNodesApi() {
                 ];
             },
         };
-    }, [client, sdk]);
+    }, [client]);
 }
