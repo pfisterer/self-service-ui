@@ -1,4 +1,5 @@
 import { useLocation } from 'wouter';
+import { cloudProjectsEnabled } from '/features.js';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
 
@@ -33,7 +34,7 @@ export function useNav() {
     const { isRoot, pending, hasBudgets } = useCloudStatus();
     const { hasPolicy } = useDnsPolicyStatus();
 
-    const cloudProjectsEnabled = Boolean(window?.appconfig?.cloudResourcesBaseUrl);
+
 
     const sections = [
         { id: 'home', label: 'Home', href: '/', items: [] },

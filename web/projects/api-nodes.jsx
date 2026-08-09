@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { apiError, apiErrorMessage } from '/helper/api-error.js';
 import { useClient } from '../providers/client.jsx';
+import { cloudProjectsEnabled } from '/features.js';
 // Named imports, not `sdk.<op>`: a property access on a namespace is still
 // only wrong at runtime, while a missing named export fails the build — which
 // is the whole point of depending on the client by version (see d6).
@@ -51,7 +52,14 @@ export const PAGE_SIZE = 50;
 export function useNodesApi() {
     const client = useClient('projects');
 
+    // Null when this deployment has no Cloud Projects section: there is no API
+    // to talk to, and callers (cloud-status.jsx) gate their queries on getting
+    // an api back. Before the client became a build-time dependency, its
+    // failure to load produced the same null by accident.
+    const enabled = cloudProjectsEnabled;
+
     return useMemo(() => {
+        if (!enabled) return null;
 
         // Lists that grow with one person's own work — the projects they own,
         // the budgets delegated to them, the decisions on their desk. These are
@@ -193,5 +201,5 @@ export function useNodesApi() {
                 ];
             },
         };
-    }, [client]);
+    }, [client, enabled]);
 }

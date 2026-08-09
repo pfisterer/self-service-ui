@@ -5,6 +5,8 @@ import './app.css';
 import { createRoot } from 'react-dom/client';
 import { lazy, Suspense, useState } from 'react';
 import { Router, Route, Switch, useLocation } from 'wouter';
+
+import { cloudProjectsEnabled } from '/features.js';
 import { MantineProvider, AppShell, v8CssVariablesResolver } from '@mantine/core';
 import { Container, Paper, Box, Center, Stack, Title, Text, Button, ThemeIcon, TextInput, Anchor, Group } from '@mantine/core';
 import { LogIn } from 'lucide-react';
@@ -96,7 +98,7 @@ function AppRoutes() {
     // time that side effect is gone, so the gate has to be stated. Getting it
     // wrong would open the section on an environment that deliberately hides it
     // (production sets no cloudResourcesBaseUrl). nav.jsx reads the same thing.
-    const cloudProjectsEnabled = Boolean(window?.appconfig?.cloudResourcesBaseUrl);
+    // (see /features.js — the same flag nav.jsx and the projects API read)
 
     // Reset the error boundary only when switching between top-level sections
     // (/, /dyndns, /projects) — NOT on every sub-navigation. Keying on the full
