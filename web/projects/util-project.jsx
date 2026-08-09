@@ -147,6 +147,71 @@ export function autoApproveHeadroom(budget, resources, myProjects) {
     return out;
 }
 
+// resourceBarSegments turns absolute amounts into the widths of the three
+// stacked segments of a usage bar. Split out of ResourceBar so the arithmetic
+// can be checked without rendering anything: the clamping is the whole point.
+// Each segment is capped by what the ones before it left over, so the segments
+// never sum past 100 — otherwise an over-committed budget draws a bar that
+// runs out of its own track.
+export function resourceBarSegments(limit, { approved = 0, changePending = 0, incoming = 0 } = {}) {
+    const pct = (v) => (limit > 0 ? Math.round((v / limit) * 100) : 0);
+    const approvedPct = Math.min(100, pct(approved));
+    const pendingPct = Math.min(100 - approvedPct, pct(changePending));
+    const incomingPct = Math.min(100 - approvedPct - pendingPct, pct(incoming));
+    return { approvedPct, pendingPct, incomingPct, totalPct: approvedPct + pendingPct + incomingPct };
+}
+
+// limitDelta is one row of the before/after table: what a resource is now, what
+// it would become, and the difference. A missing key means 0 — a quota that
+// does not mention a resource grants none of it.
+export function limitDelta(limitFrom, limitTo, resourceId) {
+    const before = limitFrom?.[resourceId] ?? 0;
+    const after = limitTo?.[resourceId] ?? 0;
+    return { before, after, d: after - before };
+}
+
+// nodeChanges answers "what would this change actually do" for a proposed edit:
+// which of limit, termination date and member list moved, and who was added,
+// removed or given a different role.
+//
+// Members are compared by token, not by position: the API returns them in no
+// guaranteed order, and a list-identity comparison would report every reorder
+// as a change. `usersTo === undefined` means the caller is not editing members
+// at all, which is different from editing them down to an empty list — hence
+// hasUserData rather than checking for an empty array.
+export function nodeChanges({ resources, limitFrom, limitTo, dateFrom, dateTo, usersFrom, usersTo } = {}) {
+    const hasLimitChange = Boolean(limitFrom && limitTo && resources &&
+        resources.some(r => (limitFrom[r.id] ?? 0) !== (limitTo[r.id] ?? 0)));
+    const hasDateChange = Boolean(dateFrom && dateTo &&
+        new Date(dateFrom).getTime() !== new Date(dateTo).getTime());
+
+    const hasUserData = usersTo !== undefined && usersTo !== null;
+    const from = usersFrom || [];
+    const to = usersTo || [];
+    const fromMap = new Map(from.map(u => [u.token, u]));
+    const toMap = new Map(to.map(u => [u.token, u]));
+    const added = hasUserData ? to.filter(u => !fromMap.has(u.token)) : [];
+    const removed = hasUserData ? from.filter(u => !toMap.has(u.token)) : [];
+    // Carries `previous_role` along: "what it was" is part of the change, and
+    // the caller would otherwise have to rebuild the same lookup to render the
+    // "member → reader" arrow.
+    const roleChanged = hasUserData ? to.flatMap(u => {
+        const previous = fromMap.get(u.token);
+        return previous && previous.openstack_role !== u.openstack_role
+            ? [{ ...u, previous_role: previous.openstack_role }]
+            : [];
+    }) : [];
+
+    return {
+        hasLimitChange,
+        hasDateChange,
+        added,
+        removed,
+        roleChanged,
+        hasUserChanges: added.length > 0 || removed.length > 0 || roleChanged.length > 0,
+    };
+}
+
 // One-line resource summary, e.g. "8 vCPUs · 16 GB RAM · 200 GB Disk".
 export function resourceSummaryText(resources, quota) {
     if (!resources || !quota) return '';

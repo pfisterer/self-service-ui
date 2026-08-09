@@ -4,7 +4,7 @@ import { DatePickerInput } from '@mantine/dates';
 import { Badge, Box, Checkbox, Group, NumberInput, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { COLOR, formatRoleLabel, statusLabel, statusStyle, UNLIMITED_QUOTA } from './util-project.jsx';
+import { COLOR, formatRoleLabel, limitDelta, nodeChanges, resourceBarSegments, statusLabel, statusStyle, UNLIMITED_QUOTA } from './util-project.jsx';
 import { tokenDisplay, tokenEmail, useTokenLabels } from './token-labels.jsx';
 
 dayjs.extend(relativeTime);
@@ -143,11 +143,8 @@ export function ResourceBar({ resource, limit, approved = 0, changePending = 0, 
         );
     }
 
-    const pct = (v) => (limit > 0 ? Math.round((v / limit) * 100) : 0);
-    const approvedPct = Math.min(100, pct(approved));
-    const pendingPct = Math.min(100 - approvedPct, pct(changePending));
-    const incomingPct = Math.min(100 - approvedPct - pendingPct, pct(incoming));
-    const totalPct = approvedPct + pendingPct + incomingPct;
+    const { approvedPct, pendingPct, incomingPct, totalPct } =
+        resourceBarSegments(limit, { approved, changePending, incoming });
     // Two steps, not a traffic light: the bar is neutral until the budget is
     // nearly full, and only then does it become a warning. A middle colour would
     // add a hue that means nothing anywhere else in the UI.
@@ -202,29 +199,13 @@ export function NodeUsageBars({ resources, node, incomingQuota = null }) {
 // NodeChangesDiff shows a before/after table for limit and termination date
 // plus added/removed authorized users. Renders nothing when nothing changed.
 export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateTo, usersFrom, usersTo, label = 'Proposed changes' }) {
-    const hasLimitChange = limitFrom && limitTo && resources &&
-        resources.some(r => (limitFrom[r.id] ?? 0) !== (limitTo[r.id] ?? 0));
-    const hasDateChange = dateFrom && dateTo && new Date(dateFrom).getTime() !== new Date(dateTo).getTime();
-
-    const hasUserData = usersTo !== undefined && usersTo !== null;
-    const from = usersFrom || [];
-    const to = usersTo || [];
-    const fromMap = new Map(from.map(u => [u.token, u]));
-    const toMap = new Map(to.map(u => [u.token, u]));
-    const added = hasUserData ? to.filter(u => !fromMap.has(u.token)) : [];
-    const removed = hasUserData ? from.filter(u => !toMap.has(u.token)) : [];
-    const roleChanged = hasUserData ? to.filter(u => {
-        const previous = fromMap.get(u.token);
-        return previous && previous.openstack_role !== u.openstack_role;
-    }) : [];
-    const hasUserChanges = added.length > 0 || removed.length > 0 || roleChanged.length > 0;
+    const { hasLimitChange, hasDateChange, added, removed, roleChanged, hasUserChanges } =
+        nodeChanges({ resources, limitFrom, limitTo, dateFrom, dateTo, usersFrom, usersTo });
 
     if (!hasLimitChange && !hasDateChange && !hasUserChanges) return null;
 
     const diff = (id) => {
-        const before = limitFrom?.[id] ?? 0;
-        const after = limitTo?.[id] ?? 0;
-        const d = after - before;
+        const { before, after, d } = limitDelta(limitFrom, limitTo, id);
         return { before, after, d, color: d > 0 ? 'green' : d < 0 ? 'red' : 'gray' };
     };
 
@@ -280,7 +261,7 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
                                     <Group key={u.token} gap="xs" align="center">
                                         <Text size="sm">{u.token}:</Text>
                                         <Badge size="sm" variant="outline" color="gray">
-                                            {formatRoleLabel(fromMap.get(u.token)?.openstack_role)}
+                                            {formatRoleLabel(u.previous_role)}
                                         </Badge>
                                         <Text size="xs" c="dimmed">→</Text>
                                         <Badge size="sm" variant="outline" color="dark">

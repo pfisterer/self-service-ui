@@ -1,6 +1,6 @@
-name: Lint
+name: Checks
 
-# Deliberately a separate workflow, not a step in docker-image.yml: by
+# Deliberately a separate workflow, not steps in docker-image.yml: by
 # convention nothing is verified inside the image build (the emulated arm64
 # build OOM-killed the in-image test run, so checks are a local step). This is
 # where the checks live instead — cheap, no Docker, no registry.
@@ -11,7 +11,7 @@ on:
     branches: ["main"]
 
 jobs:
-  lint:
+  checks:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,3 +33,10 @@ jobs:
 
       - name: ESLint
         run: npm run lint
+
+      # Unit tests, pure functions only — no DOM, no rendering. Runs even when
+      # the lint step failed, so one push reports both problems instead of
+      # hiding the second behind the first.
+      - name: Vitest
+        if: '!cancelled()'
+        run: npm test

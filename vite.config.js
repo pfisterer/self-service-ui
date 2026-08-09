@@ -58,6 +58,14 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 8084
     },
+    // Unit tests. Deliberately only the pure functions — the arithmetic and the
+    // string rules that are wrong silently. Rendering is not tested, so no DOM
+    // environment and no @testing-library are pulled in.
+    // Paths are relative to `root` above, i.e. web/.
+    test: {
+      environment: 'node',
+      include: ['**/*.test.js'],
+    },
     define: {
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
     },
