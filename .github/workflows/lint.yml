@@ -1,0 +1,35 @@
+name: Lint
+
+# Deliberately a separate workflow, not a step in docker-image.yml: by
+# convention nothing is verified inside the image build (the emulated arm64
+# build OOM-killed the in-image test run, so checks are a local step). This is
+# where the checks live instead — cheap, no Docker, no registry.
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: npm
+
+      # ci, not install: fails on a package-lock.json that disagrees with
+      # package.json instead of quietly resolving something else.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint

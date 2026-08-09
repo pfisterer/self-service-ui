@@ -6,6 +6,7 @@
     "dev": "npx vite",
     "build": "npx vite build",
     "preview": "npx vite preview",
+    "lint": "eslint .",
     "clean": "rm -rf dist-ui"
   },
   "dependencies": {
