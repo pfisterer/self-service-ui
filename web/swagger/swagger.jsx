@@ -10,14 +10,16 @@ import 'swagger-ui-dist/swagger-ui.css';
 // /client/*, and the endpoints themselves (see api_static.go on either side) — so
 // one component documents either of them. The two exports below name which.
 export function DynamicZonesApiSwagger() {
-    return <ApiDocumentation baseUrl={window.appconfig.dynamicZonesBaseUrl} title="Dynamic Zones API" />;
+    return <ApiDocumentation baseUrl={window.appconfig.dynamicZonesBaseUrl} title="Dynamic Zones API"
+        npmPackage="@dhbw-cloud/dynamic-zones-client" />;
 }
 
 export function CloudProjectsApiSwagger() {
-    return <ApiDocumentation baseUrl={window.appconfig.cloudResourcesBaseUrl} title="Cloud Projects API" />;
+    return <ApiDocumentation baseUrl={window.appconfig.cloudResourcesBaseUrl} title="Cloud Projects API"
+        npmPackage="@dhbw-cloud/os-mgt-client" />;
 }
 
-function ApiDocumentation({ baseUrl, title }) {
+function ApiDocumentation({ baseUrl, title, npmPackage }) {
     // All resolved RELATIVE to baseUrl (which has a trailing slash). In BFF mode
     // baseUrl is "https://<ui>/api/dyndns/", so these become
     // ".../api/dyndns/client/..." and ".../api/dyndns/swagger.json" — same origin,
@@ -29,11 +31,12 @@ function ApiDocumentation({ baseUrl, title }) {
     // app loads its own client — that is an npm dependency now (see d6). They
     // break the day the services stop embedding client-dist, so that step has
     // to replace them (with the package name and version, presumably).
-    const jsSdkUrl = new URL('client/sdk.gen.js', baseUrl).href;
-    const jsClientUrl = new URL('client/client.gen.js', baseUrl).href;
-    const mjsSdkUrl = new URL('client/sdk.gen.mjs', baseUrl).href;
-    const mjsClientUrl = new URL('client/client.gen.mjs', baseUrl).href;
     const swaggerJsonUrl = new URL('swagger.json', baseUrl).href;
+    // The generated client used to be downloadable from this service under
+    // /client. It is published to npm instead, versioned with the API that
+    // produced it, so a consumer pins a version rather than fetching whatever
+    // the server happens to serve — including this UI (see d6).
+    const npmUrl = `https://www.npmjs.com/package/${npmPackage}`;
 
     // Use a ref to target the DOM element where Swagger UI will render
     const uiRef = useRef(null);
@@ -88,7 +91,7 @@ function ApiDocumentation({ baseUrl, title }) {
 
                                     See <ExternalLink href={swaggerJsonUrl}>swagger.json</ExternalLink> for full API specification.
 
-                                    JavaScript (<ExternalLink href={jsClientUrl}>Client</ExternalLink> and <ExternalLink href={jsSdkUrl}>SDKs</ExternalLink>) and ESM-Module (<ExternalLink href={mjsClientUrl}>Client</ExternalLink> and <ExternalLink href={mjsSdkUrl}>SDKs</ExternalLink>) clients are available for accessing the API.
+                                    A generated TypeScript client is published as <ExternalLink href={npmUrl}><Code>{npmPackage}</Code></ExternalLink>; its version matches the API version shown above. Install it with <Code>npm install {npmPackage}</Code>.
                                 </Text>
                             </Box>
 
