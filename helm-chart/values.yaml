@@ -15,6 +15,13 @@ selfServiceUI:
   cloudResourcesBaseUrl: ""
   # DHBW-internal ACME server (acme2certifier) shown on the "TLS Certificates" tab.
   acmeServer: https://certificates.dhbw.cloud
+  # In-cluster addresses Caddy forwards the SPA's same-origin /api/<svc>/ calls
+  # to. These are Service names of OTHER releases, so this chart cannot derive
+  # them — and leaving them as image defaults meant a rename over there broke
+  # this deployment with a 502 that nothing here could fix. Empty -> the image
+  # default applies.
+  dynamicZonesUpstream: ""
+  cloudResourcesUpstream: ""
 
 #------------------------------------
 # OIDC/Auth Configuration

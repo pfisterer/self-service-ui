@@ -17,7 +17,9 @@
         "replicas": { "type": "integer", "minimum": 0 },
         "dynamicZonesBaseUrl": { "type": "string" },
         "cloudResourcesBaseUrl": { "type": "string" },
-        "acmeServer": { "type": "string" }
+        "acmeServer": { "type": "string" },
+        "dynamicZonesUpstream": { "type": "string" },
+        "cloudResourcesUpstream": { "type": "string" }
       }
     },
     "auth": {

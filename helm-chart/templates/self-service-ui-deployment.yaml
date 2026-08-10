@@ -59,6 +59,14 @@ spec:
               value: "{{ .Values.selfServiceUI.cloudResourcesBaseUrl }}"
             - name: ACME_SERVER
               value: "{{ .Values.selfServiceUI.acmeServer }}"
+            {{- if .Values.selfServiceUI.dynamicZonesUpstream }}
+            - name: DYN_ZONES_UPSTREAM
+              value: "{{ .Values.selfServiceUI.dynamicZonesUpstream }}"
+            {{- end }}
+            {{- if .Values.selfServiceUI.cloudResourcesUpstream }}
+            - name: CLOUD_RESOURCES_UPSTREAM
+              value: "{{ .Values.selfServiceUI.cloudResourcesUpstream }}"
+            {{- end }}
             - name: OIDC_ISSUER_URL
               value: "{{ .Values.auth.oidc.issuerUrl  }}"
             - name: OIDC_CLIENT_ID
