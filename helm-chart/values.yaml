@@ -8,7 +8,8 @@ selfServiceUI:
   replicas: 1
   imagePullPolicy: "Always"
   image: "ghcr.io/pfisterer/self-service-ui"
-  version: "latest"
+  # Empty -> the chart\'s appVersion is used (see the deployment template).
+  version: ""
   dynamicZonesBaseUrl: https://dyndnsapi.example.com
   # OpenStack management API base URL. Empty disables the Cloud Projects tab
   # (route unregistered + nav link hidden). Set it only where the backend works.
