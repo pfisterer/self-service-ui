@@ -159,11 +159,11 @@ Two consequences of this split are worth knowing before changing anything:
   The app reads the user's identity from `/oauth2/userinfo`, nothing more. A
   `401` from an API therefore means "the proxy session expired", and the app says
   so instead of navigating away silently.
-- **The API clients are loaded at runtime.** Both APIs serve a generated
-  TypeScript SDK under `/client/`, and the app imports it on startup. So a new
-  API operation becomes usable without rebuilding this app — at the price that a
-  version mismatch shows up at runtime rather than at build time (see `d6` in the
-  deployment repo's TODOs).
+- **The API clients are build-time dependencies.** Both APIs publish their
+  generated TypeScript SDK to npm (`@dhbw-cloud/dynamic-zones-client`,
+  `@dhbw-cloud/os-mgt-client`) and this app depends on a version. They used to be
+  fetched from the APIs at startup, which meant a missing operation showed up as a
+  silent no-op in the browser; now it fails the build here.
 
 The navigation is data, defined once in [`web/nav.jsx`](web/nav.jsx): which
 sections exist, which entries a given user gets, which of them the URL is in. The
@@ -223,21 +223,30 @@ start, so one image works in every environment. Required and optional variables:
 | `OIDC_CLIENT_ID`, `OIDC_ISSUER_URL` | yes | Shown to the app; the actual login is done by the proxy in front |
 | `ACME_SERVER` | no | ACME endpoint advertised in the certificate instructions |
 | `DUMMY_AUTH` | no | Ignored by production builds (see above) |
+| `DYN_ZONES_UPSTREAM`, `CLOUD_RESOURCES_UPSTREAM` | no | In-cluster `host:port` Caddy forwards `/api/dyndns/` and `/api/projects/` to. These are Service names owned by *other* releases; leaving them to the image defaults is how a rename over there once turned every DNS Zones call into a 502 |
 
-In BFF mode the app must be reached **through** the `oauth2-proxy`, and
-`/oauth2/*` must be routed to it — the app calls `/oauth2/userinfo` for the
-identity, `/oauth2/auth` to notice an expired session, and `/oauth2/start` to
-begin a new one.
+In BFF mode the app must be reached **through** the proxy, and `/oauth2/*` must
+be routed to it — the app calls `/oauth2/userinfo` for the identity,
+`/oauth2/auth` to notice an expired session, and `/oauth2/start` to begin a new
+one.
 
 A Helm chart lives in [`helm-chart/`](helm-chart) (`selfServiceUI`, `auth`,
-`ingress`), and the DHBW deployment drives it from Ansible. Images are published
-to `ghcr.io/pfisterer/self-service-ui`; `-test.N` tags are the staging channel,
-plain semver is production.
+`ingress`, `bff`). Images are published to `ghcr.io/pfisterer/self-service-ui`;
+`-test.N` tags are the staging channel, plain semver is production.
+
+**The proxy is part of this chart.** `bff.enabled` deploys an `oauth2-proxy` in
+front of the app, with the ingress pointing at it rather than at the app — so
+`ingress.enabled` belongs off in that mode, or there would be a second,
+unauthenticated route to the same content. It sits here rather than one level up
+for one reason: its upstream *is* this chart's Service, and deriving that name
+beats writing it out and watching it go stale. Off by default, because an
+environment that already runs its own proxy would otherwise end up with two
+owners of the same host.
 
 The chart is published as an OCI artifact on every push to `main`:
 
 ```sh
-helm pull oci://ghcr.io/pfisterer/charts/self-service-ui --version 0.8.6-test.1
+helm pull oci://ghcr.io/pfisterer/charts/self-service-ui --version 0.8.7-test.1
 ```
 
 It is normally not installed on its own. The DHBW deployment composes all four
