@@ -234,6 +234,24 @@ A Helm chart lives in [`helm-chart/`](helm-chart) (`selfServiceUI`, `auth`,
 to `ghcr.io/pfisterer/self-service-ui`; `-test.N` tags are the staging channel,
 plain semver is production.
 
+The chart is published as an OCI artifact on every push to `main`:
+
+```sh
+helm pull oci://ghcr.io/pfisterer/charts/self-service-ui --version 0.8.6-test.1
+```
+
+It is normally not installed on its own. The DHBW deployment composes all four
+services with the [cloud-self-service](https://github.com/pfisterer/cloud-self-service)
+umbrella chart, which pins this chart by version — and a pinned chart version
+pins its `appVersion`, which pins the image tag. Values for this chart go under
+its chart name there:
+
+```yaml
+self-service-ui:
+  selfServiceUI:
+    ...
+```
+
 ## Repository layout
 
 ```
@@ -248,6 +266,13 @@ web/
 docs/img/              screenshots used in this README
 helm-chart/            deployment chart
 ```
+
+## Related projects
+
+- [cloud-self-service](https://github.com/pfisterer/cloud-self-service) — the umbrella chart that composes all four
+- [dynamic-zones](https://github.com/pfisterer/dynamic-zones) — the DNS self-service API behind the DNS Zones section
+- [openstack-management-api](https://github.com/pfisterer/openstack-management-api) — the projects and quotas API behind Cloud Projects
+- [role-provider-service](https://github.com/pfisterer/role-provider-service) — groups and authorization, consumed by both APIs
 
 ## License
 
