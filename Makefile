@@ -9,7 +9,7 @@ DOCKER_PLATFORMS ?= linux/amd64,linux/arm64
 
 # --- Targets ---
 .DEFAULT_GOAL := docker-build
-.PHONY: all clean docker-build multi-arch-build docker-login help dev helm-update
+.PHONY: all clean docker-build multi-arch-build docker-login help dev helm-update bump version-check
 
 # Alias for the primary build target
 all: docker-build
@@ -49,12 +49,40 @@ docker-multi-arch-build: docker-login helm-update
 		.
 	@echo "✅ Multi-architecture image built and pushed."
 
-# Update helm chart version from VERSION file
-helm-update:
+# --- Versioning -------------------------------------------------------------
+# package.json is the single source of truth here (the Go services use a VERSION
+# file); Chart.yaml has to agree with it. That matters more than it used to:
+# once the chart is published as an OCI artifact, the number in Chart.yaml IS
+# the artifact version, so a mismatch ships one release's contents under another
+# release's name. `version-check` runs in CI and FAILS on a mismatch rather than
+# quietly rewriting the file — rewriting would hide the very mistake it is meant
+# to catch.
 
+# make bump V=0.8.5
+# npm version keeps package-lock.json in step, which a plain edit would not.
+bump:
+	@test -n "$(V)" || { echo "usage: make bump V=<x.y.z>"; exit 1; }
+	@npm version "$(V)" --no-git-tag-version >/dev/null
+	@$(MAKE) --no-print-directory helm-update
+
+version-check:
+	@v=$$(jq -r .version package.json); \
+	cv=$$(awk '/^version:/{print $$2}' helm-chart/Chart.yaml); \
+	av=$$(awk '/^appVersion:/{gsub(/"/,"",$$2); print $$2}' helm-chart/Chart.yaml); \
+	if [ "$$v" != "$$cv" ] || [ "$$v" != "$$av" ]; then \
+		echo "✗ package.json is $$v, Chart.yaml says version=$$cv appVersion=$$av"; \
+		echo "  fix with: make bump V=$$v"; \
+		exit 1; \
+	fi; \
+	echo "✅ version $$v is consistent"
+
+# Update helm chart version from package.json
+helm-update:
 	@VERSION=$$(jq -r .version package.json); \
-	sed -i '' "s/^version: .*/version: $$VERSION/" helm-chart/Chart.yaml; \
-	sed -i '' "s/^appVersion: .*/appVersion: \"$$VERSION\"/" helm-chart/Chart.yaml; \
+	sed -e "s/^version: .*/version: $$VERSION/" \
+	    -e "s/^appVersion: .*/appVersion: \"$$VERSION\"/" \
+	    helm-chart/Chart.yaml > helm-chart/Chart.yaml.tmp; \
+	mv helm-chart/Chart.yaml.tmp helm-chart/Chart.yaml; \
 	echo "✅ Updated helm-chart/Chart.yaml to version $$VERSION"
 
 	helm lint helm-chart/
