@@ -1,0 +1,162 @@
+{{- if .Values.bff.enabled }}
+{{- /* The BFF belongs in THIS chart, not in the umbrella: its whole job is to
+       proxy to the UI service, and deriving that name from the same helper the
+       Service uses is the point. Written out by hand elsewhere, it goes stale
+       silently — which is exactly how a chart rename turned every UI request
+       into a 502 once. */ -}}
+{{- $uiComp := dict "context" . "component" "self-service-ui" -}}
+{{- $uiName := include "cloud-self-service.componentName" $uiComp -}}
+{{- $comp := dict "context" . "component" "bff" -}}
+{{- $name := include "cloud-self-service.componentName" $comp -}}
+{{- $labels := include "cloud-self-service.labels" $comp -}}
+{{- $selectors := include "cloud-self-service.selectorLabels" $comp -}}
+{{- $secret := .Values.bff.existingSecret -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    secret.reloader.stakater.com/reload: {{ $secret | quote }}
+  labels:
+    {{- $labels | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- $selectors | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- $selectors | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: oauth2-proxy
+          image: {{ .Values.bff.image }}:{{ .Values.bff.version }}
+          args:
+            - --provider=oidc
+            - --oidc-issuer-url={{ .Values.auth.oidc.issuerUrl }}
+            - --http-address=0.0.0.0:4180
+            - --reverse-proxy=true
+            # Everything goes to the UI pod (Caddy), which serves the SPA and
+            # routes /api/* onward. The name comes from the same helper as the
+            # Service above it, so it cannot drift.
+            - --upstream=http://{{ $uiName }}.{{ .Release.Namespace }}.svc:8080/
+            # Any authenticated user of the issuer's realm — no allowlist.
+            - --email-domain=*
+            # offline_access -> the issuer hands out an OFFLINE refresh token,
+            # not one tied to the SSO session, so a long-idle tab can be
+            # refreshed instead of bounced back to the login.
+            - --scope=openid email profile offline_access
+            # Renew the short-lived access token while the tab is in use, so it
+            # cannot expire mid-session.
+            - --cookie-refresh=1m
+            - --cookie-domain={{ .Values.selfServiceUI.hostname }}
+            - --whitelist-domain={{ .Values.selfServiceUI.hostname }}
+            {{- range .Values.bff.whitelistDomains }}
+            # Needed for RP-initiated logout: the sign-out redirect goes to the
+            # issuer's end-session endpoint, which is a different host.
+            - --whitelist-domain={{ . }}
+            {{- end }}
+            # A DISTINCT cookie name. Where another oauth2-proxy guards ops
+            # dashboards on a parent domain, its default `_oauth2_proxy` cookie
+            # also covers this host — two same-named cookies collide, the
+            # signature check fails and the login loops.
+            - --cookie-name={{ .Values.bff.cookieName }}
+            - --cookie-secure=true
+            # Explicit rather than relying on the browser default: this cookie
+            # is what makes a request authenticated, so a cross-site POST must
+            # not carry it. Lax and not Strict — Strict would also drop it on
+            # the top-level redirect back from the issuer and loop the login.
+            - --cookie-samesite=lax
+            - --redirect-url=https://{{ .Values.selfServiceUI.hostname }}/oauth2/callback
+            - --skip-provider-button=true
+            - --footer=-
+            # Injects the token into the UPSTREAM request, which is what makes
+            # the browser never see it. Not --set-authorization-header: that
+            # only sets it on the /oauth2/auth RESPONSE, i.e. forward-auth mode,
+            # and does nothing here.
+            - --pass-authorization-header=true
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              valueFrom:
+                secretKeyRef: { name: {{ $secret | quote }}, key: client-id }
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef: { name: {{ $secret | quote }}, key: client-secret }
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef: { name: {{ $secret | quote }}, key: cookie-secret }
+          ports:
+            - containerPort: 4180
+              name: http
+          livenessProbe:
+            httpGet: { path: /ping, port: 4180 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /ping, port: 4180 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 64Mi }
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- $labels | nindent 4 }}
+spec:
+  selector:
+    {{- $selectors | nindent 4 }}
+  ports:
+    - name: http
+      port: 4180
+      targetPort: 4180
+
+{{- if .Values.bff.ingress.enabled }}
+---
+# In BFF mode the public ingress points HERE, not at the UI service — hence
+# ingress.enabled is false for the chart's own ingress in this mode.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    {{- range $key, $value := .Values.bff.ingress.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  labels:
+    {{- $labels | nindent 4 }}
+spec:
+  {{- if .Values.bff.ingress.className }}
+  ingressClassName: {{ .Values.bff.ingress.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.selfServiceUI.hostname | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}
+                port:
+                  number: 4180
+  tls:
+    - hosts:
+        - {{ .Values.selfServiceUI.hostname | quote }}
+{{- end }}
+{{- end }}

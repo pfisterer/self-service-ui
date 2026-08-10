@@ -41,3 +41,29 @@ ingress:
   # k3s). No cert-manager annotation: TLS = cluster wildcard default cert.
   className: ""
   annotations: {}
+
+# BFF (oauth2-proxy in front of the SPA). Off by default: it only makes sense
+# where this chart also owns the public ingress, and an environment that still
+# runs its own proxy alongside would end up with two owners of the same host.
+#
+# It lives in this chart rather than one level up because its upstream IS the
+# Service above — deriving that name beats writing it out and watching it go
+# stale.
+bff:
+  enabled: false
+  image: quay.io/oauth2-proxy/oauth2-proxy
+  version: v7.15.3
+  # Supplies client-id, client-secret and cookie-secret. Created out of band;
+  # keeping the cookie-secret stable across a redeploy is what keeps sessions
+  # alive.
+  existingSecret: oauth2-proxy-ui-secret
+  # Distinct from any other oauth2-proxy on a parent domain — a colliding
+  # cookie name fails the signature check and loops the login.
+  cookieName: _oauth2_proxy_selfservice
+  # Hosts the proxy may redirect to besides the UI itself; the issuer's host
+  # belongs here, or RP-initiated logout cannot reach its end-session endpoint.
+  whitelistDomains: []
+  ingress:
+    enabled: true
+    className: traefik
+    annotations: {}

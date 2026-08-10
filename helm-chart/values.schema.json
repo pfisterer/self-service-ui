@@ -14,6 +14,27 @@
       "type": "string",
       "description": "Pins the resource base name. The umbrella chart sets this so adopting these releases does not rename every object."
     },
+    "bff": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": { "type": "string" },
+        "version": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "cookieName": { "type": "string" },
+        "whitelistDomains": { "type": "array", "items": { "type": "string" } },
+        "ingress": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "className": { "type": "string" },
+            "annotations": { "type": "object", "additionalProperties": { "type": "string" } }
+          }
+        }
+      }
+    },
     "selfServiceUI": {
       "type": "object",
       "additionalProperties": false,
