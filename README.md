@@ -213,6 +213,8 @@ make docker-build   # container image
 
 ## Deployment
 
+**Normally deployed as part of [cloud-self-service](https://github.com/pfisterer/cloud-self-service)**, the umbrella chart that composes this service with the other three and pins it by version — and a pinned chart version pins its `appVersion`, which pins the image tag. Installing this chart on its own works, but then nothing keeps it in step with the services it talks to.
+
 The image serves `dist/` through Caddy and generates `config.js` at container
 start, so one image works in every environment. Required and optional variables:
 
@@ -249,11 +251,7 @@ The chart is published as an OCI artifact on every push to `main`:
 helm pull oci://ghcr.io/pfisterer/charts/self-service-ui --version 0.8.7-test.1
 ```
 
-It is normally not installed on its own. The DHBW deployment composes all four
-services with the [cloud-self-service](https://github.com/pfisterer/cloud-self-service)
-umbrella chart, which pins this chart by version — and a pinned chart version
-pins its `appVersion`, which pins the image tag. Values for this chart go under
-its chart name there:
+Values for this chart go under its chart name in the umbrella:
 
 ```yaml
 self-service-ui:
