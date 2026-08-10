@@ -33,7 +33,7 @@
     # after every mutation and must see the fresh state.
     handle_path /api/dyndns/* {
         header Cache-Control "no-store"
-        reverse_proxy {$DYN_ZONES_UPSTREAM:dynamic-zones-cloud-self-service-dynamic-zones:8082}
+        reverse_proxy {$DYN_ZONES_UPSTREAM:dynamic-zones:8082}
     }
     handle_path /api/projects/* {
         header Cache-Control "no-store"
