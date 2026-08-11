@@ -58,6 +58,10 @@ spec:
             # Renew the short-lived access token while the tab is in use, so it
             # cannot expire mid-session.
             - --cookie-refresh=1m
+            # Hard end of the session. Without it oauth2-proxy uses 168h, which
+            # with offline_access means a week in which a logout elsewhere does
+            # not reach this tab. See values.yaml for the full reasoning.
+            - --cookie-expire={{ .Values.bff.cookieExpire }}
             - --cookie-domain={{ .Values.selfServiceUI.hostname }}
             - --whitelist-domain={{ .Values.selfServiceUI.hostname }}
             {{- range .Values.bff.whitelistDomains }}

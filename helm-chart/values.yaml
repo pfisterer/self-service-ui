@@ -60,6 +60,16 @@ bff:
   # Distinct from any other oauth2-proxy on a parent domain — a colliding
   # cookie name fails the signature check and loops the login.
   cookieName: _oauth2_proxy_selfservice
+  # How long a session survives before the user is sent back to the issuer.
+  # Set explicitly because the oauth2-proxy default is 168h, and together with
+  # the offline_access scope that means a week without the login being checked
+  # again: an offline refresh token is deliberately NOT bound to the SSO
+  # session, so neither an idle timeout nor a logout elsewhere nor "sign out
+  # all sessions" in the Keycloak admin console reaches this cookie. Eight
+  # hours does not close that gap — it bounds it to a working day. If the SSO
+  # session is still alive the re-login is a silent redirect, so the practical
+  # cost is at most one interactive login per day.
+  cookieExpire: 8h
   # Hosts the proxy may redirect to besides the UI itself; the issuer's host
   # belongs here, or RP-initiated logout cannot reach its end-session endpoint.
   whitelistDomains: []

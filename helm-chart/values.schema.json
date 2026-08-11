@@ -23,6 +23,7 @@
         "version": { "type": "string" },
         "existingSecret": { "type": "string" },
         "cookieName": { "type": "string" },
+        "cookieExpire": { "type": "string", "pattern": "^[0-9]+(s|m|h)$" },
         "whitelistDomains": { "type": "array", "items": { "type": "string" } },
         "ingress": {
           "type": "object",
