@@ -1,7 +1,7 @@
 import { AlertTriangle, ArrowRightLeft, Check, Eye, FolderInput, Pencil, Rocket, X } from 'lucide-react';
 import { Alert, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge } from './component-common.jsx';
-import { COLOR, expiryTone, expiryValue, isImported, isProvisioning, ownerEmail, resourceSummaryText } from './util-project.jsx';
+import { COLOR, expiryTone, expiryValue, isImported, isProvisioning, overageEntries, overageText, ownerEmail, resourceSummaryText } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 
 // ProjectCard renders one project leaf. It is purely presentational: every
@@ -35,6 +35,11 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     const summaryQuota = (isChangePending && node.pending?.limit) ? node.pending.limit : node.limit;
     const resourceSummary = resourceSummaryText(resources, summaryQuota);
 
+    // What OpenStack measures where that exceeds the limit above. This is the
+    // number the budget is actually charged, so leaving it off turns the
+    // Overcommitted badge into a claim the card itself contradicts.
+    const overage = overageEntries(resources, node);
+
     // Rejection reason (if this project was rejected): last matching history entry.
     const rejectionReason = isRejected && hasHistory
         ? [...node.history].reverse().find(h => h.event === 'rejected')?.reason
@@ -49,7 +54,9 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                     <Group gap="xs">
                         <NodeStatusBadge status={node.status} provisioning={provisioning} />
                         {node.os_overcommitted && (
-                            <Tooltip label="The project currently uses more in OpenStack than was granted. Creating new resources is blocked.">
+                            <Tooltip label={overage.length > 0
+                                ? `Uses ${overageText(overage)} in OpenStack, more than granted. The budget is charged the larger figure, and creating new resources is blocked.`
+                                : 'The project currently uses more in OpenStack than was granted. Creating new resources is blocked.'}>
                                 <Badge color={COLOR.negative} variant="filled" style={{ cursor: 'default' }}>
                                     <AlertTriangle size="11" style={{ marginRight: 3, verticalAlign: 'middle' }} />
                                     Overcommitted
@@ -89,6 +96,15 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
 
                     {resourceSummary && (
                         <FactRow label="Resources">{resourceSummary}</FactRow>
+                    )}
+
+                    {/* Only the resources that exceed their limit, so the row
+                        stays short and every figure on it is the reason the
+                        badge is there. */}
+                    {overage.length > 0 && (
+                        <FactRow label="In use" hint="Charged to the budget instead of the granted amount.">
+                            <Text size="xs" c={COLOR.negative} fw={600}>{overageText(overage)}</Text>
+                        </FactRow>
                     )}
 
                     {/* Only a date that is close keeps a colour, because then it

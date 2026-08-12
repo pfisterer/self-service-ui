@@ -224,6 +224,36 @@ export function resourceSummaryText(resources, quota) {
         .join(' · ');
 }
 
+// The resources a project is CHARGED for beyond what it declared, i.e. where
+// OpenStack measures more than the granted limit.
+//
+// Mirrors chargedQuota in the API (internal/tree/service.go) rather than
+// re-inventing the rule, including both of its edge cases: a resource MISSING
+// from os_in_use means "OpenStack does not measure this", not zero, and an
+// unlimited limit stays unlimited. Only a measured value strictly above a
+// finite limit is an overage.
+//
+// Without this the card says "Overcommitted" and then lists the declared
+// limit — which is exactly the number that is NOT being billed, so the badge
+// states there is a problem while the figures next to it deny it.
+export function overageEntries(resources, node) {
+    const inUse = node?.os_in_use;
+    if (!resources || !inUse) return [];
+    return resources.flatMap(r => {
+        const limit = node.limit?.[r.id] ?? 0;
+        if (limit === UNLIMITED_QUOTA) return [];
+        const used = inUse[r.id];
+        if (used === undefined || used <= limit) return [];
+        return [{ ...r, limit, used }];
+    });
+}
+
+// "8 Cores · 5 GB RAM" for the overage rows above, in the same shape as
+// resourceSummaryText so the two lines read as a pair.
+export function overageText(entries) {
+    return entries.map(r => (r.unit ? `${r.used} ${r.unit} ${r.name}` : `${r.used} ${r.name}`)).join(' · ');
+}
+
 // ── Generic helpers (unchanged semantics) ───────────────────────────────────
 
 export function normalizeObjectResponse(res, fallback = {}) {

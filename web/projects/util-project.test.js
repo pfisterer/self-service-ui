@@ -9,6 +9,8 @@ import {
     nodeChanges,
     nodeTitle,
     normalizeObjectResponse,
+    overageEntries,
+    overageText,
     ownerEmail,
     quotaFits,
     requestType,
@@ -339,5 +341,45 @@ describe('isExpired / expiryTone', () => {
         expect(expiryTone(daysFromNow(3))).toBe('red');
         expect(expiryTone(daysFromNow(-10))).toBe('red');
         expect(expiryTone(null)).toBe('gray');
+    });
+});
+
+// The two rules below are the same ones the API's chargedQuota carries, and
+// each of them is a way to understate usage if it is dropped.
+describe('overageEntries / overageText', () => {
+    const resources = [
+        { id: 'cores', name: 'Cores' },
+        { id: 'ram', name: 'RAM', unit: 'GB' },
+        { id: 'storage', name: 'Storage', unit: 'GB' },
+    ];
+
+    it('reports only what OpenStack measures above the limit', () => {
+        const node = { limit: { cores: 4, ram: 2, storage: 5 }, os_in_use: { cores: 8, ram: 1 } };
+        expect(overageEntries(resources, node).map(r => r.id)).toEqual(['cores']);
+        expect(overageText(overageEntries(resources, node))).toBe('8 Cores');
+    });
+
+    // A key missing from os_in_use means "not measured", not zero — treating it
+    // as zero would be an overage of nothing and hide the ones that are real.
+    it('ignores resources OpenStack does not measure', () => {
+        const node = { limit: { cores: 4, storage: 5 }, os_in_use: { cores: 4 } };
+        expect(overageEntries(resources, node)).toEqual([]);
+    });
+
+    // max(-1, n) would turn "no cap" into a finite number and report an overage
+    // against a project that cannot have one.
+    it('never treats an unlimited limit as exceeded', () => {
+        const node = { limit: { cores: -1 }, os_in_use: { cores: 9999 } };
+        expect(overageEntries(resources, node)).toEqual([]);
+    });
+
+    it('is empty when nothing was measured at all', () => {
+        expect(overageEntries(resources, { limit: { cores: 4 } })).toEqual([]);
+        expect(overageEntries(null, { os_in_use: { cores: 8 } })).toEqual([]);
+    });
+
+    it('formats several resources with their units', () => {
+        const node = { limit: { cores: 4, ram: 2 }, os_in_use: { cores: 8, ram: 5 } };
+        expect(overageText(overageEntries(resources, node))).toBe('8 Cores · 5 GB RAM');
     });
 });
