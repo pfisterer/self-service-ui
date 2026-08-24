@@ -119,7 +119,7 @@ function AppRoutes() {
                     <Route path="/" component={Home} />
                     {dnsZonesEnabled && <Route path="/dyndns" component={DynamicDnsManagement} nest />}
                     {cloudProjectsEnabled && <Route path="/projects" component={CloudProjectManagement} nest />}
-                    {apiTokensEnabled && <Route path="/tokens" component={ApiTokens} />}
+                    {apiTokensEnabled && <Route path="/tokens" component={ApiTokens} nest />}
                     <Route component={NotFound} />
                 </Switch>
             </ErrorBoundary>

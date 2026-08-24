@@ -1,9 +1,10 @@
-import { Alert, Container, List, Paper, Stack, Text, Title } from '@mantine/core';
-import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { Route, Switch, Redirect } from 'wouter';
+import { Alert, Container, Stack, Text, Title } from '@mantine/core';
 import { useZonesApi } from '/dyndns/api-zones.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
 import { useNodesApi } from '/projects/api-nodes.jsx';
 import { projectKeys } from '/projects/query-keys.js';
+import { TOKEN_SCOPES } from '/tokens/scopes.js';
 import { TokenScopePanel } from '/tokens/token-scope-panel.jsx';
 
 // One page for every API token a person holds, rather than one page per API.
@@ -19,8 +20,8 @@ import { TokenScopePanel } from '/tokens/token-scope-panel.jsx';
 // What this page must NOT suggest is one credential. The tokens are not
 // interchangeable: different prefixes, different databases, different issuers,
 // and the two services do not even agree on which claim identifies their owner.
-// Hence a panel per scope, each labelled and prefixed, instead of one merged
-// list.
+// One scope per tab, each with its own prefix, keeps that visible — the scopes
+// were stacked on one page first, which read like one list in two boxes.
 export function ApiTokens() {
     // Both hooks run unconditionally — hooks cannot be called behind a
     // condition, and neither one talks to a server until a query does.
@@ -28,12 +29,11 @@ export function ApiTokens() {
     const zonesApi = useZonesApi();
     const nodesApi = useNodesApi();
 
-    const scopes = [
-        dnsZonesEnabled && zonesApi && {
-            id: 'dyndns',
-            label: 'DNS Zones',
-            prefix: 'dynz_token_',
-            description: 'Manages your zones and DNS records — the credential a router or an ACME client uses for dynamic updates.',
+    // The API adapter per scope id. Kept next to the hooks rather than in
+    // scopes.js, which nav.jsx imports and which therefore has to stay free of
+    // anything that touches an SDK.
+    const adapters = {
+        dns: zonesApi && {
             queryKey: dyndnsKeys.tokens(),
             api: {
                 list: () => zonesApi.listTokens(),
@@ -41,11 +41,7 @@ export function ApiTokens() {
                 remove: (id) => zonesApi.deleteToken(id),
             },
         },
-        cloudProjectsEnabled && nodesApi && {
-            id: 'projects',
-            label: 'Cloud Projects',
-            prefix: 'os_mgt_',
-            description: 'Reads and changes your projects, budgets and quota requests from a script or CI job.',
+        projects: nodesApi && {
             queryKey: projectKeys.apiTokens(),
             api: {
                 list: () => nodesApi.listApiTokens(),
@@ -53,48 +49,43 @@ export function ApiTokens() {
                 remove: (id) => nodesApi.deleteApiToken(id),
             },
         },
-    ].filter(Boolean);
+    };
+
+    const scopes = TOKEN_SCOPES.filter(s => adapters[s.id]);
 
     return (
         <Container size="lg" py="xl">
-            <Stack gap="lg">
+            <Stack gap="md">
                 <Title order={2}>API Tokens</Title>
 
-                <Paper p="md" radius="md" withBorder>
-                    <Stack gap="xs">
-                        <Text size="sm">
-                            An API token authenticates a script, a CI job or a device without a browser
-                            login.
-                        </Text>
-                        <List size="sm" spacing={4}>
-                            <List.Item>
-                                Each token is bound to one API. A DNS token does not work against Cloud Projects, and the other way round.
-                            </List.Item>
-                            <List.Item>
-                                {/* `inherit`, not size="sm": a nested Text starts at
-                                    the default size and would sit larger than the
-                                    list around it. Inheriting keeps it matched to
-                                    whatever the list is set to. */}
-                                Send it as <Text span inherit ff="monospace">Authorization: Bearer &lt;token&gt;</Text>.
-                            </List.Item>
-                            <List.Item>
-                                A read-only token is refused for anything but reads — the right default for a monitoring job or an agent.
-                            </List.Item>
-                            <List.Item>
-                                The token itself is shown once, when it is created, and cannot be recovered afterwards.
-                            </List.Item>
-                        </List>
-                    </Stack>
-                </Paper>
+                <Text size="sm" c="dimmed">
+                    An API token authenticates a script, a CI job or a device without a browser login.
+                    It carries your identity and nothing more — what it may do is decided per request,
+                    so a token can only narrow your rights, never widen them. Send it
+                    as <Text span inherit ff="monospace">Authorization: Bearer &lt;token&gt;</Text>; it is
+                    shown once, when it is created, and only its hash is stored.
+                </Text>
 
                 {scopes.length === 0 ? (
                     // Reachable only by typing the URL: the route and the menu
                     // entry are both gated on at least one API being configured.
                     <Alert color="yellow" title="No API available">
-                        This deployment has neither the DNS nor the Cloud Projects API configured, so there is nothing to issue a token for.
+                        This deployment has neither the DNS nor the Cloud Projects API configured, so
+                        there is nothing to issue a token for.
                     </Alert>
                 ) : (
-                    scopes.map(scope => <TokenScopePanel key={scope.id} scope={scope} />)
+                    <Switch>
+                        {scopes.map(scope => (
+                            <Route key={scope.id} path={`/${scope.id}`}>
+                                <TokenScopePanel scope={{ ...scope, ...adapters[scope.id] }} />
+                            </Route>
+                        ))}
+                        {/* Bare /tokens lands on the first scope, so the tab bar
+                            always has one tab marked as the current one. */}
+                        <Route>
+                            <Redirect to={`/${scopes[0].id}`} replace />
+                        </Route>
+                    </Switch>
                 )}
             </Stack>
         </Container>

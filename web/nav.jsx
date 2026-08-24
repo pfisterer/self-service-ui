@@ -1,5 +1,6 @@
 import { useLocation } from 'wouter';
 import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { TOKEN_SCOPES, tokenScopePath } from '/tokens/scopes.js';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
 
@@ -71,9 +72,16 @@ export function useNav() {
         // issue their own, and a credential has to be findable in one place to
         // be revocable in a hurry. It used to sit under DNS Zones, from when
         // that was the only API that had them.
-        // `base` as well as `href`, or the category would never mark itself
-        // active: without it, inSection below only ever matches the home page.
-        apiTokensEnabled && { id: 'tokens', label: 'API Tokens', href: '/tokens', base: '/tokens', items: [] },
+        apiTokensEnabled && {
+            id: 'tokens',
+            label: 'API Tokens',
+            base: '/tokens',
+            // A tab per issuing API, from the same list the page routes on. The
+            // two are not one credential — different prefixes, different
+            // databases — and a tab bar says that more plainly than two boxes
+            // stacked on one page did.
+            items: TOKEN_SCOPES.map(s => ({ label: s.label, href: tokenScopePath(s) })),
+        },
     ].filter(Boolean).map(s => ({ ...s, href: s.href ?? s.items[0]?.href ?? '/' }));
 
     const inSection = (s) => (s.base
