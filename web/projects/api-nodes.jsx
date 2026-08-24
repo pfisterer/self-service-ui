@@ -212,9 +212,13 @@ export function useNodesApi() {
             // exists in readable form — the server keeps a hash. os-mgt-api
             // answers 201 with the token itself, dynamic-zones 200 with it
             // wrapped; both facades hand the caller the same plain object.
-            createApiToken: async ({ readOnly = false } = {}) =>
+            // ttlHours as the API defines it: 0 means the configured default,
+            // -1 a token that never expires.
+            createApiToken: async ({ readOnly = false, description = '', ttlHours = 0 } = {}) =>
                 unwrapObject(await createToken({
-                    client, body: { read_only: readOnly }, headers: JSON_HEADERS,
+                    client,
+                    body: { read_only: readOnly, description, ttl_hours: ttlHours },
+                    headers: JSON_HEADERS,
                 })),
             deleteApiToken: async (id) =>
                 unwrapVoid(await deleteToken({ client, path: { id } })),

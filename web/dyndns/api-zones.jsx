@@ -77,9 +77,16 @@ export function useZonesApi() {
             // The created token is the ONLY time the server returns the secret
             // in clear text (they are stored hashed) — the caller must show it
             // straight away or it is gone.
-            createToken: async ({ readOnly = false } = {}) =>
+            //
+            // ttlHours is passed through as the API defines it: 0 (or omitted)
+            // takes the configured default, -1 asks for a token that never
+            // expires. Translating that here would put a second vocabulary
+            // between the form and the server.
+            createToken: async ({ readOnly = false, description = '', ttlHours = 0 } = {}) =>
                 unwrap(await createToken({
-                    client, body: { read_only: readOnly }, headers: JSON_HEADERS,
+                    client,
+                    body: { read_only: readOnly, description, ttl_hours: ttlHours },
+                    headers: JSON_HEADERS,
                 }))?.token,
             deleteToken: async (id) => unwrap(await deleteToken({ client, path: { id } })),
 

@@ -5,8 +5,27 @@ import { useConfirm } from '/providers/confirm.jsx';
 import { Trash2 } from 'lucide-react';
 import {
     ActionIcon, Alert, Badge, Button, Checkbox, Code, CopyButton, Group, Paper,
-    Stack, Table, Text,
+    Select, Stack, Table, Text, TextInput,
 } from '@mantine/core';
+
+// The lifetimes offered, in the hours the API takes. -1 is "never expires",
+// the same value the shared library calls NeverExpires, so nothing in between
+// has to translate.
+//
+// Hard-coded rather than read from the server: both APIs cap a request at a
+// year and both permit "never", so this list is exactly what they accept today.
+// A deployment that configures a shorter maximum, or forbids "never", will
+// refuse the request with a message saying so — honest, but the UI would then be
+// offering something it cannot deliver. Exposing the policy through the two
+// config endpoints the UI already fetches is the fix, and is written down as
+// such rather than guessed at here.
+const LIFETIMES = [
+    { value: '720', label: '30 days' },
+    { value: '2160', label: '90 days' },
+    { value: '8760', label: '1 year' },
+    { value: '-1', label: 'Never expires' },
+];
+const DEFAULT_LIFETIME = '8760';
 
 // One scope's tokens: its own query, its own error state, its own create form.
 //
@@ -24,6 +43,8 @@ import {
 export function TokenScopePanel({ scope }) {
     const confirm = useConfirm();
     const [readOnly, setReadOnly] = useState(false);
+    const [description, setDescription] = useState('');
+    const [lifetime, setLifetime] = useState(DEFAULT_LIFETIME);
     // The server stores only a hash, so a token exists in readable form exactly
     // once: in the response that created it. Kept for this page view (id →
     // secret) and gone on reload — the one piece of state here that is NOT
@@ -36,12 +57,20 @@ export function TokenScopePanel({ scope }) {
     });
 
     const createMutation = useApiMutation({
-        mutationFn: () => scope.api.create({ readOnly }),
+        mutationFn: () => scope.api.create({
+            readOnly,
+            description,
+            ttlHours: Number(lifetime),
+        }),
         invalidates: [scope.queryKey],
         onSuccess: (created) => {
             if (created?.token_string) {
                 setRevealed(prev => ({ ...prev, [created.id]: created.token_string }));
             }
+            // Only the note is cleared: the next token is a different one and
+            // needs its own, while lifetime and read-only are usually the same
+            // choice again.
+            setDescription('');
         },
     });
 
@@ -75,6 +104,27 @@ export function TokenScopePanel({ scope }) {
                         <Text size="sm" c="dimmed">{scope.description}</Text>
                     </Group>
                     <Group gap="sm" align="center" wrap="nowrap">
+                        {/* The note is what turns "three tokens, two dates" into
+                            something a person can act on months later, so it is
+                            offered here rather than hidden behind a dialog —
+                            optional, but in front of you when you create one. */}
+                        <TextInput
+                            size="sm"
+                            w={240}
+                            placeholder="What is this for?"
+                            maxLength={100}
+                            value={description}
+                            onChange={e => setDescription(e.currentTarget.value)}
+                        />
+                        <Select
+                            size="sm"
+                            w={150}
+                            data={LIFETIMES}
+                            value={lifetime}
+                            onChange={value => setLifetime(value ?? DEFAULT_LIFETIME)}
+                            allowDeselect={false}
+                            comboboxProps={{ withinPortal: true }}
+                        />
                         <Checkbox
                             size="sm"
                             label="Read-only"
@@ -100,11 +150,16 @@ export function TokenScopePanel({ scope }) {
                             <Table verticalSpacing="xs" horizontalSpacing="sm" highlightOnHover>
                                 <Table.Thead>
                                     <Table.Tr>
-                                        <Table.Th w={60}>ID</Table.Th>
-                                        <Table.Th>Token</Table.Th>
-                                        <Table.Th w={120}>Mode</Table.Th>
-                                        <Table.Th w={150}>Created</Table.Th>
-                                        <Table.Th w={150}>Expires</Table.Th>
+                                        <Table.Th w={50}>ID</Table.Th>
+                                        <Table.Th w={170}>Token</Table.Th>
+                                        <Table.Th>Description</Table.Th>
+                                        <Table.Th w={110}>Mode</Table.Th>
+                                        {/* Next to each other on purpose: "made
+                                            a year ago, never used" is the whole
+                                            answer to "can I revoke this?". */}
+                                        <Table.Th w={130}>Created</Table.Th>
+                                        <Table.Th w={130}>Last used</Table.Th>
+                                        <Table.Th w={130}>Expires</Table.Th>
                                         <Table.Th w={50} />
                                     </Table.Tr>
                                 </Table.Thead>
@@ -137,12 +192,27 @@ function TokenRows({ token, secret, onRevoke }) {
                 <Table.Td c="dimmed">{token.id}</Table.Td>
                 <Table.Td ff="monospace">{token.token_prefix ? `${token.token_prefix}…` : '—'}</Table.Td>
                 <Table.Td>
+                    {token.description
+                        ? <Text size="sm">{token.description}</Text>
+                        : <Text size="sm" c="dimmed">—</Text>}
+                </Table.Td>
+                <Table.Td>
                     <Badge size="sm" variant="light" color={token.read_only ? 'gray' : 'blue'}>
                         {token.read_only ? 'read-only' : 'read-write'}
                     </Badge>
                 </Table.Td>
                 <Table.Td c="dimmed">{formatMoment(token.created_at)}</Table.Td>
-                <Table.Td>{formatMoment(token.expires_at)}</Table.Td>
+                {/* Dimmed when it has never been used, because that is the case
+                    worth spotting: nothing depends on this token. */}
+                <Table.Td c={neverHappened(token.last_used_at) ? 'dimmed' : undefined}>
+                    {neverHappened(token.last_used_at) ? 'never' : formatMoment(token.last_used_at)}
+                </Table.Td>
+                {/* Both columns say "never" for an absent time, and they mean
+                    different things — never used, never expires. The headers
+                    carry that; the cell should not invent wording for it. */}
+                <Table.Td>
+                    {neverHappened(token.expires_at) ? 'never' : formatMoment(token.expires_at)}
+                </Table.Td>
                 <Table.Td>
                     <ActionIcon color="red" variant="subtle" onClick={onRevoke}
                         aria-label={`Delete token ${token.token_prefix || token.id}`}>
@@ -152,7 +222,7 @@ function TokenRows({ token, secret, onRevoke }) {
             </Table.Tr>
             {secret && (
                 <Table.Tr>
-                    <Table.Td colSpan={6}>
+                    <Table.Td colSpan={8}>
                         <Alert color="green" title="Copy this token now" p="xs">
                             <Group gap="xs" wrap="wrap">
                                 <Code style={{ wordBreak: 'break-all' }}>{secret}</Code>
@@ -175,6 +245,16 @@ function TokenRows({ token, secret, onRevoke }) {
     );
 }
 
+// neverHappened covers the two ways "there is no such moment" can arrive: null
+// from the current APIs, and Go's zero time (the year 1) from an older one that
+// serialised a time.Time it had no value for. The second case matters during a
+// rollout, when the UI is newer than a backend for a few minutes.
+function neverHappened(value) {
+    if (value === null || value === undefined || value === '') return true;
+    const d = new Date(value);
+    return !Number.isNaN(d.getTime()) && d.getFullYear() <= 1;
+}
+
 // Local on purpose: this page spans both sections, so it must not import the
 // projects section's date helper and pull that module into its chunk.
 //
@@ -182,14 +262,12 @@ function TokenRows({ token, secret, onRevoke }) {
 // table, and the times that matter here (was this issued today, does it expire
 // this afternoon) are readable without them.
 //
-// Both APIs send RFC 3339. A token that never expires would arrive as the zero
-// time, which reads as the year 1 — neither service issues those today (both
-// apply a configured TTL), and if one ever does, "never" is the honest word for
-// it rather than a date from antiquity.
+// Both APIs send RFC 3339. "No such moment" is neverHappened's business, not
+// this function's — callers ask that first, so anything arriving here is meant
+// to be a date. An unparseable one is shown verbatim rather than swallowed.
 function formatMoment(value) {
     if (!value) return '—';
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return String(value);
-    if (d.getFullYear() <= 1) return 'never';
     return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
