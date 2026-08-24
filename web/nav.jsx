@@ -1,5 +1,5 @@
 import { useLocation } from 'wouter';
-import { cloudProjectsEnabled } from '/features.js';
+import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
 
@@ -54,19 +54,26 @@ export function useNav() {
                 { label: 'API Documentation', href: '/projects/api-doc' },
             ].filter(Boolean),
         },
-        {
+        dnsZonesEnabled && {
             id: 'dyndns',
             label: 'DNS Zones',
             base: '/dyndns',
             items: [
                 { label: 'Zone Management', href: '/dyndns/zones' },
-                { label: 'API Tokens', href: '/dyndns/tokens' },
                 // Read-only for most users, and worth reading only if a rule
                 // actually applies to them; empty for a student.
                 hasPolicy && { label: 'DNS Policy', href: '/dyndns/policy' },
                 { label: 'API Documentation', href: '/dyndns/api-doc' },
             ].filter(Boolean),
         },
+        // Last, and a category of its own with nothing under it: tokens belong
+        // to the account rather than to one of the domains above — both APIs
+        // issue their own, and a credential has to be findable in one place to
+        // be revocable in a hurry. It used to sit under DNS Zones, from when
+        // that was the only API that had them.
+        // `base` as well as `href`, or the category would never mark itself
+        // active: without it, inSection below only ever matches the home page.
+        apiTokensEnabled && { id: 'tokens', label: 'API Tokens', href: '/tokens', base: '/tokens', items: [] },
     ].filter(Boolean).map(s => ({ ...s, href: s.href ?? s.items[0]?.href ?? '/' }));
 
     const inSection = (s) => (s.base

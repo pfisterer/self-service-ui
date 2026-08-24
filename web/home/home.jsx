@@ -1,6 +1,7 @@
 import { Link } from 'wouter';
 import { Container, Stack, Group, Title, Text, Paper, Button, ThemeIcon, SimpleGrid, List, Alert } from '@mantine/core';
 import { Globe, ListPlus, ShieldCheck, ArrowRight, ServerCog, FolderKanban } from 'lucide-react';
+import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 
 // First-run friendly landing page: explain what this portal is for and give a
 // short, scannable path through it. Most users arrive here on their first login
@@ -11,11 +12,12 @@ import { Globe, ListPlus, ShieldCheck, ArrowRight, ServerCog, FolderKanban } fro
 // budget/delegation side of Cloud Projects is deliberately absent — it concerns
 // the handful of people who hand out resources, not the people arriving here.
 
-// Cloud Projects only exists where the backend is wired up (cloudResourcesBaseUrl),
-// which is the same check the header uses to show the tab. Without it the
-// /projects route isn't registered, so neither the button nor the project step
-// may appear — the portal is then purely about DNS and certificates.
-const cloudProjectsEnabled = () => Boolean(window?.appconfig?.cloudResourcesBaseUrl);
+// Which sections exist comes from /features.js — the same statement the header
+// and the router read. This file used to re-derive the projects flag from
+// window.appconfig itself, which was a third copy of one fact.
+//
+// It matters here beyond the wording: a button pointing at a section whose route
+// is not registered lands on the 404 page.
 
 const PROJECT_STEP = {
     icon: FolderKanban,
@@ -70,9 +72,15 @@ const DNS_ONLY_STEPS = [
 export function Home() {
     const acmeServer = window.appconfig?.acmeServer || 'https://certificates.dhbw.cloud';
     const acmeHost = acmeServer.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const withProjects = cloudProjectsEnabled();
+    const withProjects = cloudProjectsEnabled;
+    const withDns = dnsZonesEnabled;
 
-    const steps = withProjects ? [PROJECT_STEP, ZONE_STEP, TLS_STEP] : DNS_ONLY_STEPS;
+    // Every step below the first one is about zones and certificates, so a
+    // deployment without the DNS API keeps only the project step rather than
+    // walking someone through a section that is not there.
+    const steps = withDns
+        ? (withProjects ? [PROJECT_STEP, ZONE_STEP, TLS_STEP] : DNS_ONLY_STEPS)
+        : [PROJECT_STEP];
 
     return (
         <Container size="lg" py="xl">
@@ -82,11 +90,16 @@ export function Home() {
                     <Stack gap="sm">
                         <Title order={1}>Welcome to dhbwCloud Self-Service</Title>
                         <Text size="lg" c="dimmed">
-                            {withProjects ? (
+                            {withProjects && withDns ? (
                                 <>
                                     This portal is where you request <b>your own cloud project</b> — your space in
                                     the DHBW cloud with the resources you need — and where you give the services
                                     you run there <b>their own hostnames</b> and <b>TLS certificates</b>.
+                                </>
+                            ) : withProjects ? (
+                                <>
+                                    This portal is where you request <b>your own cloud project</b> — your space in
+                                    the DHBW cloud with the CPU, RAM and storage you need.
                                 </>
                             ) : (
                                 <>
@@ -104,11 +117,13 @@ export function Home() {
                                     Request a project
                                 </Button>
                             )}
-                            <Button component={Link} to="/dyndns/zones" size="md"
-                                variant={withProjects ? 'light' : 'filled'}
-                                rightSection={withProjects ? null : <ArrowRight size="18" />}>
-                                Manage DNS zones
-                            </Button>
+                            {withDns && (
+                                <Button component={Link} to="/dyndns/zones" size="md"
+                                    variant={withProjects ? 'light' : 'filled'}
+                                    rightSection={withProjects ? null : <ArrowRight size="18" />}>
+                                    Manage DNS zones
+                                </Button>
+                            )}
                         </Group>
                     </Stack>
                 </Paper>
@@ -133,7 +148,9 @@ export function Home() {
                     </SimpleGrid>
                 </div>
 
-                {/* DHBW ACME callout */}
+                {/* DHBW ACME callout — about the zones this portal hands out, so
+                    it goes with them. */}
+                {withDns && (
                 <Alert icon={<ServerCog size="20" />} color="blue" variant="light" radius="md"
                     title="TLS certificates: use the DHBW ACME server">
                     <Text size="sm">
@@ -145,6 +162,7 @@ export function Home() {
                         {' '}<b>TLS Certificates</b> tab generates cert-manager manifests pre-filled for exactly this server.
                     </Text>
                 </Alert>
+                )}
             </Stack>
         </Container>
     );

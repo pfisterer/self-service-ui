@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { lazy, Suspense, useState } from 'react';
 import { Router, Route, Switch, useLocation } from 'wouter';
 
-import { cloudProjectsEnabled } from '/features.js';
+import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 import { MantineProvider, AppShell, v8CssVariablesResolver } from '@mantine/core';
 import { Container, Paper, Box, Center, Stack, Title, Text, Button, ThemeIcon, TextInput, Anchor, Group } from '@mantine/core';
 import { LogIn } from 'lucide-react';
@@ -35,6 +35,11 @@ const CloudProjectManagement = lazy(() =>
     import('./projects/projects.jsx').then(m => ({ default: m.CloudProjectManagement })));
 const DynamicDnsManagement = lazy(() =>
     import('./dyndns/dyndns-routes.jsx').then(m => ({ default: m.DynamicDnsManagement })));
+// Lazy for the same reason, and one reason more: this page touches BOTH section
+// facades, so eagerly importing it would pull every operation of both SDKs into
+// the main bundle.
+const ApiTokens = lazy(() =>
+    import('./tokens/api-tokens.jsx').then(m => ({ default: m.ApiTokens })));
 
 createRoot(document.getElementById('app')).render(
     <MantineProvider
@@ -112,8 +117,9 @@ function AppRoutes() {
             <ErrorBoundary key={section}>
                 <Switch>
                     <Route path="/" component={Home} />
-                    <Route path="/dyndns" component={DynamicDnsManagement} nest />
+                    {dnsZonesEnabled && <Route path="/dyndns" component={DynamicDnsManagement} nest />}
                     {cloudProjectsEnabled && <Route path="/projects" component={CloudProjectManagement} nest />}
+                    {apiTokensEnabled && <Route path="/tokens" component={ApiTokens} />}
                     <Route component={NotFound} />
                 </Switch>
             </ErrorBoundary>

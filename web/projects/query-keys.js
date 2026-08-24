@@ -20,4 +20,7 @@ export const projectKeys = {
     search: (q, offset) => ['projects', 'tree', 'search', q, offset],
     config: () => ['projects', 'config'],
     rootStatus: () => ['projects', 'root-status'],
+    // Deliberately outside tree(): a credential is not a node, and no write in
+    // the tree changes the list of tokens.
+    apiTokens: () => ['projects', 'api-tokens'],
 };

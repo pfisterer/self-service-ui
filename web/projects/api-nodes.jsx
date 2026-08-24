@@ -6,10 +6,10 @@ import { cloudProjectsEnabled } from '/features.js';
 // only wrong at runtime, while a missing named export fails the build — which
 // is the whole point of depending on the client by version (see d6).
 import {
-    approveNode, clearRoleSwitch, createNode, deleteNode,
-    getAdminReconcileStatus, getConfig, getNode, getRoleSwitch,
+    approveNode, clearRoleSwitch, createNode, createToken, deleteNode,
+    deleteToken, getAdminReconcileStatus, getConfig, getNode, getRoleSwitch,
     listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
-    listMyNodes, listNodeChildren, listNodesToManage, promoteNode,
+    listMyNodes, listNodeChildren, listNodesToManage, listTokens, promoteNode,
     rejectNode, releaseNode, reparentNode, requestNodeChange, searchNodes,
     searchPrincipals, setRoleSwitch, transferNodeOwner,
     triggerAdminReconcile, updateNode,
@@ -200,6 +200,24 @@ export function useNodesApi() {
                     ...(res?.data?.users || []).map(email => `user:${email}`),
                 ];
             },
+
+            // ── API tokens ───────────────────────────────────────────────
+            // Named apiToken*, not token*, although the SDK operations are
+            // listTokens/createToken/deleteToken: in this service a "token"
+            // is already a principal in the quota tree (`group:…`, `user:…`),
+            // and those appear all over this file. These are credentials.
+            listApiTokens: async () =>
+                unwrapObject(await listTokens({ client }))?.tokens ?? [],
+            // The response that creates a token is the only place the secret
+            // exists in readable form — the server keeps a hash. os-mgt-api
+            // answers 201 with the token itself, dynamic-zones 200 with it
+            // wrapped; both facades hand the caller the same plain object.
+            createApiToken: async ({ readOnly = false } = {}) =>
+                unwrapObject(await createToken({
+                    client, body: { read_only: readOnly }, headers: JSON_HEADERS,
+                })),
+            deleteApiToken: async (id) =>
+                unwrapVoid(await deleteToken({ client, path: { id } })),
         };
     }, [client, enabled]);
 }

@@ -2,7 +2,6 @@ import { lazy, Suspense } from 'react';
 import { Route, Switch, Redirect } from 'wouter';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { DynDnsZones } from '/dyndns/zones.jsx';
-import { Tokens } from '/dyndns/tokens.jsx';
 import { DnsPolicy } from '/dyndns/policy.jsx';
 import { DynDnsLoadState } from '/dyndns/dyndns-load-state.jsx';
 
@@ -25,7 +24,15 @@ export function DynamicDnsManagement() {
         <Suspense fallback={<div style={{ padding: '2rem' }}>Lädt…</div>}>
             <Switch>
                 <Route path="/zones" component={DynDnsZones} nest/>
-                <Route path="/tokens" component={Tokens} />
+                {/* The token page moved out of this section and up one level,
+                    because os-mgt-api issues tokens too. This URL was the only
+                    place to manage them for a long time and is bookmarked and
+                    linked from documentation, so it keeps working. `~` makes
+                    the target absolute — a plain "/tokens" would resolve
+                    against this nested router's base and redirect here again. */}
+                <Route path="/tokens">
+                    <Redirect to="~/tokens" replace />
+                </Route>
                 <Route path="/api-doc" component={DynamicZonesApiSwagger} />
                 <Route path="/policy" component={DnsPolicy} />
                 <Route path="/">
