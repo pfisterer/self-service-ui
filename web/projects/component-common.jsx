@@ -241,8 +241,8 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
                         {hasDateChange && (
                             <Table.Tr>
                                 <Table.Td>End date</Table.Td>
-                                <Table.Td>{new Date(dateFrom).toLocaleDateString()}</Table.Td>
-                                <Table.Td>{new Date(dateTo).toLocaleDateString()}</Table.Td>
+                                <Table.Td>{formatDate(dateFrom)}</Table.Td>
+                                <Table.Td>{formatDate(dateTo)}</Table.Td>
                                 <Table.Td c={new Date(dateTo) - new Date(dateFrom) >= 0 ? 'green' : 'red'}>
                                     {new Date(dateTo) > new Date(dateFrom) ? '+' : ''}{dayjs(dateTo).from(dayjs(dateFrom), true)}
                                 </Table.Td>
@@ -347,7 +347,7 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
             <>
                 <Text mt="xs" mb="xs" size="xs" fw={600}>{label}</Text>
                 <Badge variant="outline" color="gray" leftSection={<Calendar size="12" />}>
-                    Ends: {new Date(currentDate).toLocaleDateString()} ({dayjs(currentDate).fromNow()})
+                    Ends: {formatDate(currentDate)} ({dayjs(currentDate).fromNow()})
                 </Badge>
             </>
         );

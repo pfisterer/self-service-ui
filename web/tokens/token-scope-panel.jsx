@@ -7,6 +7,7 @@ import {
     ActionIcon, Alert, Badge, Button, Checkbox, Code, CopyButton, Group, Paper,
     Select, Stack, Table, Text, TextInput,
 } from '@mantine/core';
+import { formatDateTime } from '../format-date.js';
 
 // The lifetimes offered, in the hours the API takes. -1 is "never expires",
 // the same value the shared library calls NeverExpires, so nothing in between
@@ -255,19 +256,11 @@ function neverHappened(value) {
     return !Number.isNaN(d.getTime()) && d.getFullYear() <= 1;
 }
 
-// Local on purpose: this page spans both sections, so it must not import the
-// projects section's date helper and pull that module into its chunk.
+// The shared formatter, not a local copy: this page used to keep its own so it
+// would not pull the projects section's module into its chunk, and the result
+// was a second answer to "how does a date read here". format-date.js has no
+// section behind it and no dependencies, so there is nothing left to avoid.
 //
-// Date plus hours and minutes, not toLocaleString: seconds are noise in a
-// table, and the times that matter here (was this issued today, does it expire
-// this afternoon) are readable without them.
-//
-// Both APIs send RFC 3339. "No such moment" is neverHappened's business, not
-// this function's — callers ask that first, so anything arriving here is meant
-// to be a date. An unparseable one is shown verbatim rather than swallowed.
-function formatMoment(value) {
-    if (!value) return '—';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return String(value);
-    return `${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-}
+// "No such moment" stays neverHappened's business — callers ask that first, so
+// anything arriving here is meant to be a date.
+const formatMoment = formatDateTime;

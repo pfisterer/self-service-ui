@@ -55,7 +55,7 @@ export function RootAdminView() {
         return (<Text size="sm" c="dimmed">Reconciler is disabled.</Text>);
     }
 
-    const lastRun = status?.last_run_at ? new Date(status.last_run_at).toLocaleString() : '—';
+    const lastRun = status?.last_run_at ? formatDateTime(status.last_run_at) : '—';
 
     return (
         <Stack gap="md">

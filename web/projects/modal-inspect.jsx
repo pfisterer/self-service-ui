@@ -154,7 +154,7 @@ function NodeHistoryPanel({ node, resources }) {
                     <Timeline.Item key={i} bullet={<Icon size="16" />}>
                         <Group justify="space-between" mb="xs">
                             <Text fw={600}>{meta.label}</Text>
-                            <Text size="xs" c="dimmed">{new Date(h.timestamp).toLocaleString()}</Text>
+                            <Text size="xs" c="dimmed">{formatDateTime(h.timestamp)}</Text>
                         </Group>
 
                         <Text size="sm">By: {h.actor}</Text>

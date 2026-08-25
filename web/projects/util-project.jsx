@@ -314,14 +314,14 @@ export function getAuthUserEmail(user) {
     return profile.email || '';
 }
 
-// Formats a date value as a locale date string, or '—' if falsy.
-export function formatDate(d) {
-    return d ? new Date(d).toLocaleDateString() : '—';
-}
+// Re-exported so the projects area keeps one import for its formatting, while
+// the decision itself lives in one module for the whole UI.
+export { formatDate, formatDateTime } from '../format-date.js';
+import { formatDate } from '../format-date.js';
 
-// Formats a date value as "MM/DD/YYYY (relative)" or '—' if falsy.
+// Formats a date value as "05.08.2026 (in 2 months)" or '—' if falsy.
 export function formatRelativeDate(d) {
-    return d ? `${new Date(d).toLocaleDateString()} (${dayjs(d).fromNow()})` : '—';
+    return d ? `${formatDate(d)} (${dayjs(d).fromNow()})` : '—';
 }
 
 // expiryTone turns "how much time is left" into a colour. A date years away is

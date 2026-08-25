@@ -26,7 +26,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     const hasHistory = (node.history || []).length > 0;
     const isManager = perspective === 'manager';
 
-    const createdDate = node.created_at ? new Date(node.created_at).toLocaleDateString() : '';
+    const createdDate = node.created_at ? formatDate(node.created_at) : '';
     const authorizedCount = (node.authorized_users || []).length;
     const owner = ownerEmail(node);
 
