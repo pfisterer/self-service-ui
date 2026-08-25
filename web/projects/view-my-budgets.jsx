@@ -22,7 +22,7 @@ import { RejectModal } from './modal-reject.jsx';
 import { TransferOwnerModal } from './modal-transfer-owner.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
-import { COLOR, formatError, getAuthUserEmail, isBudget, ownerEmail, REQUEST_TYPES, requestType } from './util-project.jsx';
+import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, ownerEmail, REQUEST_TYPES, requestType } from './util-project.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
 // How long typing pauses before a search is sent.
@@ -164,16 +164,10 @@ export function MyBudgetsView() {
     // where `invalidates: [projectKeys.tree()]` could not reach them and a
     // hand-written refresh had to guess which branches to reload.
     //
-    // `combine` must keep its identity across renders or react-query cannot
-    // memoise it — a new Map every render would rebuild the tree data and
-    // re-render the whole Tree for nothing. Pending branches are simply absent:
-    // budgetsToTreeData reads that as "not loaded yet", which is what it is.
-    const combineChildren = useCallback(
-        (results) => new Map(
-            openIds.map((id, i) => [id, results[i]?.data]).filter(([, page]) => page),
-        ),
-        [openIds],
-    );
+    // `combine` has to keep its identity across renders, and childrenById has to
+    // return a PLAIN OBJECT — see the note on that function. Pending branches are
+    // simply absent: budgetsToTreeData reads that as "not loaded yet".
+    const combineChildren = useCallback((results) => childrenById(openIds, results), [openIds]);
     const childrenMap = useQueries({
         queries: openIds.map(id => ({ ...childQuery(id), enabled: !!api })),
         combine: combineChildren,
@@ -369,7 +363,7 @@ export function MyBudgetsView() {
 
     const resources = config.resources || [];
     // Move targets: every budget visible in the tree.
-    const loadedBudgets = [...childrenMap.values()].flatMap(p => p.items).filter(isBudget);
+    const loadedBudgets = Object.values(childrenMap).flatMap(p => p.items).filter(isBudget);
     const moveTargets = [
         ...myBudgets.items,
         ...loadedBudgets.filter(b => !myBudgets.items.some(r => r.id === b.id)),

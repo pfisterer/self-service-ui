@@ -32,9 +32,12 @@ export const MORE_SUFFIX = '::more';
 // hasChildren comes from the server's child_count, NOT from the children loaded
 // so far: children arrive on demand, so without it every budget would offer an
 // expand control and half of them would turn out empty.
-export function budgetsToTreeData(roots, childrenMap) {
+//
+// `childrenById` is a plain object keyed by node id, and that is load-bearing
+// rather than a matter of taste — see childrenById() in the owning view.
+export function budgetsToTreeData(roots, childrenById) {
     const toData = (node) => {
-        const page = childrenMap.get(node.id);
+        const page = childrenById[node.id];
         const loaded = page?.items || [];
         const rows = loaded.map(toData);
         // One more page to go: the row that fetches it is part of the tree, so

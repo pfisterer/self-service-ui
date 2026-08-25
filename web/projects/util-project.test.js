@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     autoApproveHeadroom,
+    childrenById,
     expiryTone,
     freeAmount,
     isExpired,
@@ -381,5 +382,52 @@ describe('overageEntries / overageText', () => {
     it('formats several resources with their units', () => {
         const node = { limit: { cores: 4, ram: 2 }, os_in_use: { cores: 8, ram: 5 } };
         expect(overageText(overageEntries(resources, node))).toBe('8 Cores · 5 GB RAM');
+    });
+});
+
+// The budget tree's per-branch query results, collapsed into one lookup.
+//
+// The container type is the point of these tests. react-query passes a
+// `combine` result through replaceEqualDeep, which only preserves the previous
+// reference for plain objects and arrays — a Map comes back as a new reference
+// every time, the memoised tree data is rebuilt, and Mantine's Tree
+// re-initialises its controller on every render. That shipped once
+// (0.8.13-test.1) and took the whole section down with "Maximum update depth
+// exceeded", so the shape is asserted rather than assumed.
+describe('childrenById', () => {
+    const page = (n) => ({ items: [{ id: `n${n}` }], total: 1 });
+
+    it('is a plain object, so structural sharing can keep its identity', () => {
+        const out = childrenById(['a'], [{ data: page(1) }]);
+        expect(Object.getPrototypeOf(out)).toBe(Object.prototype);
+        expect(out instanceof Map).toBe(false);
+    });
+
+    it('keys each page by its node id', () => {
+        const a = page(1);
+        const b = page(2);
+        expect(childrenById(['a', 'b'], [{ data: a }, { data: b }])).toEqual({ a, b });
+    });
+
+    it('leaves out branches that have no data yet', () => {
+        const loaded = page(1);
+        const out = childrenById(['pending', 'loaded'], [{ data: undefined }, { data: loaded }]);
+        expect(out).toEqual({ loaded });
+        expect('pending' in out).toBe(false);
+    });
+
+    // A branch whose query failed has no data either, and must not appear as an
+    // empty page — budgetsToTreeData reads a missing entry as "not loaded" and
+    // an empty one as "this budget has nothing in it".
+    it('leaves out branches whose query failed', () => {
+        expect(childrenById(['broken'], [{ data: undefined, isError: true }])).toEqual({});
+    });
+
+    // Same values in, same values out: the reference cannot be preserved by this
+    // function, but the pages it hands back must be the very objects react-query
+    // holds, or replaceEqualDeep has nothing to recognise.
+    it('passes the page objects through untouched', () => {
+        const p = page(1);
+        expect(childrenById(['a'], [{ data: p }]).a).toBe(p);
     });
 });

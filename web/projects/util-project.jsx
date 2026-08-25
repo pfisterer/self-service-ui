@@ -289,6 +289,30 @@ export function overageText(entries) {
     return entries.map(r => (r.unit ? `${r.used} ${r.unit} ${r.name}` : `${r.used} ${r.name}`)).join(' · ');
 }
 
+// childrenById turns the per-branch query results of the budget tree into one
+// lookup: node id → the loaded page, branches still in flight left out.
+//
+// It returns a PLAIN OBJECT, and that is load-bearing. react-query hands a
+// `combine` result through replaceEqualDeep, which preserves the previous
+// reference when the contents are equal — but only for plain objects and
+// arrays; anything else (a Map, for one) it returns as-is, i.e. a fresh
+// reference on every call. The tree data is memoised on this value and Mantine's
+// Tree re-initialises its controller whenever `data` changes identity, and that
+// sets state. A Map therefore rendered the view into an infinite loop, which is
+// how it shipped in 0.8.13-test.1: "Maximum update depth exceeded", the whole
+// section replaced by the error boundary.
+//
+// If this ever needs a richer container, the identity has to be pinned some
+// other way first.
+export function childrenById(ids, results) {
+    const out = {};
+    ids.forEach((id, i) => {
+        const page = results[i]?.data;
+        if (page) out[id] = page;
+    });
+    return out;
+}
+
 // ── Generic helpers (unchanged semantics) ───────────────────────────────────
 
 export function normalizeObjectResponse(res, fallback = {}) {
