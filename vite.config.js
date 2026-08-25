@@ -59,13 +59,21 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 8084
     },
-    // Unit tests. Deliberately only the pure functions — the arithmetic and the
-    // string rules that are wrong silently. Rendering is not tested, so no DOM
-    // environment and no @testing-library are pulled in.
+    // Unit tests. Two kinds, and the default stays the cheap one.
+    //
+    // *.test.js are the pure functions — the arithmetic and the string rules
+    // that are wrong silently. They run in `node`, with no DOM.
+    //
+    // *.test.jsx are the render smoke tests, and they opt into jsdom per file
+    // with a `@vitest-environment` docblock so the pure tests keep running in
+    // milliseconds. They exist because two releases in one day shipped views
+    // that could not render at all: once a free variable ESLint would have
+    // caught, once an infinite render loop nothing here could see — lint green,
+    // tests green, build green, page blank.
     // Paths are relative to `root` above, i.e. web/.
     test: {
       environment: 'node',
-      include: ['**/*.test.js'],
+      include: ['**/*.test.js', '**/*.test.jsx'],
     },
     define: {
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
