@@ -100,14 +100,31 @@ export function MyBudgetsView() {
     const dlg = useNodeDialog();
     const [budgetForm, setBudgetForm] = useState(null); // { mode, parent?, node? } | null
 
+    // Which of the managed budgets are drawn at the top.
+    //
     // A manager of a budget is often also in the admin_scope of budgets nested
-    // under it, and my-budgets returns that flat list — rendering every entry
-    // as a top-level root would show those nested budgets twice. Keep only the
-    // budgets whose direct parent is not itself in the managed set; the rest
-    // appear in their natural place when their parent is expanded.
+    // under it, and my-budgets returns that as a flat list — so the ones that
+    // are already reachable by expanding another entry have to be left out, or
+    // they appear twice: once at the top and once in their real place.
+    //
+    // The test is the whole ANCESTOR chain, not the direct parent. Comparing
+    // parents breaks as soon as the chain skips a level, and it skips exactly
+    // where it is most likely to: the node in between belongs to someone else,
+    // so it is not in this list at all. Observed on staging on 2026-08-25 — a
+    // root admin also managing a budget under an unmanaged faculty budget saw
+    // both of theirs drawn twice.
+    //
+    // ancestor_ids is missing when the API is older than this UI, which is the
+    // normal state for a few minutes during a rollout. Falling back to the
+    // parent check keeps the view working with the old, occasionally doubled
+    // result rather than treating every budget as a root.
     const rootBudgets = useMemo(() => {
         const managedIds = new Set(myBudgets.items.map(b => b.id));
-        return myBudgets.items.filter(b => !managedIds.has(b.parent_id));
+        return myBudgets.items.filter(b => (
+            b.ancestor_ids
+                ? !b.ancestor_ids.some(id => managedIds.has(id))
+                : !managedIds.has(b.parent_id)
+        ));
     }, [myBudgets]);
 
     // Nothing picked yet falls back to the first root, so the detail panel is

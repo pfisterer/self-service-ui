@@ -109,6 +109,37 @@ export function fixtureTree() {
     };
 }
 
+// The staging shape from 2026-08-25: the caller manages the root and a budget
+// two levels below it, but NOT the faculty budget in between. my-budgets hands
+// back the two managed ones and nothing else, so the view has to decide from the
+// ancestor chain alone which of them belongs at the top.
+//
+// `managed` is what my-budgets answers; `children` is what expanding returns,
+// and it contains the in-between node the caller cannot see in their own list.
+export function fixtureSkippedLevel() {
+    const budget = (id, parentId, name, childCount, ancestors) => ({
+        id, parent_id: parentId, kind: 'budget', status: 'approved', name,
+        child_count: childCount, limit: { cores: 32, ram: 128 },
+        ancestor_ids: ancestors,
+        admin_scope: ['user:dennis.pfisterer@dhbw.de'],
+        usage: { approved: { limit: { cores: 8, ram: 16 }, node_ids: [] } },
+        created_at: '2026-08-01T10:00:00Z',
+    });
+
+    const root = budget('b_root', null, 'Organization Root', 1, []);
+    const mannheim = budget('b_ma', 'b_root', 'Mannheim', 1, ['b_root']);
+    const wi = budget('b_wi', 'b_ma', 'WI-Budget', 0, ['b_root', 'b_ma']);
+
+    return {
+        // Mannheim is deliberately absent: it belongs to someone else.
+        roots: [root, wi],
+        children: {
+            b_root: { items: [mannheim], total: 1 },
+            b_ma: { items: [wi], total: 1 },
+        },
+    };
+}
+
 // The api-nodes facade, answering from a fixture. Every method the views call
 // has to exist here: a missing one shows up as "not a function" during render,
 // which is the failure mode this harness is for.

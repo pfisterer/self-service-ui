@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, screen, waitFor } from '@testing-library/react';
-import { fakeNodesApi, fixtureTree, renderView } from '/test/render-harness.jsx';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fakeNodesApi, fixtureSkippedLevel, fixtureTree, renderView } from '/test/render-harness.jsx';
 
 // Does each view render at all, with data in it?
 //
@@ -95,6 +95,32 @@ describe('the cloud project views render', () => {
         // Let the query cache and the tree controller run to a standstill.
         await new Promise(resolve => setTimeout(resolve, 250));
         await waitFor(() => expectNoRenderFailure());
+    });
+
+    // One node, one row. The duplicate was never two nodes: the view assembles
+    // its tree from two independent sources — the entries it picks for the top
+    // level, and the children of whatever is expanded — and a node that lands in
+    // both is simply drawn twice. Counting rows inside the tree is the direct
+    // question; the detail panel names the selected node too, so counting on the
+    // whole document would count that as well.
+    it('draws a budget once even when its parent is not one of mine', async () => {
+        globalThis.__testApi = fakeNodesApi(fixtureSkippedLevel());
+        renderView(<MyBudgetsView />);
+
+        const tree = () => within(screen.getByRole('tree'));
+
+        // The first level opens itself. WI-Budget is managed by this caller and
+        // used to be listed here as a root of its own — this is the assertion
+        // the bug failed.
+        await screen.findAllByText('Mannheim');
+        expect(tree().queryAllByText('WI-Budget')).toHaveLength(0);
+
+        // Its real place, one level further down. Clicking the row expands it.
+        fireEvent.click(tree().getByText('Mannheim'));
+
+        await waitFor(() => expect(tree().getAllByText('WI-Budget')).toHaveLength(1));
+        expect(tree().getAllByText('Organization Root')).toHaveLength(1);
+        expectNoRenderFailure();
     });
 
     it('My Projects renders its cards', async () => {
