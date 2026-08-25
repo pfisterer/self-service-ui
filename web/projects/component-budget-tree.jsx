@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AlertTriangle, ChevronDown, ChevronRight, CloudDownload, FileText, Folder, Zap } from 'lucide-react';
 import { Box, Group, Loader, Text, Tooltip, Tree, UnstyledButton } from '@mantine/core';
-import { COLOR, isBudget, isImported, nodeTitle, statusLabel, statusStyle } from './util-project.jsx';
+import { COLOR, isBudget, isImported, nodeTitle, statusDescription, statusLabel, statusStyle } from './util-project.jsx';
 
 // BudgetTree is the navigation side of the "My Budgets" master-detail view: a
 // lazily loaded tree of budgets (inner nodes) and projects (leaves).
@@ -57,10 +57,17 @@ export function budgetsToTreeData(roots, childrenMap) {
 }
 
 // Small colored dot for any status that deviates from plain "approved".
+// A dot carries no words at all, so the tooltip does double duty here: it names
+// the status and explains it, in that order.
 function StatusDot({ status }) {
     if (status === 'approved') return null;
+    const description = statusDescription(status);
     return (
-        <Tooltip label={statusLabel(status)}>
+        <Tooltip
+            label={description ? `${statusLabel(status)} — ${description}` : statusLabel(status)}
+            multiline={Boolean(description)}
+            w={description ? 300 : undefined}
+        >
             <Box w={8} h={8} style={{
                 borderRadius: '50%', flexShrink: 0,
                 backgroundColor: `var(--mantine-color-${statusStyle(status).color}-6)`,

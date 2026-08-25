@@ -4,7 +4,7 @@ import { DatePickerInput } from '@mantine/dates';
 import { Badge, Box, Checkbox, Group, NumberInput, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { COLOR, formatRoleLabel, limitDelta, nodeChanges, resourceBarSegments, statusLabel, statusStyle, UNLIMITED_QUOTA } from './util-project.jsx';
+import { COLOR, formatRoleLabel, limitDelta, nodeChanges, resourceBarSegments, statusDescription, statusLabel, statusStyle, UNLIMITED_QUOTA } from './util-project.jsx';
 import { tokenDisplay, tokenEmail, useTokenLabels } from './token-labels.jsx';
 
 dayjs.extend(relativeTime);
@@ -33,7 +33,9 @@ export function FactRow({ label, hint, children }) {
 
 // ── Badges ──────────────────────────────────────────────────────────────────
 
-// NodeStatusBadge renders the status of a node in the one shared vocabulary.
+// NodeStatusBadge renders the status of a node in the one shared vocabulary,
+// and explains it on hover. The label is a word we invented for a state the
+// reader did not choose; the tooltip is where it says what that means for them.
 export function NodeStatusBadge({ status, size = 'sm', provisioning = false }) {
     const style = statusStyle(status, provisioning);
     const badge = (
@@ -41,10 +43,11 @@ export function NodeStatusBadge({ status, size = 'sm', provisioning = false }) {
             {statusLabel(status, provisioning)}
         </Badge>
     );
-    if (!provisioning) return badge;
+    const description = statusDescription(status, provisioning);
+    if (!description) return badge;
     return (
-        <Tooltip label="Approved. The OpenStack project is being created — this usually takes a few minutes.">
-            <span style={{ cursor: 'default' }}>{badge}</span>
+        <Tooltip label={description} multiline w={300} withArrow>
+            <span style={{ cursor: 'help' }}>{badge}</span>
         </Tooltip>
     );
 }

@@ -54,13 +54,38 @@ export const COLOR = {
 // ── Status vocabulary ───────────────────────────────────────────────────────
 // One place defines how every status looks and reads across the whole UI.
 
+// Every status also carries the sentence that explains it. A badge is a label,
+// not an explanation, and the words we chose ("Released", "Imported") are ours
+// rather than everyday English — so each one has to say what it means for the
+// person reading it: what happened, what it costs, what they can do next.
 const STATUS_META = {
-    pending: { label: 'Awaiting approval', color: COLOR.attention, variant: 'outline' },
-    approved: { label: 'Active', color: COLOR.positive, variant: 'filled' },
-    change_pending: { label: 'Change requested', color: COLOR.attention, variant: 'outline' },
-    rejected: { label: 'Rejected', color: COLOR.negative, variant: 'filled' },
-    released: { label: 'Released', color: COLOR.identity, variant: 'light' },
-    imported: { label: 'Imported', color: COLOR.outside, variant: 'light' },
+    pending: {
+        label: 'Awaiting approval', color: COLOR.attention, variant: 'outline',
+        description: 'Requested, but nothing exists yet. Someone who manages the paying budget has to approve it first.',
+    },
+    approved: {
+        label: 'Active', color: COLOR.positive, variant: 'filled',
+        description: 'Approved and running. The OpenStack project exists and the resources shown here are reserved for you.',
+    },
+    change_pending: {
+        label: 'Change requested', color: COLOR.attention, variant: 'outline',
+        description: 'A change is waiting for a decision. Until it is approved the project keeps running on its previous limits, and those are what it costs.',
+    },
+    rejected: {
+        label: 'Rejected', color: COLOR.negative, variant: 'filled',
+        description: 'The request was turned down. Nothing was created and nothing is charged to the budget.',
+    },
+    released: {
+        // The one people ask about: they gave the project up, expect it gone,
+        // and see it still listed and still charged. Both are true and both are
+        // deliberate — releasing asks for deletion, it does not perform it.
+        label: 'Released', color: COLOR.identity, variant: 'light',
+        description: 'You gave this project up. It stays listed — and keeps using its budget — until OpenStack has actually deleted it, because until then the machines are still running. This cannot be undone.',
+    },
+    imported: {
+        label: 'Imported', color: COLOR.outside, variant: 'light',
+        description: 'Found in OpenStack but not managed here — it was created outside the self-service. It has to be adopted into a budget before it can be changed.',
+    },
 };
 
 // A leaf that is approved but has no OpenStack project yet. The reconciler runs
@@ -68,7 +93,10 @@ const STATUS_META = {
 // window "Active" sends people looking for a project that is not there.
 // Only meaningful while provisioning actually runs; with the reconciler off,
 // nothing ever gets an ID and every project would be stuck on "Setting up".
-const PROVISIONING_META = { label: 'Setting up', color: COLOR.attention, variant: 'filled' };
+const PROVISIONING_META = {
+    label: 'Setting up', color: COLOR.attention, variant: 'filled',
+    description: 'Approved. The OpenStack project is being created — this usually takes a few minutes.',
+};
 
 export function isProvisioning(node, provisioningEnabled) {
     return Boolean(provisioningEnabled)
@@ -87,6 +115,13 @@ export function statusStyle(status, provisioning = false) {
 export function statusLabel(status, provisioning = false) {
     if (provisioning) return PROVISIONING_META.label;
     return STATUS_META[status]?.label ?? status;
+}
+
+// Returns the sentence explaining a status, or '' for one we have no words for
+// — callers render no tooltip rather than an empty one.
+export function statusDescription(status, provisioning = false) {
+    if (provisioning) return PROVISIONING_META.description;
+    return STATUS_META[status]?.description ?? '';
 }
 
 // Returns true for reconciler-imported OpenStack projects that are not yet
