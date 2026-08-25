@@ -23,3 +23,10 @@ export const dnsZonesEnabled = Boolean(window?.appconfig?.dynamicZonesBaseUrl);
 
 // At least one API has to be there for a token to be issuable at all.
 export const apiTokensEnabled = dnsZonesEnabled || cloudProjectsEnabled;
+
+// The projects API also speaks MCP, so an AI assistant can work on someone's
+// behalf. A SEPARATE value, not derived from cloudResourcesBaseUrl: that one may
+// be the BFF path, which authenticates browser sessions with cookies and answers
+// a bearer token with a login redirect. An MCP client needs the API's own host,
+// and nothing in the browser can work that out from the BFF URL.
+export const cloudProjectsMcpUrl = window?.appconfig?.cloudResourcesMcpUrl || '';

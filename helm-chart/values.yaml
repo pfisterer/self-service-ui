@@ -19,6 +19,11 @@ selfServiceUI:
   # OpenStack management API base URL. Empty disables the Cloud Projects tab
   # (route unregistered + nav link hidden). Set it only where the backend works.
   cloudResourcesBaseUrl: ""
+  # Where an MCP client reaches the projects API. NOT cloudResourcesBaseUrl:
+  # that may point at the BFF, which authenticates browser sessions with cookies
+  # and would answer a bearer token with a login redirect. This has to be the
+  # API's own host. Empty -> the UI shows nothing about MCP.
+  cloudResourcesMcpUrl: ""
   # DHBW-internal ACME server (acme2certifier) shown on the "TLS Certificates" tab.
   acmeServer: https://certificates.dhbw.cloud
   # In-cluster addresses Caddy forwards the SPA's same-origin /api/<svc>/ calls

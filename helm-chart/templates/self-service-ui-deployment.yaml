@@ -62,6 +62,8 @@ spec:
             # Empty -> Cloud Projects tab disabled (route not registered, nav link hidden).
             - name: CLOUD_RESOURCES_BASE_URL
               value: "{{ .Values.selfServiceUI.cloudResourcesBaseUrl }}"
+            - name: CLOUD_RESOURCES_MCP_URL
+              value: "{{ .Values.selfServiceUI.cloudResourcesMcpUrl }}"
             - name: ACME_SERVER
               value: "{{ .Values.selfServiceUI.acmeServer }}"
             {{- if .Values.selfServiceUI.dynamicZonesUpstream }}

@@ -8,6 +8,7 @@ import {
     Select, Stack, Table, Text, TextInput,
 } from '@mantine/core';
 import { formatDateTime } from '../format-date.js';
+import { McpSection, mcpConfigJson } from './mcp-config.jsx';
 
 // The lifetimes offered, in the hours the API takes. -1 is "never expires",
 // the same value the shared library calls NeverExpires, so nothing in between
@@ -170,6 +171,7 @@ export function TokenScopePanel({ scope }) {
                                             key={t.id}
                                             token={t}
                                             secret={revealed[t.id]}
+                                            scope={scope}
                                             onRevoke={() => revoke(t)}
                                         />
                                     ))}
@@ -177,6 +179,7 @@ export function TokenScopePanel({ scope }) {
                             </Table>
                         )
                 )}
+                <McpSection scope={scope} />
             </Stack>
         </Paper>
     );
@@ -186,7 +189,7 @@ export function TokenScopePanel({ scope }) {
 // it was created, while its secret is still readable. The secret is far too
 // long for a cell, and it is also the one thing on this page that must not be
 // easy to miss.
-function TokenRows({ token, secret, onRevoke }) {
+function TokenRows({ token, secret, scope, onRevoke }) {
     return (
         <>
             <Table.Tr>
@@ -238,6 +241,21 @@ function TokenRows({ token, secret, onRevoke }) {
                                     Stored only as a hash — reload this page and it is gone for good.
                                 </Text>
                             </Group>
+                            {/* The only moment a complete MCP config can be
+                                handed over: after this render the secret is
+                                unrecoverable, and the standing section below the
+                                table can only offer a placeholder. */}
+                            {scope?.mcpUrl && (
+                                <Stack gap="xs" mt="xs">
+                                    <CopyButton value={mcpConfigJson(scope, secret)}>
+                                        {({ copied, copy }) => (
+                                            <Button size="xs" variant="light" onClick={copy}>
+                                                {copied ? 'Copied' : 'Copy MCP config with this token'}
+                                            </Button>
+                                        )}
+                                    </CopyButton>
+                                </Stack>
+                            )}
                         </Alert>
                     </Table.Td>
                 </Table.Tr>
