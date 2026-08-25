@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { COLOR, formatRoleLabel, limitDelta, nodeChanges, resourceBarSegments, statusDescription, statusLabel, statusStyle, UNLIMITED_QUOTA } from './util-project.jsx';
 import { tokenDisplay, tokenEmail, useTokenLabels } from './token-labels.jsx';
+import { formatDate } from '../format-date.js';
 
 dayjs.extend(relativeTime);
 

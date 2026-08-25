@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { NodeChangesDiff, NodeStatusBadge, QuotaBadges, TokenBadgeList, UserRoleBadgeList } from './component-common.jsx';
 import { formatRelativeDate, isBudget, nodeTitle, ownerEmail, resourceSummaryText, statusLabel } from './util-project.jsx';
+import { formatDateTime } from '../format-date.js';
 
 dayjs.extend(relativeTime);
 

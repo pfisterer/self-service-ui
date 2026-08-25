@@ -3,6 +3,7 @@ import { Alert, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@m
 import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge } from './component-common.jsx';
 import { COLOR, expiryTone, expiryValue, isImported, isProvisioning, overageEntries, overageText, ownerEmail, resourceSummaryText } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
+import { formatDate } from '../format-date.js';
 
 // ProjectCard renders one project leaf. It is purely presentational: every
 // button reports an action to the owning view via onAction(actionId, node),

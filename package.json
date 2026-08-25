@@ -8,6 +8,7 @@
     "preview": "npx vite preview",
     "lint": "eslint .",
     "test": "vitest run",
+    "check": "npm run lint && npm test",
     "clean": "rm -rf dist-ui"
   },
   "dependencies": {

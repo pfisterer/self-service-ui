@@ -9,7 +9,7 @@ DOCKER_PLATFORMS ?= linux/amd64,linux/arm64
 
 # --- Targets ---
 .DEFAULT_GOAL := docker-build
-.PHONY: all clean docker-build multi-arch-build docker-login help dev helm-update bump version-check
+.PHONY: all check clean docker-build multi-arch-build docker-login help dev helm-update bump version-check
 
 # Alias for the primary build target
 all: docker-build
@@ -60,10 +60,20 @@ docker-multi-arch-build: docker-login helm-update
 
 # make bump V=0.8.5
 # npm version keeps package-lock.json in step, which a plain edit would not.
-bump:
+#
+# `check` runs first, because bumping the version IS the moment a release
+# starts. It is here rather than left to habit: a release went out with four
+# files calling formatDate() without importing it — `npm test` covers pure
+# functions only and the bundler does not object to a free variable, so ESLint
+# was the one step that saw it, and it was the one step not run.
+bump: check
 	@test -n "$(V)" || { echo "usage: make bump V=<x.y.z>"; exit 1; }
 	@npm version "$(V)" --no-git-tag-version >/dev/null
 	@$(MAKE) --no-print-directory helm-update
+
+# What CI runs, in one command.
+check:
+	@npm run check
 
 version-check:
 	@v=$$(jq -r .version package.json); \
@@ -109,6 +119,7 @@ update-deps:
 help:
 	@echo "Usage: make <target>"
 	@echo "  dev                      → Start the development server."
+	@echo "  check                    → Run ESLint and the unit tests (what CI runs)."
 	@echo "  docker-build             → Build the local Docker image tagged with the version from package.json."
 	@echo "  docker-multi-arch-build  → Build and push multi-arch images (latest & version tag). Requires 'docker-login'."
 	@echo "  docker-login             → Log into the Docker registry."
