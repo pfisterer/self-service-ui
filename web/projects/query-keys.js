@@ -16,7 +16,13 @@ export const projectKeys = {
     eligibleForMe: () => ['projects', 'tree', 'eligible-for-me'],
     eligibleForOwner: (tokens) => ['projects', 'tree', 'eligible-for-owner', tokens],
     node: (id) => ['projects', 'tree', 'node', id],
-    children: (id, offset) => ['projects', 'tree', 'children', id, offset],
+    // Keyed by LIMIT, not by offset: a node's children are one query holding
+    // the first N rows, and "show more" raises N. Offset-keyed pages would put
+    // one branch in several cache entries that have to be stitched back
+    // together in the view — which is how this ended up outside the cache in
+    // the first place, and with it the bug that a move left the tree showing
+    // two different answers until a reload.
+    children: (id, limit) => ['projects', 'tree', 'children', id, limit],
     search: (q, offset) => ['projects', 'tree', 'search', q, offset],
     config: () => ['projects', 'config'],
     rootStatus: () => ['projects', 'root-status'],

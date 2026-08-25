@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Inbox, Search, X } from 'lucide-react';
 import { ActionIcon, Alert, Badge, Button, Checkbox, Grid, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, useTree } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
@@ -11,7 +11,7 @@ import { PAGE_SIZE, useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { BudgetCard } from './card-budget.jsx';
 import { ProjectCard } from './card-project.jsx';
-import { BudgetTree, NodeResultList, budgetsToTreeData } from './component-budget-tree.jsx';
+import { BudgetTree, MORE_SUFFIX, NodeResultList, budgetsToTreeData } from './component-budget-tree.jsx';
 import { AdoptModal } from './modal-adopt.jsx';
 import { ApproveModal } from './modal-approve.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
@@ -27,6 +27,12 @@ import { useCloudStatus } from './cloud-status.jsx';
 
 // How long typing pauses before a search is sent.
 const SEARCH_DEBOUNCE_MS = 300;
+
+// How long a loaded branch counts as fresh. Long enough that opening a node
+// does not fetch it twice (see childQuery), short enough that a branch someone
+// leaves sitting open is re-read when they come back to it. Changes made in
+// this view do not wait for it — every write invalidates.
+const CHILDREN_STALE_MS = 30_000;
 
 // MyBudgetsView is a master-detail tree navigator: the left side shows the
 // budgets the user manages as an expandable tree (sub-budgets and projects
@@ -76,9 +82,10 @@ export function MyBudgetsView() {
     const budgetRequestTargets = useMemo(
         () => (eligibleQuery.data?.items ?? []).filter(b => b.allow_sub_budget_requests !== false),
         [eligibleQuery.data]);
-    // The pages of children loaded so far, per node: { items, total }. Expansion,
-    // per-node loading and load errors are owned by the Mantine tree controller.
-    const [childrenMap, setChildrenMap] = useState(new Map());
+    // How many rows of a node's children to hold, per node. "Show more" raises
+    // this; the query key follows it, so the cache keeps one entry per branch
+    // instead of a pile of pages the view would have to stitch together.
+    const [limits, setLimits] = useState({});
     const [selectedNode, setSelectedNode] = useState(null);
     const [search, setSearch] = useState('');
     const [extraResults, setExtraResults] = useState([]);
@@ -109,65 +116,106 @@ export function MyBudgetsView() {
     // also has to decide what to do when the list changes under it.
     const selected = selectedNode ?? rootBudgets[0] ?? null;
 
-    // Lazy loading: the tree calls this the first time a node with children is
-    // opened, and it fetches the FIRST page only. Errors propagate on purpose —
-    // the controller records them and the row shows the failure in place instead
-    // of a modal that loses the context.
-    const loadChildren = async (nodeId) => {
-        const page = await api.listChildren(nodeId);
-        setChildrenMap(m => new Map(m).set(nodeId, page));
-    };
+    const childLimit = (nodeId) => limits[nodeId] ?? PAGE_SIZE;
+    const childQuery = (nodeId) => ({
+        queryKey: projectKeys.children(nodeId, childLimit(nodeId)),
+        queryFn: () => api.listChildren(nodeId, { limit: childLimit(nodeId) }),
+        // Not a caching nicety, a correctness one for the pair below: with the
+        // default of 0 the row that onLoadChildren just fetched is stale the
+        // moment it arrives, so the query mounting behind it fetches the same
+        // branch a second time. Every first expand would cost two requests.
+        // Writes invalidate regardless of this, so nothing goes stale unseen.
+        staleTime: CHILDREN_STALE_MS,
+        // A node that was expanded and has since been deleted or released keeps
+        // its entry in the expansion state, so its query outlives it and answers
+        // 404. Nothing renders for it — it is not in the tree any more — and the
+        // default three retries would repeat that on every invalidation. Fail
+        // once and stay quiet.
+        retry: false,
+    });
 
-    // The "show more" row under a partly loaded budget. The new page is appended;
-    // total comes from the fresh response, so a child added meanwhile is counted.
+    // Lazy loading: the tree calls this the first time a node with children is
+    // opened. It only warms the cache — the query below is what the view reads,
+    // and it starts as soon as the node counts as expanded. Going through
+    // fetchQuery rather than the api directly means the two share one cache
+    // entry, so this is not a second request.
+    //
+    // Awaited, and errors propagate on purpose: that is what gives the row its
+    // spinner and its in-place failure marker instead of a modal that loses the
+    // context. A rejected load is not remembered as loaded, so collapsing and
+    // reopening retries it.
+    const loadChildren = (nodeId) => queryClient.fetchQuery(childQuery(nodeId));
+
+    const tree = useTree({ multiple: false, onLoadChildren: loadChildren });
+
+    // The branches currently open. This — not a Map the view maintains — is what
+    // decides which children are fetched, so expansion and data cannot disagree.
+    // The "show more" placeholder rows are not nodes and have nothing to fetch.
+    const openIds = useMemo(
+        () => Object.entries(tree.expandedState)
+            .filter(([id, open]) => open && !id.endsWith(MORE_SUFFIX))
+            .map(([id]) => id),
+        [tree.expandedState],
+    );
+
+    // One query per open branch, under the shared `tree()` prefix — so every
+    // write already invalidates them and the tree refreshes itself. That is the
+    // whole point of the rewrite: the children used to live in component state,
+    // where `invalidates: [projectKeys.tree()]` could not reach them and a
+    // hand-written refresh had to guess which branches to reload.
+    //
+    // `combine` must keep its identity across renders or react-query cannot
+    // memoise it — a new Map every render would rebuild the tree data and
+    // re-render the whole Tree for nothing. Pending branches are simply absent:
+    // budgetsToTreeData reads that as "not loaded yet", which is what it is.
+    const combineChildren = useCallback(
+        (results) => new Map(
+            openIds.map((id, i) => [id, results[i]?.data]).filter(([, page]) => page),
+        ),
+        [openIds],
+    );
+    const childrenMap = useQueries({
+        queries: openIds.map(id => ({ ...childQuery(id), enabled: !!api })),
+        combine: combineChildren,
+    });
+
+    // The "show more" row under a partly loaded budget: raise this branch's
+    // limit. Fetched before the key moves so the rows do not blink out and back
+    // in, and so MoreRow's spinner covers the wait.
+    //
+    // This refetches the branch rather than appending the next page — the same
+    // trade the old refresh already made when it reloaded each open branch with
+    // as many rows as were showing. It costs a bigger response on later clicks
+    // and buys one cache entry per branch instead of a merge the view has to get
+    // right on every path.
     const loadMoreChildren = async (nodeId) => {
-        const loaded = childrenMap.get(nodeId)?.items || [];
+        const next = childLimit(nodeId) + PAGE_SIZE;
         try {
-            const page = await api.listChildren(nodeId, { offset: loaded.length });
-            setChildrenMap(m => {
-                const previous = m.get(nodeId)?.items || [];
-                const seen = new Set(previous.map(n => n.id));
-                return new Map(m).set(nodeId, {
-                    items: [...previous, ...page.items.filter(n => !seen.has(n.id))],
-                    total: page.total,
-                });
+            await queryClient.fetchQuery({
+                queryKey: projectKeys.children(nodeId, next),
+                queryFn: () => api.listChildren(nodeId, { limit: next }),
             });
+            setLimits(prev => ({ ...prev, [nodeId]: next }));
         } catch (e) {
             showError(formatError(e));
         }
     };
 
-    const tree = useTree({ multiple: false, onLoadChildren: loadChildren });
-
-    // Reloads the roots AND everything currently visible in the tree, so the
-    // usage bars and statuses are fresh after every action. Each expanded node
-    // is refetched with as many rows as were loaded, so a refresh does not
-    // silently fold pages the user opened back up.
-    // Reloads the lists AND everything currently visible in the tree, so the
-    // usage bars and statuses are fresh after every action. Each expanded node
-    // is refetched with as many rows as were loaded, so a refresh does not
-    // silently fold pages the user opened back up.
+    // Everything the tree shows now sits under the `tree()` prefix, so one
+    // invalidation reaches the lists AND every open branch — including the two
+    // this view cannot name after a move, the one the node came from and the one
+    // it went to. This used to walk the open branches by hand and rebuild the
+    // page map wholesale, which is what left expansion and data disagreeing.
     //
-    // The lists come from the query cache (a write invalidates them on its own);
-    // what still has to be done by hand is the lazily loaded tree, which is not
-    // server state a key can describe — it is "the pages this user happened to
-    // open".
+    // Two things stay by hand, because neither is server state a key describes:
+    // the selection (one node, and it has to be DROPPED when it vanishes) and
+    // the header badge.
     const refresh = async () => {
         try {
             await queryClient.invalidateQueries({ queryKey: projectKeys.tree() });
             // The header badge shows the same number; a decision made here must
             // not leave it stale.
             cloudStatus.refresh();
-
-            const ids = Object.entries(tree.expandedState).filter(([, open]) => open).map(([id]) => id);
-            const pages = await Promise.all(ids.map(id => {
-                const shown = childrenMap.get(id)?.items.length || 0;
-                const limit = Math.max(PAGE_SIZE, Math.ceil(shown / PAGE_SIZE) * PAGE_SIZE);
-                return api.listChildren(id, { limit }).catch(() => null);
-            }));
-            const map = new Map();
-            ids.forEach((id, i) => { if (pages[i]) map.set(id, pages[i]); });
-            setChildrenMap(map);
 
             // Refresh the selected node too; drop the selection if it vanished
             // (deleted, released, moved out of sight).
@@ -185,9 +233,15 @@ export function MyBudgetsView() {
     //
     // Expansion is set in one go instead of per node via tree.expand(): that
     // helper builds the next state from the state it captured, so expanding
-    // several roots in a row would keep only the last one. Loading the children
-    // is therefore ours to trigger too; a failure leaves the node empty and the
-    // next refresh retries it.
+    // several roots in a row would keep only the last one. Fetching is not ours
+    // to trigger any more — a branch that counts as open is queried by that
+    // alone.
+    //
+    // Keyed on the root IDs and not on the root OBJECTS: a write that only
+    // changes a root's child_count (a move into one, say) hands back a new array
+    // but the same set of roots, and re-running then re-opened what the user had
+    // just collapsed.
+    const rootIds = rootBudgets.map(b => b.id).join(' ');
     useEffect(() => {
         const openable = rootBudgets.filter(b => b.child_count > 0);
         if (openable.length === 0) return;
@@ -195,14 +249,10 @@ export function MyBudgetsView() {
             ...tree.expandedState,
             ...Object.fromEntries(openable.map(b => [b.id, true])),
         });
-        openable
-            .filter(b => !childrenMap.has(b.id))
-            .forEach(b => { loadChildren(b.id).catch(() => { }); });
-        // Deliberately keyed on the ROOTS only. `tree` and `childrenMap` are
-        // read to decide what still has to be opened/loaded; listing them would
-        // re-run this on every expand and fight the user's own collapsing.
+        // `tree` and `rootBudgets` are read to decide what to open; listing them
+        // would re-run this on every expand and fight the user's own collapsing.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rootBudgets]);
+    }, [rootIds]);
 
     // ── Search ──────────────────────────────────────────────────────────────
     // Server-side: the tree holds only the pages that were opened, so there is

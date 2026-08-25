@@ -21,7 +21,11 @@ import { COLOR, isBudget, isImported, nodeTitle, statusDescription, statusLabel,
 
 // The value of the synthetic row that loads the next page. Suffixed onto the
 // parent's ID so it is unique, and recognisable when the tree hands it back.
-const MORE_SUFFIX = '::more';
+//
+// Exported because the owning view has to tell these rows apart from real nodes
+// when it reads the expansion state: they carry no node and there is nothing to
+// fetch for them.
+export const MORE_SUFFIX = '::more';
 
 // budgetsToTreeData converts the loaded pages into Mantine's node shape.
 //
