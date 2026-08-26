@@ -22,6 +22,7 @@ export default defineConfig(({ mode }) => {
       dynamicZonesBaseUrl: env.DYNAMIC_ZONE_BASE_URL || '',
       cloudResourcesBaseUrl: env.CLOUD_RESOURCES_BASE_URL || '',
       cloudResourcesMcpUrl: env.CLOUD_RESOURCES_MCP_URL || '',
+      dynamicZonesMcpUrl: env.DYNAMIC_ZONE_MCP_URL || '',
       acmeServer: env.ACME_SERVER || 'https://certificates.dhbw.cloud',
       dummyAuth: env.DUMMY_AUTH === 'true',
       oidc: {

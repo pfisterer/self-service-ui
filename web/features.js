@@ -24,9 +24,14 @@ export const dnsZonesEnabled = Boolean(window?.appconfig?.dynamicZonesBaseUrl);
 // At least one API has to be there for a token to be issuable at all.
 export const apiTokensEnabled = dnsZonesEnabled || cloudProjectsEnabled;
 
-// The projects API also speaks MCP, so an AI assistant can work on someone's
-// behalf. A SEPARATE value, not derived from cloudResourcesBaseUrl: that one may
-// be the BFF path, which authenticates browser sessions with cookies and answers
-// a bearer token with a login redirect. An MCP client needs the API's own host,
-// and nothing in the browser can work that out from the BFF URL.
+// Both APIs also speak MCP, so an AI assistant can work on someone's behalf.
+// SEPARATE values, not derived from the base URLs: those may be the BFF paths,
+// which authenticate browser sessions with cookies and answer a bearer token
+// with a login redirect. An MCP client needs the API's own host, and nothing in
+// the browser can work that out from the BFF URL.
+//
+// One per API rather than one flag for both: a deployment can perfectly well run
+// a version of one service that speaks MCP and a version of the other that does
+// not, and offering an address that answers 404 is worse than offering none.
 export const cloudProjectsMcpUrl = window?.appconfig?.cloudResourcesMcpUrl || '';
+export const dnsZonesMcpUrl = window?.appconfig?.dynamicZonesMcpUrl || '';

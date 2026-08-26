@@ -59,6 +59,8 @@ spec:
           env:
             - name: DYN_ZONES_BASE_URL
               value: "{{ .Values.selfServiceUI.dynamicZonesBaseUrl }}"
+            - name: DYN_ZONES_MCP_URL
+              value: "{{ .Values.selfServiceUI.dynamicZonesMcpUrl }}"
             # Empty -> Cloud Projects tab disabled (route not registered, nav link hidden).
             - name: CLOUD_RESOURCES_BASE_URL
               value: "{{ .Values.selfServiceUI.cloudResourcesBaseUrl }}"

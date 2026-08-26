@@ -3,8 +3,12 @@ import { Alert, Anchor, Button, Code, CopyButton, Group, Stack, Text } from '@ma
 // What an MCP client needs to reach one of these APIs on a person's behalf: an
 // address and a credential. The credential is the token on this page; the
 // address is deployment configuration the browser cannot work out for itself
-// (see cloudProjectsMcpUrl in features.js). So this is the one place both are
+// (see the *McpUrl exports in features.js). So this is the one place both are
 // known at the same time.
+//
+// Written against the scope rather than against one API: both backends speak
+// MCP, and everything that differs between them — the address, the server name,
+// what the assistant would be working on — is already a field on the scope.
 
 // PLACEHOLDER is what stands in for the secret where we no longer have it. It is
 // deliberately obvious rather than a plausible-looking fake, so a config pasted
@@ -70,8 +74,9 @@ export function McpSection({ scope }) {
                     <Anchor href="https://modelcontextprotocol.io" target="_blank" rel="noreferrer" inherit>
                         Model Context Protocol
                     </Anchor>
-                    , so an assistant can read and change your projects for you. It acts as you and can do
-                    nothing you could not do yourself — a read-only token gives it a read-only assistant.
+                    , so an assistant can read and change your {scope.mcpSubject || 'resources'} for you. It
+                    acts as you and can do nothing you could not do yourself — a read-only token gives it a
+                    read-only assistant.
                 </Text>
                 <McpConfigBlock scope={scope} />
                 <Text size="xs" c="dimmed">

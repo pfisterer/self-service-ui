@@ -51,6 +51,7 @@
         "hostname": { "type": "string", "minLength": 1 },
         "replicas": { "type": "integer", "minimum": 0 },
         "dynamicZonesBaseUrl": { "type": "string" },
+        "dynamicZonesMcpUrl": { "type": "string" },
         "cloudResourcesBaseUrl": { "type": "string" },
         "cloudResourcesMcpUrl": { "type": "string" },
         "acmeServer": { "type": "string" },
