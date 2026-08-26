@@ -16,13 +16,21 @@ import { Alert, Anchor, Button, Code, CopyButton, Group, Stack, Text } from '@ma
 // point.
 const PLACEHOLDER = '<your-token>';
 
-// mcpConfigJson builds the snippet a client is configured with. The shape is the
-// remote-server form every current client accepts: a name, a URL, and the
-// Authorization header sent with each request.
+// mcpConfigJson builds the snippet a client is configured with: a name, a URL,
+// the Authorization header sent with each request — and `type`.
+//
+// `type` is the one that was missing and the reason this had to be tested with a
+// real client rather than a protocol library. Claude Code reads its server list
+// from ~/.claude.json and drops any entry without it SILENTLY: no error, no
+// warning, the server simply never appears in /mcp and none of its tools exist.
+// The endpoint answered every curl, so nothing about the failure pointed here.
+// Clients that do not need the field ignore it, so stating it costs nothing and
+// omitting it costs an afternoon.
 export function mcpConfigJson(scope, token) {
     return JSON.stringify({
         mcpServers: {
             [scope.mcpServerName || scope.id]: {
+                type: 'http',
                 url: scope.mcpUrl,
                 headers: { Authorization: `Bearer ${token || PLACEHOLDER}` },
             },

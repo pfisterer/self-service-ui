@@ -63,9 +63,20 @@ describe('the config snippet handed to a client', () => {
         const cfg = JSON.parse(mcpConfigJson(scope, 'dynz_token_secret'));
 
         expect(cfg.mcpServers['dhbw-cloud-dns']).toEqual({
+            type: 'http',
             url: 'https://dyndnsapi.example.com/mcp',
             headers: { Authorization: 'Bearer dynz_token_secret' },
         });
+    });
+
+    // The field that was missing, given a test of its own because of HOW it
+    // failed: Claude Code drops an entry without `type` silently — no error, no
+    // warning, the server just never appears. A snippet that is wrong this way
+    // looks exactly like one that is right until someone goes looking.
+    it('declares the transport, without which some clients discard the entry', () => {
+        const cfg = JSON.parse(mcpConfigJson(scope, ''));
+
+        expect(cfg.mcpServers['dhbw-cloud-dns'].type).toBe('http');
     });
 
     // Where the secret is gone, what stands in for it has to FAIL if pasted
