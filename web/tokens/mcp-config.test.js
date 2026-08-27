@@ -59,14 +59,27 @@ describe('token scopes and their MCP endpoints', () => {
 describe('the config snippet handed to a client', () => {
     const scope = { id: 'dns', mcpUrl: 'https://dyndnsapi.example.com/mcp', mcpServerName: 'dhbw-cloud-dns' };
 
-    it('carries the endpoint and the token as a bearer header', () => {
-        const cfg = JSON.parse(mcpConfigJson(scope, 'dynz_token_secret'));
+    // What it returns is one entry of an mcpServers object, so it is a fragment
+    // and does not parse on its own — the braces are the caller's, both here and
+    // in the config file someone pastes it into.
+    const parseEntry = (fragment) => JSON.parse(`{${fragment}}`);
 
-        expect(cfg.mcpServers['dhbw-cloud-dns']).toEqual({
+    it('carries the endpoint and the token as a bearer header', () => {
+        const cfg = parseEntry(mcpConfigJson(scope, 'dynz_token_secret'));
+
+        expect(cfg['dhbw-cloud-dns']).toEqual({
             type: 'http',
             url: 'https://dyndnsapi.example.com/mcp',
             headers: { Authorization: 'Bearer dynz_token_secret' },
         });
+    });
+
+    // The wrapper is what someone would have to strip off before pasting, and
+    // pasting it whole would produce a second mcpServers key — invalid JSON that
+    // costs the servers already configured.
+    it('brings no mcpServers wrapper of its own', () => {
+        expect(mcpConfigJson(scope, '')).not.toMatch(/mcpServers/);
+        expect(mcpConfigJson(scope, '').trimStart()).toMatch(/^"dhbw-cloud-dns":/);
     });
 
     // The field that was missing, given a test of its own because of HOW it
@@ -74,17 +87,17 @@ describe('the config snippet handed to a client', () => {
     // warning, the server just never appears. A snippet that is wrong this way
     // looks exactly like one that is right until someone goes looking.
     it('declares the transport, without which some clients discard the entry', () => {
-        const cfg = JSON.parse(mcpConfigJson(scope, ''));
+        const cfg = parseEntry(mcpConfigJson(scope, ''));
 
-        expect(cfg.mcpServers['dhbw-cloud-dns'].type).toBe('http');
+        expect(cfg['dhbw-cloud-dns'].type).toBe('http');
     });
 
     // Where the secret is gone, what stands in for it has to FAIL if pasted
     // unedited — a plausible-looking fake would break at some later, stranger
     // point instead of at the first request.
     it('never emits something that could pass for a token', () => {
-        const cfg = JSON.parse(mcpConfigJson(scope, ''));
-        const auth = cfg.mcpServers['dhbw-cloud-dns'].headers.Authorization;
+        const cfg = parseEntry(mcpConfigJson(scope, ''));
+        const auth = cfg['dhbw-cloud-dns'].headers.Authorization;
 
         expect(auth).toBe('Bearer <your-token>');
         expect(auth).not.toMatch(/dynz_token_/);

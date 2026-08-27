@@ -16,26 +16,34 @@ import { Alert, Anchor, Button, Code, CopyButton, Group, Stack, Text } from '@ma
 // point.
 const PLACEHOLDER = '<your-token>';
 
-// mcpConfigJson builds the snippet a client is configured with: a name, a URL,
-// the Authorization header sent with each request — and `type`.
+// mcpConfigJson builds one named server entry: the name, `type`, the URL, and
+// the Authorization header sent with each request.
 //
-// `type` is the one that was missing and the reason this had to be tested with a
-// real client rather than a protocol library. Claude Code reads its server list
-// from ~/.claude.json and drops any entry without it SILENTLY: no error, no
-// warning, the server simply never appears in /mcp and none of its tools exist.
-// The endpoint answered every curl, so nothing about the failure pointed here.
-// Clients that do not need the field ignore it, so stating it costs nothing and
-// omitting it costs an afternoon.
+// Deliberately the ENTRY and not a whole config file. Anyone pasting this
+// already has an mcpServers object with other servers in it, and a snippet that
+// brings its own wrapper has to be taken apart before it can be used — while
+// pasting it whole produces a second mcpServers key, which is invalid JSON and
+// silently costs the servers that were there. The entry drops straight in.
+//
+// The consequence, stated because it is a real one: what this returns is a
+// fragment, not a standalone JSON document. It does not parse on its own, so
+// anything that reads it back has to supply the braces.
+//
+// `type` is the field that was missing until 2026-08-26, and the reason this had
+// to be tested with a real client rather than a protocol library: Claude Code
+// reads ~/.claude.json and drops an entry without it SILENTLY — no error, no
+// warning, the server never appears in /mcp and none of its tools exist. The
+// endpoint answered every curl, so nothing about the failure pointed here.
+// Clients that do not need the field ignore it.
 export function mcpConfigJson(scope, token) {
-    return JSON.stringify({
-        mcpServers: {
-            [scope.mcpServerName || scope.id]: {
-                type: 'http',
-                url: scope.mcpUrl,
-                headers: { Authorization: `Bearer ${token || PLACEHOLDER}` },
-            },
-        },
-    }, null, 2);
+    const name = scope.mcpServerName || scope.id;
+    const entry = {
+        type: 'http',
+        url: scope.mcpUrl,
+        headers: { Authorization: `Bearer ${token || PLACEHOLDER}` },
+    };
+
+    return `${JSON.stringify(name)}: ${JSON.stringify(entry, null, 2)}`;
 }
 
 // McpConfigBlock shows the snippet with a copy button.
@@ -88,8 +96,10 @@ export function McpSection({ scope }) {
                 </Text>
                 <McpConfigBlock scope={scope} />
                 <Text size="xs" c="dimmed">
-                    Replace <Code>{PLACEHOLDER}</Code> with a token from the table above. A token is shown in
-                    full only once, when it is created — the config offered there already has it filled in.
+                    Goes inside the <Code>mcpServers</Code> object of your client's config, next to the
+                    servers you already have. Replace <Code>{PLACEHOLDER}</Code> with a token from the table
+                    above — a token is shown in full only once, when it is created, and the entry offered
+                    there already has it filled in.
                 </Text>
             </Stack>
         </Alert>
