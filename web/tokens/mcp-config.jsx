@@ -46,32 +46,59 @@ export function mcpConfigJson(scope, token) {
     return `${JSON.stringify(name)}: ${JSON.stringify(entry, null, 2)}`;
 }
 
-// McpConfigBlock shows the snippet with a copy button.
+// The surrounding object, shown but never copied. It is what makes the entry
+// legible — on its own, a fragment starting with a quoted name says nothing
+// about where it goes — while copying it would produce a second mcpServers key
+// in a file that already has one.
+const WRAPPER_OPEN = '{\n  "mcpServers": {';
+const WRAPPER_CLOSE = '  }\n}';
+
+// indentFragment lines the entry up under the wrapper. Display only: the copied
+// text is the fragment as it comes, because leading whitespace on a pasted line
+// is the editor's business, not ours. Blank lines stay blank rather than
+// becoming trailing spaces.
+function indentFragment(text, spaces = 4) {
+    const pad = ' '.repeat(spaces);
+    return text.split('\n').map((line) => (line ? pad + line : line)).join('\n');
+}
+
+// McpConfigBlock shows the entry inside the object it belongs to, and copies
+// only the entry.
 //
-// A block of text to copy, and deliberately not a one-click install link. VS
+// The two differ on purpose. Showing the bare fragment leaves the reader to
+// guess where it goes; copying the wrapper with it breaks the file it is pasted
+// into. Dimming the wrapper says "context, not content" without a sentence of
+// explanation — and the copy button spells out what it actually takes.
+//
+// A block of text either way, and deliberately not a one-click install link. VS
 // Code and Cursor can add a server from a URL, but the configuration travels
 // inside that URL — which would put a credential that can create and delete
 // projects into browser history, clipboard managers and any proxy log on the
 // way. The inconvenience is the point.
 export function McpConfigBlock({ scope, token = '' }) {
     if (!scope?.mcpUrl) return null;
-    const json = mcpConfigJson(scope, token);
+    const entry = mcpConfigJson(scope, token);
+    const dimmed = { opacity: 0.45 };
 
     return (
         <Stack gap="xs">
             <Group gap="xs" align="center" wrap="wrap">
                 <Text size="xs" c="dimmed">Endpoint</Text>
                 <Code>{scope.mcpUrl}</Code>
-                <CopyButton value={json}>
+                <CopyButton value={entry}>
                     {({ copied, copy }) => (
                         <Button size="xs" variant="light" onClick={copy}>
-                            {copied ? 'Copied' : 'Copy MCP config'}
+                            {copied ? 'Copied' : 'Copy server entry'}
                         </Button>
                     )}
                 </CopyButton>
             </Group>
             <Code block style={{ fontSize: 'inherit', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                {json}
+                <span style={dimmed}>{WRAPPER_OPEN}</span>
+                {'\n'}
+                {indentFragment(entry)}
+                {'\n'}
+                <span style={dimmed}>{WRAPPER_CLOSE}</span>
             </Code>
         </Stack>
     );
@@ -96,10 +123,10 @@ export function McpSection({ scope }) {
                 </Text>
                 <McpConfigBlock scope={scope} />
                 <Text size="xs" c="dimmed">
-                    Goes inside the <Code>mcpServers</Code> object of your client's config, next to the
-                    servers you already have. Replace <Code>{PLACEHOLDER}</Code> with a token from the table
-                    above — a token is shown in full only once, when it is created, and the entry offered
-                    there already has it filled in.
+                    The greyed-out lines are where it goes — copying takes only the entry, so it drops in
+                    next to the servers you already have. Replace <Code>{PLACEHOLDER}</Code> with a token
+                    from the table above; a token is shown in full only once, when it is created, and the
+                    entry offered there already has it filled in.
                 </Text>
             </Stack>
         </Alert>

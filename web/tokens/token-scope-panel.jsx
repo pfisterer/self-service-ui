@@ -250,7 +250,7 @@ function TokenRows({ token, secret, scope, onRevoke }) {
                                     <CopyButton value={mcpConfigJson(scope, secret)}>
                                         {({ copied, copy }) => (
                                             <Button size="xs" variant="light" onClick={copy}>
-                                                {copied ? 'Copied' : 'Copy MCP config with this token'}
+                                                {copied ? 'Copied' : 'Copy server entry with this token'}
                                             </Button>
                                         )}
                                     </CopyButton>

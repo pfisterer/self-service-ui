@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mcpConfigJson } from './mcp-config.jsx';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { MantineProvider } from '@mantine/core';
+import '/test/jsdom-stubs.js';
+import { McpConfigBlock, mcpConfigJson } from './mcp-config.jsx';
 
 // Two questions, and the first is the one that has actually gone wrong: does the
 // deployment's configuration REACH the scope? Everything on the panel hangs off
@@ -101,5 +104,61 @@ describe('the config snippet handed to a client', () => {
 
         expect(auth).toBe('Bearer <your-token>');
         expect(auth).not.toMatch(/dynz_token_/);
+    });
+});
+
+// The wrapper is shown and not copied, and those are two different facts about
+// two different strings. Either one alone reads as correct while the pair is
+// broken: copy the wrapper too and the pasted file gets a second mcpServers key;
+// stop showing it and the reader has no idea where the entry goes.
+describe('the block on the page', () => {
+    const scope = {
+        id: 'projects',
+        mcpUrl: 'https://projects.example.com/mcp',
+        mcpServerName: 'dhbw-cloud-projects',
+    };
+
+    afterEach(cleanup);
+
+    const renderBlock = () => render(
+        <MantineProvider>
+            <McpConfigBlock scope={scope} />
+        </MantineProvider>,
+    );
+
+    it('shows the surrounding mcpServers object', () => {
+        renderBlock();
+
+        expect(screen.getByText(/"mcpServers"/)).toBeTruthy();
+    });
+
+    it('shows the entry indented inside it', () => {
+        const { container } = renderBlock();
+        // <pre>, not 'pre, code' — the first Code on the block is the inline one
+        // holding the endpoint, and it matched instead.
+        const block = container.querySelector('pre');
+
+        expect(block.textContent).toContain('    "dhbw-cloud-projects"');
+    });
+
+    // The copy value is the fragment, and the fragment is what the other tests
+    // above pin. Stated here as well because this is the component where the two
+    // strings meet, and where someone would "fix" the mismatch by copying what
+    // is displayed.
+    it('does not copy what it only shows', () => {
+        expect(mcpConfigJson(scope, '')).not.toContain('mcpServers');
+    });
+
+    it('renders nothing where the deployment has no endpoint', () => {
+        const { container } = render(
+            <MantineProvider>
+                <McpConfigBlock scope={{ id: 'dns', mcpUrl: '' }} />
+            </MantineProvider>,
+        );
+
+        // Not "the container is empty": MantineProvider injects its own style
+        // tags, so it never is. What has to be absent is this component's output.
+        expect(container.querySelector('pre')).toBeNull();
+        expect(screen.queryByRole('button')).toBeNull();
     });
 });
