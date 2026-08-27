@@ -4,7 +4,7 @@ import { DatePickerInput } from '@mantine/dates';
 import { Badge, Box, Checkbox, Group, NumberInput, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { COLOR, formatRoleLabel, limitDelta, nodeChanges, resourceBarSegments, statusDescription, statusLabel, statusStyle, UNLIMITED_QUOTA } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, formatRoleLabel, isAvailability, limitDelta, nodeChanges, resourceBarSegments, statusDescription, statusLabel, statusStyle } from './util-project.jsx';
 import { tokenDisplay, tokenEmail, useTokenLabels } from './token-labels.jsx';
 import { formatDate } from '../format-date.js';
 
@@ -179,12 +179,21 @@ export function ResourceBar({ resource, limit, approved = 0, changePending = 0, 
 // NodeUsageBars renders the full set of resource bars for a budget node, taken
 // from the node's server-computed usage rollup (usage[status].limit per status).
 // incomingQuota (optional) previews the impact of granting an additional request.
+//
+// Availabilities do not get a bar. A progress track needs a quantity to be a
+// fraction OF, and there is none: a granted network is not "1 of 1 used", it is
+// simply there. They are drawn as badges below the bars instead, and only the
+// granted ones — a row of greyed-out badges for everything withheld says nothing
+// and grows with the catalogue.
 export function NodeUsageBars({ resources, node, incomingQuota = null }) {
     if (!resources || !node) return null;
     const usage = node.usage ?? {};
+    const quantities = resources.filter(r => !isAvailability(r));
+    const granted = resources.filter(r => isAvailability(r) && node.limit?.[r.id] === 1);
+
     return (
         <Stack gap="xs">
-            {resources.map(r => (
+            {quantities.map(r => (
                 <ResourceBar
                     key={r.id}
                     resource={r}
@@ -194,7 +203,20 @@ export function NodeUsageBars({ resources, node, incomingQuota = null }) {
                     incoming={incomingQuota?.[r.id] ?? 0}
                 />
             ))}
+            <AvailabilityBadges resources={granted} />
         </Stack>
+    );
+}
+
+// AvailabilityBadges lists what a node may use, as opposed to how much of it.
+export function AvailabilityBadges({ resources }) {
+    if (!resources?.length) return null;
+    return (
+        <Group gap="4" wrap="wrap">
+            {resources.map(r => (
+                <Badge key={r.id} size="xs" variant="light" color="gray">{r.name}</Badge>
+            ))}
+        </Group>
     );
 }
 

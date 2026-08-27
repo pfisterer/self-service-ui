@@ -9,7 +9,7 @@ import { TerminationDatePicker } from './component-common.jsx';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
-import { COLOR, formatError } from './util-project.jsx';
+import { COLOR, formatError, visibleResources } from './util-project.jsx';
 
 // Same three-step split as the project dialog: what it is → how much → who.
 const TAB_DETAILS = 'details';
@@ -32,6 +32,15 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const api = useNodesApi();
     const isEdit = mode === 'edit';
     const isRequest = mode === 'request';
+
+    // A budget can only hold what the budget above it holds, so the parent is
+    // what decides which resources this form may offer at all.
+    //
+    // Editing without a parent in hand falls back to the node's own scope. That
+    // is narrower than the truth — it shows what the budget HAS rather than what
+    // it could be given — but the alternative is offering the whole catalogue
+    // and letting the server refuse, which teaches the user nothing.
+    const offered = visibleResources(resources, parent || node);
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
 
@@ -84,11 +93,11 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 ? 'Name at least one person or group — a budget nobody manages appears in nobody\'s "My Budgets", and requests under it land with the budget above instead'
                 : null,
             ...Object.fromEntries(
-                Object.entries(validateQuota(resources, values.quota, { allowUnlimited: true }))
+                Object.entries(validateQuota(visibleResources(resources, parent || node), values.quota, { allowUnlimited: true }))
                     .map(([id, msg]) => [`quota.${id}`, msg])),
             ...(values.autoApproveEnabled
                 ? Object.fromEntries(
-                    Object.entries(validateQuota(resources, values.autoApproveQuota))
+                    Object.entries(validateQuota(visibleResources(resources, parent || node), values.autoApproveQuota))
                         .map(([id, msg]) => [`autoApproveQuota.${id}`, msg]))
                 : {}),
         }),
@@ -224,9 +233,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 The maximum everything under this budget may use in total.
             </Text>
             <QuotaInputs
-                resources={resources}
+                resources={offered}
                 value={quota}
-                errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
+                errors={Object.fromEntries(offered.map(r => [r.id, form.errors[`quota.${r.id}`]]))}
                 allowUnlimited
                 onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}
             />
@@ -321,10 +330,10 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                         Per-person limit — how much one requester may take without approval.
                     </Text>
                     <QuotaInputs
-                        resources={resources}
+                        resources={offered}
                         value={autoApproveQuota}
                         disabled={!autoApproveEnabled || !hasRequesters}
-                        errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`autoApproveQuota.${r.id}`]]))}
+                        errors={Object.fromEntries(offered.map(r => [r.id, form.errors[`autoApproveQuota.${r.id}`]]))}
                         onChange={(id, v) => {
                             form.setFieldValue(`autoApproveQuota.${id}`, v);
                             form.clearFieldError(`autoApproveQuota.${id}`);

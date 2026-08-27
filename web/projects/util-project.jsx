@@ -130,6 +130,49 @@ export function isImported(node) {
     return node?.status === 'imported';
 }
 
+// ── Resource kinds ──────────────────────────────────────────────────────────
+
+// An availability is a resource you either have or do not: a network, an image,
+// a GPU flavour. It travels in the same quota map as everything else, as 0 or 1,
+// so nothing about the VALUE says which kind it is — only the definition does.
+export function isAvailability(resource) {
+    return resource?.kind === 'bool';
+}
+
+// visibleResources narrows the catalogue to what is in scope at one node.
+//
+// The server decides this and sends it as `available_resources`: everything at
+// the root, and below that only what was actually delegated. Without the filter
+// a budget granted two of forty GPU flavours would show all forty.
+//
+// A node WITHOUT the field falls back to the whole catalogue. That is the older
+// server, and showing too much is recoverable; showing nothing would make a
+// budget look like it had no resources at all.
+export function visibleResources(resources, node) {
+    const all = resources || [];
+    const scope = node?.available_resources;
+    if (!Array.isArray(scope)) return all;
+    const inScope = new Set(scope);
+    return all.filter(r => inScope.has(r.id));
+}
+
+// groupResources sorts the catalogue into its display groups, keeping the
+// catalogue's own order inside each one so two nodes never reshuffle relative to
+// each other. Resources without a group land in one unnamed bucket at the end.
+export function groupResources(resources) {
+    const groups = new Map();
+    for (const r of resources || []) {
+        const key = r.group || '';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(r);
+    }
+    // The unnamed bucket last: a heading-less block reads as a footnote, and it
+    // looks wrong above named sections.
+    const named = [...groups.entries()].filter(([k]) => k !== '');
+    const unnamed = groups.has('') ? [['', groups.get('')]] : [];
+    return [...named, ...unnamed];
+}
+
 // ── Quota helpers ───────────────────────────────────────────────────────────
 
 // Sums the usage of all statuses in a node's usage rollup for one resource.
@@ -146,8 +189,16 @@ export function freeAmount(node, resourceId) {
 }
 
 // True when the requested quota fits into the budget's remaining capacity.
+//
+// Availabilities are skipped: they consume nothing, so "does it fit" is not a
+// question about them. Left in, every granted availability would eat 1 from a
+// budget that never counted it — and a budget whose availability sat at 0 would
+// refuse a request that the server accepts, which is the worse direction: the UI
+// would block something the API allows.
 export function quotaFits(budget, requestedQuota, resources) {
-    return (resources || []).every(r => (requestedQuota?.[r.id] ?? 0) <= freeAmount(budget, r.id));
+    return (resources || [])
+        .filter(r => !isAvailability(r))
+        .every(r => (requestedQuota?.[r.id] ?? 0) <= freeAmount(budget, r.id));
 }
 
 // autoApproveHeadroom returns the largest request a budget would approve on the
@@ -169,12 +220,16 @@ export function autoApproveHeadroom(budget, resources, myProjects) {
         // Same definition of "active" the server uses for this sum.
         if (project.status !== 'approved' && project.status !== 'change_pending') continue;
         for (const r of resources || []) {
+            if (isAvailability(r)) continue;
             mine[r.id] = (mine[r.id] || 0) + (project.limit?.[r.id] || 0);
         }
     }
 
     const out = {};
     for (const r of resources || []) {
+        // "How much of this is left for you" means nothing for an availability;
+        // it is granted or it is not, and the per-requester cap does not divide.
+        if (isAvailability(r)) continue;
         const personal = Math.max(0, (perRequester[r.id] ?? 0) - (mine[r.id] || 0));
         const free = freeAmount(budget, r.id);
         out[r.id] = Math.max(0, Math.min(personal, free));
@@ -253,6 +308,9 @@ export function resourceSummaryText(resources, quota) {
     return resources
         .filter(r => (quota[r.id] ?? 0) !== 0)
         .map(r => {
+            // An availability reads as its own name. "1 DHBW IPv4" invites the
+            // question of what two would be, and there is no answer.
+            if (isAvailability(r)) return r.name;
             const v = quota[r.id] === UNLIMITED_QUOTA ? '∞' : quota[r.id];
             return r.unit ? `${v} ${r.unit} ${r.name}` : `${v} ${r.name}`;
         })

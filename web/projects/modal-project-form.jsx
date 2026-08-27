@@ -9,7 +9,7 @@ import { NodeChangesDiff, TerminationDatePicker } from './component-common.jsx';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
-import { autoApproveHeadroom, COLOR, freeAmount, quotaFits, resourceSummaryText } from './util-project.jsx';
+import { autoApproveHeadroom, COLOR, freeAmount, quotaFits, resourceSummaryText, visibleResources } from './util-project.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
 
@@ -106,6 +106,17 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // you manage the project is created approved outright, so its headroom is
     // not a limit for you — neither prefill the form with it nor talk about it.
     const managedIds = useMemo(() => new Set((myBudgets || []).map(b => b.id)), [myBudgets]);
+    // Which resources a project may even ask for: only what the budget it hangs
+    // under was delegated. Defined here rather than inline because validation
+    // runs inside useForm, before the render has a chosen budget to look at —
+    // and a form that validates a different set from the one it renders will
+    // demand a value for a field nobody was shown.
+    const budgetById = (id) => [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === id);
+    const offeredFor = (id) => {
+        const budget = budgetById(id);
+        return budget ? visibleResources(resources, budget) : resources;
+    };
+
     const headroomFor = (id) => managedIds.has(id)
         ? null
         : autoApproveHeadroom(
@@ -153,12 +164,14 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 ? 'Please set an end date'
                 : (values.terminationDate <= new Date() ? 'The end date must be in the future' : null),
             ...Object.fromEntries(
-                Object.entries(validateQuota(resources, values.quota)).map(([id, msg]) => [`quota.${id}`, msg])),
+                Object.entries(validateQuota(offeredFor(values.parentId), values.quota)).map(([id, msg]) => [`quota.${id}`, msg])),
         }),
     });
 
     const { parentId, quota, terminationDate, authorizedUsers } = form.values;
     const selectedHeadroom = headroomFor(parentId);
+
+    const offered = offeredFor(parentId);
 
     // Picking a budget with auto-approve fills the resources with the most it
     // would grant on the spot. Any other budget leaves the numbers alone —
@@ -342,7 +355,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 </Alert>
             )}
             <QuotaInputs
-                resources={resources}
+                resources={offered}
                 value={quota}
                 errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
                 onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}

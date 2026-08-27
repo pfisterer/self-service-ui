@@ -1,9 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
+    UNLIMITED_QUOTA,
     autoApproveHeadroom,
     childrenById,
     expiryTone,
     freeAmount,
+    groupResources,
+    isAvailability,
     isExpired,
     isProvisioning,
     limitDelta,
@@ -19,7 +22,7 @@ import {
     resourceSummaryText,
     statusLabel,
     usedAmount,
-    UNLIMITED_QUOTA,
+    visibleResources,
 } from './util-project.jsx';
 
 const RESOURCES = [
@@ -429,5 +432,118 @@ describe('childrenById', () => {
     it('passes the page objects through untouched', () => {
         const p = page(1);
         expect(childrenById(['a'], [{ data: p }]).a).toBe(p);
+    });
+});
+
+// ── Resource kinds ──────────────────────────────────────────────────────────
+
+describe('availabilities in the quota helpers', () => {
+    const cores = { id: 'cores', name: 'Cores', group: 'Compute' };
+    const ipv4 = { id: 'dhbw-ipv4', name: 'IPv4', kind: 'bool', group: 'Networks' };
+    const resources = [cores, ipv4];
+
+    it('tells an availability from a quantity by its definition, not its value', () => {
+        expect(isAvailability(ipv4)).toBe(true);
+        expect(isAvailability(cores)).toBe(false);
+        // Both are 1 in a quota map; only the definition separates them.
+        expect(isAvailability({ id: 'x' })).toBe(false);
+    });
+
+    // The direction that matters: a budget holding an availability but no spare
+    // capacity for it would otherwise refuse a request the server accepts.
+    it('does not charge an availability against a budget', () => {
+        const budget = { limit: { cores: 4, 'dhbw-ipv4': 1 }, usage: {} };
+
+        expect(quotaFits(budget, { cores: 4, 'dhbw-ipv4': 1 }, resources)).toBe(true);
+    });
+
+    it('still enforces the quantity beside it', () => {
+        const budget = { limit: { cores: 4, 'dhbw-ipv4': 1 }, usage: {} };
+
+        expect(quotaFits(budget, { cores: 5, 'dhbw-ipv4': 1 }, resources)).toBe(false);
+    });
+
+    it('leaves availabilities out of the auto-approve headroom', () => {
+        const budget = {
+            limit: { cores: 10, 'dhbw-ipv4': 1 },
+            usage: {},
+            auto_approve: { per_requester_limit: { cores: 4, 'dhbw-ipv4': 1 } },
+        };
+
+        const headroom = autoApproveHeadroom(budget, resources, []);
+
+        expect(headroom.cores).toBe(4);
+        expect('dhbw-ipv4' in headroom).toBe(false);
+    });
+});
+
+describe('visibleResources', () => {
+    const resources = [
+        { id: 'cores', name: 'Cores' },
+        { id: 'dhbw-ipv4', name: 'IPv4', kind: 'bool' },
+        { id: 'gpu-rtx6000', name: 'RTX 6000', kind: 'bool' },
+    ];
+
+    it('narrows to what the server says is in scope', () => {
+        const node = { available_resources: ['cores', 'dhbw-ipv4'] };
+
+        expect(visibleResources(resources, node).map(r => r.id)).toEqual(['cores', 'dhbw-ipv4']);
+    });
+
+    // An older server sends no such field. Showing too much is recoverable;
+    // showing nothing would make a budget look like it had no resources at all.
+    it('falls back to the whole catalogue when the field is absent', () => {
+        expect(visibleResources(resources, {}).length).toBe(3);
+        expect(visibleResources(resources, null).length).toBe(3);
+    });
+
+    // Distinct from "absent": the server said this node has none.
+    it('shows nothing when the server sends an empty scope', () => {
+        expect(visibleResources(resources, { available_resources: [] })).toEqual([]);
+    });
+});
+
+describe('groupResources', () => {
+    it('keeps the catalogue order inside each group', () => {
+        const grouped = groupResources([
+            { id: 'cores', group: 'Compute' },
+            { id: 'ipv4', group: 'Networks' },
+            { id: 'ram', group: 'Compute' },
+        ]);
+
+        expect(grouped.map(([name]) => name)).toEqual(['Compute', 'Networks']);
+        expect(grouped[0][1].map(r => r.id)).toEqual(['cores', 'ram']);
+    });
+
+    // A heading-less block reads as a footnote and looks wrong above named ones.
+    it('puts ungrouped resources last', () => {
+        const grouped = groupResources([
+            { id: 'loose' },
+            { id: 'cores', group: 'Compute' },
+        ]);
+
+        expect(grouped.map(([name]) => name)).toEqual(['Compute', '']);
+    });
+});
+
+describe('resourceSummaryText with availabilities', () => {
+    const resources = [
+        { id: 'cores', name: 'Cores' },
+        { id: 'ram', name: 'RAM', unit: 'GB' },
+        { id: 'dhbw-ipv4', name: 'DHBW IPv4', kind: 'bool' },
+    ];
+
+    // "1 DHBW IPv4" invites the question of what two would be, and there is no
+    // answer — an availability reads as its own name.
+    it('names an availability instead of counting it', () => {
+        const text = resourceSummaryText(resources, { cores: 4, ram: 8, 'dhbw-ipv4': 1 });
+
+        expect(text).toBe('4 Cores · 8 GB RAM · DHBW IPv4');
+    });
+
+    it('leaves out what was not granted', () => {
+        const text = resourceSummaryText(resources, { cores: 4, 'dhbw-ipv4': 0 });
+
+        expect(text).toBe('4 Cores');
     });
 });
