@@ -12,7 +12,7 @@
     "clean": "rm -rf dist-ui"
   },
   "dependencies": {
-    "@dhbw-cloud/dynamic-zones-client": "0.8.3-test.1",
+    "@dhbw-cloud/dynamic-zones-client": "^0.8.3",
     "@dhbw-cloud/os-mgt-client": "^0.8.9",
     "@mantine/core": "^9.4.1",
     "@mantine/dates": "^9.4.1",
