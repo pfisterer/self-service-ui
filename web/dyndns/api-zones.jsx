@@ -9,8 +9,8 @@ import {
     createToken, createZone, deleteDelegation, deleteDnsRecord,
     deleteOrphanedZone, deletePolicyRule, deleteToken, deleteZone, getZone,
     joinZone, listDelegations, listDnsRecords, listOrphanedZones,
-    listPolicyRules, listTokens, listZones, removeZoneOwner, rotateZoneKeys,
-    updateDelegation, updatePolicyRule,
+    listPolicyRules, listTokens, listZoneEvents, listZones, removeZoneOwner,
+    rotateZoneKeys, updateDelegation, updatePolicyRule,
 } from '@dhbw-cloud/dynamic-zones-client';
 
 // useZonesApi is to the dyndns section what useNodesApi is to projects: the one
@@ -71,6 +71,12 @@ export function useZonesApi() {
             rotateKeys: async (zone) => unwrap(await rotateZoneKeys({ client, path: { zone } })),
             addOwner: async (zone, email) =>
                 unwrap(await addZoneOwner({ client, path: { zone }, body: { email }, headers: JSON_HEADERS })),
+
+            // ── Zone events ──────────────────────────────────────────────
+            // Problems the platform observed with the caller's zones (fed by
+            // the monitoring side; the API is source-agnostic). Read-only here
+            // — the ingest side is not for browsers.
+            listZoneEvents: async () => unwrap(await listZoneEvents({ client }))?.events ?? [],
 
             // ── API tokens ───────────────────────────────────────────────
             listTokens: async () => unwrap(await listTokens({ client }))?.tokens ?? [],

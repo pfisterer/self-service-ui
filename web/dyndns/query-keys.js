@@ -13,4 +13,5 @@ export const dyndnsKeys = {
     records: (zone) => ['dyndns', 'records', zone],
     delegations: () => ['dyndns', 'delegations'],
     orphanedZones: () => ['dyndns', 'orphaned-zones'],
+    zoneEvents: () => ['dyndns', 'zone-events'],
 };

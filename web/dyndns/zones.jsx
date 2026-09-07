@@ -15,6 +15,7 @@ import { Container, Title, Paper, Stack, NavLink, Tabs, Button, Text, Loader, Al
 import { AlertCircle, Globe, CornerDownRight, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
 import { subzoneLabelError } from '/helper/dns-validation.js';
 import { CopyableText } from '/helper/copyable-text.jsx';
+import { useZoneEvents, ZoneEventIndicator, ZoneEventsBanner } from '/dyndns/zones/zone-events-banner.jsx';
 
 
 // ----------------------------------------
@@ -35,6 +36,10 @@ export function DynDnsZones() {
         queryFn: () => api.listZones(),
         enabled: !!api,
     });
+
+    // Problems the platform observed with the caller's zones — best-effort
+    // context for the list (small indicator per affected zone).
+    const eventsByZone = useZoneEvents();
 
     if (!api || zonesQuery.isPending) return <Loading />;
     if (zonesQuery.isError) return <LoadError query={zonesQuery} title="Could not load zones" />;
@@ -66,7 +71,7 @@ export function DynDnsZones() {
                                 <NavLink
                                     component={Link}
                                     to={"/zone/" + base.name}
-                                    label={base.name}
+                                    label={<Group gap={6} wrap="nowrap">{base.name}<ZoneEventIndicator events={eventsByZone[base.name]} /></Group>}
                                     description={base.owners?.length > 1 ? `Shared with ${base.owners.length} owners: ${base.owners.join(', ')}` : undefined}
                                     leftSection={<Globe size="16" />}
                                     active={activeZoneName === base.name}
@@ -86,7 +91,7 @@ export function DynDnsZones() {
                                         key={sz.name}
                                         component={Link}
                                         to={"/zone/" + sz.name}
-                                        label={sz.name}
+                                        label={<Group gap={6} wrap="nowrap">{sz.name}<ZoneEventIndicator events={eventsByZone[sz.name]} /></Group>}
                                         description={sz.owners?.length > 1 ? `Shared with ${sz.owners.length} owners: ${sz.owners.join(', ')}` : undefined}
                                         leftSection={<CornerDownRight size="14" />}
                                         active={activeZoneName === sz.name}
@@ -306,6 +311,9 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
 
     const zoneKeys = [dyndnsKeys.zones(), dyndnsKeys.zone(zoneName)];
 
+    // Shares the list's query (same key), so opening a zone costs no request.
+    const eventsByZone = useZoneEvents();
+
     const deleteZone = useApiMutation({
         mutationFn: () => api.deleteZone(zone.zoneData.zone),
         invalidates: zoneKeys,
@@ -405,6 +413,8 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
                 zoneName={zone.zoneData.zone}
                 owners={zone.owners || []}
             />
+
+            <ZoneEventsBanner events={eventsByZone[zoneName]} />
 
             <Tabs value={activeTab} onChange={(val) => navigate(tabs.find(t => t.name === val)?.path || '/')}>
                 <Tabs.List>
