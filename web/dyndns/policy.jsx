@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useLocation, useRoute } from 'wouter';
 import { formatError } from '/helper/api-error.js';
 import { useQuery } from '@tanstack/react-query';
 import { useZonesApi } from '/dyndns/api-zones.jsx';
@@ -18,7 +19,14 @@ export function DnsPolicy() {
     const [editingRule, setEditingRule] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchFilter, setSearchFilter] = useState('');
-    const [activeTab, setActiveTab] = useState('rules');
+
+    // The active tab is the URL (…/policy/<tab>), not component state: a
+    // reload or a shared link must land on the same tab. Unknown or
+    // admin-only values fall back to the rules tab below, once the
+    // permissions are known.
+    const [, params] = useRoute('/policy/:tab');
+    const [, navigate] = useLocation();
+    const requestedTab = params?.tab ?? 'rules';
 
     // The rules AND the caller's permissions come from one response, so they
     // stay one cache entry — three separate useStates used to hold them and
@@ -36,6 +44,11 @@ export function DnsPolicy() {
     const rules = useMemo(() => policyQuery.data?.rules ?? [], [policyQuery.data]);
     const isEditAllowed = !!policyQuery.data?.edit_allowed;
     const isSuperAdmin = !!policyQuery.data?.is_super_admin;
+
+    const adminTabs = ['delegations', 'orphaned', 'zone-events'];
+    const activeTab = (requestedTab === 'rules' || (isSuperAdmin && adminTabs.includes(requestedTab)))
+        ? requestedTab : 'rules';
+    const selectTab = (tab) => navigate(tab === 'rules' ? '/policy' : `/policy/${tab}`);
 
     // Filter rules based on search term (and remember the filtered list until rules or search term changes)
     const filteredRules = useMemo(() => {
@@ -58,7 +71,7 @@ export function DnsPolicy() {
             <Stack gap="lg">
                 <Title order={2}>DNS Policy Management</Title>
 
-                <Tabs value={activeTab} onChange={setActiveTab}>
+                <Tabs value={activeTab} onChange={selectTab}>
                     <Tabs.List>
                         <Tabs.Tab value="rules">Policy Rules</Tabs.Tab>
                         {isSuperAdmin && <Tabs.Tab value="delegations">Delegations</Tabs.Tab>}

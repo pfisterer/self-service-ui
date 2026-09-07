@@ -34,7 +34,10 @@ export function DynamicDnsManagement() {
                     <Redirect to="~/tokens" replace />
                 </Route>
                 <Route path="/api-doc" component={DynamicZonesApiSwagger} />
-                <Route path="/policy" component={DnsPolicy} />
+                {/* The tab lives in the URL (/policy/delegations, ...), so a
+                    reload and a shared link land on the SAME tab — plain
+                    component state used to reset to the first tab on reload. */}
+                <Route path="/policy/:tab?" component={DnsPolicy} />
                 <Route path="/">
                     <Redirect to="/zones" replace />
                 </Route>
