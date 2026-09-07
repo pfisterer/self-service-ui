@@ -81,6 +81,7 @@ export function DnsPolicy() {
 
                     <Tabs.Panel value="rules" pt="md">
                         <Stack gap="lg">
+                            {!isSuperAdmin && <DelegatedToYou />}
                             <Group justify="space-between" align="flex-start">
                                 <Text size="sm" c="dimmed">
                                     {isEditAllowed
@@ -406,10 +407,45 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
 // Validation helpers (isValidDnsName / isValidZonePattern / isValidUserFilter)
 // live in /helper/dns-validation.js, shared with the subzone modal.
 
+// DelegatedToYou tells a NON-admin what was delegated to them: the server
+// filters the same delegations endpoint down to the caller's entries and
+// reduces them to zone suffix + description (the target filter is admin
+// data). Best-effort context like the zone-events banner — while loading, on
+// error, or with nothing delegated it renders nothing rather than making the
+// rules tab look broken.
+function DelegatedToYou() {
+    const api = useZonesApi();
+    const delegationsQuery = useQuery({
+        queryKey: dyndnsKeys.delegations(),
+        queryFn: () => api.listDelegations(),
+        enabled: !!api,
+        retry: 1,
+    });
+
+    const delegations = delegationsQuery.data ?? [];
+    if (delegations.length === 0) return null;
+
+    return (
+        <Paper p="md" withBorder>
+            <Text fw={600} mb={4}>Delegated to you</Text>
+            <Text size="sm" c="dimmed" mb="xs">
+                You may create, edit and delete policy rules within these zones (including their subdomains):
+            </Text>
+            <Stack gap={4}>
+                {delegations.map(d => (
+                    <Group key={d.zone_suffix} gap="xs" wrap="nowrap">
+                        <Badge variant="light" style={{ textTransform: 'none', flexShrink: 0 }}>{d.zone_suffix}</Badge>
+                        {d.description && <Text size="sm" c="dimmed">{d.description}</Text>}
+                    </Group>
+                ))}
+            </Stack>
+        </Paper>
+    );
+}
+
 // ============================================================
-// Delegation Policies (super-admin only). Grants users the right to manage
-// policy rules for a zone (and its subdomains). Uses the raw client because
-// the generated SDK does not (yet) include the /policies/delegations endpoints.
+// Delegation Policies (super-admin management). Grants users the right to
+// manage policy rules for a zone (and its subdomains).
 // ============================================================
 function DelegationManagement() {
     const api = useZonesApi();
