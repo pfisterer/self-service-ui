@@ -12,9 +12,12 @@ import { groupZoneEventsByZone, worstZoneEventColor, zoneEventColor, zoneEventTi
 // is still loading, both components render nothing rather than an error — a
 // broken events feed must never make the zone page look broken.
 
-export function useZoneEvents() {
+// useZoneEventsQuery is the one query behind every zone-events surface
+// (list indicator, zone banner, admin table) — same key, one request. The
+// server scopes the answer: owners get their zones' events, super-admins all.
+export function useZoneEventsQuery() {
     const api = useZonesApi();
-    const query = useQuery({
+    return useQuery({
         queryKey: dyndnsKeys.zoneEvents(),
         queryFn: () => api.listZoneEvents(),
         enabled: !!api,
@@ -23,6 +26,10 @@ export function useZoneEvents() {
         refetchInterval: 60_000,
         retry: 1,
     });
+}
+
+export function useZoneEvents() {
+    const query = useZoneEventsQuery();
     return groupZoneEventsByZone(query.data);
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-    groupZoneEventsByZone, worstZoneEventColor, zoneEventColor, zoneEventTimeline,
+    groupZoneEventsByZone, worstZoneEventColor, zoneEventColor, zoneEventMailto, zoneEventTimeline,
 } from '/dyndns/zone-events.js';
 
 describe('groupZoneEventsByZone', () => {
@@ -52,5 +52,31 @@ describe('zoneEventTimeline', () => {
     it('renders nothing rather than "Invalid Date" for missing timestamps', () => {
         expect(zoneEventTimeline({})).toBe('');
         expect(zoneEventTimeline(undefined)).toBe('');
+    });
+});
+
+describe('zoneEventMailto', () => {
+    const ev = {
+        zone: 'a.example.org',
+        class: 'DnsClientMisconfig',
+        message: 'Ein Client scheitert an TSIG',
+        detail: 'Mehr Kontext',
+        owners: ['alice@example.edu', 'bob@example.edu'],
+        first_seen: '2026-09-05T15:00:00Z',
+        last_seen: '2026-09-06T09:00:00Z',
+        count: 3,
+    };
+
+    it('addresses every owner and carries subject and message', () => {
+        const link = zoneEventMailto(ev, 'en-GB');
+        expect(link).toMatch(/^mailto:alice@example\.edu,bob@example\.edu\?/);
+        expect(link).toContain(encodeURIComponent('Problem mit DNS-Zone a.example.org'));
+        expect(link).toContain(encodeURIComponent('Ein Client scheitert an TSIG'));
+        expect(link).toContain(encodeURIComponent('Mehr Kontext'));
+    });
+
+    it('returns null without owners rather than an empty compose window', () => {
+        expect(zoneEventMailto({ ...ev, owners: [] })).toBeNull();
+        expect(zoneEventMailto(undefined)).toBeNull();
     });
 });

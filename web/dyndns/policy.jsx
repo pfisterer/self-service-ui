@@ -3,6 +3,7 @@ import { formatError } from '/helper/api-error.js';
 import { useQuery } from '@tanstack/react-query';
 import { useZonesApi } from '/dyndns/api-zones.jsx';
 import { usePolicyRulesQuery } from '/dyndns/use-policy.jsx';
+import { ZoneEventsAdminPanel } from '/dyndns/zone-events-admin.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
 import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -62,6 +63,7 @@ export function DnsPolicy() {
                         <Tabs.Tab value="rules">Policy Rules</Tabs.Tab>
                         {isSuperAdmin && <Tabs.Tab value="delegations">Delegations</Tabs.Tab>}
                         {isSuperAdmin && <Tabs.Tab value="orphaned">Orphaned Zones</Tabs.Tab>}
+                        {isSuperAdmin && <Tabs.Tab value="zone-events">Zone Events</Tabs.Tab>}
                     </Tabs.List>
 
                     <Tabs.Panel value="rules" pt="md">
@@ -101,6 +103,12 @@ export function DnsPolicy() {
                     {isSuperAdmin && (
                         <Tabs.Panel value="orphaned" pt="md">
                             <OrphanedZonesPanel />
+                        </Tabs.Panel>
+                    )}
+
+                    {isSuperAdmin && (
+                        <Tabs.Panel value="zone-events" pt="md">
+                            <ZoneEventsAdminPanel />
                         </Tabs.Panel>
                     )}
                 </Tabs>

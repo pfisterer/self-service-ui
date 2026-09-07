@@ -35,3 +35,27 @@ export function zoneEventTimeline(ev, locale = undefined) {
     const times = ev.count > 1 ? `${ev.count}× since ${fmt(ev.first_seen)}` : `since ${fmt(ev.first_seen)}`;
     return `${times}, last ${fmt(ev.last_seen)}`;
 }
+
+// zoneEventMailto builds a mailto: link to the zone's owners, with the
+// event's message pre-filled — the admin's one-click way from "I see a
+// problem" to "the owner knows". Returns null without owners: a link that
+// opens an empty compose window is worse than no link.
+export function zoneEventMailto(ev, locale = undefined) {
+    if (!ev?.owners?.length || !ev?.zone) return null;
+    const subject = `Problem mit DNS-Zone ${ev.zone}`;
+    const lines = [
+        'Hallo,',
+        '',
+        `die DHBW-Cloud-Plattform meldet für Ihre DNS-Zone ${ev.zone} folgendes Problem:`,
+        '',
+        ev.message || ev.class || 'Unbekanntes Problem',
+    ];
+    if (ev.detail && ev.detail !== ev.message) lines.push('', ev.detail);
+    const timeline = zoneEventTimeline(ev, locale);
+    if (timeline) lines.push('', `(${timeline})`);
+    lines.push('', 'Bitte prüfen Sie die Konfiguration des betroffenen Clients.',
+        'Details finden Sie in der Self-Service-UI unter "Zone Management".');
+    return `mailto:${ev.owners.join(',')}`
+        + `?subject=${encodeURIComponent(subject)}`
+        + `&body=${encodeURIComponent(lines.join('\n'))}`;
+}
