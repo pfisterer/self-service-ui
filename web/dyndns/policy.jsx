@@ -69,7 +69,7 @@ export function DnsPolicy() {
     return (
         <Container fluid py="md" px="xl">
             <Stack gap="lg">
-                <Title order={2}>DNS Policy Management</Title>
+                <Title order={2}>DNS Administration</Title>
 
                 <Tabs value={activeTab} onChange={selectTab}>
                     <Tabs.List>

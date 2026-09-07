@@ -62,8 +62,11 @@ export function useNav() {
             items: [
                 { label: 'Zone Management', href: '/dyndns/zones' },
                 // Read-only for most users, and worth reading only if a rule
-                // actually applies to them; empty for a student.
-                hasPolicy && { label: 'DNS Policy', href: '/dyndns/policy' },
+                // actually applies to them; empty for a student. Named for
+                // what the page became: policy rules are one tab among the
+                // administrative ones (delegations, orphaned zones, zone
+                // events). The /policy URL stays — it is bookmarked.
+                hasPolicy && { label: 'Administration', href: '/dyndns/policy' },
                 { label: 'API Documentation', href: '/dyndns/api-doc' },
             ].filter(Boolean),
         },
