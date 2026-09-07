@@ -20,11 +20,11 @@ export function DnsPolicy() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchFilter, setSearchFilter] = useState('');
 
-    // The active tab is the URL (…/policy/<tab>), not component state: a
+    // The active tab is the URL (…/administration/<tab>), not component state: a
     // reload or a shared link must land on the same tab. Unknown or
     // admin-only values fall back to the rules tab below, once the
     // permissions are known.
-    const [, params] = useRoute('/policy/:tab');
+    const [, params] = useRoute('/administration/:tab');
     const [, navigate] = useLocation();
     const requestedTab = params?.tab ?? 'rules';
 
@@ -48,7 +48,7 @@ export function DnsPolicy() {
     const adminTabs = ['delegations', 'orphaned', 'zone-events'];
     const activeTab = (requestedTab === 'rules' || (isSuperAdmin && adminTabs.includes(requestedTab)))
         ? requestedTab : 'rules';
-    const selectTab = (tab) => navigate(tab === 'rules' ? '/policy' : `/policy/${tab}`);
+    const selectTab = (tab) => navigate(tab === 'rules' ? '/administration' : `/administration/${tab}`);
 
     // Filter rules based on search term (and remember the filtered list until rules or search term changes)
     const filteredRules = useMemo(() => {

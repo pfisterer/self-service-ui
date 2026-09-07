@@ -65,8 +65,8 @@ export function useNav() {
                 // actually applies to them; empty for a student. Named for
                 // what the page became: policy rules are one tab among the
                 // administrative ones (delegations, orphaned zones, zone
-                // events). The /policy URL stays — it is bookmarked.
-                hasPolicy && { label: 'Administration', href: '/dyndns/policy' },
+                // events). Old /policy links redirect (see dyndns-routes).
+                hasPolicy && { label: 'Administration', href: '/dyndns/administration' },
                 { label: 'API Documentation', href: '/dyndns/api-doc' },
             ].filter(Boolean),
         },
