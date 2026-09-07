@@ -59,8 +59,8 @@ describe('zoneEventMailto', () => {
     const ev = {
         zone: 'a.example.org',
         class: 'DnsClientMisconfig',
-        message: 'Ein Client scheitert an TSIG',
-        detail: 'Mehr Kontext',
+        message: 'A client keeps failing TSIG',
+        detail: 'More context',
         owners: ['alice@example.edu', 'bob@example.edu'],
         first_seen: '2026-09-05T15:00:00Z',
         last_seen: '2026-09-06T09:00:00Z',
@@ -70,9 +70,9 @@ describe('zoneEventMailto', () => {
     it('addresses every owner and carries subject and message', () => {
         const link = zoneEventMailto(ev, 'en-GB');
         expect(link).toMatch(/^mailto:alice@example\.edu,bob@example\.edu\?/);
-        expect(link).toContain(encodeURIComponent('Problem mit DNS-Zone a.example.org'));
-        expect(link).toContain(encodeURIComponent('Ein Client scheitert an TSIG'));
-        expect(link).toContain(encodeURIComponent('Mehr Kontext'));
+        expect(link).toContain(encodeURIComponent('Problem with DNS zone a.example.org'));
+        expect(link).toContain(encodeURIComponent('A client keeps failing TSIG'));
+        expect(link).toContain(encodeURIComponent('More context'));
     });
 
     it('returns null without owners rather than an empty compose window', () => {

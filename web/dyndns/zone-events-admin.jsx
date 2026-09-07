@@ -98,7 +98,7 @@ export function ZoneEventsAdminPanel() {
                                         </Table.Td>
                                         <Table.Td>
                                             {mailto && (
-                                                <Tooltip label="E-Mail an die Besitzer, Fehlermeldung vorausgefüllt">
+                                                <Tooltip label="Mail the owners, error message pre-filled">
                                                     <ActionIcon component="a" href={mailto} variant="light" aria-label="mail the owners">
                                                         <Mail size={16} />
                                                     </ActionIcon>

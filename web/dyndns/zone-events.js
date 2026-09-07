@@ -42,19 +42,19 @@ export function zoneEventTimeline(ev, locale = undefined) {
 // opens an empty compose window is worse than no link.
 export function zoneEventMailto(ev, locale = undefined) {
     if (!ev?.owners?.length || !ev?.zone) return null;
-    const subject = `Problem mit DNS-Zone ${ev.zone}`;
+    const subject = `Problem with DNS zone ${ev.zone}`;
     const lines = [
-        'Hallo,',
+        'Hello,',
         '',
-        `die DHBW-Cloud-Plattform meldet für Ihre DNS-Zone ${ev.zone} folgendes Problem:`,
+        `the DHBW cloud platform reports the following problem with your DNS zone ${ev.zone}:`,
         '',
-        ev.message || ev.class || 'Unbekanntes Problem',
+        ev.message || ev.class || 'Unknown problem',
     ];
     if (ev.detail && ev.detail !== ev.message) lines.push('', ev.detail);
     const timeline = zoneEventTimeline(ev, locale);
     if (timeline) lines.push('', `(${timeline})`);
-    lines.push('', 'Bitte prüfen Sie die Konfiguration des betroffenen Clients.',
-        'Details finden Sie in der Self-Service-UI unter "Zone Management".');
+    lines.push('', 'Please check the configuration of the affected client.',
+        'Details are available in the self-service UI under "Zone Management".');
     return `mailto:${ev.owners.join(',')}`
         + `?subject=${encodeURIComponent(subject)}`
         + `&body=${encodeURIComponent(lines.join('\n'))}`;
