@@ -12,6 +12,7 @@ import { Trash2 } from 'lucide-react';
 //   message      string OR a React node (for a richer body, e.g. an Alert)
 //   confirmLabel red confirm button label (default "Delete")
 //   cancelLabel  cancel button label (default "Cancel")
+//   icon         confirm button icon (default trash — most confirms delete)
 const ConfirmContext = createContext({ confirm: async () => false });
 
 export function useConfirm() {
@@ -60,7 +61,7 @@ export function ConfirmProvider({ children }) {
                             <Button variant="default" onClick={() => answer(false)} data-autofocus>
                                 {opts.cancelLabel ?? 'Cancel'}
                             </Button>
-                            <Button color="red" leftSection={<Trash2 size="16" />} onClick={() => answer(true)}>
+                            <Button color="red" leftSection={opts.icon ?? <Trash2 size="16" />} onClick={() => answer(true)}>
                                 {opts.confirmLabel ?? 'Delete'}
                             </Button>
                         </Group>

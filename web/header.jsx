@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
 import { useAuth } from '/providers/auth.jsx';
-import { User } from "lucide-react";
+import { useConfirm } from '/providers/confirm.jsx';
+import { LogOut, User } from "lucide-react";
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
 import { RoleSwitchButton } from '/projects/component-group-role-switcher.jsx';
 import { Burger, Group, Button, Menu, Image, Box, Divider, Stack, Text } from '@mantine/core';
@@ -63,8 +64,28 @@ function SubNavItem({ item, active, onClick, vertical = false }) {
 
 export function Header() {
     const [opened, setOpened] = useState(false);
-    const { user, login, logout } = useAuth();
+    const { user, login, logout, useDummyAuth } = useAuth();
+    const confirm = useConfirm();
     const { sections, activeSection, activeItem, subNavItems } = useNav();
+
+    // Signing out ends the DHBW Cloud session (proxy cookie + Keycloak) but the
+    // upstream bwIDM / home-IdP single sign-on survives it — and since the whole
+    // UI sits behind the auth proxy, the post-logout redirect lands straight on
+    // the sign-in mask, so there is no page to explain that AFTERWARDS. The
+    // honest explanation therefore lives here, before the chain starts.
+    // Dev/dummy mode has no SSO chain, so no dialog there.
+    const confirmLogout = async () => {
+        if (useDummyAuth) return logout();
+        const ok = await confirm({
+            title: 'Sign out?',
+            message: 'This ends your DHBW Cloud session and takes you back to the sign-in page. '
+                + 'Your bwIDM single sign-on session stays active, so signing in again may not ask for a password. '
+                + 'To end that session as well, close your browser.',
+            confirmLabel: 'Sign out',
+            icon: <LogOut size="16" />,
+        });
+        if (ok) logout();
+    };
 
     const close = () => setOpened(false);
     const hasSubNav = subNavItems.length > 0;
@@ -176,7 +197,7 @@ export function Header() {
                                 <Menu.Dropdown>
                                     <Menu.Label>Hello, {user.profile.name}!</Menu.Label>
                                     <Menu.Divider />
-                                    <Menu.Item color="red" onClick={logout}>Logout</Menu.Item>
+                                    <Menu.Item color="red" onClick={confirmLogout}>Logout</Menu.Item>
                                 </Menu.Dropdown>
                             </Menu>
                         ) : (
