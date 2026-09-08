@@ -8,7 +8,7 @@ import { ZoneEventsAdminPanel } from '/dyndns/zone-events-admin.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
 import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
-import { isValidDnsName, isValidZonePattern, isValidUserFilter } from '/helper/dns-validation.js';
+import { isValidDnsName, isValidZonePattern, isValidUserFilter, zoneWithinAnySuffix } from '/helper/dns-validation.js';
 import { Trash2, Edit, Plus, Search, X, AlertCircle } from 'lucide-react';
 import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, SimpleGrid, Card, Modal, Alert, ActionIcon, Paper, Tabs, Badge, Table } from '@mantine/core';
 
@@ -129,6 +129,7 @@ export function DnsPolicy() {
 
                 {isModalOpen && (
                     <RuleFormModal
+                        isSuperAdmin={isSuperAdmin}
                         // Remount per edited rule so the form resets itself,
                         // instead of an effect copying props into state.
                         key={editingRule?.id ?? 'new'}
@@ -265,19 +266,38 @@ function RuleList({ rules, isSuperAdmin, onEdit }) {
 }
 
 // --- Rule Form Modal ---
-function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
+function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
     const api = useZonesApi();
     const isEditMode = ruleToEdit !== null;
 
-    const [rule, setRule] = useState({
+    // A delegated (non-admin) editor may only place rules whose SOA lies at or
+    // below one of their delegated zones — the server enforces this with a
+    // bare 403, so the modal explains the boundary BEFORE submitting, against
+    // the same list the "Delegated to you" panel shows. Fails open while the
+    // list is loading or empty: the server stays the authority.
+    const delegationsQuery = useQuery({
+        queryKey: dyndnsKeys.delegations(),
+        queryFn: () => api.listDelegations(),
+        enabled: !!api && !isSuperAdmin,
+        retry: 1,
+    });
+    const delegationSuffixes = useMemo(
+        () => (isSuperAdmin ? [] : (delegationsQuery.data ?? []).map(d => d.zone_suffix)),
+        [isSuperAdmin, delegationsQuery.data]);
+
+    const [rule, setRule] = useState(() => ({
         zone_pattern: '',
-        zone_soa: '',
+        // With exactly one delegated zone the SOA is not a choice — pre-fill
+        // it. Best effort by design: the list is normally already cached by
+        // the "Delegated to you" panel next to the button that opened this
+        // modal; on a cold cache there is simply no pre-fill.
+        zone_soa: (!ruleToEdit && delegationSuffixes.length === 1) ? delegationSuffixes[0] : '',
         target_user_filter: '',
         allow_subdomains: false,
         sharing_allowed: false,
         description: '',
         ...(ruleToEdit || {})
-    });
+    }));
     const [message, setMessage] = useState(null);
 
     // Derived, not stored. These were three useStates kept in sync by hand from
@@ -286,6 +306,7 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
     const zoneValid = isValidZonePattern(rule.zone_pattern);
     const zoneSoaValid = isValidDnsName(rule.zone_soa);
     const userFilterValid = isValidUserFilter(rule.target_user_filter);
+    const soaInScope = delegationSuffixes.length === 0 || zoneWithinAnySuffix(rule.zone_soa, delegationSuffixes);
 
     const saveRule = useApiMutation({
         mutationFn: (body) => isEditMode
@@ -311,7 +332,7 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
         e.preventDefault();
         setMessage(null);
 
-        if (!zoneValid || !zoneSoaValid || !userFilterValid) {
+        if (!zoneValid || !zoneSoaValid || !userFilterValid || !soaInScope) {
             setMessage(<Alert icon={<AlertCircle size="16" />} title="Validation Error" color="red">Please ensure Zone Pattern, Zone SOA, and User Filter are all valid.</Alert>);
             return;
         }
@@ -352,7 +373,8 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
                             required
                             placeholder="e.g. users.example.com"
                             description="The authoritative zone for this nameserver (e.g., users.example.com)"
-                            error={!zoneSoaValid && "Enter a valid DNS domain name."}
+                            error={(!zoneSoaValid && 'Enter a valid DNS domain name.')
+                                || (!soaInScope && `Your delegations cover ${delegationSuffixes.join(', ')} — the Zone SOA must be at or below one of these zones.`)}
                         />
 
                         <TextInput
@@ -393,7 +415,7 @@ function RuleFormModal({ ruleToEdit, onFormSuccess, onClose }) {
                             <Button
                                 type="submit"
                                 loading={saveRule.isPending}
-                                disabled={!zoneValid || !zoneSoaValid || !userFilterValid}>
+                                disabled={!zoneValid || !zoneSoaValid || !userFilterValid || !soaInScope}>
                                 {isEditMode ? "Save Changes" : "Create Rule"}
                             </Button>
                         </Group>

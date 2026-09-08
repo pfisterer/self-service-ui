@@ -44,6 +44,20 @@ export function isValidUserFilter(value) {
     });
 }
 
+// zoneWithinAnySuffix reports whether `zone` equals one of the given zones or
+// lies below one — the client-side twin of the server's zoneInScope check that
+// gates delegated rule management. Pure containment only: what an empty
+// suffix list means (no restriction vs. no access) is the caller's decision.
+export function zoneWithinAnySuffix(zone, suffixes) {
+    const norm = (v) => (v || '').trim().toLowerCase().replace(/\.+$/, '');
+    const z = norm(zone);
+    if (!z) return false;
+    return (suffixes || []).some(s => {
+        const sf = norm(s);
+        return sf !== '' && (z === sf || z.endsWith('.' + sf));
+    });
+}
+
 // Validate a subzone label (one or more lowercase labels) to be created under
 // `parent`. Returns a specific, user-facing error message, or null when valid.
 export function subzoneLabelError(label, parent) {

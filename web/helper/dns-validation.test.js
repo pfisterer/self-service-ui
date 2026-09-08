@@ -4,6 +4,7 @@ import {
     isValidDnsName,
     isValidZonePattern,
     isValidUserFilter,
+    zoneWithinAnySuffix,
     subzoneLabelError,
     recordNameError,
     recordValueError,
@@ -161,5 +162,32 @@ describe('recordValueError', () => {
     it('passes types it does not check', () => {
         expect(recordValueError('TXT', 'anything at all')).toBeNull();
         expect(recordValueError('', 'anything at all')).toBeNull();
+    });
+});
+
+describe('zoneWithinAnySuffix', () => {
+    const suffixes = ['delegation-test.users.dhbw.site', 'projects.dhbw.site'];
+
+    it('accepts the suffix itself and anything below it', () => {
+        expect(zoneWithinAnySuffix('delegation-test.users.dhbw.site', suffixes)).toBe(true);
+        expect(zoneWithinAnySuffix('deep.delegation-test.users.dhbw.site', suffixes)).toBe(true);
+        expect(zoneWithinAnySuffix('x.projects.dhbw.site', suffixes)).toBe(true);
+    });
+
+    it('rejects parents and suffix look-alikes', () => {
+        expect(zoneWithinAnySuffix('users.dhbw.site', suffixes)).toBe(false);
+        expect(zoneWithinAnySuffix('evil-delegation-test.users.dhbw.site', suffixes)).toBe(false);
+    });
+
+    it('normalizes case and trailing dots', () => {
+        expect(zoneWithinAnySuffix('Sub.Delegation-Test.Users.DHBW.Site.', suffixes)).toBe(true);
+        expect(zoneWithinAnySuffix('x.projects.dhbw.site', ['projects.dhbw.site.'])).toBe(true);
+    });
+
+    it('matches nothing against an empty or blank list', () => {
+        expect(zoneWithinAnySuffix('a.example.org', [])).toBe(false);
+        expect(zoneWithinAnySuffix('a.example.org', undefined)).toBe(false);
+        expect(zoneWithinAnySuffix('a.example.org', [''])).toBe(false);
+        expect(zoneWithinAnySuffix('', ['example.org'])).toBe(false);
     });
 });
