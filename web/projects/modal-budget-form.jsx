@@ -382,7 +382,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
             <Stack gap="md">
                 <Switch
                     label="Auto-approve requests"
-                    description="Projects from the people under “Who can request here” are created immediately, without a manager, as long as this budget has room — and so are later changes to them that stay within it. What happens beyond that is the last switch below."
+                    description="Projects from the people under “Who can request here” are created immediately, without a manager, as long as this budget has room — and so are later changes to them that stay within it. What happens beyond that is the next switch."
                     disabled={!hasRequesters}
                     {...form.getInputProps('autoApproveEnabled', { type: 'checkbox' })}
                     style={fadedWithoutRequesters}
@@ -403,6 +403,16 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     }}
                 >
                     <Stack gap="sm">
+                        {/* What happens to everything the policy does not
+                            cover: a manager decides, or it is refused. */}
+                        <Switch
+                            label="Allow requests beyond this"
+                            description={allowRequestsBeyond
+                                ? 'What auto-approve does not cover waits for a manager. Switch off to make it a hard limit.'
+                                : 'Off: what auto-approve does not cover is refused right away — nothing waits for a manager. The managers of this budget are not limited.'}
+                            disabled={!autoApproveEnabled || !hasRequesters}
+                            {...form.getInputProps('allowRequestsBeyond', { type: 'checkbox' })}
+                        />
                         <Switch
                             label="Apply individual limits"
                             description={autoApproveIndividual
@@ -423,16 +433,6 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                                 }}
                             />
                         )}
-                        {/* What happens to everything the policy does not
-                            cover: a manager decides, or it is refused. */}
-                        <Switch
-                            label="Allow requests beyond this"
-                            description={allowRequestsBeyond
-                                ? 'What auto-approve does not cover waits for a manager. Switch off to make it a hard limit.'
-                                : 'Off: what auto-approve does not cover is refused right away — nothing waits for a manager. The managers of this budget are not limited.'}
-                            disabled={!autoApproveEnabled || !hasRequesters}
-                            {...form.getInputProps('allowRequestsBeyond', { type: 'checkbox' })}
-                        />
                     </Stack>
                 </Box>
                 <Text size="xs" c="dimmed">
