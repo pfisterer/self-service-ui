@@ -323,6 +323,17 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
 // because there an end date is required.
 const DEFAULT_DURATION_DAYS = 90;
 
+// pickedDate turns what the calendar reports into the Date every form expects.
+// Mantine's date pickers report a "YYYY-MM-DD" string since v8, while the
+// duration fields and the forms' initial values work with Date objects — a
+// string slipping through failed only when someone clicked a day, in
+// termination_date.toISOString(). Parsed as local midnight, which is what the
+// picker meant by that day.
+export function pickedDate(value) {
+    if (value === null || value === undefined || value === '') return null;
+    return value instanceof Date ? value : dayjs(value).toDate();
+}
+
 export function TerminationDatePicker({ value, onChange, error, readOnly = false, label = 'End date', optional = false }) {
     const currentDate = value;
     // No date means no duration to show: a number standing next to an empty date
@@ -390,7 +401,7 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
             <DatePickerInput style={{ flex: 1 }} size="xs" placeholder="Pick date" leftSection={<Calendar size="14" />}
                 label={`Date ${currentDate ? `(${dayjs(currentDate).fromNow()})` : ''}`}
                 value={currentDate}
-                onChange={onChange}
+                onChange={(v) => onChange?.(pickedDate(v))}
                 minDate={new Date()}
                 disabled={!hasEndDate}
                 error={error}
