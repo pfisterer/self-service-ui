@@ -4,7 +4,7 @@ import { Badge, Button, Divider, Group, Modal, Paper, Stack, Table, Tabs, Text, 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { NodeChangesDiff, NodeStatusBadge, QuotaBadges, TokenBadgeList, UserRoleBadgeList } from './component-common.jsx';
-import { formatRelativeDate, isBudget, nodeTitle, ownerEmail, resourceSummaryText, statusLabel } from './util-project.jsx';
+import { autoApproveText, formatRelativeDate, hasAutoApprove, isBudget, nodeTitle, ownerEmail, statusLabel } from './util-project.jsx';
 import { formatDateTime } from '../format-date.js';
 
 dayjs.extend(relativeTime);
@@ -98,11 +98,8 @@ function NodeDetailsPanel({ node, resources }) {
                         )}
                         {/* Same as on the card: the auto-approve amount is a
                             statement about these people, not a topic of its own. */}
-                        {node.auto_approve?.per_requester_limit && (
-                            <Text size="xs" c="green.7" mt="4">
-                                Up to {resourceSummaryText(resources, node.auto_approve.per_requester_limit)} per
-                                {' '}person are approved automatically
-                            </Text>
+                        {hasAutoApprove(node) && (
+                            <Text size="xs" c="green.7" mt="4">{autoApproveText(resources, node)}</Text>
                         )}
                     </div>
                 </>

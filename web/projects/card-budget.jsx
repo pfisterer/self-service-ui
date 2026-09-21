@@ -1,7 +1,7 @@
 import { Check, Eye, FolderInput, FolderOpen, Pencil, Plus, Trash2, X, Zap } from 'lucide-react';
 import { Badge, Button, Card, Divider, Group, Stack, Text } from '@mantine/core';
 import { FactRow, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
-import { COLOR, expiryTone, expiryValue, resourceSummaryText } from './util-project.jsx';
+import { autoApproveText, COLOR, expiryTone, expiryValue, hasAutoApprove, isPoolAutoApprove } from './util-project.jsx';
 
 // BudgetCard renders one budget (inner tree node): who manages it, who may
 // request under it, and how full it is. Like ProjectCard it is presentational —
@@ -18,7 +18,7 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
     // for a sub-budget, or proposed a change to an existing one.
     const isPending = node.status === 'pending';
     const isChangePending = node.status === 'change_pending';
-    const autoApprove = node.auto_approve?.per_requester_limit;
+    const autoApprove = hasAutoApprove(node);
     const hasRequesters = (node.eligible_requesters || []).length > 0;
 
     return (
@@ -77,10 +77,12 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
 
                     {autoApprove && (
                         <FactRow label="Auto-approve"
-                            hint="Requests up to this size are granted without asking; anything bigger needs a manager's decision.">
+                            hint={isPoolAutoApprove(node)
+                                ? 'Requests are granted without asking until the budget is used up; beyond that a manager decides.'
+                                : "Requests up to this size are granted without asking; anything bigger needs a manager's decision."}>
                             <Text size="xs">
                                 <Zap size="11" style={{ verticalAlign: '-1px', marginRight: 4, color: 'var(--mantine-color-green-7)' }} />
-                                Up to {resourceSummaryText(resources, autoApprove) || 'the configured amount'} per person
+                                {autoApproveText(resources, node)}
                             </Text>
                         </FactRow>
                     )}

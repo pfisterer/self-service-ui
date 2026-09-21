@@ -95,7 +95,7 @@ function NodeMarkers({ node }) {
                     <Eye size="12" color="var(--mantine-color-gray-6)" style={{ flexShrink: 0 }} />
                 </Tooltip>
             )}
-            {node.auto_approve?.per_requester_limit && (
+            {node.auto_approve && (
                 <Tooltip label="Auto-approve: small requests are approved automatically.">
                     <Zap size="12" color="var(--mantine-color-green-6)" style={{ flexShrink: 0 }} />
                 </Tooltip>

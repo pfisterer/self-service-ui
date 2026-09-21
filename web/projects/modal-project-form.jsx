@@ -9,7 +9,7 @@ import { NodeChangesDiff, TerminationDatePicker } from './component-common.jsx';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
-import { autoApproveHeadroom, COLOR, freeAmount, isAvailability, quotaFits, resourceSummaryText, visibleResources } from './util-project.jsx';
+import { autoApproveHeadroom, COLOR, freeAmount, isAvailability, isPoolAutoApprove, quotaFits, resourceSummaryText, visibleResources } from './util-project.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
 
@@ -38,7 +38,9 @@ function BudgetSelect({ myBudgets, eligibleBudgets, resources, requestedQuota, v
             .filter(b => !managedIds.has(b.id))
             .map(b => {
                 const auto = b.auto_approve?.per_requester_limit;
-                const hint = auto ? ` — instant up to ${resourceSummaryText(resources, auto)} per person` : '';
+                const hint = !b.auto_approve ? ''
+                    : isPoolAutoApprove(b) ? ' — instant while it has room'
+                        : ` — instant up to ${resourceSummaryText(resources, auto)} per person`;
                 return { value: b.id, label: `${b.name || b.id}${hint}` };
             });
 
@@ -133,9 +135,12 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // has used up even one resource, filling the form with it would produce
     // invalid zeros — and a green "set to nothing left" note, which reads as
     // success while meaning the opposite.
+    //
+    // A pool is never pre-filled: its headroom is the whole budget, and a
+    // form that opens asking for everything is a trap, not a convenience.
     const usableHeadroomFor = (id) => {
         const h = headroomFor(id);
-        if (!h) return null;
+        if (!h || isPoolAutoApprove(budgetById(id))) return null;
         const ok = offeredFor(id).every(r =>
             isAvailability(r) || (h[r.id] ?? 0) >= (r.min ?? 0));
         return ok ? h : null;
@@ -189,6 +194,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
 
     const { parentId, quota, terminationDate, authorizedUsers } = form.values;
     const selectedHeadroom = headroomFor(parentId);
+    // The per-person notes below are about individual limits; a pool's
+    // "headroom" is just the budget's free capacity, which the picker shows.
+    const selectedIsPool = isPoolAutoApprove(budgetById(parentId));
 
     const offered = offeredFor(parentId);
 
@@ -319,7 +327,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             {/* Say why the numbers on the next tab just changed by themselves —
                 or, when the requester's instant allowance is used up, say THAT
                 clearly instead of a green success note about nothing. */}
-            {!isChange && selectedHeadroom && (usableHeadroomFor(parentId) ? (
+            {!isChange && selectedHeadroom && !selectedIsPool && (usableHeadroomFor(parentId) ? (
                 <Text size="xs" c={COLOR.positive}>
                     Resources pre-filled with the most this budget approves instantly for
                     you: {resourceSummaryText(resources, selectedHeadroom)}. Ask for less and it is still

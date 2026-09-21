@@ -201,18 +201,33 @@ export function quotaFits(budget, requestedQuota, resources) {
         .every(r => (requestedQuota?.[r.id] ?? 0) <= freeAmount(budget, r.id));
 }
 
+// hasAutoApprove reports whether the budget grants requests without a manager.
+export function hasAutoApprove(budget) {
+    return !!budget?.auto_approve;
+}
+
+// isPoolAutoApprove reports whether the budget's auto-approve has no per-person
+// limit: the budget's own free capacity is then the only bound — the shape of
+// a budget handed to one person or shared by a team.
+export function isPoolAutoApprove(budget) {
+    return hasAutoApprove(budget)
+        && Object.keys(budget.auto_approve.per_requester_limit || {}).length === 0;
+}
+
 // autoApproveHeadroom returns the largest request a budget would approve on the
 // spot for this user, or null when the budget has no auto-approve policy.
 //
 // The backend grants instantly while the requester's own ACTIVE usage under the
-// budget stays within its per-requester limit AND every ancestor still has room
-// (see the auto-approve branch of CreateNode). Both halves are mirrored here:
+// budget stays within its per-requester limit (if it has one) AND every ancestor
+// still has room (see autoApprovable in the API). Both halves are mirrored here:
 // the personal cap minus what this user already holds, capped by the budget's
 // own free capacity. Own usage is summed from the caller's projects because the
-// node's `usage` is the total over all owners.
+// node's `usage` is the total over all owners. A pool has no personal cap, so
+// its headroom is the budget's free capacity — Infinity where it has no cap.
 export function autoApproveHeadroom(budget, resources, myProjects) {
-    const perRequester = budget?.auto_approve?.per_requester_limit;
-    if (!perRequester) return null;
+    if (!hasAutoApprove(budget)) return null;
+    const pool = isPoolAutoApprove(budget);
+    const perRequester = budget.auto_approve.per_requester_limit || {};
 
     const mine = {};
     for (const project of myProjects || []) {
@@ -230,11 +245,20 @@ export function autoApproveHeadroom(budget, resources, myProjects) {
         // "How much of this is left for you" means nothing for an availability;
         // it is granted or it is not, and the per-requester cap does not divide.
         if (isAvailability(r)) continue;
-        const personal = Math.max(0, (perRequester[r.id] ?? 0) - (mine[r.id] || 0));
+        const personal = pool ? Infinity : Math.max(0, (perRequester[r.id] ?? 0) - (mine[r.id] || 0));
         const free = freeAmount(budget, r.id);
         out[r.id] = Math.max(0, Math.min(personal, free));
     }
     return out;
+}
+
+// autoApproveText says in one line what a budget grants without a manager,
+// or '' when it grants nothing that way.
+export function autoApproveText(resources, budget) {
+    if (!hasAutoApprove(budget)) return '';
+    if (isPoolAutoApprove(budget)) return 'Approved automatically while the budget has room';
+    const amount = resourceSummaryText(resources, budget.auto_approve.per_requester_limit);
+    return `Up to ${amount || 'the configured amount'} per person approved automatically`;
 }
 
 // resourceBarSegments turns absolute amounts into the widths of the three
