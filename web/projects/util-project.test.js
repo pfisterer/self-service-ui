@@ -13,6 +13,7 @@ import {
     nodeChanges,
     nodeTitle,
     normalizeObjectResponse,
+    openstackProjectUrl,
     overageEntries,
     overageText,
     ownerEmail,
@@ -545,5 +546,26 @@ describe('resourceSummaryText with availabilities', () => {
         const text = resourceSummaryText(resources, { cores: 4, 'dhbw-ipv4': 0 });
 
         expect(text).toBe('4 Cores');
+    });
+});
+
+describe('openstackProjectUrl', () => {
+    const node = { status: 'approved', os_project_id: 'abc123' };
+
+    it('switches Horizon to the project, keeping the target through the login', () => {
+        expect(openstackProjectUrl('https://newstack.dhbw.cloud/', node))
+            .toBe('https://newstack.dhbw.cloud/auth/switch/abc123/?next=/project/');
+    });
+
+    it('links nothing without a dashboard or an OpenStack project', () => {
+        expect(openstackProjectUrl('', node)).toBeNull();
+        expect(openstackProjectUrl('https://x', { status: 'approved' })).toBeNull();
+    });
+
+    it('links only projects that are active', () => {
+        expect(openstackProjectUrl('https://x', { ...node, status: 'change_pending' })).not.toBeNull();
+        for (const status of ['pending', 'released', 'rejected', 'imported']) {
+            expect(openstackProjectUrl('https://x', { ...node, status })).toBeNull();
+        }
     });
 });

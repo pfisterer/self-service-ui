@@ -1,7 +1,7 @@
-import { AlertTriangle, ArrowRightLeft, Check, Eye, FolderInput, Pencil, Rocket, X } from 'lucide-react';
-import { Alert, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
+import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Pencil, Rocket, X } from 'lucide-react';
+import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge } from './component-common.jsx';
-import { COLOR, expiryTone, expiryValue, isImported, isProvisioning, overageEntries, overageText, ownerEmail, resourceSummaryText } from './util-project.jsx';
+import { COLOR, expiryTone, expiryValue, isImported, isProvisioning, openstackProjectUrl, overageEntries, overageText, ownerEmail, resourceSummaryText } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { formatDate } from '../format-date.js';
 
@@ -20,6 +20,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     const imported = isImported(node);
     // Approved but not in OpenStack yet — the reconciler runs on an interval.
     const provisioning = isProvisioning(node, config?.provisioningEnabled);
+    const openstackUrl = openstackProjectUrl(config?.openstackDashboardUrl, node);
     const isApproved = node.status === 'approved';
     const isPending = node.status === 'pending';
     const isChangePending = node.status === 'change_pending';
@@ -69,9 +70,16 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 </Group>
 
                 {/* ── Purpose ────────────────────────────────────────────── */}
-                <Text fw={700} size="sm" mb="xs">
+                <Text fw={700} size="sm" mb={openstackUrl ? 2 : 'xs'}>
                     {imported ? (node.os_project_name || node.os_project_id || node.id) : (node.name || node.reason)}
                 </Text>
+                {/* Only where there is something to open: see openstackProjectUrl. */}
+                {openstackUrl && (
+                    <Anchor href={openstackUrl} target="_blank" rel="noopener noreferrer" size="xs" mb="xs"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        Open in OpenStack <ExternalLink size="11" />
+                    </Anchor>
+                )}
 
                 {imported && (
                     <Alert color={COLOR.outside} variant="light" mb="xs" p="xs">

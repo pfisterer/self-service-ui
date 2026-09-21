@@ -98,6 +98,16 @@ const PROVISIONING_META = {
     description: 'Approved. The OpenStack project is being created — this usually takes a few minutes.',
 };
 
+// openstackProjectUrl is where a project opens in the OpenStack dashboard, or
+// null when there is nowhere to go: no dashboard configured, no OpenStack
+// project yet, or one that is on its way out. Horizon's project switch keeps
+// its target through the login, so the link works signed out as well.
+export function openstackProjectUrl(dashboardUrl, node) {
+    if (!dashboardUrl || !node?.os_project_id) return null;
+    if (node.status !== 'approved' && node.status !== 'change_pending') return null;
+    return `${dashboardUrl.replace(/\/+$/, '')}/auth/switch/${encodeURIComponent(node.os_project_id)}/?next=/project/`;
+}
+
 export function isProvisioning(node, provisioningEnabled) {
     return Boolean(provisioningEnabled)
         && node?.kind === 'project'
