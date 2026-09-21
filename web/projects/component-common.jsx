@@ -273,9 +273,11 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
                                 <Table.Td>End date</Table.Td>
                                 <Table.Td>{formatDate(dateFrom)}</Table.Td>
                                 <Table.Td>{formatDate(dateTo)}</Table.Td>
-                                <Table.Td c={new Date(dateTo) - new Date(dateFrom) >= 0 ? 'green' : 'red'}>
-                                    {new Date(dateTo) > new Date(dateFrom) ? '+' : ''}{dayjs(dateTo).from(dayjs(dateFrom), true)}
-                                </Table.Td>
+                                {dateFrom ? (
+                                    <Table.Td c={new Date(dateTo) - new Date(dateFrom) >= 0 ? 'green' : 'red'}>
+                                        {new Date(dateTo) > new Date(dateFrom) ? '+' : ''}{dayjs(dateTo).from(dayjs(dateFrom), true)}
+                                    </Table.Td>
+                                ) : <Table.Td />}
                             </Table.Tr>
                         )}
                     </Table.Tbody>
@@ -321,6 +323,10 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
 // two contradicting answers to the same question. Budgets use it (a department
 // budget usually runs until somebody changes it); a project request does not,
 // because there an end date is required.
+//
+// `maxDate` is the end of the budget above: nothing may outlive the budget it
+// draws from, so the calendar, the duration and the "set an end date" default
+// all stop there, and the switch cannot be turned off.
 const DEFAULT_DURATION_DAYS = 90;
 
 // pickedDate turns what the calendar reports into the Date every form expects.
@@ -334,7 +340,7 @@ export function pickedDate(value) {
     return value instanceof Date ? value : dayjs(value).toDate();
 }
 
-export function TerminationDatePicker({ value, onChange, error, readOnly = false, label = 'End date', optional = false }) {
+export function TerminationDatePicker({ value, onChange, error, readOnly = false, label = 'End date', optional = false, maxDate = null }) {
     const currentDate = value;
     // No date means no duration to show: a number standing next to an empty date
     // field claims something that is not stored anywhere.
@@ -372,9 +378,11 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
             : durationUnit === 'months' ? Math.round(daysUntil / 30)
                 : daysUntil;
 
+    const latest = maxDate ? new Date(maxDate) : null;
     const dateFromDuration = (val, unit) => {
         const days = unit === 'weeks' ? val * 7 : unit === 'months' ? val * 30 : val;
-        return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+        const date = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+        return latest && date > latest ? latest : date;
     };
 
     const updateDateFromDuration = (val, unit) => {
@@ -394,7 +402,7 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
         );
     }
 
-    const hasEndDate = !optional || !!currentDate;
+    const hasEndDate = !optional || !!latest || !!currentDate;
 
     const fields = (
         <Group gap="xs" align="flex-end">
@@ -403,6 +411,7 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
                 value={currentDate}
                 onChange={(v) => onChange?.(pickedDate(v))}
                 minDate={new Date()}
+                maxDate={latest ?? undefined}
                 disabled={!hasEndDate}
                 error={error}
             />
@@ -421,7 +430,7 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
         <Stack gap="xs">
             <Text fw={600} size="sm">{label}</Text>
 
-            {optional ? (
+            {optional && !latest ? (
                 <>
                     {/* Ticking the box writes a real date right away, so the fields
                         below never describe something that is not stored. */}
@@ -445,6 +454,11 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
                     </Box>
                 </>
             ) : fields}
+            {latest && (
+                <Text size="xs" c="dimmed">
+                    At most until {formatDate(latest)}, when its budget ends.
+                </Text>
+            )}
         </Stack>
     );
 }

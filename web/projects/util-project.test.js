@@ -274,6 +274,11 @@ describe('nodeChanges', () => {
         expect(nodeChanges({ dateFrom: '2027-01-01', dateTo: '2027-06-01' }).hasDateChange).toBe(true);
     });
 
+    it('sees an end given where there was none', () => {
+        expect(nodeChanges({ dateFrom: null, dateTo: '2027-06-01' }).hasDateChange).toBe(true);
+        expect(nodeChanges({ dateFrom: '2027-06-01' }).hasDateChange).toBe(false);
+    });
+
     it('splits members into added, removed and role-changed', () => {
         const c = nodeChanges({
             usersFrom: [

@@ -7,6 +7,7 @@ import { useApiMutation } from '/helper/query-state.jsx';
 import { formatError } from '/helper/api-error.js';
 import { useForm } from '@mantine/form';
 import { NodeChangesDiff, TerminationDatePicker, TokenBadgeList } from './component-common.jsx';
+import { formatDate } from '../format-date.js';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
@@ -162,6 +163,16 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // and a form that validates a different set from the one it renders will
     // demand a value for a field nobody was shown.
     const budgetById = (id) => [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === id);
+    // Nothing outlives the budget it draws from: its end is the latest a
+    // project there may run.
+    const budgetEndOf = (id) => {
+        const end = budgetById(id)?.termination_date;
+        return end ? new Date(end) : null;
+    };
+    const withinBudget = (date, id) => {
+        const bound = budgetEndOf(id);
+        return bound && (!date || date > bound) ? bound : date;
+    };
     const offeredFor = (id) => {
         // A change request has no budget picker — the project stays where it
         // is, so the scope is its PARENT budget: that is what a request could
@@ -223,7 +234,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 // it would grant, so the common case is one click — unless the
                 // allowance is (partly) used up: then the defaults stay.
                 quota: usableHeadroomFor(initialParentId) ?? defaultQuota(resources),
-                terminationDate: defaultEnd,
+                terminationDate: withinBudget(defaultEnd, initialParentId),
                 authorizedUsers: [],
             },
         validate: (values) => ({
@@ -232,9 +243,13 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             reason: (values.reason || '').trim().length < 5
                 ? 'Please describe the purpose (at least 5 characters)' : null,
             parentId: (!isChange && !values.parentId) ? 'Please choose a budget' : null,
-            terminationDate: !values.terminationDate
-                ? 'Please set an end date'
-                : (values.terminationDate <= new Date() ? 'The end date must be in the future' : null),
+            terminationDate: (() => {
+                if (!values.terminationDate) return 'Please set an end date';
+                if (values.terminationDate <= new Date()) return 'The end date must be in the future';
+                const bound = budgetEndOf(isChange ? node.parent_id : values.parentId);
+                return bound && values.terminationDate > bound
+                    ? `The budget ends on ${formatDate(bound)} — the project cannot run longer` : null;
+            })(),
             ...Object.fromEntries(
                 Object.entries(validateQuota(offeredFor(values.parentId), values.quota)).map(([id, msg]) => [`quota.${id}`, msg])),
         }),
@@ -269,6 +284,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         form.clearFieldError('parentId');
         const headroom = usableHeadroomFor(id);
         if (headroom) form.setFieldValue('quota', headroom);
+        // A budget that ends sooner pulls the date in with it.
+        const date = withinBudget(form.values.terminationDate, id);
+        if (date !== form.values.terminationDate) form.setFieldValue('terminationDate', date);
     };
 
     // What the form was showing when it opened — a change request is only worth
@@ -413,6 +431,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
 
             <TerminationDatePicker
                 value={terminationDate}
+                maxDate={budgetEndOf(isChange ? node.parent_id : parentId)}
                 error={form.errors.terminationDate}
                 onChange={(d) => { form.setFieldValue('terminationDate', d); form.clearFieldError('terminationDate'); }}
             />

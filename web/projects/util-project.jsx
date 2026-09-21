@@ -375,8 +375,10 @@ export function limitDelta(limitFrom, limitTo, resourceId) {
 export function nodeChanges({ resources, limitFrom, limitTo, dateFrom, dateTo, usersFrom, usersTo } = {}) {
     const hasLimitChange = Boolean(limitFrom && limitTo && resources &&
         resources.some(r => (limitFrom[r.id] ?? 0) !== (limitTo[r.id] ?? 0)));
-    const hasDateChange = Boolean(dateFrom && dateTo &&
-        new Date(dateFrom).getTime() !== new Date(dateTo).getTime());
+    // An end given to something that had none is a change too — it is what a
+    // budget receiving an end does to everything below it.
+    const hasDateChange = Boolean(dateTo &&
+        (!dateFrom || new Date(dateFrom).getTime() !== new Date(dateTo).getTime()));
 
     const hasUserData = usersTo !== undefined && usersTo !== null;
     const from = usersFrom || [];

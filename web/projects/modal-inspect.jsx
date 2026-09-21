@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, ArrowRight, ArrowRightLeft, Check, FileText, FolderInput, LogOut, Pencil, Rocket, X } from 'lucide-react';
+import { AlertCircle, ArrowRight, ArrowRightLeft, CalendarMinus, Check, FileText, FolderInput, LogOut, Pencil, Rocket, X } from 'lucide-react';
 import { Badge, Button, Divider, Group, Modal, Paper, Stack, Table, Tabs, Text, Timeline } from '@mantine/core';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -29,6 +29,7 @@ const EVENT_META = {
     reparented: { label: 'Moved to another budget', icon: FolderInput },
     owner_transferred: { label: 'Ownership transferred', icon: ArrowRightLeft },
     promote_requested: { label: 'Adoption queued', icon: Rocket },
+    end_shortened: { label: 'Ends earlier with its budget', icon: CalendarMinus },
 };
 
 // One label/value row of the details table.

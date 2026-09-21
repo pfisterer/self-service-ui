@@ -6,6 +6,7 @@ import { projectKeys } from './query-keys.js';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { useForm } from '@mantine/form';
 import { TerminationDatePicker } from './component-common.jsx';
+import { formatDate } from '../format-date.js';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
@@ -46,6 +47,17 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const scopeFor = (parentId) => isRequest
         ? (eligibleBudgets.find(b => b.id === parentId) || null)
         : (parent || node);
+
+    // The budget this one draws from, when it is in hand: its end is the latest
+    // this one may run. Editing opened without the parent leaves the check to
+    // the server.
+    const boundFor = (parentId) => isRequest
+        ? (eligibleBudgets.find(b => b.id === parentId) || null)
+        : parent;
+    const endOf = (parentId) => {
+        const end = boundFor(parentId)?.termination_date;
+        return end ? new Date(end) : null;
+    };
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
 
@@ -93,7 +105,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 // people share it.
                 autoApproveIndividual: false,
                 autoApproveQuota: defaultQuota(resources),
-                terminationDate: null,
+                // A budget under one that ends ends with it, unless told sooner.
+                terminationDate: endOf(parent?.id ?? eligibleBudgets[0]?.id ?? null),
             },
         validate: (values) => ({
             name: (values.name || '').trim().length < 3
@@ -102,6 +115,13 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 ? 'Please describe what this budget is for (at least 5 characters)' : null,
             parentId: (isRequest && !values.parentId)
                 ? 'Please choose the budget to request from' : null,
+            terminationDate: (() => {
+                const bound = endOf(values.parentId);
+                if (!bound) return null;
+                if (!values.terminationDate) return `The budget above ends on ${formatDate(bound)}, so this one needs an end date too`;
+                return values.terminationDate > bound
+                    ? `The budget above ends on ${formatDate(bound)} — this one cannot run longer` : null;
+            })(),
             adminScope: !values.adminScope.length
                 ? 'Name at least one person or group — a budget nobody manages appears in nobody\'s "My Budgets", and requests under it land with the budget above instead'
                 : null,
@@ -152,13 +172,18 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
 
     // Which tab to flag: a field the user cannot see must not fail silently.
     const errorsInTab = (tab, errs) => {
-        if (tab === TAB_DETAILS) return ['name', 'reason', 'parentId'].some(k => errs[k]);
+        if (tab === TAB_DETAILS) return ['name', 'reason', 'parentId', 'terminationDate'].some(k => errs[k]);
         if (tab === TAB_RESOURCES) return (resources || []).some(r => errs[`quota.${r.id}`]);
         if (tab === TAB_ACCESS) return !!errs.adminScope;
         if (tab === TAB_AUTO_APPROVE) return Object.keys(errs).some(k => k.startsWith('autoApproveQuota.'));
         return false;
     };
     const tabHasError = (tab) => errorsInTab(tab, form.errors);
+
+    // Ending earlier — or at all, where the budget had no end — carries down to
+    // whatever below it runs longer, so say so before it happens.
+    const shortensSubtree = isEdit && node?.child_count > 0 && !!form.values.terminationDate
+        && (!node.termination_date || form.values.terminationDate < new Date(node.termination_date));
 
     const buildEditBody = (values) => {
         const {
@@ -248,6 +273,14 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     searchable
                     data={eligibleBudgets.map(b => ({ value: b.id, label: b.name || b.id }))}
                     {...form.getInputProps('parentId')}
+                    onChange={(id) => {
+                        form.setFieldValue('parentId', id);
+                        form.clearFieldError('parentId');
+                        // Another budget may end sooner: pull the date in with it.
+                        const bound = endOf(id);
+                        const date = form.values.terminationDate;
+                        if (bound && (!date || date > bound)) form.setFieldValue('terminationDate', bound);
+                    }}
                 />
             )}
             {isRequest && freeSummary && (
@@ -276,8 +309,16 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
             <TerminationDatePicker
                 label="Valid until"
                 optional
+                maxDate={endOf(form.values.parentId)}
                 {...form.getInputProps('terminationDate')}
             />
+            {shortensSubtree && (
+                <Alert variant="light" color={COLOR.attention} icon={<Info size="16" />} p="xs">
+                    <Text size="xs">
+                        Everything below this budget that runs longer — sub-budgets, projects and open requests — will end on {formatDate(form.values.terminationDate)} too.
+                    </Text>
+                </Alert>
+            )}
         </Stack>
     );
 
