@@ -111,7 +111,7 @@ export function Home() {
                         </Text>
                         <Group mt="sm">
                             {/* Same target as the header's Cloud Projects link: /projects
-                                redirects to My Projects, where "Request project" lives. */}
+                                redirects to My Projects, where "New project" lives. */}
                             {withProjects && (
                                 <Button component={Link} to="/projects" size="md" rightSection={<ArrowRight size="18" />}>
                                     Request a project

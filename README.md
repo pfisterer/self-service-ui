@@ -19,12 +19,7 @@ assignment, not an administrator reading a ticket. Central allocation is not a
 policy anyone chose; it is what happens when the platform has no way to hand
 authority over resources to someone else.
 
-This platform gives it that way. Capacity is handed out as **delegated pools**: a
-department gets a share it may pass on, a lecturer carves out a slice for a course
-and decides on requests against it, without asking the data centre. And for the
-common small case, nobody needs to decide at all — a pool can carry an
-**auto-approval** cap per person, so requests within it are granted immediately and
-only what exceeds it reaches a human.
+This platform gives it that way. Capacity is handed out as **delegated pools**: a department gets a share it may pass on, a lecturer carves out a slice for a course and decides on requests against it, without asking the data centre. And for the common small case, nobody needs to decide at all — a pool can **approve requests on its own** — up to the whole budget, or up to a fixed share per person — so they are granted immediately and only what exceeds that reaches a human.
 
 This is the web interface for that: people request what they need, whoever owns the
 budget decides — or the policy decides for them — and both sides can see the state
@@ -36,7 +31,7 @@ Two areas and the credentials for both, behind one login:
 
 **Cloud Projects** — resources are handed out along a *budget tree*. A budget is a delegated pool of capacity; passing capacity on means creating a sub-budget with someone else as its manager. A project is a leaf: a concrete allocation with one owner, which the platform turns into a real OpenStack project. Requests, the approval of them, adjusted approvals, changes, moves, owner transfers and release all live here, and each node keeps its own history; every project status explains itself on hover, because "Released" asks for deletion rather than performing it.
 
-A budget with an auto-approval allowance grants requests within it on the spot, and the request form says so — and says just as plainly when the allowance is used up and the request will go to a manager. The request dialogs show how much of the funding budget is still free and what share the entered values take, and someone who may request from a budget sees it read-only under *My Budgets*. Resources are either quantities or *availabilities*, which are only granted or withheld and therefore get a switch instead of a number; each form offers only what the budget above it was delegated. Managers can adopt OpenStack projects that exist outside the managed lifecycle. Root admins see the state of the OpenStack reconciliation, and where the API permits it, a role switch shows the section as a given group or person would see it.
+A budget with auto-approval grants requests on the spot — as a pool until the budget is used up, or with individual limits per person — and later changes to a project that stay within it take effect at once too; giving resources back, ending sooner and changing members never wait. While a form is filled in it says what the button will do: create the project right away, or send it to the budget's managers, who are named. The budgets someone may draw from appear as cards on *My Projects*, each saying how much is theirs right away; *My Budgets* is shown only to people who manage a budget. The request dialogs show how much of the funding budget is still free and what share the entered values take. Resources are either quantities or *availabilities*, which are only granted or withheld and therefore get a switch instead of a number; each form offers only what the budget above it was delegated. Managers can adopt OpenStack projects that exist outside the managed lifecycle. Root admins see the state of the OpenStack reconciliation, and where the API permits it, a role switch shows the section as a given group or person would see it.
 
 **DNS Zones** — self-service DNS. Users create zones they are entitled to by policy, edit records in the browser, and get per-zone TSIG keys so that Kubernetes, `external-dns` or `cert-manager` can keep the records up to date via RFC 2136 without a human in the loop. A zone the platform reports a problem with — a client failing TSIG in a loop, for example — carries a warning in the zone list and a banner on its page. Whoever a policy rule applies to also gets an *Administration* page with the rules and the zones delegated to them; super admins additionally see delegations, orphaned zones and every active zone event, with a pre-filled mail to the zone's owners.
 
@@ -48,19 +43,19 @@ Both areas also include the interactive API documentation of the service behind 
 
 ### Cloud Projects
 
-**My Projects** — a person's own projects: what they cost, which budget pays for them, and what a pending change would do.
+**My Projects** — the budgets a person may draw from, each saying how much is theirs right away and whether a project there needs an approval, and below them their own projects: what they cost, which budget pays for them, and what a pending change would do.
 
 ![My Projects](docs/img/01-my-projects.webp)
 
-**Requesting a project** — the budget to pay from comes first. Where a budget approves small requests on its own, the form starts filled with exactly what goes through instantly.
+**Requesting a project** — the budget to pay from comes first. While the form is filled in, it says what the button will do: create the project right away, or send it to the budget's managers. Where a budget grants a fixed share per person on its own, the form starts filled with exactly what goes through instantly.
 
 ![Requesting a project](docs/img/02-request-project.webp)
 
-**My Budgets** — the tree resources are paid from. Selecting a node shows its usage, who manages it, and who may request from it.
+**My Budgets** — the tree resources are paid from, shown to people who manage a budget. Selecting a node shows its usage, who manages it, and who may request from it; budgets they may only request from appear read-only, marked with an eye.
 
 ![My Budgets](docs/img/03-budget-tree.webp)
 
-**Delegating** — passing capacity on means creating a sub-budget with someone else under *Managed by*; *Who can request here* decides who may ask it for projects.
+**Delegating** — passing capacity on means creating a sub-budget with someone else under *Managed by*; *Who can request here* decides who may ask it for projects. The access tab names the typical setups: a budget someone runs themselves, a pool, a course.
 
 ![Delegating by creating a sub-budget](docs/img/04-delegate.webp)
 
@@ -68,9 +63,9 @@ Both areas also include the interactive API documentation of the service behind 
 
 ![Approving a request](docs/img/05-approve-impact.webp)
 
-**Budgets you may request from** — they appear in the tree read-only, marked with an eye: how full they are and who decides, without any of the manager's actions.
+**Approving without a manager** — with auto-approve on, requests go through as long as the budget has room; with individual limits, each person gets a fixed share, the setup for a course.
 
-![Read-only budgets for a requester](docs/img/06-readonly-budget.webp)
+![Auto-approve with individual limits](docs/img/06-auto-approve.webp)
 
 **Requesting a budget** — each amount shows how much the source budget still has free and what share of it the request would take.
 

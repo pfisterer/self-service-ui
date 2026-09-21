@@ -130,7 +130,10 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy }) {
 //   node != null  → change: resources, end date and members are editable;
 //                   pending projects are amended in place, active projects get
 //                   a change request that a manager must approve.
-export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [] }) {
+//
+// initialBudgetId preselects the budget of a new project — set when the dialog
+// is opened from a budget's own card.
+export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null }) {
     const api = useNodesApi();
     const isChange = !!node;
 
@@ -190,7 +193,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // The whole form is initialised HERE instead of by an effect that fired on
     // `opened` and wrote eight setStates. Remounting is what makes that correct:
     // "initial" and "for the node currently being edited" are the same moment.
-    const initialParentId = isChange ? null : (myBudgets[0]?.id ?? eligibleBudgets[0]?.id ?? null);
+    const initialParentId = isChange ? null : (initialBudgetId ?? myBudgets[0]?.id ?? eligibleBudgets[0]?.id ?? null);
     const form = useForm({
         initialValues: isChange
             ? {

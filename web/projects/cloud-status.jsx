@@ -10,10 +10,9 @@ import { projectKeys } from './query-keys.js';
 //   pending    how many requests wait for this user's decision — the number
 //              that used to be the reason for an "Approvals" tab. Without it
 //              nobody learns that something arrived until they go looking.
-//   hasBudgets whether the budget view has anything for this user: a budget
-//              they manage, or one they may request. A first-time student has
-//              neither, and the entry is left out (see nav.jsx) instead of
-//              leading to a box that says so.
+//   hasBudgets whether the user manages a budget. The budget view is for
+//              running budgets; somebody who only draws from them finds them
+//              on "My Projects", and the entry is left out (see nav.jsx).
 //
 // It lives above the header (see index.jsx) because the menu is rendered there,
 // and the views below call refresh() after every decision so the badge follows
@@ -33,7 +32,7 @@ export function CloudStatusProvider({ children }) {
     const statusQuery = useQuery({
         queryKey: projectKeys.rootStatus(),
         queryFn: async () => {
-            const [role, pending, myBudgets, eligible] = await Promise.allSettled([
+            const [role, pending, myBudgets] = await Promise.allSettled([
                 // `allowed` reflects the REAL caller (it stays true while
                 // impersonating, so they can still reset), but an impersonated
                 // identity has dropped root, so the entry follows the
@@ -43,9 +42,8 @@ export function CloudStatusProvider({ children }) {
                 // delegated sub-budgets belong to their manager — counting them
                 // would nag a root admin with the whole organization.
                 api.countToManage('direct'),
-                // Counts only, no rows — the menu asks "any?", not "which?".
+                // Count only, no rows — the menu asks "any?", not "which?".
                 api.countMyBudgets(),
-                api.countEligibleForMe(),
             ]);
             const count = (r) => (r.status === 'fulfilled' ? (r.value ?? 0) : 0);
             return {
@@ -53,7 +51,7 @@ export function CloudStatusProvider({ children }) {
                     && !!role.value?.allowed
                     && !role.value?.impersonated_user,
                 pending: count(pending),
-                hasBudgets: count(myBudgets) > 0 || count(eligible) > 0,
+                hasBudgets: count(myBudgets) > 0,
             };
         },
         enabled: !!api && !!user,
