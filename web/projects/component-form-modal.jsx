@@ -53,7 +53,7 @@ export function FormTabs({ value, onChange, tabs }) {
  */
 export function FormModal({
     opened, onClose, title, size = 'lg',
-    onSubmit, submitting, submitError, submitLabel, submitColor,
+    onSubmit, submitting, submitError, submitLabel, submitColor, submitDisabled = false,
     children,
 }) {
     return (
@@ -72,7 +72,7 @@ export function FormModal({
 
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" type="button" onClick={onClose}>Cancel</Button>
-                        <Button type="submit" color={submitColor} loading={submitting}>{submitLabel}</Button>
+                        <Button type="submit" color={submitColor} loading={submitting} disabled={submitDisabled}>{submitLabel}</Button>
                     </Group>
                 </Stack>
             </form>

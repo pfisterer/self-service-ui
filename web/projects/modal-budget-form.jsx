@@ -62,6 +62,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 adminScope: node.admin_scope || [],
                 eligibleRequesters: node.eligible_requesters || [],
                 allowSubBudgetRequests: node.allow_sub_budget_requests !== false,
+                allowRequestsBeyond: node.allow_requests_beyond_auto_approve !== false,
                 autoApproveEnabled: !!node.auto_approve,
                 autoApproveIndividual: !!node.auto_approve && !isPoolAutoApprove(node),
                 autoApproveQuota: { ...(node.auto_approve?.per_requester_limit || defaultQuota(resources)) },
@@ -84,6 +85,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 // requesters. Existing budgets are untouched — the API still treats an
                 // unset flag as "allowed".
                 allowSubBudgetRequests: false,
+                // As before the switch existed: beyond auto-approve, a manager decides.
+                allowRequestsBeyond: true,
                 autoApproveEnabled: false,
                 // A pool unless said otherwise: the budget's own cap already
                 // bounds it, and a per-person limit only matters once several
@@ -172,6 +175,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         if (allowSubBudgetRequests !== (node.allow_sub_budget_requests !== false)) {
             body.allow_sub_budget_requests = allowSubBudgetRequests;
         }
+        if (values.allowRequestsBeyond !== (node.allow_requests_beyond_auto_approve !== false)) {
+            body.allow_requests_beyond_auto_approve = values.allowRequestsBeyond;
+        }
         const policy = autoApprovePolicy(values);
         if (policy) {
             const prev = JSON.stringify(node.auto_approve?.per_requester_limit || {});
@@ -207,6 +213,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 admin_scope: values.adminScope,
                 eligible_requesters: values.eligibleRequesters,
                 allow_sub_budget_requests: values.allowSubBudgetRequests,
+                allow_requests_beyond_auto_approve: values.allowRequestsBeyond,
                 auto_approve: autoApprovePolicy(values),
                 termination_date: values.terminationDate ? values.terminationDate.toISOString() : null,
             });
@@ -351,6 +358,23 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                         disabled={!hasRequesters}
                         {...form.getInputProps('allowSubBudgetRequests', { type: 'checkbox' })}
                         style={fadedWithoutRequesters}
+                    />
+
+                    {/* Belongs to the requesters, not to auto-approve: it says what
+                        they may ask for. It only has something to limit once
+                        auto-approve is on, so it is faded until then. */}
+                    <Checkbox
+                        label="Also allow requests beyond auto-approve"
+                        description={!hasRequesters
+                            ? 'Only relevant once somebody may request here.'
+                            : !autoApproveEnabled
+                                ? 'Only relevant with auto-approve (next tab) — without it every request waits for a manager anyway.'
+                                : form.values.allowRequestsBeyond
+                                    ? 'What auto-approve does not cover waits for a manager. Turn this off to make it a hard limit.'
+                                    : 'Off: what auto-approve does not cover is refused right away — nothing waits for a manager. Managers themselves are not limited.'}
+                        disabled={!hasRequesters || !autoApproveEnabled}
+                        {...form.getInputProps('allowRequestsBeyond', { type: 'checkbox' })}
+                        style={{ opacity: hasRequesters && autoApproveEnabled ? 1 : 0.45, transition: 'opacity 150ms ease' }}
                     />
                 </Stack>
             </Fieldset>

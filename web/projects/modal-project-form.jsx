@@ -81,6 +81,15 @@ function BudgetSelect({ myBudgets, eligibleBudgets, resources, value, onChange, 
 // will do — the one thing a requester cannot otherwise tell before it happened.
 function OutcomeNote({ outcome, isChange, budget, hasPolicy }) {
     if (!outcome) return null;
+    if (outcome === 'blocked') {
+        return (
+            <Text size="sm" c={COLOR.negative} mt="sm">
+                More than {budget ? `“${budget.name || budget.id}”` : 'this budget'} grants you, and it takes
+                no requests beyond that. Ask for less, give resources back elsewhere, or ask one of its
+                managers to raise your share.
+            </Text>
+        );
+    }
     if (outcome === 'refused') {
         return (
             <Text size="sm" c={COLOR.negative} mt="sm">
@@ -243,6 +252,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const outcome = isChange
         ? (node.status === 'pending' ? null : changeOutcome({
             node, budget: outcomeBudget, quota, terminationDate, resources, myProjects,
+            manages: managedIds.has(node.parent_id),
         }))
         : requestOutcome({
             budget: outcomeBudget, manages: managedIds.has(parentId), quota, resources, myProjects,
@@ -475,6 +485,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 : 'New project'}
             onSubmit={form.onSubmit(values => save.mutate(values), handleInvalid)}
             submitting={save.isPending}
+            submitDisabled={outcome === 'blocked'}
             submitError={save.error && formatError(save.error)}
             submitLabel={isChange
                 ? (node?.status === 'pending' ? 'Update request'

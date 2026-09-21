@@ -252,13 +252,20 @@ export function autoApproveHeadroom(budget, resources, myProjects) {
     return out;
 }
 
+// beyondAutoApproveRefused reports whether the budget refuses requests its
+// auto-approve does not cover, instead of queueing them for a manager.
+export function beyondAutoApproveRefused(budget) {
+    return hasAutoApprove(budget) && budget.allow_requests_beyond_auto_approve === false;
+}
+
 // autoApproveText says in one line what a budget grants without a manager,
 // or '' when it grants nothing that way.
 export function autoApproveText(resources, budget) {
     if (!hasAutoApprove(budget)) return '';
-    if (isPoolAutoApprove(budget)) return 'Approved automatically while the budget has room';
+    const hard = beyondAutoApproveRefused(budget) ? '; nothing beyond that can be requested' : '';
+    if (isPoolAutoApprove(budget)) return `Approved automatically while the budget has room${hard}`;
     const amount = resourceSummaryText(resources, budget.auto_approve.per_requester_limit);
-    return `Up to ${amount || 'the configured amount'} per person approved automatically`;
+    return `Up to ${amount || 'the configured amount'} per person approved automatically${hard}`;
 }
 
 // What happens when a request is sent — the same decision the API makes, made
@@ -268,6 +275,8 @@ export function autoApproveText(resources, budget) {
 //               own creation is checked on the spot and turned down
 //   'instant'   the budget's auto-approve grants it (or it needs no approval)
 //   'approval'  a manager of the budget decides
+//   'blocked'   beyond what auto-approve grants, and the budget takes no
+//               requests beyond that — the server refuses it
 //
 // requestOutcome is for a NEW project under `budget`.
 export function requestOutcome({ budget, manages, quota, resources, myProjects }) {
@@ -278,7 +287,8 @@ export function requestOutcome({ budget, manages, quota, resources, myProjects }
     const fits = (resources || [])
         .filter(r => !isAvailability(r))
         .every(r => (quota?.[r.id] ?? 0) <= (headroom[r.id] ?? 0));
-    return fits ? 'instant' : 'approval';
+    if (fits) return 'instant';
+    return beyondAutoApproveRefused(budget) ? 'blocked' : 'approval';
 }
 
 // changeOutcome is for a proposed change to an active project `node` under
@@ -287,7 +297,10 @@ export function requestOutcome({ budget, manages, quota, resources, myProjects }
 // and extending take effect at once only where the budget's auto-approve covers
 // them — for growth only the DIFFERENCE has to fit, since the project already
 // holds its current size.
-export function changeOutcome({ node, budget, quota, terminationDate, resources, myProjects }) {
+//
+// `manages`: the viewer manages the budget — the hard limit of a budget that
+// takes no requests beyond its auto-approve does not bind them.
+export function changeOutcome({ node, budget, quota, terminationDate, resources, myProjects, manages = false }) {
     const current = node?.limit || {};
     const counted = (resources || []).filter(r => !isAvailability(r));
     const grows = (resources || []).some(r => isAvailability(r)
@@ -299,10 +312,11 @@ export function changeOutcome({ node, budget, quota, terminationDate, resources,
     const extendsEnd = nextEnd !== null && currentEnd !== null && nextEnd > currentEnd;
 
     if (!grows && !extendsEnd) return 'instant';
+    const beyond = beyondAutoApproveRefused(budget) && !manages ? 'blocked' : 'approval';
     if (!hasAutoApprove(budget) || budget.status !== 'approved') return 'approval';
     if (extendsEnd) {
         const budgetEnd = endOf(budget.termination_date);
-        if (budgetEnd !== null && nextEnd > budgetEnd) return 'approval';
+        if (budgetEnd !== null && nextEnd > budgetEnd) return beyond;
     }
     if (grows) {
         // An availability newly switched on is no quantity: the policy grants
@@ -311,7 +325,7 @@ export function changeOutcome({ node, budget, quota, terminationDate, resources,
         const headroom = autoApproveHeadroom(budget, resources, myProjects);
         const fits = counted.every(r =>
             (quota?.[r.id] ?? 0) - (current[r.id] ?? 0) <= (headroom[r.id] ?? 0));
-        if (!fits) return 'approval';
+        if (!fits) return beyond;
     }
     return 'instant';
 }

@@ -102,3 +102,29 @@ describe('changeOutcome', () => {
         expect(change(pool(), { cpu: 2, ram: 8, ipv4: 1 })).toBe('instant');
     });
 });
+
+describe('a budget that takes no requests beyond auto-approve', () => {
+    const hard = (b) => ({ ...b, allow_requests_beyond_auto_approve: false });
+    const project = { id: 'p1', parent_id: 'b1', status: 'approved', limit: { cpu: 2, ram: 8 }, termination_date: '2027-03-31T00:00:00Z' };
+
+    it('blocks a new project beyond the share instead of queueing it', () => {
+        const ask = (quota) => requestOutcome({ budget: hard(individual()), quota, resources: RESOURCES, myProjects: [] });
+        expect(ask({ cpu: 4, ram: 16 })).toBe('instant');
+        expect(ask({ cpu: 5 })).toBe('blocked');
+    });
+
+    it('does not bind the budget\'s managers', () => {
+        expect(requestOutcome({ budget: hard(individual()), manages: true, quota: { cpu: 5 }, resources: RESOURCES, myProjects: [] })).toBe('direct');
+        expect(changeOutcome({ node: project, budget: hard(pool()), quota: { cpu: 9, ram: 8 }, resources: RESOURCES, myProjects: [project], manages: true })).toBe('approval');
+    });
+
+    it('blocks growth past the pool but still lets resources go back', () => {
+        const change = (quota) => changeOutcome({ node: project, budget: hard(pool()), quota, terminationDate: project.termination_date, resources: RESOURCES, myProjects: [project] });
+        expect(change({ cpu: 9, ram: 8 })).toBe('blocked');
+        expect(change({ cpu: 1, ram: 8 })).toBe('instant');
+    });
+
+    it('means nothing without auto-approve', () => {
+        expect(requestOutcome({ budget: hard(budget()), quota: { cpu: 1 }, resources: RESOURCES, myProjects: [] })).toBe('approval');
+    });
+});

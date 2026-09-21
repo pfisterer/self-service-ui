@@ -2,7 +2,7 @@ import { Clock, Inbox, Plus, Zap } from 'lucide-react';
 import { Badge, Button, Card, Group, SimpleGrid, Stack, Text } from '@mantine/core';
 import { FactRow, TokenBadgeList } from './component-common.jsx';
 import {
-    autoApproveHeadroom, COLOR, expiryTone, expiryValue, freeAmount, hasAutoApprove, isAvailability,
+    autoApproveHeadroom, beyondAutoApproveRefused, COLOR, expiryTone, expiryValue, freeAmount, hasAutoApprove, isAvailability,
     isPoolAutoApprove, resourceSummaryText, UNLIMITED_QUOTA, visibleResources,
 } from './util-project.jsx';
 
@@ -27,6 +27,7 @@ function BudgetOfferCard({ budget, resources, myProjects, onNewProject, onReques
         : Object.fromEntries(scope.map(r => [r.id, freeAmount(budget, r.id)]));
     const summary = resourceSummaryText(scope, printable(available));
     const usedUp = instant && !isPoolAutoApprove(budget) && !summary;
+    const hardLimit = beyondAutoApproveRefused(budget);
     const takesBudgetRequests = budget.allow_sub_budget_requests !== false;
 
     return (
@@ -43,9 +44,11 @@ function BudgetOfferCard({ budget, resources, myProjects, onNewProject, onReques
             <Stack gap={6} style={{ flex: 1 }} mb="sm">
                 <Text size="xs">
                     {usedUp
-                        ? 'Your automatic share is used up — further projects go to a manager.'
+                        ? (hardLimit
+                            ? 'Your share is used up — give resources back or ask a manager to raise it.'
+                            : 'Your automatic share is used up — further projects go to a manager.')
                         : instant
-                            ? <>Yours right away: {summary || 'nothing left'}</>
+                            ? <>Yours right away: {summary || 'nothing left'}{hardLimit ? ' — nothing beyond that.' : ''}</>
                             : <>Still free here: {summary || 'nothing'} — a manager approves each project.</>}
                 </Text>
                 <FactRow label="Managed by">
