@@ -261,6 +261,61 @@ export function autoApproveText(resources, budget) {
     return `Up to ${amount || 'the configured amount'} per person approved automatically`;
 }
 
+// What happens when a request is sent — the same decision the API makes, made
+// early so the form can say it before the button is pressed:
+//   'direct'    the viewer manages the budget; created active on the spot
+//   'refused'   the viewer manages the budget, but it has no room: a manager's
+//               own creation is checked on the spot and turned down
+//   'instant'   the budget's auto-approve grants it (or it needs no approval)
+//   'approval'  a manager of the budget decides
+//
+// requestOutcome is for a NEW project under `budget`.
+export function requestOutcome({ budget, manages, quota, resources, myProjects }) {
+    if (!budget) return null;
+    if (manages) return quotaFits(budget, quota, resources) ? 'direct' : 'refused';
+    const headroom = autoApproveHeadroom(budget, resources, myProjects);
+    if (!headroom) return 'approval';
+    const fits = (resources || [])
+        .filter(r => !isAvailability(r))
+        .every(r => (quota?.[r.id] ?? 0) <= (headroom[r.id] ?? 0));
+    return fits ? 'instant' : 'approval';
+}
+
+// changeOutcome is for a proposed change to an active project `node` under
+// `budget` (null when the viewer cannot see it). It mirrors leafChangeDecision
+// in the API: giving back, ending sooner and member changes never wait; growing
+// and extending take effect at once only where the budget's auto-approve covers
+// them — for growth only the DIFFERENCE has to fit, since the project already
+// holds its current size.
+export function changeOutcome({ node, budget, quota, terminationDate, resources, myProjects }) {
+    const current = node?.limit || {};
+    const counted = (resources || []).filter(r => !isAvailability(r));
+    const grows = (resources || []).some(r => isAvailability(r)
+        ? (quota?.[r.id] ?? 0) > 0 && (current[r.id] ?? 0) <= 0
+        : (quota?.[r.id] ?? 0) > (current[r.id] ?? 0));
+    const endOf = (d) => (d ? new Date(d).getTime() : null);
+    const currentEnd = endOf(node?.termination_date);
+    const nextEnd = endOf(terminationDate);
+    const extendsEnd = nextEnd !== null && currentEnd !== null && nextEnd > currentEnd;
+
+    if (!grows && !extendsEnd) return 'instant';
+    if (!hasAutoApprove(budget) || budget.status !== 'approved') return 'approval';
+    if (extendsEnd) {
+        const budgetEnd = endOf(budget.termination_date);
+        if (budgetEnd !== null && nextEnd > budgetEnd) return 'approval';
+    }
+    if (grows) {
+        // An availability newly switched on is no quantity: the policy grants
+        // it like a new request would (it is in the budget's scope, or the
+        // form would not have offered it).
+        const headroom = autoApproveHeadroom(budget, resources, myProjects);
+        const fits = counted.every(r =>
+            (quota?.[r.id] ?? 0) - (current[r.id] ?? 0) <= (headroom[r.id] ?? 0));
+        if (!fits) return 'approval';
+    }
+    return 'instant';
+}
+
 // resourceBarSegments turns absolute amounts into the widths of the three
 // stacked segments of a usage bar. Split out of ResourceBar so the arithmetic
 // can be checked without rendering anything: the clamping is the whole point.

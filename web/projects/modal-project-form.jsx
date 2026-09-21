@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react';
-import { Alert, Select, Stack, Text, Textarea, TextInput } from '@mantine/core';
+import { Alert, Group, Select, Stack, Text, Textarea, TextInput } from '@mantine/core';
+import { Clock, Zap } from 'lucide-react';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { formatError } from '/helper/api-error.js';
 import { useForm } from '@mantine/form';
-import { NodeChangesDiff, TerminationDatePicker } from './component-common.jsx';
+import { NodeChangesDiff, TerminationDatePicker, TokenBadgeList } from './component-common.jsx';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
-import { autoApproveHeadroom, COLOR, freeAmount, isAvailability, isPoolAutoApprove, quotaFits, resourceSummaryText, visibleResources } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, freeAmount, isAvailability, isPoolAutoApprove, requestOutcome, resourceSummaryText, visibleResources } from './util-project.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
 
@@ -21,7 +22,7 @@ const TAB_MEMBERS = 'members';
 //   - budgets they manage → the project is created active immediately
 //   - budgets they may request under → the project awaits approval
 //     (or is approved instantly when the budget's auto-approve covers it)
-function BudgetSelect({ myBudgets, eligibleBudgets, resources, requestedQuota, value, onChange, error }) {
+function BudgetSelect({ myBudgets, eligibleBudgets, resources, value, onChange, error }) {
     const data = useMemo(() => {
         const managedIds = new Set((myBudgets || []).map(b => b.id));
         const remainingText = (b) => resources
@@ -46,16 +47,11 @@ function BudgetSelect({ myBudgets, eligibleBudgets, resources, requestedQuota, v
 
         const groups = [];
         if (managed.length) groups.push({ group: 'Budgets you manage (created immediately)', items: managed });
-        if (eligible.length) groups.push({ group: 'Budgets you can request under (needs approval)', items: eligible });
+        // Not "needs approval": with auto-approve many of these grant on the
+        // spot, and the note under the form says which way it goes.
+        if (eligible.length) groups.push({ group: 'Budgets you can request from', items: eligible });
         return groups;
     }, [myBudgets, eligibleBudgets, resources]);
-
-    const selected = [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === value);
-    const overCap = selected && requestedQuota && !quotaFits(selected, requestedQuota, resources);
-    // Over capacity means two different things: a request queues up for a
-    // manager, but a manager's own creation is approved on the spot and the
-    // capacity check therefore rejects it outright.
-    const managesSelected = (myBudgets || []).some(b => b.id === value);
 
     if (!data.length) {
         return (
@@ -64,25 +60,65 @@ function BudgetSelect({ myBudgets, eligibleBudgets, resources, requestedQuota, v
         );
     }
 
+    // What choosing a budget means for this request — instant, waiting, or
+    // refused for lack of room — is said under the form (see OutcomeNote).
     return (
-        <Stack gap="4">
-            <Select
-                label="Budget"
-                description="Every project lives under a budget that provides its resources."
-                required
-                searchable
-                data={data}
-                value={value}
-                onChange={onChange}
-                error={error}
-                placeholder="Choose where to request this project"
-            />
-            {overCap && (
-                <Text size="xs" c="orange">
-                    {managesSelected
-                        ? 'The requested amount exceeds this budget\'s free capacity — creating the project will be refused. Lower the amount, or raise this budget first.'
-                        : 'The requested amount exceeds this budget\'s free capacity — the request will wait until a manager decides (they may grant an adjusted amount).'}
+        <Select
+            label="Budget"
+            description="Every project lives under a budget that provides its resources."
+            required
+            searchable
+            data={data}
+            value={value}
+            onChange={onChange}
+            error={error}
+            placeholder="Choose where to request this project"
+        />
+    );
+}
+
+// OutcomeNote says, while the form is being filled in, what pressing the button
+// will do — the one thing a requester cannot otherwise tell before it happened.
+function OutcomeNote({ outcome, isChange, budget, hasPolicy }) {
+    if (!outcome) return null;
+    if (outcome === 'refused') {
+        return (
+            <Text size="sm" c={COLOR.negative} mt="sm">
+                More than this budget has free — creating the project will be refused. Lower the
+                amount, or raise the budget first.
+            </Text>
+        );
+    }
+    const name = budget ? `“${budget.name || budget.id}”` : 'its budget';
+    if (outcome === 'direct' || outcome === 'instant') {
+        const text = outcome === 'direct'
+            ? 'You manage this budget — the project is created right away.'
+            : isChange
+                ? 'Takes effect right away — no approval needed.'
+                : 'Created right away — this budget approves it automatically.';
+        return (
+            <Group gap={6} wrap="nowrap" mt="sm">
+                <Zap size="14" color="var(--mantine-color-green-7)" style={{ flexShrink: 0 }} />
+                <Text size="sm" c="green.8">{text}</Text>
+            </Group>
+        );
+    }
+    return (
+        <Stack gap={4} mt="sm">
+            <Group gap={6} wrap="nowrap">
+                <Clock size="14" color="var(--mantine-color-orange-7)" style={{ flexShrink: 0 }} />
+                <Text size="sm" c="orange.8">
+                    {hasPolicy ? 'More than this budget approves automatically — ' : ''}
+                    {isChange
+                        ? `a manager of ${name} decides; until then the project keeps its current resources.`
+                        : `a manager of ${name} decides on this request.`}
                 </Text>
+            </Group>
+            {budget?.admin_scope?.length > 0 && (
+                <Group gap={6} pl={20}>
+                    <Text size="xs" c="dimmed">Managed by</Text>
+                    <TokenBadgeList size="xs" tokens={budget.admin_scope} />
+                </Group>
             )}
         </Stack>
     );
@@ -197,6 +233,17 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // The per-person notes below are about individual limits; a pool's
     // "headroom" is just the budget's free capacity, which the picker shows.
     const selectedIsPool = isPoolAutoApprove(budgetById(parentId));
+
+    // What the button will do. An amended pending request stays a request, so
+    // it has no outcome worth announcing.
+    const outcomeBudget = budgetById(isChange ? node.parent_id : parentId) || null;
+    const outcome = isChange
+        ? (node.status === 'pending' ? null : changeOutcome({
+            node, budget: outcomeBudget, quota, terminationDate, resources, myProjects,
+        }))
+        : requestOutcome({
+            budget: outcomeBudget, manages: managedIds.has(parentId), quota, resources, myProjects,
+        });
 
     const offered = offeredFor(parentId);
 
@@ -317,7 +364,6 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     myBudgets={myBudgets}
                     eligibleBudgets={eligibleBudgets}
                     resources={resources}
-                    requestedQuota={quota}
                     value={parentId}
                     onChange={selectBudget}
                     error={form.errors.parentId}
@@ -429,14 +475,15 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             opened={opened}
             onClose={onClose}
             title={isChange
-                ? (node?.status === 'pending' ? 'Edit request' : 'Request a change')
-                : 'Request a project'}
+                ? (node?.status === 'pending' ? 'Edit request' : 'Change project')
+                : 'New project'}
             onSubmit={form.onSubmit(values => save.mutate(values), handleInvalid)}
             submitting={save.isPending}
             submitError={save.error && formatError(save.error)}
             submitLabel={isChange
-                ? (node?.status === 'pending' ? 'Update request' : 'Submit change request')
-                : 'Submit request'}
+                ? (node?.status === 'pending' ? 'Update request'
+                    : outcome === 'instant' ? 'Save changes' : 'Submit change request')
+                : (outcome === 'approval' ? 'Submit request' : 'Create project')}
         >
             <FormTabs
                 value={activeTab}
@@ -461,6 +508,13 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     label="Your proposed changes"
                 />
             )}
+
+            <OutcomeNote
+                outcome={outcome}
+                isChange={isChange}
+                budget={outcomeBudget}
+                hasPolicy={!!outcomeBudget?.auto_approve && !managedIds.has(outcomeBudget?.id)}
+            />
         </FormModal>
     );
 }

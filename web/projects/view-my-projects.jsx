@@ -125,6 +125,9 @@ export function MyProjectsView() {
                 resources={resources}
                 openstackRoles={config.openstackRoles}
                 node={dlg.node}
+                myBudgets={myBudgets}
+                eligibleBudgets={eligibleBudgets}
+                myProjects={projects.items}
             />
             {/* History is a tab in here, not a button of its own outside. */}
             <NodeInspectModal key={`inspect:${dlg.key}`} opened={dlg.is('details')}
