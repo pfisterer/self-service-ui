@@ -373,23 +373,16 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 />
             )}
 
-            {/* Say why the numbers on the next tab just changed by themselves —
-                or, when the requester's instant allowance is used up, say THAT
-                clearly instead of a green success note about nothing. */}
-            {!isChange && selectedHeadroom && !selectedIsPool && (usableHeadroomFor(parentId) ? (
+            {/* Say why the numbers on the next tab just changed by themselves.
+                What happens beyond them — a manager, or a refusal — and a share
+                that is used up are the note under the form's business. */}
+            {!isChange && !selectedIsPool && usableHeadroomFor(parentId) && (
                 <Text size="xs" c={COLOR.positive}>
                     Resources pre-filled with the most this budget approves instantly for
                     you: {resourceSummaryText(resources, selectedHeadroom)}. Ask for less and it is still
-                    instant; ask for more and a manager decides.
+                    instant.
                 </Text>
-            ) : (
-                <Text size="xs" c={COLOR.attention}>
-                    You have used up what this budget approves instantly
-                    {resourceSummaryText(resources, selectedHeadroom)
-                        ? ` (left: ${resourceSummaryText(resources, selectedHeadroom)})`
-                        : ''} — this request will go to a manager for approval.
-                </Text>
-            ))}
+            )}
 
             <TextInput
                 label="Name"
