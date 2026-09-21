@@ -70,16 +70,17 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 </Group>
 
                 {/* ── Purpose ────────────────────────────────────────────── */}
-                <Text fw={700} size="sm" mb={openstackUrl ? 2 : 'xs'}>
-                    {imported ? (node.os_project_name || node.os_project_id || node.id) : (node.name || node.reason)}
+                {/* The name opens the project in OpenStack wherever there is
+                    one to open (see openstackProjectUrl); otherwise it is text. */}
+                <Text fw={700} size="sm" mb="xs">
+                    {openstackUrl ? (
+                        <Anchor href={openstackUrl} target="_blank" rel="noopener noreferrer" inherit
+                            title="Open in OpenStack"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            {node.name || node.reason} <ExternalLink size="12" />
+                        </Anchor>
+                    ) : (imported ? (node.os_project_name || node.os_project_id || node.id) : (node.name || node.reason))}
                 </Text>
-                {/* Only where there is something to open: see openstackProjectUrl. */}
-                {openstackUrl && (
-                    <Anchor href={openstackUrl} target="_blank" rel="noopener noreferrer" size="xs" mb="xs"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        Open in OpenStack <ExternalLink size="11" />
-                    </Anchor>
-                )}
 
                 {imported && (
                     <Alert color={COLOR.outside} variant="light" mb="xs" p="xs">
