@@ -91,6 +91,14 @@ describe('validateQuota', () => {
         expect(validateQuota([ipv4], { 'dhbw-ipv4': 0 })).toEqual({});
     });
 
+    // A stored limit only carries the availabilities that were set; one missing
+    // is not granted, not invalid. Flagging it blocked saving a budget whose
+    // tab showed nothing wrong.
+    it('treats a missing availability as not granted', () => {
+        expect(validateQuota([ipv4], {})).toEqual({});
+        expect(validateQuota([ipv4], { 'dhbw-ipv4': null })).toEqual({});
+    });
+
     it('rejects anything else on an availability', () => {
         expect(validateQuota([ipv4], { 'dhbw-ipv4': 2 })['dhbw-ipv4']).toBeTruthy();
         expect(validateQuota([ipv4], { 'dhbw-ipv4': -1 })['dhbw-ipv4']).toBeTruthy();

@@ -67,7 +67,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                         {groupResourcesList.map(r => (
                             <Grid.Col key={r.id} span={{ base: 12, sm: isAvailability(r) ? 6 : 4 }}>
                                 {isAvailability(r)
-                                    ? <AvailabilityField resource={r} value={value?.[r.id]} onChange={onChange} disabled={disabled} />
+                                    ? <AvailabilityField resource={r} value={value?.[r.id]} onChange={onChange} disabled={disabled} error={errors[r.id]} />
                                     : <QuantityField
                                         resource={r}
                                         value={value?.[r.id]}
@@ -89,7 +89,10 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
 // An availability is granted or it is not. A NumberInput would invite a 2, which
 // the API rejects — the control has to make the invalid value unreachable rather
 // than report it afterwards.
-function AvailabilityField({ resource, value, onChange, disabled }) {
+//
+// It shows its error like every other field: a tab marked as faulty with no
+// field saying why leaves nothing to fix.
+function AvailabilityField({ resource, value, onChange, disabled, error }) {
     return (
         <Group gap="xs" align="flex-start" wrap="nowrap">
             <Switch
@@ -98,6 +101,7 @@ function AvailabilityField({ resource, value, onChange, disabled }) {
                 onChange={e => onChange(resource.id, e.currentTarget.checked ? 1 : 0)}
                 label={resource.name}
                 description={resource.message}
+                error={error}
             />
         </Group>
     );
@@ -168,7 +172,11 @@ export function validateQuota(resources, quota, { allowUnlimited = false } = {})
     (resources || []).forEach(r => {
         const v = quota?.[r.id];
         if (isAvailability(r)) {
-            if (v !== 0 && v !== 1) {
+            // Absent is "not granted": a stored limit only carries the
+            // availabilities that were set, and one added to the catalogue
+            // later is missing from every older budget. Treating that as
+            // invalid blocked saving an untouched field.
+            if (v !== undefined && v !== null && v !== 0 && v !== 1) {
                 errors[r.id] = 'Must be granted or not granted';
             }
             return;
