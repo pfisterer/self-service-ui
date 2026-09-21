@@ -55,7 +55,7 @@ Both areas also include the interactive API documentation of the service behind 
 
 ![My Budgets](docs/img/03-budget-tree.webp)
 
-**Delegating** — passing capacity on means creating a sub-budget with someone else under *Managed by*; *Who can request here* decides who may ask it for projects. The access tab names the typical setups: a budget someone runs themselves, a pool, a course.
+**Delegating** — passing capacity on means creating a sub-budget with someone else under *Managed by*; *Who can request here* decides who may ask it for projects.
 
 ![Delegating by creating a sub-budget](docs/img/04-delegate.webp)
 

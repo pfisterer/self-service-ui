@@ -308,26 +308,6 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const fadedWithoutRequesters = { opacity: hasRequesters ? 1 : 0.45, transition: 'opacity 150ms ease' };
     const accessTab = (
         <Stack>
-            {/* The two lists below and the auto-approve tab combine into a
-                handful of setups that people actually want. Naming those is
-                quicker than making everybody derive them from the switches. */}
-            <Alert color={COLOR.info} variant="light" icon={<Info size="18" />} p="xs">
-                <Text size="xs" fw={600} mb={4}>Typical setups</Text>
-                <Text size="xs">
-                    <b>Hand over a budget</b> someone runs themselves (a lecturer, a department): put
-                    them under <i>Managed by</i>.
-                </Text>
-                <Text size="xs">
-                    <b>A pool</b> for one person or a team: put them under <i>Who can request here</i> and
-                    switch on <i>Auto-approve</i> without individual limits — they create projects on
-                    their own until the budget is used up.
-                </Text>
-                <Text size="xs">
-                    <b>A course</b>: put the course group under <i>Who can request here</i> and switch on
-                    {' '}<i>Auto-approve</i> with individual limits — every student gets the same share.
-                </Text>
-            </Alert>
-
             {/* The group legend IS the field label — printing "Managed by" again
                 inside a box called "Management" says the same thing twice. */}
             <Fieldset legend="Managed by">
