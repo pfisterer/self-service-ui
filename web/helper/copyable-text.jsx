@@ -1,6 +1,7 @@
 import { Tooltip } from '@mantine/core';
 import { useClipboard } from '@mantine/hooks';
 import { Check, Copy } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // ----------------------------------------
 // CopyableText
@@ -9,11 +10,13 @@ import { Check, Copy } from 'lucide-react';
 // switches to "Copied!" after a successful copy.
 // ----------------------------------------
 export function CopyableText({ value, children, style, ...rest }) {
+    const { t } = useTranslation();
     const clipboard = useClipboard({ timeout: 1500 });
     const text = value ?? (typeof children === 'string' ? children : '');
 
     return (
-        <Tooltip label={clipboard.copied ? 'Copied!' : 'Click to copy'} withArrow>
+        <Tooltip label={clipboard.copied ? t('helper.copyableText.copied') : t('helper.copyableText.clickToCopy')}
+            withArrow>
             <span
                 role="button"
                 tabIndex={0}

@@ -1,5 +1,6 @@
 import { Alert, Button, Group, Loader } from '@mantine/core';
 import { AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Delayed } from '/helper/delayed.jsx';
 import { CONFLICT, formatError } from '/helper/api-error.js';
@@ -17,15 +18,17 @@ export function Loading({ size = 'lg' }) {
 
 /**
  * LoadError shows why a query failed and offers to run it again.
- * `query` is the object returned by useQuery.
+ * `query` is the object returned by useQuery. `title` is what could not be
+ * loaded; left out, it stays at the general wording.
  */
-export function LoadError({ query, title = 'Could not load' }) {
+export function LoadError({ query, title }) {
+    const { t } = useTranslation();
     return (
-        <Alert icon={<AlertCircle size="16" />} title={title} color="red">
+        <Alert icon={<AlertCircle size="16" />} title={title ?? t('helper.queryState.loadErrorTitle')} color="red">
             <Group justify="space-between" wrap="nowrap" align="center">
                 <span>{formatError(query.error)}</span>
                 <Button size="xs" variant="light" onClick={() => query.refetch()} loading={query.isFetching}>
-                    Try again
+                    {t('helper.queryState.tryAgain')}
                 </Button>
             </Group>
         </Alert>
@@ -56,6 +59,7 @@ export function LoadError({ query, title = 'Could not load' }) {
  * dismiss whatever form they were looking at.
  */
 export function useApiMutation({ mutationFn, invalidates = [], onSuccess, onError, onConflict, reportErrors = 'modal' }) {
+    const { t } = useTranslation();
     const queryClient = useQueryClient();
     const { showError } = useErrorModal();
 
@@ -72,7 +76,7 @@ export function useApiMutation({ mutationFn, invalidates = [], onSuccess, onErro
             if (error?.status === CONFLICT) {
                 await invalidateAll();
                 onConflict?.(error, variables, context);
-                showError(`${formatError(error)} — the view has been refreshed.`);
+                showError(t('helper.queryState.conflict', { error: formatError(error) }));
                 return;
             }
             if (onError) onError(error, variables, context);

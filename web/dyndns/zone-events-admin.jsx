@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Alert, ActionIcon, Badge, Group, Paper, Table, Text, TextInput, Tooltip } from '@mantine/core';
 import { AlertTriangle, Mail, Search, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useZoneEventsQuery } from '/dyndns/zones/zone-events-banner.jsx';
 import { zoneEventColor, zoneEventMailto, zoneEventTimeline } from '/dyndns/zone-events.js';
 
@@ -13,6 +14,7 @@ import { zoneEventColor, zoneEventMailto, zoneEventTimeline } from '/dyndns/zone
 // policy-rules list does. If this table ever feels slow, the fix is upstream
 // (why are there hundreds of DISTINCT problems?), not paging through them.
 export function ZoneEventsAdminPanel() {
+    const { t, i18n } = useTranslation();
     const eventsQuery = useZoneEventsQuery();
     const [filter, setFilter] = useState('');
 
@@ -29,7 +31,7 @@ export function ZoneEventsAdminPanel() {
 
     if (eventsQuery.isError) {
         return (
-            <Alert icon={<AlertTriangle size="16" />} color="red" title="Could not load zone events">
+            <Alert icon={<AlertTriangle size="16" />} color="red" title={t('dyndns.eventsAdmin.loadError')}>
                 {String(eventsQuery.error?.message ?? eventsQuery.error)}
             </Alert>
         );
@@ -38,12 +40,12 @@ export function ZoneEventsAdminPanel() {
     return (
         <Paper p="md" withBorder>
             <Group justify="space-between" mb="md" wrap="wrap">
-                <Text fw={600}>Active zone events ({events.length})</Text>
+                <Text fw={600}>{t('dyndns.eventsAdmin.title', { events: events.length })}</Text>
                 <TextInput
-                    placeholder="Filter by zone, class, message, owner…"
+                    placeholder={t('dyndns.eventsAdmin.filterPlaceholder')}
                     leftSection={<Search size={14} />}
                     rightSection={filter ? (
-                        <ActionIcon variant="subtle" color="gray" onClick={() => setFilter('')} aria-label="clear filter">
+                        <ActionIcon variant="subtle" color="gray" onClick={() => setFilter('')} aria-label={t('dyndns.eventsAdmin.clearFilter')}>
                             <X size={14} />
                         </ActionIcon>
                     ) : null}
@@ -56,24 +58,24 @@ export function ZoneEventsAdminPanel() {
             {filtered.length === 0 ? (
                 <Text c="dimmed" size="sm">
                     {events.length === 0
-                        ? 'No active zone events — no client is currently failing against any zone.'
-                        : 'No events match the filter.'}
+                        ? t('dyndns.eventsAdmin.none')
+                        : t('dyndns.eventsAdmin.noMatch')}
                 </Text>
             ) : (
                 <Table.ScrollContainer minWidth={760}>
                     <Table striped highlightOnHover>
                         <Table.Thead>
                             <Table.Tr>
-                                <Table.Th>Zone</Table.Th>
-                                <Table.Th>Problem</Table.Th>
-                                <Table.Th>Seen</Table.Th>
-                                <Table.Th>Owners</Table.Th>
+                                <Table.Th>{t('dyndns.eventsAdmin.colZone')}</Table.Th>
+                                <Table.Th>{t('dyndns.eventsAdmin.colProblem')}</Table.Th>
+                                <Table.Th>{t('dyndns.eventsAdmin.colSeen')}</Table.Th>
+                                <Table.Th>{t('dyndns.eventsAdmin.colOwners')}</Table.Th>
                                 <Table.Th></Table.Th>
                             </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
                             {filtered.map(ev => {
-                                const mailto = zoneEventMailto(ev);
+                                const mailto = zoneEventMailto(ev, t, i18n.language);
                                 return (
                                     <Table.Tr key={`${ev.source}/${ev.class}/${ev.zone}`}>
                                         <Table.Td style={{ wordBreak: 'break-word', maxWidth: 280 }}>
@@ -90,16 +92,16 @@ export function ZoneEventsAdminPanel() {
                                             </Tooltip>
                                         </Table.Td>
                                         <Table.Td>
-                                            <Text size="xs" c="dimmed">{zoneEventTimeline(ev)}</Text>
-                                            <Text size="xs" c="dimmed">via {ev.source}</Text>
+                                            <Text size="xs" c="dimmed">{zoneEventTimeline(ev, t, i18n.language)}</Text>
+                                            <Text size="xs" c="dimmed">{t('dyndns.eventsAdmin.viaSource', { source: ev.source })}</Text>
                                         </Table.Td>
                                         <Table.Td style={{ wordBreak: 'break-word', maxWidth: 220 }}>
                                             <Text size="sm">{(ev.owners ?? []).join(', ') || '—'}</Text>
                                         </Table.Td>
                                         <Table.Td>
                                             {mailto && (
-                                                <Tooltip label="Mail the owners, error message pre-filled">
-                                                    <ActionIcon component="a" href={mailto} variant="light" aria-label="mail the owners">
+                                                <Tooltip label={t('dyndns.eventsAdmin.mailTooltip')}>
+                                                    <ActionIcon component="a" href={mailto} variant="light" aria-label={t('dyndns.eventsAdmin.mailAria')}>
                                                         <Mail size={16} />
                                                     </ActionIcon>
                                                 </Tooltip>

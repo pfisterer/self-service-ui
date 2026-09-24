@@ -4,6 +4,7 @@ import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { CodeBlock } from '/helper/codeblock.jsx';
 import { Accordion, Alert, Anchor, Stack, Text } from '@mantine/core';
 import { AlertCircle } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { TabIntro } from './tab-intro.jsx';
 import { deriveZoneConfig, PrefilledValues } from './dynamic-dns.jsx';
 
@@ -24,35 +25,35 @@ import { deriveZoneConfig, PrefilledValues } from './dynamic-dns.jsx';
 // in — tokens are stored hashed now, so nothing can fill one in, and a snippet
 // that only works after pasting a credential is worse than showing the values.
 function ExternalDnsPanel({ externalDnsValuesYaml }) {
+    const { t } = useTranslation();
     const helmAddRepoCommand = `helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/; helm repo update`;
     const helmInstallCommand = `helm upgrade --install external-dns external-dns/external-dns -n external-dns --create-namespace -f external-dns-values.yaml`;
 
     return (
         <Stack gap="lg">
             <Text size="sm" c="dimmed">
-                Install <ExternalLink href="https://github.com/kubernetes-sigs/external-dns">external-dns</ExternalLink>{' '}
-                into a cluster you already run, so this zone's records follow your Kubernetes resources
-                (Services / Ingresses). It signs its updates with this zone's TSIG key.
+                <Trans i18nKey="dyndns.kubernetes.externalDnsIntro" components={{
+                    1: <ExternalLink href="https://github.com/kubernetes-sigs/external-dns" />,
+                }} />
             </Text>
 
             <div>
                 <Text component="p" mb="md" size="sm" c="dimmed">
-                    1. Add the external-dns Helm repository (only once):
+                    {t('dyndns.kubernetes.step1')}
                 </Text>
                 <CodeBlock code={helmAddRepoCommand} />
             </div>
 
             <div>
                 <Text component="p" mb="md" size="sm" c="dimmed">
-                    2. Save these values as <code>external-dns-values.yaml</code> — they carry this zone's TSIG
-                    key, so keep the file private:
+                    <Trans i18nKey="dyndns.kubernetes.step2" components={{ 1: <code /> }} />
                 </Text>
                 <CodeBlock code={externalDnsValuesYaml} />
             </div>
 
             <div>
                 <Text component="p" mb="md" size="sm" c="dimmed">
-                    3. Install:
+                    {t('dyndns.kubernetes.step3')}
                 </Text>
                 <CodeBlock code={helmInstallCommand} />
             </div>
@@ -98,13 +99,10 @@ function AnsibleRolePanel({ cfg }) {
     return (
         <Stack gap="lg">
             <Text size="sm" c="dimmed">
-                Turn one or more fresh Linux hosts into a{' '}
-                <ExternalLink href="https://k3s.io">k3s</ExternalLink> cluster with the{' '}
-                <ExternalLink href={ROLE_URL}>k3s-dhbw-cloud-role</ExternalLink> Ansible role. It installs
-                external-dns and cert-manager for you, so every Ingress under this zone automatically gets a DNS
-                record and a wildcard HTTPS certificate. Add the block below to your inventory — it is everything
-                the role needs to know about this zone. Keep that file private: the TSIG key grants write access
-                to the zone.
+                <Trans i18nKey="dyndns.kubernetes.ansibleIntro" components={{
+                    1: <ExternalLink href="https://k3s.io" />,
+                    2: <ExternalLink href={ROLE_URL} />,
+                }} />
             </Text>
 
             <div>
@@ -119,39 +117,36 @@ function AnsibleRolePanel({ cfg }) {
 // Tab shell: derives the shared config once and lays out the accordions.
 // ----------------------------------------
 export function DynamicDnsKubernetes({ externalDnsValuesYaml, zone }) {
+    const { t } = useTranslation();
     const { config: dynDnsConfig } = useDynDnsConfig();
     const cfg = deriveZoneConfig(zone, dynDnsConfig);
 
     return (
         <Stack gap="lg">
-            <TabIntro title={`Dynamic DNS (Kubernetes) for ${cfg.zoneNoDot}`}>
-                Manage this zone's records from Kubernetes — either with{' '}
-                <ExternalLink href="https://github.com/kubernetes-sigs/external-dns">external-dns</ExternalLink>{' '}
-                in a cluster you already have, or by setting up a whole k3s cluster (DNS + HTTPS included) with the{' '}
-                <ExternalLink href={ROLE_URL}>k3s-dhbw-cloud-role</ExternalLink> Ansible role.
-                Both use this zone's TSIG key.
+            <TabIntro title={t('dyndns.kubernetes.title', { zone: cfg.zoneNoDot })}>
+                <Trans i18nKey="dyndns.kubernetes.intro" components={{
+                    1: <ExternalLink href="https://github.com/kubernetes-sigs/external-dns" />,
+                    2: <ExternalLink href={ROLE_URL} />,
+                }} />
             </TabIntro>
 
             <PrefilledValues cfg={cfg} />
 
             {!cfg.hasKey && (
-                <Alert icon={<AlertCircle size="16" />} color="red">
-                    This zone has no TSIG key yet — create one under the "Keys" tab first, then the snippets below
-                    will be filled in automatically.
-                </Alert>
+                <Alert icon={<AlertCircle size="16" />} color="red">{t('dyndns.noKey.snippets')}</Alert>
             )}
 
             {/* Both accordions start collapsed — the user opens whichever they need. */}
             <Accordion variant="separated">
                 <Accordion.Item value="external-dns">
-                    <Accordion.Control>external-dns (existing cluster)</Accordion.Control>
+                    <Accordion.Control>{t('dyndns.kubernetes.accordionExternalDns')}</Accordion.Control>
                     <Accordion.Panel>
                         <ExternalDnsPanel externalDnsValuesYaml={externalDnsValuesYaml} />
                     </Accordion.Panel>
                 </Accordion.Item>
 
                 <Accordion.Item value="ansible">
-                    <Accordion.Control>Ansible k3s-dhbw-cloud-role (new k3s cluster)</Accordion.Control>
+                    <Accordion.Control>{t('dyndns.kubernetes.accordionAnsible')}</Accordion.Control>
                     <Accordion.Panel><AnsibleRolePanel cfg={cfg} /></Accordion.Panel>
                 </Accordion.Item>
             </Accordion>

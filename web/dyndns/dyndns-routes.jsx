@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Route, Switch, Redirect } from 'wouter';
+import { useTranslation } from 'react-i18next';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { DynDnsZones } from '/dyndns/zones.jsx';
 import { DnsPolicy } from '/dyndns/policy.jsx';
@@ -10,6 +11,7 @@ const DynamicZonesApiSwagger = lazy(() =>
     import('/swagger/swagger.jsx').then(m => ({ default: m.DynamicZonesApiSwagger })));
 
 export function DynamicDnsManagement() {
+    const { t } = useTranslation();
     const { config: dynDnsConfig, error: configLoadError } = useDynDnsConfig();
     // The client is a module singleton now; only the remote config is awaited.
     const dynamicZonesLoaded = Boolean(dynDnsConfig);
@@ -21,7 +23,7 @@ export function DynamicDnsManagement() {
     }
 
     return (
-        <Suspense fallback={<div style={{ padding: '2rem' }}>Lädt…</div>}>
+        <Suspense fallback={<div style={{ padding: '2rem' }}>{t('dyndns.loading')}</div>}>
             <Switch>
                 <Route path="/zones" component={DynDnsZones} nest/>
                 {/* The token page moved out of this section and up one level,

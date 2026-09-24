@@ -1,5 +1,6 @@
 import { useState, Fragment } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Trans, useTranslation } from 'react-i18next';
 import { Route, Switch, Link, useRoute, useLocation, Redirect } from 'wouter';
 import { useZonesApi } from '/dyndns/api-zones.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
@@ -22,6 +23,7 @@ import { useZoneEvents, ZoneEventIndicator, ZoneEventsBanner } from '/dyndns/zon
 // DynDnsZones
 // ----------------------------------------
 export function DynDnsZones() {
+    const { t } = useTranslation();
     const api = useZonesApi();
     // Parent zone whose "create subzone" modal is currently open (null = closed).
     const [subzoneParent, setSubzoneParent] = useState(null);
@@ -42,7 +44,7 @@ export function DynDnsZones() {
     const eventsByZone = useZoneEvents();
 
     if (!api || zonesQuery.isPending) return <Loading />;
-    if (zonesQuery.isError) return <LoadError query={zonesQuery} title="Could not load zones" />;
+    if (zonesQuery.isError) return <LoadError query={zonesQuery} title={t('dyndns.zoneList.loadError')} />;
 
     const zones = zonesQuery.data ?? [];
 
@@ -58,11 +60,11 @@ export function DynDnsZones() {
     return (
         <Container size="xl" py="md">
             <Stack gap="lg">
-                <Title order={2}>Zone Management</Title>
+                <Title order={2}>{t('dyndns.zoneList.title')}</Title>
 
                 <Paper shadow="sm" radius="md" withBorder>
                     <Paper p="md" withBorder style={{ backgroundColor: '#f8f9fa' }}>
-                        <Text fw={600}>Available Zones ({zones.length})</Text>
+                        <Text fw={600}>{t('dyndns.zoneList.availableZones', { zones: zones.length })}</Text>
                     </Paper>
 
                     <Stack gap={0}>
@@ -72,7 +74,7 @@ export function DynDnsZones() {
                                     component={Link}
                                     to={"/zone/" + base.name}
                                     label={<Group gap={6} wrap="nowrap">{base.name}<ZoneEventIndicator events={eventsByZone[base.name]} /></Group>}
-                                    description={base.owners?.length > 1 ? `Shared with: ${base.owners.join(', ')}` : undefined}
+                                    description={base.owners?.length > 1 ? t('dyndns.zoneList.sharedWith', { owners: base.owners.join(', ') }) : undefined}
                                     leftSection={<Globe size="16" />}
                                     active={activeZoneName === base.name}
                                     rightSection={base.allow_subdomains && base.exists ? (
@@ -82,7 +84,7 @@ export function DynDnsZones() {
                                             leftSection={<Plus size="12" />}
                                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSubzoneParent(base.name); }}
                                         >
-                                            Subzone
+                                            {t('dyndns.zoneList.subzone')}
                                         </Button>
                                     ) : null}
                                 />
@@ -92,7 +94,7 @@ export function DynDnsZones() {
                                         component={Link}
                                         to={"/zone/" + sz.name}
                                         label={<Group gap={6} wrap="nowrap">{sz.name}<ZoneEventIndicator events={eventsByZone[sz.name]} /></Group>}
-                                        description={sz.owners?.length > 1 ? `Shared with: ${sz.owners.join(', ')}` : undefined}
+                                        description={sz.owners?.length > 1 ? t('dyndns.zoneList.sharedWith', { owners: sz.owners.join(', ') }) : undefined}
                                         leftSection={<CornerDownRight size="14" />}
                                         active={activeZoneName === sz.name}
                                         style={{ paddingLeft: `${12 + subzoneDepth(sz.name, base.name) * 22}px` }}
@@ -103,7 +105,7 @@ export function DynDnsZones() {
                                                 leftSection={<Plus size="12" />}
                                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSubzoneParent(sz.name); }}
                                             >
-                                                Subzone
+                                                {t('dyndns.zoneList.subzone')}
                                             </Button>
                                         ) : null}
                                     />
@@ -111,7 +113,7 @@ export function DynDnsZones() {
                             </Fragment>
                         ))}
                         {zones.length === 0 && (
-                            <Text p="md" c="dimmed">No zones available.</Text>
+                            <Text p="md" c="dimmed">{t('dyndns.zoneList.empty')}</Text>
                         )}
                     </Stack>
                 </Paper>
@@ -146,7 +148,7 @@ export function DynDnsZones() {
                             <Redirect to={`/zone/${zones[0].name}`} replace />
                         ) : (
                             <Paper p="xl" withBorder>
-                                <Text ta="center" size="lg">⬆️ Select a zone above to manage its DNS records.</Text>
+                                <Text ta="center" size="lg">{t('dyndns.zoneList.selectPrompt')}</Text>
                             </Paper>
                         )}
                     </Route>
@@ -166,10 +168,11 @@ function subzoneDepth(name, base) {
 // Opened by the "Subzone" button on a zone row; `parent` null = closed.
 // ----------------------------------------
 function SubzoneModal({ parent, onClose, onCreated }) {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const [label, setLabel] = useState('');
 
-    const validationError = subzoneLabelError(label, parent);
+    const validationError = subzoneLabelError(label, parent, t);
     const valid = validationError === null;
 
     const createZone = useApiMutation({
@@ -186,13 +189,13 @@ function SubzoneModal({ parent, onClose, onCreated }) {
 
     const preview = label.trim().replace(/\.+$/, '');
     return (
-        <Modal opened={!!parent} onClose={onClose} title="Create subzone" centered size="lg">
+        <Modal opened={!!parent} onClose={onClose} title={t('dyndns.subzone.title')} centered size="lg">
             <Stack gap="lg" p="xs">
                 <Text size="sm" c="dimmed">
-                    Create a delegated subzone under <code>{parent}</code>.
+                    <Trans i18nKey="dyndns.subzone.intro" values={{ parent }} components={{ 1: <code /> }} />
                 </Text>
                 <TextInput
-                    label="Subzone label"
+                    label={t('dyndns.subzone.labelField')}
                     placeholder="new-subzone"
                     value={label}
                     onChange={e => setLabel(e.currentTarget.value)}
@@ -202,15 +205,15 @@ function SubzoneModal({ parent, onClose, onCreated }) {
                     data-autofocus
                 />
                 <Text size="sm" c="dimmed">
-                    Full name:{' '}
+                    {t('dyndns.subzone.fullNameLabel')}{' '}
                     {valid
                         ? <code>{preview}.{parent}</code>
                         : <Text span c="dimmed">…<code>.{parent}</code></Text>}
                 </Text>
                 <Group justify="flex-end" gap="sm" mt="xs">
-                    <Button variant="default" onClick={onClose}>Cancel</Button>
+                    <Button variant="default" onClick={onClose}>{t('dyndns.actions.cancel')}</Button>
                     <Button onClick={add} loading={createZone.isPending} disabled={!valid} leftSection={<Plus size="16" />}>
-                        Create subzone
+                        {t('dyndns.subzone.submit')}
                     </Button>
                 </Group>
             </Stack>
@@ -222,12 +225,13 @@ function SubzoneModal({ parent, onClose, onCreated }) {
 // Available Domain List
 // ----------------------------------------
 function AvailableDomain({ zone, onDeleted }) {
+    const { t } = useTranslation();
     let response;
 
     // No onChange prop any more: activating, joining and leaving all invalidate
     // the zone list through their mutation, so nothing has to be told to reload.
     if (zone.already_taken_by_someone_else) {
-        response = (<Alert icon={<AlertCircle size="16" />} color="red">This zone is already taken by someone else.</Alert>)
+        response = (<Alert icon={<AlertCircle size="16" />} color="red">{t('dyndns.zoneDetail.takenByOther')}</Alert>)
     } else if (zone.exists) {
         response = (<ActiveDomain zone={zone.name} onDeleted={onDeleted} />)
     } else if (zone.can_join) {
@@ -247,19 +251,21 @@ function AvailableDomain({ zone, onDeleted }) {
 // Activate Zone
 // ----------------------------------------
 function ActivateZone({ zone }) {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const activate = useApiMutation({
         mutationFn: () => api.createZone(zone),
         invalidates: [dyndnsKeys.zones()],
     });
 
-    return (<Button onClick={() => activate.mutate()} loading={activate.isPending}>Activate</Button>);
+    return (<Button onClick={() => activate.mutate()} loading={activate.isPending}>{t('dyndns.zoneDetail.activate')}</Button>);
 }
 
 // ----------------------------------------
 // Join Zone — explicitly become a co-owner of an existing shared zone.
 // ----------------------------------------
 function JoinZone({ zone, owners }) {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const join = useApiMutation({
         mutationFn: () => api.joinZone(zone),
@@ -268,15 +274,12 @@ function JoinZone({ zone, owners }) {
 
     return (
         <Stack gap="sm">
-            <Text>
-                This is a shared zone. Join it to co-manage its DNS records — you'll get your own
-                TSIG key.
-            </Text>
+            <Text>{t('dyndns.joinZone.intro')}</Text>
             {owners?.length > 0 && (
-                <Text size="sm" c="dimmed">{`Currently managed by: ${owners.join(', ')}`}</Text>
+                <Text size="sm" c="dimmed">{t('dyndns.joinZone.managedBy', { owners: owners.join(', ') })}</Text>
             )}
             <Group>
-                <Button leftSection={<Users size={16} />} onClick={() => join.mutate()} loading={join.isPending}>Join zone</Button>
+                <Button leftSection={<Users size={16} />} onClick={() => join.mutate()} loading={join.isPending}>{t('dyndns.joinZone.join')}</Button>
             </Group>
         </Stack>
     );
@@ -287,18 +290,21 @@ function JoinZone({ zone, owners }) {
 // Active Domain Tabs
 // ----------------------------------------
 function ActiveDomain({ zone: zoneName, onDeleted }) {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const [currentLocation, navigate] = useLocation()
     const confirm = useConfirm();
     const { user } = useAuth();
     const [shareOpen, setShareOpen] = useState(false);
 
+    // `id` is what the code compares on and what the URL maps to; `label` is
+    // the only part that changes with the language.
     const tabs = [
-        { name: "Manage", path: "/" },
-        { name: "Keys", path: "/keys" },
-        { name: "Dynamic DNS", path: "/dyndns" },
-        { name: "Dynamic DNS (Kubernetes)", path: "/config" },
-        { name: "TLS Certificates", path: "/tls" }
+        { id: "manage", label: t('dyndns.zoneDetail.tabs.manage'), path: "/" },
+        { id: "keys", label: t('dyndns.zoneDetail.tabs.keys'), path: "/keys" },
+        { id: "dyndns", label: t('dyndns.zoneDetail.tabs.dynamicDns'), path: "/dyndns" },
+        { id: "config", label: t('dyndns.zoneDetail.tabs.kubernetes'), path: "/config" },
+        { id: "tls", label: t('dyndns.zoneDetail.tabs.tls'), path: "/tls" }
     ];
 
     // Keyed by zone name only. Switching TABS does not refetch: the tabs are
@@ -338,32 +344,29 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
 
     async function handleDeleteClick() {
         const ok = await confirm({
-            title: '⚠️ Delete zone?',
-            confirmLabel: 'Delete zone',
+            title: t('dyndns.zoneDetail.deleteTitle'),
+            confirmLabel: t('dyndns.zoneDetail.deleteConfirm'),
             // Two whole messages instead of one sentence with two switches in it.
-            message: zone.owners?.length > 1
-                ? (
-                    <Text size="sm">
-                        This permanently deletes the zone <b>{zone.zoneData.zone}</b>, all of its DNS
-                        records and every owner's access to it. This cannot be undone. To remove only
-                        yourself, use “Leave zone” instead.
-                    </Text>
-                )
-                : (
-                    <Text size="sm">
-                        This permanently deletes the zone <b>{zone.zoneData.zone}</b> and all of its
-                        DNS records. This cannot be undone.
-                    </Text>
-                ),
+            message: (
+                <Text size="sm">
+                    <Trans
+                        i18nKey={zone.owners?.length > 1
+                            ? 'dyndns.zoneDetail.deleteMessageShared'
+                            : 'dyndns.zoneDetail.deleteMessageSole'}
+                        values={{ zone: zone.zoneData.zone }}
+                        components={{ 1: <b /> }}
+                    />
+                </Text>
+            ),
         });
         if (ok) deleteZone.mutate();
     }
 
     async function handleRotateKeys() {
         const ok = await confirm({
-            title: '⚠️ Rotate keys?',
-            confirmLabel: 'Rotate keys',
-            message: 'This regenerates the TSIG key of every owner of this zone. Consider it if a key was used in a shared/untrusted environment or may be compromised. All owners (external-dns secrets, scripts, nsupdate) must re-fetch their key afterwards.',
+            title: t('dyndns.zoneDetail.rotateTitle'),
+            confirmLabel: t('dyndns.zoneDetail.rotateConfirm'),
+            message: t('dyndns.zoneDetail.rotateMessage'),
         });
         if (ok) rotateKeys.mutate();
     }
@@ -372,18 +375,23 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
     // and other owners are unaffected.
     async function handleLeave() {
         const ok = await confirm({
-            title: 'Leave this zone?',
-            confirmLabel: 'Leave zone',
-            message: (<Text size="sm">Remove yourself as an owner of <b>{zone.zoneData.zone}</b>? Your TSIG key is deleted and you lose access immediately. The zone and its other owners are unaffected.</Text>),
+            title: t('dyndns.zoneDetail.leaveTitle'),
+            confirmLabel: t('dyndns.zoneDetail.leaveConfirm'),
+            message: (
+                <Text size="sm">
+                    <Trans i18nKey="dyndns.zoneDetail.leaveMessage"
+                        values={{ zone: zone.zoneData.zone }} components={{ 1: <b /> }} />
+                </Text>
+            ),
         });
         if (ok) leaveZone.mutate();
     }
 
     if (!api || zoneQuery.isPending) return <Loading size="sm" />;
-    if (zoneQuery.isError) return <LoadError query={zoneQuery} title={`Could not load ${zoneName}`} />;
-    if (!zone || !zone.zoneData) return (<Alert icon={<AlertCircle size="16" />} color="red">Zone data corrupted.</Alert>);
+    if (zoneQuery.isError) return <LoadError query={zoneQuery} title={t('dyndns.zoneDetail.loadError', { zone: zoneName })} />;
+    if (!zone || !zone.zoneData) return (<Alert icon={<AlertCircle size="16" />} color="red">{t('dyndns.zoneDetail.corrupted')}</Alert>);
 
-    const activeTab = tabs.find(t => currentLocation === t.path)?.name || "Manage";
+    const activeTab = tabs.find(tab => currentLocation === tab.path)?.id || "manage";
 
     return (
         <Stack gap="md">
@@ -393,33 +401,34 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
                 <Flex direction={{ base: 'column', sm: 'row' }} justify="space-between" align={{ base: 'stretch', sm: 'center' }} gap="sm">
                     <div style={{ minWidth: 0 }}>
                         <Text fw={600} style={{ wordBreak: 'break-word' }}>
-                            Zone: <CopyableText value={zone.zoneData.zone}>{zone.zoneData.zone}</CopyableText>
+                            {t('dyndns.zoneDetail.zoneLabel')}{' '}
+                            <CopyableText value={zone.zoneData.zone}>{zone.zoneData.zone}</CopyableText>
                         </Text>
                         {zone.owners?.length > 0 && (
                             <Text size="sm" c="dimmed" style={{ wordBreak: 'break-word' }}>
-                                Managed by: {zone.owners.join(', ')}
+                                {t('dyndns.zoneDetail.managedBy', { owners: zone.owners.join(', ') })}
                             </Text>
                         )}
                     </div>
                     <Group gap="sm" wrap="wrap">
                         {zone.sharing_allowed && (
                             <Button variant="light" size="sm" leftSection={<Users size={16} />} onClick={() => setShareOpen(true)}>
-                                Share zone
+                                {t('dyndns.zoneDetail.share')}
                             </Button>
                         )}
-                        <Tooltip label="Consider rotating if a key was used in a shared environment or may be compromised — regenerates every owner's key.">
+                        <Tooltip label={t('dyndns.zoneDetail.rotateTooltip')}>
                             <Button variant="light" color="orange" size="sm" leftSection={<RefreshCw size={16} />} onClick={handleRotateKeys}>
-                                Rotate keys
+                                {t('dyndns.zoneDetail.rotate')}
                             </Button>
                         </Tooltip>
                         {zone.owners?.length > 1 && (
-                            <Tooltip label="Remove only yourself as an owner — the zone and the other owners stay.">
+                            <Tooltip label={t('dyndns.zoneDetail.leaveTooltip')}>
                                 <Button variant="light" color="red" size="sm" leftSection={<LogOut size={16} />} onClick={handleLeave}>
-                                    Leave zone
+                                    {t('dyndns.zoneDetail.leave')}
                                 </Button>
                             </Tooltip>
                         )}
-                        <Button color="red" size="sm" onClick={handleDeleteClick}>Delete Zone</Button>
+                        <Button color="red" size="sm" onClick={handleDeleteClick}>{t('dyndns.zoneDetail.delete')}</Button>
                     </Group>
                 </Flex>
             </Paper>
@@ -433,32 +442,32 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
 
             <ZoneEventsBanner events={eventsByZone[zoneName]} />
 
-            <Tabs value={activeTab} onChange={(val) => navigate(tabs.find(t => t.name === val)?.path || '/')}>
+            <Tabs value={activeTab} onChange={(val) => navigate(tabs.find(tab => tab.id === val)?.path || '/')}>
                 <Tabs.List>
-                    {tabs.map(({ name }) => <Tabs.Tab key={name} value={name}>{name}</Tabs.Tab>)}
+                    {tabs.map(({ id, label }) => <Tabs.Tab key={id} value={id}>{label}</Tabs.Tab>)}
                 </Tabs.List>
             </Tabs>
 
             {/* Consistent padding for every tab's content (each tab renders a
                 bare <Stack>, so the horizontal/bottom padding lives here once). */}
             <Box px="md" pb="md">
-                {activeTab === "Manage" && (
+                {activeTab === "manage" && (
                     <DnsRecordsList zone={zone.zoneData.zone} tsigKey={zone.zoneData.zone_keys?.[0]} />
                 )}
 
-                {activeTab === "Keys" && (
+                {activeTab === "keys" && (
                     <ShowKeys zone={zone.zoneData} />
                 )}
 
-                {activeTab === "Dynamic DNS" && (
+                {activeTab === "dyndns" && (
                     <DynamicDns zone={zone.zoneData} />
                 )}
 
-                {activeTab === "Dynamic DNS (Kubernetes)" && (
+                {activeTab === "config" && (
                     <DynamicDnsKubernetes externalDnsValuesYaml={zone.externalDnsValuesYaml} zone={zone.zoneData} />
                 )}
 
-                {activeTab === "TLS Certificates" && (
+                {activeTab === "tls" && (
                     <TlsCertificates zone={zone.zoneData} />
                 )}
             </Box>
@@ -471,6 +480,7 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
 // Each owner has their own TSIG key; removing an owner deletes only their key.
 // ----------------------------------------
 function ShareZoneModal({ opened, onClose, zoneName, owners }) {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const confirm = useConfirm();
     const { user } = useAuth();
@@ -502,42 +512,39 @@ function ShareZoneModal({ opened, onClose, zoneName, owners }) {
 
     async function handleRemove(owner) {
         const ok = await confirm({
-            title: 'Remove owner?',
-            confirmLabel: 'Remove owner',
-            message: `Remove ${owner} from this zone? Their TSIG key is deleted and they lose access immediately. Other owners are unaffected.`,
+            title: t('dyndns.share.removeTitle'),
+            confirmLabel: t('dyndns.share.removeConfirm'),
+            message: t('dyndns.share.removeMessage', { owner }),
         });
         if (ok) removeOwner.mutate(owner);
     }
 
     return (
-        <Modal opened={opened} onClose={onClose} title={`Share ${zoneName}`} centered size="lg">
+        <Modal opened={opened} onClose={onClose} title={t('dyndns.share.title', { zone: zoneName })} centered size="lg">
             <Stack gap="lg">
-                <Text size="sm" c="dimmed">
-                    Everyone listed here manages this zone with equal rights. Each owner gets their own TSIG key;
-                    removing an owner deletes only their key, so the others keep working.
-                </Text>
+                <Text size="sm" c="dimmed">{t('dyndns.share.intro')}</Text>
 
                 <Stack gap="xs">
                     {owners.map(o => (
                         <Group key={o} justify="space-between" wrap="nowrap">
-                            <Text size="sm">{o}{o === me && <Text span c="dimmed"> (you)</Text>}</Text>
+                            <Text size="sm">{o}{o === me && <Text span c="dimmed"> {t('dyndns.share.you')}</Text>}</Text>
                             <Button size="compact-xs" color="red" variant="light" disabled={busy || owners.length <= 1}
-                                onClick={() => handleRemove(o)} title={owners.length <= 1 ? 'The last owner cannot be removed — delete the zone instead.' : undefined}>
-                                Remove
+                                onClick={() => handleRemove(o)} title={owners.length <= 1 ? t('dyndns.share.lastOwner') : undefined}>
+                                {t('dyndns.actions.remove')}
                             </Button>
                         </Group>
                     ))}
-                    {owners.length === 0 && <Text size="sm" c="dimmed">No owners.</Text>}
+                    {owners.length === 0 && <Text size="sm" c="dimmed">{t('dyndns.share.noOwners')}</Text>}
                 </Stack>
 
                 <Group gap="xs" align="flex-end">
-                    <TextInput style={{ flex: 1 }} label="Add owner (email)" placeholder="user@dhbw.de" value={email}
+                    <TextInput style={{ flex: 1 }} label={t('dyndns.share.addLabel')} placeholder="user@dhbw.de" value={email}
                         onChange={e => setEmail(e.currentTarget.value)} onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }} />
-                    <Button onClick={handleAdd} loading={busy} disabled={!email.trim()} leftSection={<Plus size={16} />}>Add</Button>
+                    <Button onClick={handleAdd} loading={busy} disabled={!email.trim()} leftSection={<Plus size={16} />}>{t('dyndns.actions.add')}</Button>
                 </Group>
 
                 <Group justify="flex-end" mt="xs">
-                    <Button variant="default" onClick={onClose}>Close</Button>
+                    <Button variant="default" onClick={onClose}>{t('dyndns.actions.close')}</Button>
                 </Group>
             </Stack>
         </Modal>

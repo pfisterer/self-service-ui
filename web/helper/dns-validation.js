@@ -60,15 +60,17 @@ export function zoneWithinAnySuffix(zone, suffixes) {
 
 // Validate a subzone label (one or more lowercase labels) to be created under
 // `parent`. Returns a specific, user-facing error message, or null when valid.
-export function subzoneLabelError(label, parent) {
+// Takes `t` because the message is shown to a person: this module has no React
+// around it, so the caller hands its own translator in.
+export function subzoneLabelError(label, parent, t) {
     const s = (label || '').trim().replace(/\.+$/, '');
-    if (!s) return 'Enter a subzone name.';
+    if (!s) return t('helper.dnsValidation.subzoneRequired');
     for (const l of s.split('.')) {
-        if (l.length > 63) return 'Each label may be at most 63 characters.';
-        if (!LABEL_RE_LOWER.test(l)) return 'Only lowercase letters, digits and hyphens are allowed.';
-        if (l.startsWith('-') || l.endsWith('-')) return 'A label must not start or end with a hyphen.';
+        if (l.length > 63) return t('helper.dnsValidation.labelTooLong');
+        if (!LABEL_RE_LOWER.test(l)) return t('helper.dnsValidation.lowercaseOnly');
+        if (l.startsWith('-') || l.endsWith('-')) return t('helper.dnsValidation.hyphenEdge');
     }
-    if (`${s}.${parent}`.replace(/\.$/, '').length > 253) return 'The full name is too long (max 253 characters).';
+    if (`${s}.${parent}`.replace(/\.$/, '').length > 253) return t('helper.dnsValidation.nameTooLong');
     return null;
 }
 
@@ -78,28 +80,28 @@ export function subzoneLabelError(label, parent) {
 // must be a DNS label: letters/digits/hyphen/underscore, 1–63 chars, not starting
 // or ending with a hyphen; a single leftmost '*' (wildcard) label is allowed.
 // Returns a user-facing error message, or null when valid.
-export function recordNameError(name) {
+export function recordNameError(name, t) {
     const s = (name || '').trim().replace(/\.+$/, '');
     if (s === '' || s === '@' || s === '\\@') return null; // zone apex
     const labels = s.split('.');
     for (let i = 0; i < labels.length; i++) {
         const l = labels[i];
         if (l === '*' && i === 0) continue; // wildcard, leftmost label only
-        if (l.length < 1 || l.length > 63) return 'Each label must be 1–63 characters.';
-        if (!/^[A-Za-z0-9_-]+$/.test(l)) return 'Only letters, digits, hyphen and underscore are allowed.';
-        if (l.startsWith('-') || l.endsWith('-')) return 'A label must not start or end with a hyphen.';
+        if (l.length < 1 || l.length > 63) return t('helper.dnsValidation.labelLength');
+        if (!/^[A-Za-z0-9_-]+$/.test(l)) return t('helper.dnsValidation.nameCharacters');
+        if (l.startsWith('-') || l.endsWith('-')) return t('helper.dnsValidation.hyphenEdge');
     }
     return null;
 }
 
 // Client-side validation of a record's value for its type (A -> IPv4, AAAA -> IPv6).
 // Returns a user-facing error message, or null when valid / unchecked.
-export function recordValueError(type, value) {
+export function recordValueError(type, value, t) {
     const v = (value || '').trim();
-    if (!v) return 'Value is required.';
+    if (!v) return t('helper.dnsValidation.valueRequired');
     switch ((type || '').toUpperCase()) {
-        case 'A': return isIP(v, 4) ? null : 'Enter a valid IPv4 address (e.g. 192.0.2.1).';
-        case 'AAAA': return isIP(v, 6) ? null : 'Enter a valid IPv6 address (e.g. 2001:db8::1).';
+        case 'A': return isIP(v, 4) ? null : t('helper.dnsValidation.ipv4');
+        case 'AAAA': return isIP(v, 6) ? null : t('helper.dnsValidation.ipv6');
         default: return null;
     }
 }

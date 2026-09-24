@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import i18n from '/i18n/index.js';
 import {
     groupZoneEventsByZone, worstZoneEventColor, zoneEventColor, zoneEventMailto, zoneEventTimeline,
 } from '/dyndns/zone-events.js';
+
+// The helpers take `t` rather than reaching for the i18n instance themselves,
+// so the test pins the language instead of depending on the detected one. The
+// expectations below are the English resource values.
+const t = i18n.getFixedT('en');
 
 describe('groupZoneEventsByZone', () => {
     it('groups by zone and keeps order within a zone', () => {
@@ -45,13 +51,13 @@ describe('zoneEventTimeline', () => {
     };
 
     it('mentions the repeat count only when there is one', () => {
-        expect(zoneEventTimeline(ev, 'en-GB')).toMatch(/^Seen 3× between .+ and .+$/);
-        expect(zoneEventTimeline({ ...ev, count: 1 }, 'en-GB')).toMatch(/^Seen on .+$/);
+        expect(zoneEventTimeline(ev, t, 'en-GB')).toMatch(/^Seen 3× between .+ and .+$/);
+        expect(zoneEventTimeline({ ...ev, count: 1 }, t, 'en-GB')).toMatch(/^Seen on .+$/);
     });
 
     it('renders nothing rather than "Invalid Date" for missing timestamps', () => {
-        expect(zoneEventTimeline({})).toBe('');
-        expect(zoneEventTimeline(undefined)).toBe('');
+        expect(zoneEventTimeline({}, t)).toBe('');
+        expect(zoneEventTimeline(undefined, t)).toBe('');
     });
 });
 
@@ -68,7 +74,7 @@ describe('zoneEventMailto', () => {
     };
 
     it('addresses every owner and carries subject and message', () => {
-        const link = zoneEventMailto(ev, 'en-GB');
+        const link = zoneEventMailto(ev, t, 'en-GB');
         expect(link).toMatch(/^mailto:alice@example\.edu,bob@example\.edu\?/);
         expect(link).toContain(encodeURIComponent('Problem with DNS zone a.example.org'));
         expect(link).toContain(encodeURIComponent('A client keeps failing TSIG'));
@@ -76,7 +82,7 @@ describe('zoneEventMailto', () => {
     });
 
     it('returns null without owners rather than an empty compose window', () => {
-        expect(zoneEventMailto({ ...ev, owners: [] })).toBeNull();
-        expect(zoneEventMailto(undefined)).toBeNull();
+        expect(zoneEventMailto({ ...ev, owners: [] }, t)).toBeNull();
+        expect(zoneEventMailto(undefined, t)).toBeNull();
     });
 });

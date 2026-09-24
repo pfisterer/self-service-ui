@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Stack, Text, Tooltip } from '@mantine/core';
 import { AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useZonesApi } from '/dyndns/api-zones.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
 import { groupZoneEventsByZone, worstZoneEventColor, zoneEventColor, zoneEventTimeline } from '/dyndns/zone-events.js';
@@ -36,17 +37,20 @@ export function useZoneEvents() {
 // ZoneEventIndicator is the small warning triangle next to a zone's name in
 // the list. Icon only — the full story is on the zone's page.
 export function ZoneEventIndicator({ events }) {
+    const { t } = useTranslation();
     if (!events?.length) return null;
+    // A single event shows the platform's own message (server data); only the
+    // fallback and the "several of them" case are ours to phrase.
     const label = events.length === 1
-        ? events[0].message || 'There is a problem with this zone.'
-        : `Problems with this zone: ${events.length}`;
+        ? events[0].message || t('dyndns.events.indicatorFallback')
+        : t('dyndns.events.indicatorCount', { problems: events.length });
     return (
         <Tooltip label={label}>
             <AlertTriangle
                 size="15"
                 color={`var(--mantine-color-${worstZoneEventColor(events)}-7)`}
                 style={{ flexShrink: 0 }}
-                aria-label="zone problem"
+                aria-label={t('dyndns.events.indicatorAria')}
             />
         </Tooltip>
     );
@@ -54,6 +58,7 @@ export function ZoneEventIndicator({ events }) {
 
 // ZoneEventsBanner renders one alert per event on the zone detail page.
 export function ZoneEventsBanner({ events }) {
+    const { t, i18n } = useTranslation();
     if (!events?.length) return null;
     return (
         <Stack gap="xs">
@@ -62,14 +67,14 @@ export function ZoneEventsBanner({ events }) {
                     key={`${ev.source}/${ev.class}`}
                     icon={<AlertTriangle size="16" />}
                     color={zoneEventColor(ev.severity)}
-                    title={ev.message || `Problem detected (${ev.class})`}
+                    title={ev.message || t('dyndns.events.problemDetected', { class: ev.class })}
                 >
                     <Stack gap={4}>
                         {ev.detail && ev.detail !== ev.message && (
                             <Text size="sm">{ev.detail}</Text>
                         )}
-                        <Text size="xs" c="dimmed">{zoneEventTimeline(ev)}</Text>
-                        <Text size="xs" c="dimmed">{`Reported by ${ev.source}`}</Text>
+                        <Text size="xs" c="dimmed">{zoneEventTimeline(ev, t, i18n.language)}</Text>
+                        <Text size="xs" c="dimmed">{t('dyndns.events.reportedBy', { source: ev.source })}</Text>
                     </Stack>
                 </Alert>
             ))}

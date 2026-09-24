@@ -10,11 +10,13 @@ import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { isValidDnsName, isValidZonePattern, isValidUserFilter, zoneWithinAnySuffix } from '/helper/dns-validation.js';
 import { Trash2, Edit, Plus, Search, X, AlertCircle } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, SimpleGrid, Card, Modal, Alert, ActionIcon, Paper, Tabs, Badge, Table } from '@mantine/core';
 
 
 // --- Main Component: DnsPolicy ---
 export function DnsPolicy() {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const [editingRule, setEditingRule] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -64,19 +66,19 @@ export function DnsPolicy() {
     }, [rules, searchFilter]);
 
     if (!api || policyQuery.isPending) return <Loading />;
-    if (policyQuery.isError) return <LoadError query={policyQuery} title="Could not load policy rules" />;
+    if (policyQuery.isError) return <LoadError query={policyQuery} title={t('dyndns.policy.loadError')} />;
 
     return (
         <Container fluid py="md" px="xl">
             <Stack gap="lg">
-                <Title order={2}>DNS Administration</Title>
+                <Title order={2}>{t('dyndns.policy.title')}</Title>
 
                 <Tabs value={activeTab} onChange={selectTab}>
                     <Tabs.List>
-                        <Tabs.Tab value="rules">Policy Rules</Tabs.Tab>
-                        {isSuperAdmin && <Tabs.Tab value="delegations">Delegations</Tabs.Tab>}
-                        {isSuperAdmin && <Tabs.Tab value="orphaned">Orphaned Zones</Tabs.Tab>}
-                        {isSuperAdmin && <Tabs.Tab value="zone-events">Zone Events</Tabs.Tab>}
+                        <Tabs.Tab value="rules">{t('dyndns.policy.tabRules')}</Tabs.Tab>
+                        {isSuperAdmin && <Tabs.Tab value="delegations">{t('dyndns.policy.tabDelegations')}</Tabs.Tab>}
+                        {isSuperAdmin && <Tabs.Tab value="orphaned">{t('dyndns.policy.tabOrphaned')}</Tabs.Tab>}
+                        {isSuperAdmin && <Tabs.Tab value="zone-events">{t('dyndns.policy.tabEvents')}</Tabs.Tab>}
                     </Tabs.List>
 
                     <Tabs.Panel value="rules" pt="md">
@@ -85,12 +87,12 @@ export function DnsPolicy() {
                             <Group justify="space-between" align="flex-start">
                                 <Text size="sm" c="dimmed">
                                     {isEditAllowed
-                                        ? 'Manage who may create which zones. Policy changes apply to new zones. Existing zones stay as they are, so plan any follow-up updates.'
-                                        : 'Read-only view of the DNS access rules that are currently active.'}
+                                        ? t('dyndns.policy.introEditable')
+                                        : t('dyndns.policy.introReadOnly')}
                                 </Text>
                                 {isEditAllowed && (
                                     <Button leftSection={<Plus size="16" />} onClick={() => { setEditingRule(null); setIsModalOpen(true); }}>
-                                        New Rule
+                                        {t('dyndns.policy.newRule')}
                                     </Button>
                                 )}
                             </Group>
@@ -145,9 +147,10 @@ export function DnsPolicy() {
 
 // --- Rule Filter Component ---
 function RuleFilter({ searchFilter, onSearchChange, filteredCount, totalCount }) {
+    const { t } = useTranslation();
     return (
         <TextInput
-            placeholder="Search by zone pattern, user filter, or description..."
+            placeholder={t('dyndns.policy.searchPlaceholder')}
             value={searchFilter}
             onChange={(e) => onSearchChange(e.target.value)}
             leftSection={<Search size="16" />}
@@ -156,13 +159,14 @@ function RuleFilter({ searchFilter, onSearchChange, filteredCount, totalCount })
                     <X size="16" />
                 </ActionIcon>
             )}
-            description={`Rules shown: ${filteredCount}/${totalCount}`}
+            description={t('dyndns.policy.rulesShown', { shown: filteredCount, total: totalCount })}
         />
     );
 }
 
 // --- Rule List Component ---
 function RuleList({ rules, isSuperAdmin, onEdit }) {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const confirm = useConfirm();
 
@@ -175,22 +179,18 @@ function RuleList({ rules, isSuperAdmin, onEdit }) {
         // Deleting a rule orphans every zone only it covered (zone<->rule links
         // are recomputed, not stored), so confirm with an explicit impact warning.
         const ok = await confirm({
-            title: '⚠️ Delete policy rule?',
-            confirmLabel: 'Delete rule',
+            title: t('dyndns.policy.deleteRuleTitle'),
+            confirmLabel: t('dyndns.policy.deleteRuleConfirm'),
             message: (
                 <Stack gap="md">
-                    <Alert color="red" icon={<AlertCircle size="16" />} title="This can orphan zones">
-                        Every zone that is covered <b>only</b> by this rule will become
-                        orphaned. Owners keep their DNS records, but can no longer manage
-                        those zones until a rule reproducing the same names and owners exists
-                        again — recreating it must match <b>exactly</b> (a single typo in the
-                        user filter is enough to leave the zones orphaned).
+                    <Alert color="red" icon={<AlertCircle size="16" />} title={t('dyndns.policy.orphanWarningTitle')}>
+                        <Trans i18nKey="dyndns.policy.orphanWarning" components={{ 1: <b />, 2: <b /> }} />
                     </Alert>
                     <Stack gap={6}>
-                        <Text size="sm" c="dimmed">You are about to delete:</Text>
-                        <Text fw={600}>{rule.description || '(no description)'}</Text>
-                        <Group gap="xs" wrap="nowrap"><Text size="sm" c="dimmed" w={110}>Zone pattern</Text><Text component="code" style={{ fontSize: '0.85em' }}>{rule.zone_pattern}</Text></Group>
-                        <Group gap="xs" wrap="nowrap"><Text size="sm" c="dimmed" w={110}>Applies to</Text><Text component="code" style={{ fontSize: '0.85em' }}>{rule.target_user_filter}</Text></Group>
+                        <Text size="sm" c="dimmed">{t('dyndns.policy.aboutToDelete')}</Text>
+                        <Text fw={600}>{rule.description || t('dyndns.policy.noDescription')}</Text>
+                        <Group gap="xs" wrap="nowrap"><Text size="sm" c="dimmed" w={110}>{t('dyndns.policy.fieldZonePattern')}</Text><Text component="code" style={{ fontSize: '0.85em' }}>{rule.zone_pattern}</Text></Group>
+                        <Group gap="xs" wrap="nowrap"><Text size="sm" c="dimmed" w={110}>{t('dyndns.policy.fieldAppliesTo')}</Text><Text component="code" style={{ fontSize: '0.85em' }}>{rule.target_user_filter}</Text></Group>
                     </Stack>
                 </Stack>
             ),
@@ -202,8 +202,8 @@ function RuleList({ rules, isSuperAdmin, onEdit }) {
         return (
             <Paper p="xl" withBorder>
                 <Stack align="center" gap="sm">
-                    <Text size="lg" c="dimmed">📭 No rules found.</Text>
-                    {isSuperAdmin && (<Text size="sm" c="dimmed">Create the first rule to grant users access to DNS zones.</Text>)}
+                    <Text size="lg" c="dimmed">{t('dyndns.policy.noRules')}</Text>
+                    {isSuperAdmin && (<Text size="sm" c="dimmed">{t('dyndns.policy.noRulesHint')}</Text>)}
                 </Stack>
             </Paper>
         );
@@ -215,13 +215,13 @@ function RuleList({ rules, isSuperAdmin, onEdit }) {
             <Table striped highlightOnHover withTableBorder stickyHeader verticalSpacing="sm" horizontalSpacing="md">
                 <Table.Thead>
                     <Table.Tr>
-                        <Table.Th>Zone Pattern</Table.Th>
-                        <Table.Th>Zone SOA</Table.Th>
-                        <Table.Th>Applies To</Table.Th>
-                        <Table.Th>Subdomains</Table.Th>
-                        <Table.Th>Sharing</Table.Th>
-                        <Table.Th>Description</Table.Th>
-                        {isSuperAdmin && <Table.Th w={90} style={{ textAlign: 'right' }}>Actions</Table.Th>}
+                        <Table.Th>{t('dyndns.policy.colZonePattern')}</Table.Th>
+                        <Table.Th>{t('dyndns.policy.colZoneSoa')}</Table.Th>
+                        <Table.Th>{t('dyndns.policy.colAppliesTo')}</Table.Th>
+                        <Table.Th>{t('dyndns.policy.colSubdomains')}</Table.Th>
+                        <Table.Th>{t('dyndns.policy.colSharing')}</Table.Th>
+                        <Table.Th>{t('dyndns.policy.colDescription')}</Table.Th>
+                        {isSuperAdmin && <Table.Th w={90} style={{ textAlign: 'right' }}>{t('dyndns.policy.colActions')}</Table.Th>}
                     </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
@@ -232,26 +232,26 @@ function RuleList({ rules, isSuperAdmin, onEdit }) {
                             <Table.Td><code style={codeStyle}>{rule.target_user_filter}</code></Table.Td>
                             <Table.Td>
                                 <Badge size="sm" variant="light" color={rule.allow_subdomains ? 'green' : 'gray'}
-                                    title="Whether users may create subdomains (delegated subzones) under a matched zone">
-                                    {rule.allow_subdomains ? 'Yes' : 'No'}
+                                    title={t('dyndns.policy.subdomainsTooltip')}>
+                                    {rule.allow_subdomains ? t('dyndns.policy.yes') : t('dyndns.policy.no')}
                                 </Badge>
                             </Table.Td>
                             <Table.Td>
                                 <Badge size="sm" variant="light" color={rule.sharing_allowed ? 'green' : 'gray'}
-                                    title="Whether a matched zone may be shared with additional owners">
-                                    {rule.sharing_allowed ? 'Yes' : 'No'}
+                                    title={t('dyndns.policy.sharingTooltip')}>
+                                    {rule.sharing_allowed ? t('dyndns.policy.yes') : t('dyndns.policy.no')}
                                 </Badge>
                             </Table.Td>
                             <Table.Td><Text size="sm" c="dimmed">{rule.description}</Text></Table.Td>
                             {isSuperAdmin && (
                                 <Table.Td>
                                     <Group gap="4" justify="flex-end" wrap="nowrap">
-                                        <ActionIcon size="sm" variant="light" color="blue" onClick={() => onEdit(rule)} title="Edit">
+                                        <ActionIcon size="sm" variant="light" color="blue" onClick={() => onEdit(rule)} title={t('dyndns.actions.edit')}>
                                             <Edit size="16" />
                                         </ActionIcon>
                                         <ActionIcon size="sm" variant="light" color="red" onClick={() => handleDelete(rule)}
                                             loading={deleteRule.isPending && deleteRule.variables === rule.id}
-                                            disabled={deleteRule.isPending} title="Delete">
+                                            disabled={deleteRule.isPending} title={t('dyndns.actions.delete')}>
                                             <Trash2 size="16" />
                                         </ActionIcon>
                                     </Group>
@@ -267,6 +267,7 @@ function RuleList({ rules, isSuperAdmin, onEdit }) {
 
 // --- Rule Form Modal ---
 function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const isEditMode = ruleToEdit !== null;
 
@@ -315,11 +316,12 @@ function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
         // A rule decides which zones exist for whom, so the zone list changes too.
         invalidates: [dyndnsKeys.policyRules(), dyndnsKeys.zones()],
         onSuccess: () => {
-            setMessage(<Alert title="Success" color="green">{isEditMode ? '✅ Rule updated!' : '✅ Rule created!'}</Alert>);
+            setMessage(<Alert title={t('dyndns.messages.success')} color="green">{isEditMode ? t('dyndns.ruleForm.updated') : t('dyndns.ruleForm.created')}</Alert>);
             setTimeout(() => onFormSuccess(), 700);
         },
+        // The server's message is data, not UI text — it is shown as it arrives.
         onError: (error) => setMessage(
-            <Alert icon={<AlertCircle size="16" />} title="Error" color="red">{formatError(error)}</Alert>
+            <Alert icon={<AlertCircle size="16" />} title={t('dyndns.messages.error')} color="red">{formatError(error)}</Alert>
         ),
     });
 
@@ -333,7 +335,7 @@ function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
         setMessage(null);
 
         if (!zoneValid || !zoneSoaValid || !userFilterValid || !soaInScope) {
-            setMessage(<Alert icon={<AlertCircle size="16" />} title="Validation Error" color="red">Please ensure Zone Pattern, Zone SOA, and User Filter are all valid.</Alert>);
+            setMessage(<Alert icon={<AlertCircle size="16" />} title={t('dyndns.messages.validationError')} color="red">{t('dyndns.ruleForm.invalidFields')}</Alert>);
             return;
         }
 
@@ -348,75 +350,75 @@ function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
     };
 
     return (
-        <Modal opened={true} onClose={onClose} title={isEditMode ? '✏️ Edit Rule' : '➕ Create New Rule'} size="lg">
+        <Modal opened={true} onClose={onClose} title={isEditMode ? t('dyndns.ruleForm.editTitle') : t('dyndns.ruleForm.createTitle')} size="lg">
             <Stack gap="md">
                 {message}
 
                 <form onSubmit={handleSubmit}>
                     <Stack gap="md">
                         <TextInput
-                            label="Zone (Name or Pattern)"
+                            label={t('dyndns.ruleForm.zoneLabel')}
                             name="zone_pattern"
                             value={rule.zone_pattern}
                             onChange={handleChange}
                             required
-                            placeholder="e.g. projekt1.example.com or %u.users.example.com"
-                            description="%u.users.example.com = %u will be replaced with username"
-                            error={!zoneValid && "Enter a valid domain. Allowed: '%u' as a full label (not the TLD). Wildcards are not permitted."}
+                            placeholder={t('dyndns.ruleForm.zonePlaceholder')}
+                            description={t('dyndns.ruleForm.zoneDescription')}
+                            error={!zoneValid && t('dyndns.ruleForm.zoneError')}
                         />
 
                         <TextInput
-                            label="Zone SOA"
+                            label={t('dyndns.ruleForm.soaLabel')}
                             name="zone_soa"
                             value={rule.zone_soa}
                             onChange={handleChange}
                             required
-                            placeholder="e.g. users.example.com"
-                            description="The authoritative zone for this nameserver (e.g., users.example.com)"
-                            error={(!zoneSoaValid && 'Enter a valid DNS domain name.')
-                                || (!soaInScope && `Your delegations cover ${delegationSuffixes.join(', ')} — the Zone SOA must be at or below one of these zones.`)}
+                            placeholder={t('dyndns.ruleForm.soaPlaceholder')}
+                            description={t('dyndns.ruleForm.soaDescription')}
+                            error={(!zoneSoaValid && t('dyndns.validation.dnsName'))
+                                || (!soaInScope && t('dyndns.ruleForm.soaOutOfScope', { zones: delegationSuffixes.join(', ') }))}
                         />
 
                         <TextInput
-                            label="User Filter"
+                            label={t('dyndns.ruleForm.userFilterLabel')}
                             name="target_user_filter"
                             value={rule.target_user_filter}
                             onChange={handleChange}
                             required
-                            placeholder="e.g. *@example.com  or  alice@example.com, bob@example.com"
-                            description="Comma-separated list. *@example.com = all users at that domain; alice@example.com = one specific user. Access is granted if any entry matches."
-                            error={!userFilterValid && "Enter valid emails and/or *@domain patterns, comma-separated."}
+                            placeholder={t('dyndns.ruleForm.userFilterPlaceholder')}
+                            description={t('dyndns.ruleForm.userFilterDescription')}
+                            error={!userFilterValid && t('dyndns.validation.userFilter')}
                         />
 
                         <Checkbox
-                            label="Allow subdomains"
-                            description="Owners of a matched zone may also create and manage delegated subzones under it (e.g. sub.example.com under example.com)."
+                            label={t('dyndns.ruleForm.allowSubdomains')}
+                            description={t('dyndns.ruleForm.allowSubdomainsDescription')}
                             checked={!!rule.allow_subdomains}
                             onChange={(e) => { const v = e.currentTarget.checked; setRule(prev => ({ ...prev, allow_subdomains: v })); }}
                         />
 
                         <Checkbox
-                            label="Allow sharing"
-                            description="Owners may share a matched zone with additional users, and policy-entitled users can join it as co-owners (equal rights). Off = single-owner (the old behaviour)."
+                            label={t('dyndns.ruleForm.allowSharing')}
+                            description={t('dyndns.ruleForm.allowSharingDescription')}
                             checked={!!rule.sharing_allowed}
                             onChange={(e) => { const v = e.currentTarget.checked; setRule(prev => ({ ...prev, sharing_allowed: v })); }}
                         />
 
                         <TextInput
-                            label="Description (optional)"
+                            label={t('dyndns.ruleForm.descriptionLabel')}
                             name="description"
                             value={rule.description || ''}
                             onChange={handleChange}
-                            placeholder="e.g. Project zone for student group A"
+                            placeholder={t('dyndns.ruleForm.descriptionPlaceholder')}
                         />
 
                         <Group justify="flex-end" mt="md">
-                            <Button variant="default" onClick={onClose}>Cancel</Button>
+                            <Button variant="default" onClick={onClose}>{t('dyndns.actions.cancel')}</Button>
                             <Button
                                 type="submit"
                                 loading={saveRule.isPending}
                                 disabled={!zoneValid || !zoneSoaValid || !userFilterValid || !soaInScope}>
-                                {isEditMode ? "Save Changes" : "Create Rule"}
+                                {isEditMode ? t('dyndns.ruleForm.save') : t('dyndns.ruleForm.create')}
                             </Button>
                         </Group>
                     </Stack>
@@ -436,6 +438,7 @@ function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
 // error, or with nothing delegated it renders nothing rather than making the
 // rules tab look broken.
 function DelegatedToYou() {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const delegationsQuery = useQuery({
         queryKey: dyndnsKeys.delegations(),
@@ -449,9 +452,9 @@ function DelegatedToYou() {
 
     return (
         <Paper p="md" withBorder>
-            <Text fw={600} mb={4}>Delegated to you</Text>
+            <Text fw={600} mb={4}>{t('dyndns.delegatedToYou.title')}</Text>
             <Text size="sm" c="dimmed" mb="xs">
-                You may create, edit and delete policy rules within these zones (including their subdomains):
+                {t('dyndns.delegatedToYou.intro')}
             </Text>
             <Stack gap={4}>
                 {delegations.map(d => (
@@ -470,6 +473,7 @@ function DelegatedToYou() {
 // manage policy rules for a zone (and its subdomains).
 // ============================================================
 function DelegationManagement() {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const confirm = useConfirm();
     const [editing, setEditing] = useState(null);
@@ -490,39 +494,38 @@ function DelegationManagement() {
 
     async function handleDelete(delegation) {
         const ok = await confirm({
-            title: 'Delete delegation?',
-            confirmLabel: 'Delete delegation',
-            message: `Revoke the delegated rule-management permission for “${delegation.target_user_filter}” on ${delegation.zone_suffix}? Existing zones and rules are not affected.`,
+            title: t('dyndns.delegations.deleteTitle'),
+            confirmLabel: t('dyndns.delegations.deleteConfirm'),
+            message: t('dyndns.delegations.deleteMessage', {
+                user: delegation.target_user_filter, zone: delegation.zone_suffix,
+            }),
         });
         if (ok) deleteDelegation.mutate(delegation.id);
     }
 
     if (!api || delegationsQuery.isPending) return <Loading />;
-    if (delegationsQuery.isError) return <LoadError query={delegationsQuery} title="Could not load delegations" />;
+    if (delegationsQuery.isError) return <LoadError query={delegationsQuery} title={t('dyndns.delegations.loadError')} />;
 
     const delegations = delegationsQuery.data ?? [];
 
     return (
         <Stack gap="md">
             <Group justify="space-between" align="flex-start">
-                <Text size="sm" c="dimmed">
-                    Grant specific users the right to manage policy rules for a zone (and its subdomains).
-                    Delegated users can then create, edit and delete rules whose SOA is within that zone.
-                </Text>
-                <Button leftSection={<Plus size="16" />} onClick={() => { setEditing(null); setModalOpen(true); }}>New Delegation</Button>
+                <Text size="sm" c="dimmed">{t('dyndns.delegations.intro')}</Text>
+                <Button leftSection={<Plus size="16" />} onClick={() => { setEditing(null); setModalOpen(true); }}>{t('dyndns.delegations.new')}</Button>
             </Group>
 
             {delegations.length === 0 ? (
-                <Paper p="xl" withBorder><Text ta="center" c="dimmed">No delegations yet.</Text></Paper>
+                <Paper p="xl" withBorder><Text ta="center" c="dimmed">{t('dyndns.delegations.empty')}</Text></Paper>
             ) : (
                 <Table.ScrollContainer minWidth={600}>
                     <Table striped highlightOnHover withTableBorder stickyHeader verticalSpacing="sm" horizontalSpacing="md">
                         <Table.Thead>
                             <Table.Tr>
-                                <Table.Th>User</Table.Th>
-                                <Table.Th>Zone (+ subdomains)</Table.Th>
-                                <Table.Th>Description</Table.Th>
-                                <Table.Th w={90} style={{ textAlign: 'right' }}>Actions</Table.Th>
+                                <Table.Th>{t('dyndns.delegations.colUser')}</Table.Th>
+                                <Table.Th>{t('dyndns.delegations.colZone')}</Table.Th>
+                                <Table.Th>{t('dyndns.delegations.colDescription')}</Table.Th>
+                                <Table.Th w={90} style={{ textAlign: 'right' }}>{t('dyndns.delegations.colActions')}</Table.Th>
                             </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
@@ -533,10 +536,10 @@ function DelegationManagement() {
                                     <Table.Td><Text size="sm" c="dimmed">{d.description}</Text></Table.Td>
                                     <Table.Td>
                                         <Group gap="4" justify="flex-end" wrap="nowrap">
-                                            <ActionIcon size="sm" variant="light" color="blue" onClick={() => { setEditing(d); setModalOpen(true); }} title="Edit">
+                                            <ActionIcon size="sm" variant="light" color="blue" onClick={() => { setEditing(d); setModalOpen(true); }} title={t('dyndns.actions.edit')}>
                                                 <Edit size="16" />
                                             </ActionIcon>
-                                            <ActionIcon size="sm" variant="light" color="red" onClick={() => handleDelete(d)} title="Delete">
+                                            <ActionIcon size="sm" variant="light" color="red" onClick={() => handleDelete(d)} title={t('dyndns.actions.delete')}>
                                                 <Trash2 size="16" />
                                             </ActionIcon>
                                         </Group>
@@ -556,6 +559,7 @@ function DelegationManagement() {
 }
 
 function DelegationFormModal({ delegationToEdit, onSuccess, onClose }) {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const isEdit = delegationToEdit !== null;
     const [form, setForm] = useState({ target_user_filter: '', zone_suffix: '', description: '', ...(delegationToEdit || {}) });
@@ -565,11 +569,12 @@ function DelegationFormModal({ delegationToEdit, onSuccess, onClose }) {
         mutationFn: (body) => isEdit ? api.updateDelegation(form.id, body) : api.createDelegation(body),
         invalidates: [dyndnsKeys.delegations()],
         onSuccess: () => {
-            setMessage(<Alert title="Success" color="green">{isEdit ? '✅ Delegation updated!' : '✅ Delegation created!'}</Alert>);
+            setMessage(<Alert title={t('dyndns.messages.success')} color="green">{isEdit ? t('dyndns.delegationForm.updated') : t('dyndns.delegationForm.created')}</Alert>);
             setTimeout(onSuccess, 700);
         },
+        // The server's message is data, not UI text — it is shown as it arrives.
         onError: (error) => setMessage(
-            <Alert icon={<AlertCircle size="16" />} title="Error" color="red">{formatError(error)}</Alert>
+            <Alert icon={<AlertCircle size="16" />} title={t('dyndns.messages.error')} color="red">{formatError(error)}</Alert>
         ),
     });
 
@@ -581,7 +586,7 @@ function DelegationFormModal({ delegationToEdit, onSuccess, onClose }) {
     function handleSubmit(e) {
         e.preventDefault();
         if (!userValid || !zoneValid) {
-            setMessage(<Alert icon={<AlertCircle size="16" />} title="Validation Error" color="red">Enter a valid user filter and zone.</Alert>);
+            setMessage(<Alert icon={<AlertCircle size="16" />} title={t('dyndns.messages.validationError')} color="red">{t('dyndns.delegationForm.invalidFields')}</Alert>);
             return;
         }
         setMessage(null);
@@ -593,27 +598,27 @@ function DelegationFormModal({ delegationToEdit, onSuccess, onClose }) {
     }
 
     return (
-        <Modal opened={true} onClose={onClose} title={isEdit ? '✏️ Edit Delegation' : '➕ New Delegation'} size="lg">
+        <Modal opened={true} onClose={onClose} title={isEdit ? t('dyndns.delegationForm.editTitle') : t('dyndns.delegationForm.createTitle')} size="lg">
             <Stack gap="md">
                 {message}
                 <form onSubmit={handleSubmit}>
                     <Stack gap="md">
                         <TextInput
-                            label="User Filter" name="target_user_filter" value={form.target_user_filter} onChange={handleChange} required
-                            placeholder="e.g. max@uni-mannheim.de, petra@uni-mannheim.de  or  *@uni-mannheim.de"
-                            description="Who may manage policy rules for the zone below. Comma-separated list of emails and/or *@domain patterns."
-                            error={!userValid && form.target_user_filter && "Enter valid emails and/or *@domain patterns, comma-separated."}
+                            label={t('dyndns.delegationForm.userFilterLabel')} name="target_user_filter" value={form.target_user_filter} onChange={handleChange} required
+                            placeholder={t('dyndns.delegationForm.userFilterPlaceholder')}
+                            description={t('dyndns.delegationForm.userFilterDescription')}
+                            error={!userValid && form.target_user_filter && t('dyndns.validation.userFilter')}
                         />
                         <TextInput
-                            label="Zone" name="zone_suffix" value={form.zone_suffix} onChange={handleChange} required
-                            placeholder="e.g. uni-mannheim.de"
-                            description="Delegated users may manage rules for this zone and its subdomains"
-                            error={!zoneValid && form.zone_suffix && "Enter a valid DNS domain name."}
+                            label={t('dyndns.delegationForm.zoneLabel')} name="zone_suffix" value={form.zone_suffix} onChange={handleChange} required
+                            placeholder={t('dyndns.delegationForm.zonePlaceholder')}
+                            description={t('dyndns.delegationForm.zoneDescription')}
+                            error={!zoneValid && form.zone_suffix && t('dyndns.validation.dnsName')}
                         />
-                        <TextInput label="Description (optional)" name="description" value={form.description || ''} onChange={handleChange} placeholder="e.g. Uni-Mannheim DNS admins" />
+                        <TextInput label={t('dyndns.delegationForm.descriptionLabel')} name="description" value={form.description || ''} onChange={handleChange} placeholder={t('dyndns.delegationForm.descriptionPlaceholder')} />
                         <Group justify="flex-end" mt="md">
-                            <Button variant="default" onClick={onClose}>Cancel</Button>
-                            <Button type="submit" loading={saveDelegation.isPending} disabled={!userValid || !zoneValid}>{isEdit ? 'Save' : 'Create'}</Button>
+                            <Button variant="default" onClick={onClose}>{t('dyndns.actions.cancel')}</Button>
+                            <Button type="submit" loading={saveDelegation.isPending} disabled={!userValid || !zoneValid}>{isEdit ? t('dyndns.delegationForm.save') : t('dyndns.delegationForm.create')}</Button>
                         </Group>
                     </Stack>
                 </form>
@@ -628,6 +633,7 @@ function DelegationFormModal({ delegationToEdit, onSuccess, onClose }) {
 // client (endpoints not in the generated SDK).
 // ============================================================
 function OrphanedZonesPanel() {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const confirm = useConfirm();
 
@@ -644,26 +650,27 @@ function OrphanedZonesPanel() {
 
     async function handleDelete(zone) {
         const ok = await confirm({
-            title: '⚠️ Delete orphaned zone?',
-            confirmLabel: 'Delete zone',
-            message: (<Text size="sm">This permanently deletes the zone <b>{zone}</b> and all of its DNS records. This cannot be undone.</Text>),
+            title: t('dyndns.orphaned.deleteTitle'),
+            confirmLabel: t('dyndns.orphaned.deleteConfirm'),
+            message: (
+                <Text size="sm">
+                    <Trans i18nKey="dyndns.orphaned.deleteMessage" values={{ zone }} components={{ 1: <b /> }} />
+                </Text>
+            ),
         });
         if (ok) deleteZone.mutate(zone);
     }
 
     if (!api || orphanedQuery.isPending) return <Loading />;
-    if (orphanedQuery.isError) return <LoadError query={orphanedQuery} title="Could not load orphaned zones" />;
+    if (orphanedQuery.isError) return <LoadError query={orphanedQuery} title={t('dyndns.orphaned.loadError')} />;
 
     const zones = orphanedQuery.data ?? [];
 
     return (
         <Stack gap="md">
-            <Text size="sm" c="dimmed">
-                Zones that still exist but are no longer covered by any policy for their owner (e.g. the policy was
-                deleted or changed). Review and delete the ones that are no longer needed.
-            </Text>
+            <Text size="sm" c="dimmed">{t('dyndns.orphaned.intro')}</Text>
             {zones.length === 0 ? (
-                <Paper p="xl" withBorder><Text ta="center" c="dimmed">No orphaned zones. 🎉</Text></Paper>
+                <Paper p="xl" withBorder><Text ta="center" c="dimmed">{t('dyndns.orphaned.empty')}</Text></Paper>
             ) : (
                 <Stack gap="xs">
                     {zones.map(z => (
@@ -671,11 +678,11 @@ function OrphanedZonesPanel() {
                             <Group justify="space-between" wrap="nowrap">
                                 <div>
                                     <Text size="sm"><code style={{ fontSize: '0.85em' }}>{z.zone}</code></Text>
-                                    <Text size="xs" c="dimmed">owner: {z.user}</Text>
+                                    <Text size="xs" c="dimmed">{t('dyndns.orphaned.owner', { user: z.user })}</Text>
                                 </div>
                                 <Button size="xs" color="red" variant="light" leftSection={<Trash2 size="14" />}
                                     loading={deleteZone.isPending && deleteZone.variables === z.zone}
-                                    onClick={() => handleDelete(z.zone)}>Delete</Button>
+                                    onClick={() => handleDelete(z.zone)}>{t('dyndns.actions.delete')}</Button>
                             </Group>
                         </Paper>
                     ))}

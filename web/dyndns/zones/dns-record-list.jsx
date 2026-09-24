@@ -9,6 +9,7 @@ import { useErrorModal } from '/providers/error-modal.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { Table, TextInput, Select, Group, Stack, Text, ActionIcon, Tooltip, Checkbox, Button } from '@mantine/core';
 import { Copy, Check, Search, Edit, Trash2, Terminal, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { TabIntro } from './tab-intro.jsx';
 import { formatError } from '/helper/api-error.js';
 import { recordNameError, recordValueError } from '/helper/dns-validation.js';
@@ -84,6 +85,7 @@ const recordKey = (r) => `${r.name}|${r.type}|${r.value}`;
 
 
 export function DnsRecordRow({ zone, tsigKey, record, selected, onToggleSelect }) {
+    const { t } = useTranslation();
     const { config: dynDnsConfig } = useDynDnsConfig();
     const api = useZonesApi();
     const confirm = useConfirm();
@@ -93,8 +95,8 @@ export function DnsRecordRow({ zone, tsigKey, record, selected, onToggleSelect }
     const [copied, setCopied] = useState(null); // which copy button briefly shows "Copied…"
 
     const isEditable = SUPPORTED_TYPES.includes(record.type.toUpperCase());
-    const valueError = editing ? recordValueError(fields.type, fields.value) : null;
-    const nameError = editing ? recordNameError(fields.name) : null;
+    const valueError = editing ? recordValueError(fields.type, fields.value, t) : null;
+    const nameError = editing ? recordNameError(fields.name, t) : null;
 
     const saveRecord = useApiMutation({
         mutationFn: () => api.saveDnsRecord(zone, tsigKey, { ...fields, name: normalizeRecordName(fields.name, zone) }),
@@ -116,9 +118,11 @@ export function DnsRecordRow({ zone, tsigKey, record, selected, onToggleSelect }
 
     async function handleDelete() {
         const ok = await confirm({
-            title: 'Delete DNS record?',
-            confirmLabel: 'Delete record',
-            message: `Delete the ${fields.type} record “${fields.name}” (${fields.value})? This takes effect immediately.`,
+            title: t('dyndns.records.deleteTitle'),
+            confirmLabel: t('dyndns.records.deleteConfirm'),
+            message: t('dyndns.records.deleteMessage', {
+                type: fields.type, name: fields.name, value: fields.value,
+            }),
         });
         if (ok) deleteRecord.mutate();
     }
@@ -141,7 +145,7 @@ export function DnsRecordRow({ zone, tsigKey, record, selected, onToggleSelect }
             <Table.Td>
                 {/* Only editable records (A/AAAA) can be deleted, so only they get a checkbox. */}
                 {isEditable && (
-                    <Checkbox checked={selected} onChange={onToggleSelect} disabled={loading} aria-label={`Select ${fields.name}`} />
+                    <Checkbox checked={selected} onChange={onToggleSelect} disabled={loading} aria-label={t('dyndns.records.selectRecord', { name: fields.name })} />
                 )}
             </Table.Td>
             <Table.Td>
@@ -170,22 +174,22 @@ export function DnsRecordRow({ zone, tsigKey, record, selected, onToggleSelect }
                 {isEditable && (
                     <Group gap={4} wrap="nowrap">
                         {editing ? (
-                            <Tooltip label="Save">
-                                <ActionIcon variant="light" color="green" onClick={handleUpdate} loading={loading} disabled={!!valueError || !!nameError} aria-label="Save"><Check size={16} /></ActionIcon>
+                            <Tooltip label={t('dyndns.actions.save')}>
+                                <ActionIcon variant="light" color="green" onClick={handleUpdate} loading={loading} disabled={!!valueError || !!nameError} aria-label={t('dyndns.actions.save')}><Check size={16} /></ActionIcon>
                             </Tooltip>
                         ) : (
-                            <Tooltip label="Edit">
-                                <ActionIcon variant="light" onClick={() => setEditing(true)} disabled={loading} aria-label="Edit"><Edit size={16} /></ActionIcon>
+                            <Tooltip label={t('dyndns.actions.edit')}>
+                                <ActionIcon variant="light" onClick={() => setEditing(true)} disabled={loading} aria-label={t('dyndns.actions.edit')}><Edit size={16} /></ActionIcon>
                             </Tooltip>
                         )}
-                        <Tooltip label="Delete">
-                            <ActionIcon variant="light" color="red" onClick={handleDelete} disabled={loading} loading={loading && !editing} aria-label="Delete"><Trash2 size={16} /></ActionIcon>
+                        <Tooltip label={t('dyndns.actions.delete')}>
+                            <ActionIcon variant="light" color="red" onClick={handleDelete} disabled={loading} loading={loading && !editing} aria-label={t('dyndns.actions.delete')}><Trash2 size={16} /></ActionIcon>
                         </Tooltip>
-                        <Tooltip label={copied === 'nsupdate' ? 'Copied!' : 'Copy nsupdate command'}>
-                            <ActionIcon variant="light" onClick={handleCopy} aria-label="Copy nsupdate">{copied === 'nsupdate' ? <Check size={16} /> : <Copy size={16} />}</ActionIcon>
+                        <Tooltip label={copied === 'nsupdate' ? t('dyndns.records.copied') : t('dyndns.records.copyNsupdate')}>
+                            <ActionIcon variant="light" onClick={handleCopy} aria-label={t('dyndns.records.copyNsupdateAria')}>{copied === 'nsupdate' ? <Check size={16} /> : <Copy size={16} />}</ActionIcon>
                         </Tooltip>
-                        <Tooltip label={copied === 'dig' ? 'Copied!' : 'Copy dig command'}>
-                            <ActionIcon variant="light" onClick={handleCopyDig} aria-label="Copy dig">{copied === 'dig' ? <Check size={16} /> : <Terminal size={16} />}</ActionIcon>
+                        <Tooltip label={copied === 'dig' ? t('dyndns.records.copied') : t('dyndns.records.copyDig')}>
+                            <ActionIcon variant="light" onClick={handleCopyDig} aria-label={t('dyndns.records.copyDigAria')}>{copied === 'dig' ? <Check size={16} /> : <Terminal size={16} />}</ActionIcon>
                         </Tooltip>
                     </Group>
                 )}
@@ -197,11 +201,12 @@ export function DnsRecordRow({ zone, tsigKey, record, selected, onToggleSelect }
 const EMPTY_RECORD = { name: '', type: 'A', ttl: 300, value: '' };
 
 export function AddDnsRecordRow({ zone, tsigKey }) {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const [fields, setFields] = useState(EMPTY_RECORD);
 
-    const valueError = recordValueError(fields.type, fields.value);
-    const nameError = recordNameError(fields.name);
+    const valueError = recordValueError(fields.type, fields.value, t);
+    const nameError = recordNameError(fields.name, t);
 
     const addRecord = useApiMutation({
         mutationFn: () => api.saveDnsRecord(zone, tsigKey, { ...fields, name: normalizeRecordName(fields.name, zone) }),
@@ -218,7 +223,7 @@ export function AddDnsRecordRow({ zone, tsigKey }) {
         <Table.Tr>
             <Table.Td />
             <Table.Td>
-                <TextInput placeholder="Name" value={fields.name} onInput={e => setFields({ ...fields, name: e.target.value })} error={fields.name.trim() ? nameError : null} />
+                <TextInput placeholder={t('dyndns.records.namePlaceholder')} value={fields.name} onInput={e => setFields({ ...fields, name: e.target.value })} error={fields.name.trim() ? nameError : null} />
             </Table.Td>
             <Table.Td>
                 <TextInput value={fields.value} onInput={e => setFields({ ...fields, value: e.target.value })} error={fields.value.trim() ? valueError : null} />
@@ -234,8 +239,8 @@ export function AddDnsRecordRow({ zone, tsigKey }) {
                 <TextInput type="number" value={fields.ttl} onInput={e => setFields({ ...fields, ttl: e.target.value })} />
             </Table.Td>
             <Table.Td>
-                <Tooltip label="Add record">
-                    <ActionIcon variant="filled" color="blue" onClick={handleAdd} loading={addRecord.isPending} disabled={!!valueError || !!nameError} aria-label="Add record"><Plus size={16} /></ActionIcon>
+                <Tooltip label={t('dyndns.records.addRecord')}>
+                    <ActionIcon variant="filled" color="blue" onClick={handleAdd} loading={addRecord.isPending} disabled={!!valueError || !!nameError} aria-label={t('dyndns.records.addRecord')}><Plus size={16} /></ActionIcon>
                 </Tooltip>
             </Table.Td>
         </Table.Tr>
@@ -243,6 +248,7 @@ export function AddDnsRecordRow({ zone, tsigKey }) {
 }
 
 export function DnsRecordsList({ zone, tsigKey }) {
+    const { t } = useTranslation();
     const api = useZonesApi();
     const { showError } = useErrorModal();
     const confirm = useConfirm();
@@ -261,7 +267,7 @@ export function DnsRecordsList({ zone, tsigKey }) {
     });
 
     if (!api || recordsQuery.isPending) return <Loading size="sm" />;
-    if (recordsQuery.isError) return <LoadError query={recordsQuery} title="Could not load DNS records" />;
+    if (recordsQuery.isError) return <LoadError query={recordsQuery} title={t('dyndns.records.loadError')} />;
 
     const records = recordsQuery.data ?? [];
 
@@ -294,10 +300,10 @@ export function DnsRecordsList({ zone, tsigKey }) {
         const toDelete = selectableRecords.filter(r => selected.has(recordKey(r)));
         if (toDelete.length === 0) return;
         const ok = await confirm({
-            title: 'Delete the selected DNS records?',
-            confirmLabel: 'Delete selected',
+            title: t('dyndns.records.bulkDeleteTitle'),
+            confirmLabel: t('dyndns.records.bulkDeleteConfirm'),
             // A count beside a label needs no plural of its own.
-            message: `Selected records: ${toDelete.length}. Deleting takes effect immediately.`,
+            message: t('dyndns.records.bulkDeleteMessage', { selected: toDelete.length }),
         });
         if (!ok) return;
         setBulkDeleting(true);
@@ -323,13 +329,12 @@ export function DnsRecordsList({ zone, tsigKey }) {
 
     return (
         <Stack gap="lg">
-            <TabIntro title={`DNS records for ${zone}`}>
-                Add a record in the bottom row, or edit and delete existing ones inline. Changes take effect
-                immediately.
+            <TabIntro title={t('dyndns.records.title', { zone })}>
+                {t('dyndns.records.intro')}
             </TabIntro>
 
             <TextInput
-                placeholder="Search records by name, type, TTL, or value"
+                placeholder={t('dyndns.records.searchPlaceholder')}
                 leftSection={<Search size="16" />}
                 value={search}
                 onInput={e => setSearch(e.target.value)}
@@ -338,11 +343,11 @@ export function DnsRecordsList({ zone, tsigKey }) {
             {/* Bulk-action bar: only shown once records are selected. */}
             {selectedCount > 0 && (
                 <Group justify="space-between">
-                    <Text size="sm">{`Selected records: ${selectedCount}`}</Text>
+                    <Text size="sm">{t('dyndns.records.selectedCount', { selected: selectedCount })}</Text>
                     <Group gap="sm">
-                        <Button variant="default" size="xs" onClick={() => setSelected(new Set())} disabled={bulkDeleting}>Clear</Button>
+                        <Button variant="default" size="xs" onClick={() => setSelected(new Set())} disabled={bulkDeleting}>{t('dyndns.records.clearSelection')}</Button>
                         <Button color="red" size="xs" leftSection={<Trash2 size={16} />} onClick={handleBulkDelete} loading={bulkDeleting}>
-                            Delete selected
+                            {t('dyndns.records.deleteSelected')}
                         </Button>
                     </Group>
                 </Group>
@@ -360,14 +365,14 @@ export function DnsRecordsList({ zone, tsigKey }) {
                                     indeterminate={someSelected && !allSelected}
                                     onChange={toggleSelectAll}
                                     disabled={selectableRecords.length === 0 || bulkDeleting}
-                                    aria-label="Select all records"
+                                    aria-label={t('dyndns.records.selectAll')}
                                 />
                             </Table.Th>
-                            <Table.Th w="28%">Name</Table.Th>
-                            <Table.Th w="32%">Value</Table.Th>
-                            <Table.Th w={110}>Type</Table.Th>
-                            <Table.Th w={90}>TTL (s)</Table.Th>
-                            <Table.Th>Actions</Table.Th>
+                            <Table.Th w="28%">{t('dyndns.records.colName')}</Table.Th>
+                            <Table.Th w="32%">{t('dyndns.records.colValue')}</Table.Th>
+                            <Table.Th w={110}>{t('dyndns.records.colType')}</Table.Th>
+                            <Table.Th w={90}>{t('dyndns.records.colTtl')}</Table.Th>
+                            <Table.Th>{t('dyndns.records.colActions')}</Table.Th>
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
@@ -375,7 +380,7 @@ export function DnsRecordsList({ zone, tsigKey }) {
                         {query && filteredRecords.length === 0 && (
                             <Table.Tr>
                                 <Table.Td colSpan={6}>
-                                    <Text c="dimmed" size="sm">No records match “{search.trim()}”.</Text>
+                                    <Text c="dimmed" size="sm">{t('dyndns.records.noMatch', { search: search.trim() })}</Text>
                                 </Table.Td>
                             </Table.Tr>
                         )}

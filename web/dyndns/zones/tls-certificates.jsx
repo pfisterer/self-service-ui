@@ -7,6 +7,7 @@ import { isValidLabel } from '/helper/dns-validation.js';
 import { TabIntro } from './tab-intro.jsx';
 import { Stack, Text, Alert, Anchor, Paper, Group, SimpleGrid, Accordion, TextInput } from '@mantine/core';
 import { AlertCircle } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 
 // Compact "label + value" row for the prefilled-values panel.
 function InfoItem({ label, value, note }) {
@@ -28,6 +29,7 @@ function InfoItem({ label, value, note }) {
 // HTTP-01 as an alternative. Matches how the k3s-dhbw-cloud-role sets it up.
 // ----------------------------------------
 export function TlsCertificates({ zone }) {
+    const { t } = useTranslation();
     const { config: dynDnsConfig } = useDynDnsConfig();
     const { user } = useAuth();
 
@@ -174,30 +176,26 @@ export function TlsCertificates({ zone }) {
 
     return (
         <Stack gap="lg">
-            <TabIntro title={`TLS certificates for ${zoneName}`}>
-                Get certificates from the DHBW ACME server with{' '}
-                <ExternalLink href="https://certbot.eff.org/">certbot</ExternalLink>,{' '}
-                <ExternalLink href="https://github.com/acmesh-official/acme.sh">acme.sh</ExternalLink>, or{' '}
-                <ExternalLink href="https://cert-manager.io">cert-manager</ExternalLink> (Kubernetes). All use
-                DNS-01 (RFC&nbsp;2136) with this zone's TSIG key and can issue{' '}
-                <ExternalLink href="https://en.wikipedia.org/wiki/Wildcard_certificate">wildcard certificates</ExternalLink>.
-                The snippets below are pre-filled for this zone.
+            <TabIntro title={t('dyndns.tls.title', { zone: zoneName })}>
+                <Trans i18nKey="dyndns.tls.intro" components={{
+                    1: <ExternalLink href="https://certbot.eff.org/" />,
+                    2: <ExternalLink href="https://github.com/acmesh-official/acme.sh" />,
+                    3: <ExternalLink href="https://cert-manager.io" />,
+                    4: <ExternalLink href="https://en.wikipedia.org/wiki/Wildcard_certificate" />,
+                }} />
             </TabIntro>
 
             {/* Prefilled values overview (shared by all clients) */}
             <Paper withBorder radius="md" p="md">
                 <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" verticalSpacing="sm">
-                    <InfoItem label="ACME server" value={acmeServer} />
-                    <InfoItem label="ACME account email" value={email} note={emailIsPlaceholder ? 'set your email' : undefined} />
-                    <InfoItem label="DNS-01 nameserver" value={nameserver} />
+                    <InfoItem label={t('dyndns.tls.acmeServer')} value={acmeServer} />
+                    <InfoItem label={t('dyndns.tls.acmeEmail')} value={email} note={emailIsPlaceholder ? t('dyndns.tls.setYourEmail') : undefined} />
+                    <InfoItem label={t('dyndns.tls.dns01Nameserver')} value={nameserver} />
                 </SimpleGrid>
             </Paper>
 
             {!key && (
-                <Alert icon={<AlertCircle size="16" />} color="red">
-                    This zone has no TSIG key yet — create one under the "Keys" tab first, then the DNS-01 example
-                    below will be filled in automatically.
-                </Alert>
+                <Alert icon={<AlertCircle size="16" />} color="red">{t('dyndns.noKey.dns01')}</Alert>
             )}
 
             <Accordion variant="separated">
@@ -205,12 +203,11 @@ export function TlsCertificates({ zone }) {
                     <Accordion.Control>certbot</Accordion.Control>
                     <Accordion.Panel>
                         <Text size="sm" c="dimmed" mb="sm">
-                            DNS-01 via the <code>certbot-dns-rfc2136</code> plugin. Issues wildcards too.
-                            First write the credentials file, then run certbot:
+                            <Trans i18nKey="dyndns.tls.certbotIntro" components={{ 1: <code /> }} />
                         </Text>
                         <Text size="xs" c="dimmed" fw={600} mb={4}>rfc2136.ini</Text>
                         <CodeBlock code={certbotIni} language="ini" />
-                        <Text size="xs" c="dimmed" fw={600} mt="md" mb={4}>Issue the certificate</Text>
+                        <Text size="xs" c="dimmed" fw={600} mt="md" mb={4}>{t('dyndns.tls.issueCertificate')}</Text>
                         <CodeBlock code={certbotCmd} language="bash" />
                     </Accordion.Panel>
                 </Accordion.Item>
@@ -218,12 +215,11 @@ export function TlsCertificates({ zone }) {
                     <Accordion.Control>acme.sh</Accordion.Control>
                     <Accordion.Panel>
                         <Text size="sm" c="dimmed" mb="sm">
-                            DNS-01 via <code>nsupdate</code> (RFC&nbsp;2136). First write the TSIG key file,
-                            then run acme.sh:
+                            <Trans i18nKey="dyndns.tls.acmeShIntro" components={{ 1: <code /> }} />
                         </Text>
                         <Text size="xs" c="dimmed" fw={600} mb={4}>tsig.key</Text>
                         <CodeBlock code={acmeShKey} language="plaintext" />
-                        <Text size="xs" c="dimmed" fw={600} mt="md" mb={4}>Issue the certificate</Text>
+                        <Text size="xs" c="dimmed" fw={600} mt="md" mb={4}>{t('dyndns.tls.issueCertificate')}</Text>
                         <CodeBlock code={acmeShCmd} language="bash" />
                     </Accordion.Panel>
                 </Accordion.Item>
@@ -231,24 +227,24 @@ export function TlsCertificates({ zone }) {
                     <Accordion.Control>cert-manager (Kubernetes)</Accordion.Control>
                     <Accordion.Panel>
                         <TextInput
-                            label="Namespace"
-                            description="Where the Certificate + TLS Secret go (your workload's namespace; i.e., where your ingresses live)."
+                            label={t('dyndns.tls.namespaceLabel')}
+                            description={t('dyndns.tls.namespaceDescription')}
                             value={ns}
                             onChange={e => setNs(e.currentTarget.value)}
-                            error={ns && !nsValid ? 'Invalid namespace name.' : null}
+                            error={ns && !nsValid ? t('dyndns.tls.namespaceError') : null}
                             size="xs"
                             mb="md"
                             maw={360}
                         />
                         <Text size="sm" c="dimmed" mb="sm">
-                            <b>DNS-01 (recommended)</b> — a{' '}
-                            <ExternalLink href="https://cert-manager.io/docs/configuration/acme/dns01/rfc2136/">ClusterIssuer with the RFC&nbsp;2136 solver</ExternalLink>{' '}
-                            + this zone's TSIG key. No public HTTP access needed; can issue wildcards.
+                            <Trans i18nKey="dyndns.tls.dns01Intro" components={{
+                                1: <b />,
+                                2: <ExternalLink href="https://cert-manager.io/docs/configuration/acme/dns01/rfc2136/" />,
+                            }} />
                         </Text>
                         <CodeBlock code={dns01Yaml} />
                         <Text size="sm" c="dimmed" mt="lg" mb="sm">
-                            <b>HTTP-01 (alternative)</b> — no TSIG, but the host must be reachable on :80 via an
-                            Ingress from inside the DHBW network. No wildcards.
+                            <Trans i18nKey="dyndns.tls.http01Intro" components={{ 1: <b /> }} />
                         </Text>
                         <CodeBlock code={http01Yaml} />
                     </Accordion.Panel>
