@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import { useQuery } from '@tanstack/react-query';
 import { Button, Group, Modal, Stack, Text } from '@mantine/core';
 import { LogIn } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '/providers/auth.jsx';
 
 // The oauth2-proxy in front of this app owns the session; the browser holds
@@ -82,22 +83,23 @@ export function useSession() {
 // difference between an interruption and losing work. The next failed request
 // brings the dialog back.
 function SessionExpiredModal({ opened, onDismiss }) {
+    const { t } = useTranslation();
     const signIn = () => {
         const back = window.location.pathname + window.location.search;
         window.location.href = '/oauth2/start?rd=' + encodeURIComponent(back);
     };
 
     return (
-        <Modal opened={opened} onClose={onDismiss} centered title="Your session has expired">
+        <Modal opened={opened} onClose={onDismiss} centered title={t('providers.session.title')}>
             <Stack gap="md">
                 <Text size="sm">
-                    You have been signed out, so nothing on this page can be saved or reloaded
-                    until you sign in again. Signing in reloads the page and brings you back
-                    here — copy anything you have typed before you do.
+                    {t('providers.session.message')}
                 </Text>
                 <Group justify="flex-end">
-                    <Button variant="default" onClick={onDismiss}>Not now</Button>
-                    <Button onClick={signIn} leftSection={<LogIn size={16} />}>Sign in again</Button>
+                    <Button variant="default" onClick={onDismiss}>{t('providers.session.notNow')}</Button>
+                    <Button onClick={signIn} leftSection={<LogIn size={16} />}>
+                        {t('providers.session.signIn')}
+                    </Button>
                 </Group>
             </Stack>
         </Modal>

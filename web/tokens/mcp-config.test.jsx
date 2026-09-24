@@ -3,7 +3,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import '/test/jsdom-stubs.js';
-import { McpConfigBlock, mcpConfigJson } from './mcp-config.jsx';
+// The panel's texts come from i18next; without it the components render bare
+// keys, which passes a smoke test and is wrong in the browser.
+import '/i18n/index.js';
+import { McpConfigBlock, McpSection, mcpConfigJson } from './mcp-config.jsx';
 
 // Two questions, and the first is the one that has actually gone wrong: does the
 // deployment's configuration REACH the scope? Everything on the panel hangs off
@@ -147,6 +150,21 @@ describe('the block on the page', () => {
     // is displayed.
     it('does not copy what it only shows', () => {
         expect(mcpConfigJson(scope, '')).not.toContain('mcpServers');
+    });
+
+    // The placeholder is the one string on this panel that would be destroyed by
+    // the translation machinery: <Trans> parses its text as markup, so an
+    // unknown tag — which is exactly what <your-token> looks like — is where a
+    // sentence silently loses a word. Someone pasting a config without it gets
+    // a request with the literal word "Bearer" and no token.
+    it('names the placeholder in the sentence that tells you to replace it', () => {
+        render(
+            <MantineProvider>
+                <McpSection scope={scope} />
+            </MantineProvider>,
+        );
+
+        expect(screen.getByText('<your-token>')).toBeTruthy();
     });
 
     it('renders nothing where the deployment has no endpoint', () => {

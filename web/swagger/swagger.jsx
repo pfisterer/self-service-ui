@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { ExternalLink } from '/helper/external-link.jsx';
-import { Container, Title, Paper, Text, Anchor, Code, Stack, Box } from '@mantine/core';
+import { Container, Title, Paper, Text, Code, Stack, Box } from '@mantine/core';
 
 import SwaggerUIBundle from 'swagger-ui-dist/swagger-ui-bundle.js';
 import SwaggerUIStandalonePreset from 'swagger-ui-dist/swagger-ui-standalone-preset.js';
@@ -20,6 +21,7 @@ export function CloudProjectsApiSwagger() {
 }
 
 function ApiDocumentation({ baseUrl, title, npmPackage }) {
+    const { t } = useTranslation();
     // All resolved RELATIVE to baseUrl (which has a trailing slash). In BFF mode
     // baseUrl is "https://<ui>/api/dyndns/", so these become
     // ".../api/dyndns/client/..." and ".../api/dyndns/swagger.json" — same origin,
@@ -77,7 +79,7 @@ function ApiDocumentation({ baseUrl, title, npmPackage }) {
 
             <Container size="xl" py="md">
                 <Stack gap="lg">
-                    <Title order={2}>API Documentation</Title>
+                    <Title order={2}>{t('swagger.title')}</Title>
 
                     <Paper shadow="sm" radius="md" withBorder>
                         <Stack gap="md">
@@ -86,12 +88,19 @@ function ApiDocumentation({ baseUrl, title, npmPackage }) {
                             </Paper>
 
                             <Box p="md">
+                                {/* The base URL, the package name and the install
+                                    command go in as values: they are addresses and
+                                    a command, and nothing about them is translated. */}
                                 <Text>
-                                    The API endpoint is available at <Code>{baseUrl}</Code>.
-
-                                    See <ExternalLink href={swaggerJsonUrl}>swagger.json</ExternalLink> for full API specification.
-
-                                    A generated TypeScript client is published as <ExternalLink href={npmUrl}><Code>{npmPackage}</Code></ExternalLink>; its version matches the API version shown above. Install it with <Code>npm install {npmPackage}</Code>.
+                                    <Trans i18nKey="swagger.endpoint" values={{ baseUrl }}
+                                        components={{ 1: <Code /> }} />
+                                    {' '}
+                                    <Trans i18nKey="swagger.specification"
+                                        components={{ 1: <ExternalLink href={swaggerJsonUrl} /> }} />
+                                    {' '}
+                                    <Trans i18nKey="swagger.client"
+                                        values={{ package: npmPackage, install: `npm install ${npmPackage}` }}
+                                        components={{ 1: <ExternalLink href={npmUrl} />, 2: <Code />, 3: <Code /> }} />
                                 </Text>
                             </Box>
 

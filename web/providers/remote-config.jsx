@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Both APIs publish a public /config.json that the SPA reads once at startup.
 // There used to be one provider per API, written twice and then drifted apart:
@@ -23,6 +24,7 @@ const FETCH_TIMEOUT_MS = 5000;
  * live without it.
  */
 export function useRemoteConfig(baseUrl) {
+    const { t } = useTranslation();
     // Resolved during render, not in the effect: `new URL()` throws on a bad
     // base, and a throw in an effect is an unhandled rejection while a throw
     // here would kill the render. useMemo keeps it pure and turns a broken
@@ -34,10 +36,10 @@ export function useRemoteConfig(baseUrl) {
         } catch {
             return {
                 url: null,
-                error: new Error(`Invalid API base URL: ${JSON.stringify(baseUrl)}`),
+                error: new Error(t('providers.remoteConfig.invalidBaseUrl', { url: JSON.stringify(baseUrl) })),
             };
         }
-    }, [baseUrl]);
+    }, [baseUrl, t]);
 
     const [fetched, setFetched] = useState({ config: undefined, error: undefined, loading: true });
 

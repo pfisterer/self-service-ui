@@ -1,4 +1,6 @@
 import { Alert, Anchor, Button, Code, CopyButton, Group, Stack, Text } from '@mantine/core';
+import { Trans, useTranslation } from 'react-i18next';
+import { tokenScopeMcpSubject } from '/tokens/scopes.js';
 
 // What an MCP client needs to reach one of these APIs on a person's behalf: an
 // address and a credential. The credential is the token on this page; the
@@ -76,6 +78,7 @@ function indentFragment(text, spaces = 4) {
 // projects into browser history, clipboard managers and any proxy log on the
 // way. The inconvenience is the point.
 export function McpConfigBlock({ scope, token = '' }) {
+    const { t } = useTranslation();
     if (!scope?.mcpUrl) return null;
     const entry = mcpConfigJson(scope, token);
     const dimmed = { opacity: 0.45 };
@@ -83,12 +86,12 @@ export function McpConfigBlock({ scope, token = '' }) {
     return (
         <Stack gap="xs">
             <Group gap="xs" align="center" wrap="wrap">
-                <Text size="xs" c="dimmed">Endpoint</Text>
+                <Text size="xs" c="dimmed">{t('tokens.mcp.endpoint')}</Text>
                 <Code>{scope.mcpUrl}</Code>
                 <CopyButton value={entry}>
                     {({ copied, copy }) => (
                         <Button size="xs" variant="light" onClick={copy}>
-                            {copied ? 'Copied' : 'Copy server entry'}
+                            {copied ? t('tokens.copied') : t('tokens.mcp.copyEntry')}
                         </Button>
                     )}
                 </CopyButton>
@@ -107,26 +110,24 @@ export function McpConfigBlock({ scope, token = '' }) {
 // McpSection is the standing explanation on the panel, where the token is not
 // available and the snippet carries a placeholder.
 export function McpSection({ scope }) {
+    const { t } = useTranslation();
     if (!scope?.mcpUrl) return null;
 
     return (
-        <Alert variant="light" title="Use with an AI assistant (MCP)" p="xs">
+        <Alert variant="light" title={t('tokens.mcp.title')} p="xs">
             <Stack gap="xs">
                 <Text size="xs">
-                    This API speaks the{' '}
-                    <Anchor href="https://modelcontextprotocol.io" target="_blank" rel="noreferrer" inherit>
-                        Model Context Protocol
-                    </Anchor>
-                    , so an assistant can read and change your {scope.mcpSubject || 'resources'} for you. It
-                    acts as you and can do nothing you could not do yourself — a read-only token gives it a
-                    read-only assistant.
+                    <Trans i18nKey="tokens.mcp.intro"
+                        values={{ subject: tokenScopeMcpSubject(scope, t) }}
+                        components={{
+                            1: <Anchor href="https://modelcontextprotocol.io" target="_blank"
+                                rel="noreferrer" inherit />,
+                        }} />
                 </Text>
                 <McpConfigBlock scope={scope} />
                 <Text size="xs" c="dimmed">
-                    The greyed-out lines are where it goes — copying takes only the entry, so it drops in
-                    next to the servers you already have. Replace <Code>{PLACEHOLDER}</Code> with a token
-                    from the table above; a token is shown in full only once, when it is created, and the
-                    entry offered there already has it filled in.
+                    <Trans i18nKey="tokens.mcp.hint" values={{ placeholder: PLACEHOLDER }}
+                        components={{ 1: <Code /> }} />
                 </Text>
             </Stack>
         </Alert>

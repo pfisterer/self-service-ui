@@ -1,6 +1,7 @@
 import { Link } from 'wouter';
 import { Container, Stack, Group, Title, Text, Paper, Button, ThemeIcon, SimpleGrid, List, Alert } from '@mantine/core';
 import { Globe, ListPlus, ShieldCheck, ArrowRight, ServerCog, FolderKanban } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 
 // First-run friendly landing page: explain what this portal is for and give a
@@ -19,57 +20,69 @@ import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 // It matters here beyond the wording: a button pointing at a section whose route
 // is not registered lands on the 404 page.
 
-const PROJECT_STEP = {
+// The steps take the caller's `t`: the texts are translated, so a step cannot
+// be a module-level constant any more — it is built when the page renders, in
+// the language it renders in.
+const projectStep = (t) => ({
     icon: FolderKanban,
     color: 'blue',
-    title: '1 · Request a project',
+    title: t('home.steps.project.title'),
     points: [
-        'A project is your own space in the DHBW cloud, with the CPU, RAM and storage you ask for',
-        'Small requests are often approved instantly',
-        'Add fellow students to it so you can work on it together',
+        t('home.steps.project.own'),
+        t('home.steps.project.instant'),
+        t('home.steps.project.together'),
     ],
-};
+});
 
-const ZONE_STEP = {
+const zoneStep = (t) => ({
     icon: Globe,
     color: 'teal',
-    title: '2 · Give it a DNS name',
+    title: t('home.steps.zone.title'),
     points: [
-        'Activate your personal zone in Zone Management',
-        'You get your own hostnames, e.g. myapp.you.users.dhbw.cloud',
-        'Point them at your machines (A / AAAA / CNAME); each zone has a TSIG key for ddclient, nsupdate or external-dns',
+        t('home.steps.zone.activate'),
+        t('home.steps.zone.hostnames'),
+        t('home.steps.zone.point'),
     ],
-};
+});
 
-const TLS_STEP = {
+const tlsStep = (t) => ({
     icon: ShieldCheck,
     color: 'indigo',
-    title: '3 · Get TLS certificates',
+    title: t('home.steps.tls.title'),
     points: [
-        'Issue certificates with cert-manager once the hostname resolves',
-        'Ready-to-copy manifests in the "TLS Certificates" tab',
-        'Uses the DHBW ACME server (see below)',
+        t('home.steps.tls.issue'),
+        t('home.steps.tls.manifests'),
+        t('home.steps.tls.acme'),
     ],
-};
+});
 
 // Without Cloud Projects the portal starts at the zone, so the DNS steps are
 // spelled out separately instead of being condensed into one.
-const DNS_ONLY_STEPS = [
-    { ...ZONE_STEP, title: '1 · Activate a zone', points: ZONE_STEP.points.slice(0, 2).concat('This is the basis for records and certificates') },
+const dnsOnlySteps = (t) => [
+    {
+        ...zoneStep(t),
+        title: t('home.steps.zoneOnly.title'),
+        points: [
+            t('home.steps.zone.activate'),
+            t('home.steps.zone.hostnames'),
+            t('home.steps.zoneOnly.basis'),
+        ],
+    },
     {
         icon: ListPlus,
         color: 'teal',
-        title: '2 · Add DNS records',
+        title: t('home.steps.records.title'),
         points: [
-            'Point a hostname at your service (A / AAAA / CNAME)',
-            'Each zone comes with its own TSIG key',
-            'Automate updates with ddclient, nsupdate, or external-dns',
+            t('home.steps.records.point'),
+            t('home.steps.records.tsig'),
+            t('home.steps.records.automate'),
         ],
     },
-    TLS_STEP,
+    tlsStep(t),
 ];
 
 export function Home() {
+    const { t } = useTranslation();
     const acmeServer = window.appconfig?.acmeServer || 'https://certificates.dhbw.cloud';
     const acmeHost = acmeServer.replace(/^https?:\/\//, '').replace(/\/$/, '');
     const withProjects = cloudProjectsEnabled;
@@ -79,8 +92,8 @@ export function Home() {
     // deployment without the DNS API keeps only the project step rather than
     // walking someone through a section that is not there.
     const steps = withDns
-        ? (withProjects ? [PROJECT_STEP, ZONE_STEP, TLS_STEP] : DNS_ONLY_STEPS)
-        : [PROJECT_STEP];
+        ? (withProjects ? [projectStep(t), zoneStep(t), tlsStep(t)] : dnsOnlySteps(t))
+        : [projectStep(t)];
 
     return (
         <Container size="lg" py="xl">
@@ -88,40 +101,24 @@ export function Home() {
                 {/* Hero */}
                 <Paper p="xl" shadow="sm" radius="md" withBorder>
                     <Stack gap="sm">
-                        <Title order={1}>Welcome to dhbwCloud Self-Service</Title>
+                        <Title order={1}>{t('home.hero.title')}</Title>
                         <Text size="lg" c="dimmed">
-                            {withProjects && withDns ? (
-                                <>
-                                    This portal is where you request <b>your own cloud project</b> — your space in
-                                    the DHBW cloud with the resources you need — and where you give the services
-                                    you run there <b>their own hostnames</b> and <b>TLS certificates</b>.
-                                </>
-                            ) : withProjects ? (
-                                <>
-                                    This portal is where you request <b>your own cloud project</b> — your space in
-                                    the DHBW cloud with the CPU, RAM and storage you need.
-                                </>
-                            ) : (
-                                <>
-                                    This portal is where you manage <b>your own DNS zones</b>. A zone gives you
-                                    your own <b>hostnames</b> — the basis for reaching your services by name and for
-                                    issuing <b>TLS certificates</b> for them.
-                                </>
-                            )}
+                            <Trans i18nKey={introKey(withProjects, withDns)}
+                                components={{ 1: <b />, 2: <b />, 3: <b /> }} />
                         </Text>
                         <Group mt="sm">
                             {/* Same target as the header's Cloud Projects link: /projects
                                 redirects to My Projects, where "New project" lives. */}
                             {withProjects && (
                                 <Button component={Link} to="/projects" size="md" rightSection={<ArrowRight size="18" />}>
-                                    Request a project
+                                    {t('home.hero.requestProject')}
                                 </Button>
                             )}
                             {withDns && (
                                 <Button component={Link} to="/dyndns/zones" size="md"
                                     variant={withProjects ? 'light' : 'filled'}
                                     rightSection={withProjects ? null : <ArrowRight size="18" />}>
-                                    Manage DNS zones
+                                    {t('home.hero.manageZones')}
                                 </Button>
                             )}
                         </Group>
@@ -130,7 +127,7 @@ export function Home() {
 
                 {/* Get started */}
                 <div>
-                    <Title order={3} mb="md">Get started in three steps</Title>
+                    <Title order={3} mb="md">{t('home.steps.heading')}</Title>
                     <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
                         {steps.map(({ icon: Icon, color, title, points }) => (
                             <Paper key={title} p="lg" shadow="xs" radius="md" withBorder>
@@ -152,18 +149,22 @@ export function Home() {
                     it goes with them. */}
                 {withDns && (
                 <Alert icon={<ServerCog size="20" />} color="blue" variant="light" radius="md"
-                    title="TLS certificates: use the DHBW ACME server">
+                    title={t('home.acme.title')}>
                     <Text size="sm">
-                        For the zones you create here you <b>must</b> obtain TLS certificates from DHBW's own ACME
-                        certificate authority at <b>{acmeHost}</b>. These zones are set up to authorize only the DHBW
-                        CA (via CAA records), so public CAs such as <b>Let's Encrypt can not be used</b> for these hostnames.
-                        The DHBW server is free, has no public rate limits, and also issues certificates for services
-                        that are only reachable from <b>inside the DHBW network / VPN</b>. Each zone's
-                        {' '}<b>TLS Certificates</b> tab generates cert-manager manifests pre-filled for exactly this server.
+                        <Trans i18nKey="home.acme.body" values={{ host: acmeHost }}
+                            components={{ 1: <b />, 2: <b />, 3: <b />, 4: <b />, 5: <b /> }} />
                     </Text>
                 </Alert>
                 )}
             </Stack>
         </Container>
     );
+}
+
+// Which of the three opening sentences this deployment gets. One key per case,
+// because the sentences differ in more than a clause — a German reader would
+// not recognise them as one sentence with parts switched off.
+function introKey(withProjects, withDns) {
+    if (withProjects && withDns) return 'home.hero.introBoth';
+    return withProjects ? 'home.hero.introProjects' : 'home.hero.introDns';
 }

@@ -3,12 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
     ActionIcon, Alert, Badge, Button, Checkbox, Code, CopyButton, Group, Paper,
     Select, Stack, Table, Text, TextInput,
 } from '@mantine/core';
 import { formatDateTime } from '../format-date.js';
 import { McpSection, mcpConfigJson } from './mcp-config.jsx';
+import { tokenScopeDescription, tokenScopeLabel } from '/tokens/scopes.js';
 
 // The lifetimes offered, in the hours the API takes. -1 is "never expires",
 // the same value the shared library calls NeverExpires, so nothing in between
@@ -21,11 +23,11 @@ import { McpSection, mcpConfigJson } from './mcp-config.jsx';
 // offering something it cannot deliver. Exposing the policy through the two
 // config endpoints the UI already fetches is the fix, and is written down as
 // such rather than guessed at here.
-const LIFETIMES = [
-    { value: '720', label: '30 days' },
-    { value: '2160', label: '90 days' },
-    { value: '8760', label: '1 year' },
-    { value: '-1', label: 'Never expires' },
+const lifetimes = (t) => [
+    { value: '720', label: t('tokens.panel.lifetime.days30') },
+    { value: '2160', label: t('tokens.panel.lifetime.days90') },
+    { value: '8760', label: t('tokens.panel.lifetime.year1') },
+    { value: '-1', label: t('tokens.panel.lifetime.never') },
 ];
 const DEFAULT_LIFETIME = '8760';
 
@@ -43,6 +45,7 @@ const DEFAULT_LIFETIME = '8760';
 // the other returns it directly, and their subjects are not even the same
 // claim), and the place to absorb that is the adapter, not the view.
 export function TokenScopePanel({ scope }) {
+    const { t } = useTranslation();
     const confirm = useConfirm();
     const [readOnly, setReadOnly] = useState(false);
     const [description, setDescription] = useState('');
@@ -83,11 +86,11 @@ export function TokenScopePanel({ scope }) {
 
     async function revoke(token) {
         const ok = await confirm({
-            title: 'Delete API token?',
-            confirmLabel: 'Delete token',
+            title: t('tokens.panel.revokeTitle'),
+            confirmLabel: t('tokens.panel.revokeConfirm'),
             // Names the token: with a compact table there is no other way to be
             // sure which row the dialog is about.
-            message: `Any client still using ${token.token_prefix || `token #${token.id}`} will immediately stop working. This cannot be undone.`,
+            message: t('tokens.panel.revokeMessage', { token: tokenName(token, t) }),
         });
         if (ok) deleteMutation.mutate(token.id);
     }
@@ -103,7 +106,7 @@ export function TokenScopePanel({ scope }) {
                 <Group justify="space-between" align="center" wrap="wrap" gap="xs">
                     <Group gap="xs" align="center">
                         <Badge variant="light" style={{ textTransform: 'none' }}>{scope.prefix}…</Badge>
-                        <Text size="sm" c="dimmed">{scope.description}</Text>
+                        <Text size="sm" c="dimmed">{tokenScopeDescription(scope, t)}</Text>
                     </Group>
                     <Group gap="sm" align="center" wrap="nowrap">
                         {/* The note is what turns "three tokens, two dates" into
@@ -113,7 +116,7 @@ export function TokenScopePanel({ scope }) {
                         <TextInput
                             size="sm"
                             w={240}
-                            placeholder="What is this for?"
+                            placeholder={t('tokens.panel.descriptionPlaceholder')}
                             maxLength={100}
                             value={description}
                             onChange={e => setDescription(e.currentTarget.value)}
@@ -121,7 +124,7 @@ export function TokenScopePanel({ scope }) {
                         <Select
                             size="sm"
                             w={150}
-                            data={LIFETIMES}
+                            data={lifetimes(t)}
                             value={lifetime}
                             onChange={value => setLifetime(value ?? DEFAULT_LIFETIME)}
                             allowDeselect={false}
@@ -129,12 +132,12 @@ export function TokenScopePanel({ scope }) {
                         />
                         <Checkbox
                             size="sm"
-                            label="Read-only"
+                            label={t('tokens.panel.readOnly')}
                             checked={readOnly}
                             onChange={e => setReadOnly(e.currentTarget.checked)}
                         />
                         <Button size="sm" onClick={() => createMutation.mutate()} loading={createMutation.isPending}>
-                            Create token
+                            {t('tokens.panel.create')}
                         </Button>
                     </Group>
                 </Group>
@@ -142,26 +145,27 @@ export function TokenScopePanel({ scope }) {
                 {tokensQuery.isPending && <Loading size="sm" />}
 
                 {tokensQuery.isError && (
-                    <LoadError query={tokensQuery} title={`Could not load ${scope.label} tokens`} />
+                    <LoadError query={tokensQuery}
+                        title={t('tokens.panel.loadError', { scope: tokenScopeLabel(scope, t) })} />
                 )}
 
                 {!tokensQuery.isPending && !tokensQuery.isError && (
                     tokens.length === 0
-                        ? <Text size="sm" c="dimmed">No tokens yet.</Text>
+                        ? <Text size="sm" c="dimmed">{t('tokens.panel.empty')}</Text>
                         : (
                             <Table verticalSpacing="xs" horizontalSpacing="sm" highlightOnHover>
                                 <Table.Thead>
                                     <Table.Tr>
-                                        <Table.Th w={50}>ID</Table.Th>
-                                        <Table.Th w={170}>Token</Table.Th>
-                                        <Table.Th>Description</Table.Th>
-                                        <Table.Th w={110}>Mode</Table.Th>
+                                        <Table.Th w={50}>{t('tokens.panel.column.id')}</Table.Th>
+                                        <Table.Th w={170}>{t('tokens.panel.column.token')}</Table.Th>
+                                        <Table.Th>{t('tokens.panel.column.description')}</Table.Th>
+                                        <Table.Th w={110}>{t('tokens.panel.column.mode')}</Table.Th>
                                         {/* Next to each other on purpose: "made
                                             a year ago, never used" is the whole
                                             answer to "can I revoke this?". */}
-                                        <Table.Th w={130}>Created</Table.Th>
-                                        <Table.Th w={130}>Last used</Table.Th>
-                                        <Table.Th w={130}>Expires</Table.Th>
+                                        <Table.Th w={130}>{t('tokens.panel.column.created')}</Table.Th>
+                                        <Table.Th w={130}>{t('tokens.panel.column.lastUsed')}</Table.Th>
+                                        <Table.Th w={130}>{t('tokens.panel.column.expires')}</Table.Th>
                                         <Table.Th w={50} />
                                     </Table.Tr>
                                 </Table.Thead>
@@ -190,6 +194,7 @@ export function TokenScopePanel({ scope }) {
 // long for a cell, and it is also the one thing on this page that must not be
 // easy to miss.
 function TokenRows({ token, secret, scope, onRevoke }) {
+    const { t } = useTranslation();
     return (
         <>
             <Table.Tr>
@@ -202,24 +207,24 @@ function TokenRows({ token, secret, scope, onRevoke }) {
                 </Table.Td>
                 <Table.Td>
                     <Badge size="sm" variant="light" color={token.read_only ? 'gray' : 'blue'}>
-                        {token.read_only ? 'read-only' : 'read-write'}
+                        {token.read_only ? t('tokens.panel.modeReadOnly') : t('tokens.panel.modeReadWrite')}
                     </Badge>
                 </Table.Td>
                 <Table.Td c="dimmed">{formatMoment(token.created_at)}</Table.Td>
                 {/* Dimmed when it has never been used, because that is the case
                     worth spotting: nothing depends on this token. */}
                 <Table.Td c={neverHappened(token.last_used_at) ? 'dimmed' : undefined}>
-                    {neverHappened(token.last_used_at) ? 'never' : formatMoment(token.last_used_at)}
+                    {neverHappened(token.last_used_at) ? t('tokens.panel.never') : formatMoment(token.last_used_at)}
                 </Table.Td>
                 {/* Both columns say "never" for an absent time, and they mean
                     different things — never used, never expires. The headers
                     carry that; the cell should not invent wording for it. */}
                 <Table.Td>
-                    {neverHappened(token.expires_at) ? 'never' : formatMoment(token.expires_at)}
+                    {neverHappened(token.expires_at) ? t('tokens.panel.never') : formatMoment(token.expires_at)}
                 </Table.Td>
                 <Table.Td>
                     <ActionIcon color="red" variant="subtle" onClick={onRevoke}
-                        aria-label={`Delete token ${token.token_prefix || token.id}`}>
+                        aria-label={t('tokens.panel.deleteToken', { token: tokenName(token, t) })}>
                         <Trash2 size={16} />
                     </ActionIcon>
                 </Table.Td>
@@ -227,18 +232,18 @@ function TokenRows({ token, secret, scope, onRevoke }) {
             {secret && (
                 <Table.Tr>
                     <Table.Td colSpan={8}>
-                        <Alert color="green" title="Copy this token now" p="xs">
+                        <Alert color="green" title={t('tokens.secret.title')} p="xs">
                             <Group gap="xs" wrap="wrap">
                                 <Code style={{ wordBreak: 'break-all' }}>{secret}</Code>
                                 <CopyButton value={secret}>
                                     {({ copied, copy }) => (
                                         <Button size="xs" variant="light" onClick={copy}>
-                                            {copied ? 'Copied' : 'Copy token'}
+                                            {copied ? t('tokens.copied') : t('tokens.secret.copy')}
                                         </Button>
                                     )}
                                 </CopyButton>
                                 <Text size="xs" c="dimmed">
-                                    Stored only as a hash — reload this page and it is gone for good.
+                                    {t('tokens.secret.hint')}
                                 </Text>
                             </Group>
                             {/* The only moment a complete MCP config can be
@@ -250,7 +255,7 @@ function TokenRows({ token, secret, scope, onRevoke }) {
                                     <CopyButton value={mcpConfigJson(scope, secret)}>
                                         {({ copied, copy }) => (
                                             <Button size="xs" variant="light" onClick={copy}>
-                                                {copied ? 'Copied' : 'Copy server entry with this token'}
+                                                {copied ? t('tokens.copied') : t('tokens.secret.copyEntry')}
                                             </Button>
                                         )}
                                     </CopyButton>
@@ -262,6 +267,13 @@ function TokenRows({ token, secret, scope, onRevoke }) {
             )}
         </>
     );
+}
+
+// How a token is named where a sentence has to point at one: its prefix, or
+// its id where the API sent none. Shared by the dialog and the delete button,
+// which have to agree on which row they are talking about.
+function tokenName(token, t) {
+    return token.token_prefix || t('tokens.panel.unnamedToken', { id: token.id });
 }
 
 // neverHappened covers the two ways "there is no such moment" can arrive: null
