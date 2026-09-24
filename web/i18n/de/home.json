@@ -1,0 +1,45 @@
+{
+    "hero": {
+        "title": "Willkommen beim dhbwCloud-Self-Service",
+        "introBoth": "Hier beantragst du <1>dein eigenes Cloud-Projekt</1> — deinen Platz in der DHBW-Cloud mit den Ressourcen, die du brauchst — und gibst den Diensten, die du dort betreibst, <2>eigene Hostnamen</2> und <3>TLS-Zertifikate</3>.",
+        "introProjects": "Hier beantragst du <1>dein eigenes Cloud-Projekt</1> — deinen Platz in der DHBW-Cloud mit der CPU, dem RAM und dem Speicher, die du brauchst.",
+        "introDns": "Hier verwaltest du <1>deine eigenen DNS-Zonen</1>. Eine Zone gibt dir <2>eigene Hostnamen</2> — die Grundlage dafür, deine Dienste über ihren Namen zu erreichen und <3>TLS-Zertifikate</3> für sie zu bekommen.",
+        "requestProject": "Projekt beantragen",
+        "manageZones": "DNS-Zonen verwalten"
+    },
+    "steps": {
+        "heading": "In drei Schritten loslegen",
+        "project": {
+            "title": "1 · Projekt beantragen",
+            "own": "Ein Projekt ist dein eigener Platz in der DHBW-Cloud, mit der CPU, dem RAM und dem Speicher, die du anforderst",
+            "instant": "Kleine Anfragen werden oft sofort genehmigt",
+            "together": "Nimm Kommilitonen dazu, dann könnt ihr gemeinsam daran arbeiten"
+        },
+        "zone": {
+            "title": "2 · Einen DNS-Namen geben",
+            "activate": "Aktiviere deine persönliche Zone unter Zonen",
+            "hostnames": "Du bekommst eigene Hostnamen, z. B. myapp.you.users.dhbw.cloud",
+            "point": "Zeige damit auf deine Maschinen (A / AAAA / CNAME); jede Zone hat einen TSIG-Schlüssel für ddclient, nsupdate oder external-dns"
+        },
+        "tls": {
+            "title": "3 · TLS-Zertifikate holen",
+            "issue": "Zertifikate mit cert-manager ausstellen, sobald der Hostname auflöst",
+            "manifests": "Fertige Manifeste zum Kopieren im Tab „TLS-Zertifikate“",
+            "acme": "Nutzt den ACME-Server der DHBW (siehe unten)"
+        },
+        "zoneOnly": {
+            "title": "1 · Eine Zone aktivieren",
+            "basis": "Das ist die Grundlage für Einträge und Zertifikate"
+        },
+        "records": {
+            "title": "2 · DNS-Einträge anlegen",
+            "point": "Zeige mit einem Hostnamen auf deinen Dienst (A / AAAA / CNAME)",
+            "tsig": "Jede Zone bringt ihren eigenen TSIG-Schlüssel mit",
+            "automate": "Updates automatisieren mit ddclient, nsupdate oder external-dns"
+        }
+    },
+    "acme": {
+        "title": "TLS-Zertifikate: nimm den ACME-Server der DHBW",
+        "body": "Für die Zonen, die du hier anlegst, <1>musst</1> du TLS-Zertifikate von der eigenen ACME-Zertifizierungsstelle der DHBW unter <2>{{host}}</2> holen. Diese Zonen erlauben (über CAA-Einträge) nur die DHBW-CA, öffentliche CAs wie <3>Let's Encrypt kannst du dafür nicht nutzen</3>. Der DHBW-Server ist kostenlos, hat keine öffentlichen Rate-Limits und stellt auch Zertifikate für Dienste aus, die nur <4>aus dem DHBW-Netz / VPN</4> erreichbar sind. Der Tab <5>TLS-Zertifikate</5> jeder Zone erzeugt cert-manager-Manifeste, die genau auf diesen Server vorausgefüllt sind."
+    }
+}

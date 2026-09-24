@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link } from 'wouter';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
-import { LogOut, User } from "lucide-react";
+import { Languages, LogOut, User } from "lucide-react";
+import { useTranslation } from 'react-i18next';
+import { LANGUAGES } from '/i18n/index.js';
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
 import { RoleSwitchButton } from '/projects/component-group-role-switcher.jsx';
 import { Burger, Group, Button, Menu, Image, Box, Divider, Stack, Text } from '@mantine/core';
@@ -21,10 +23,39 @@ import dhbwLogoUrl from '/img/DHBW-Logo.svg';
 // together, not the distance between them. The parent level sits directly above
 // the child level, which is what lets a reader tell them apart at a glance.
 
+// LanguageMenu switches the language of everything on the screen, including how
+// dates are written (see i18n/index.js). It sits beside the account because it
+// is a setting of the person, not of the page they are on. The current language
+// is named in its own words — "Deutsch", not "German".
+function LanguageMenu() {
+    const { t, i18n } = useTranslation();
+    const current = LANGUAGES.find(l => l.code === i18n.resolvedLanguage) ?? LANGUAGES[0];
+    return (
+        <Menu trigger="hover" openDelay={100} closeDelay={200} position="bottom-end">
+            <Menu.Target>
+                <Button variant="subtle" size="sm" color="gray" aria-label={t('language.change')}
+                    leftSection={<Languages size="16" />}>
+                    <Text size="sm">{current.label}</Text>
+                </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+                <Menu.Label>{t('language.label')}</Menu.Label>
+                {LANGUAGES.map(l => (
+                    <Menu.Item key={l.code} onClick={() => i18n.changeLanguage(l.code)}
+                        fw={l.code === current.code ? 600 : 400}>
+                        {l.label}
+                    </Menu.Item>
+                ))}
+            </Menu.Dropdown>
+        </Menu>
+    );
+}
+
 // "Something is waiting for you" — no number, see nav.jsx.
 function PendingDot({ ml = 0 }) {
+    const { t } = useTranslation();
     return (
-        <Box component="span" ml={ml} w={7} h={7} aria-label="Requests are waiting for your decision"
+        <Box component="span" ml={ml} w={7} h={7} aria-label={t('nav.pendingDot')}
             style={{ borderRadius: '50%', background: 'var(--mantine-color-orange-6)', display: 'inline-block' }} />
     );
 }
@@ -63,6 +94,7 @@ function SubNavItem({ item, active, onClick, vertical = false }) {
 }
 
 export function Header() {
+    const { t } = useTranslation();
     const [opened, setOpened] = useState(false);
     const { user, login, logout, useDummyAuth } = useAuth();
     const confirm = useConfirm();
@@ -77,11 +109,9 @@ export function Header() {
     const confirmLogout = async () => {
         if (useDummyAuth) return logout();
         const ok = await confirm({
-            title: 'Sign out?',
-            message: 'This ends your DHBW Cloud session and takes you back to the sign-in page. '
-                + 'Your bwIDM single sign-on session stays active, so signing in again may not ask for a password. '
-                + 'To end that session as well, close your browser.',
-            confirmLabel: 'Sign out',
+            title: t('account.signOutTitle'),
+            message: t('account.signOutMessage'),
+            confirmLabel: t('account.signOut'),
             icon: <LogOut size="16" />,
         });
         if (ok) logout();
@@ -183,6 +213,7 @@ export function Header() {
                         the identity it changes rather than at the end of the tabs. */}
                     <Box style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                     <Box h={HEADER_HEIGHT} style={{ display: 'flex', alignItems: 'center' }}>
+                        <LanguageMenu />
                         {user ? (
                             <Menu trigger="hover" openDelay={100} closeDelay={200}>
                                 <Menu.Target>
@@ -195,13 +226,13 @@ export function Header() {
                                     </Button>
                                 </Menu.Target>
                                 <Menu.Dropdown>
-                                    <Menu.Label>Hello, {user.profile.name}!</Menu.Label>
+                                    <Menu.Label>{t('account.greeting', { name: user.profile.name })}</Menu.Label>
                                     <Menu.Divider />
-                                    <Menu.Item color="red" onClick={confirmLogout}>Logout</Menu.Item>
+                                    <Menu.Item color="red" onClick={confirmLogout}>{t('account.signOut')}</Menu.Item>
                                 </Menu.Dropdown>
                             </Menu>
                         ) : (
-                            <Button onClick={login} size="sm">Login</Button>
+                            <Button onClick={login} size="sm">{t('account.signIn')}</Button>
                         )}
                     </Box>
 

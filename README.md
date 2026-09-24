@@ -39,6 +39,8 @@ A budget with auto-approval grants requests on the spot — as a pool until the 
 
 Both areas also include the interactive API documentation of the service behind them.
 
+**Language** — English and German, switched in the header and remembered in the browser (no account setting, nothing for a deployment to configure). The first visit follows the browser's language. Dates, relative times and the calendar follow the choice: 31.03.2027 in German, 31 Mar 2027 in English. The translation is being moved area by area; anything not translated yet stays English.
+
 ## Screenshots
 
 ### Cloud Projects

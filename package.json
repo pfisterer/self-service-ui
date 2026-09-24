@@ -22,9 +22,12 @@
     "@tanstack/react-query": "^5.101.4",
     "dayjs": "^1.11.21",
     "highlight.js": "^11.11.1",
+    "i18next": "^26.4.2",
+    "i18next-browser-languagedetector": "^8.2.1",
     "lucide-react": "^1.23.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.15",
     "swagger-ui-dist": "^5.32.8",
     "validator": "^13.15.35",
     "wouter": "^3.10.0"

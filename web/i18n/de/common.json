@@ -1,0 +1,103 @@
+{
+    "language": {
+        "label": "Sprache",
+        "change": "Sprache wechseln"
+    },
+    "nav": {
+        "home": "Start",
+        "cloudProjects": "Cloud-Projekte",
+        "dnsZones": "DNS-Zonen",
+        "apiTokens": "API-Tokens",
+        "myProjects": "Meine Projekte",
+        "myBudgets": "Meine Budgets",
+        "rootAdmin": "Administration",
+        "apiDocumentation": "API-Dokumentation",
+        "zoneManagement": "Zonen",
+        "administration": "Verwaltung",
+        "pendingDot": "Anfragen warten auf deine Entscheidung"
+    },
+    "account": {
+        "signIn": "Anmelden",
+        "signOut": "Abmelden",
+        "greeting": "Hallo, {{name}}!",
+        "signOutTitle": "Abmelden?",
+        "signOutMessage": "Damit endet deine Sitzung in der DHBW-Cloud und du landest wieder auf der Anmeldeseite. Deine bwIDM-Anmeldung bleibt bestehen, eine erneute Anmeldung fragt also womöglich nicht nach einem Passwort. Um auch die zu beenden, schließe den Browser."
+    },
+    "footer": {
+        "copyright": "© Dennis Pfisterer, DHBW"
+    },
+    "dates": {
+        "pickerFormat": "D. MMMM YYYY"
+    },
+    "helper": {
+        "codeBlock": {
+            "copy": "Kopieren",
+            "copied": "Kopiert",
+            "clickToCopy": "Zum Kopieren klicken",
+            "copyCode": "Code kopieren"
+        },
+        "copyableText": {
+            "copied": "Kopiert!",
+            "clickToCopy": "Zum Kopieren klicken"
+        },
+        "errorBoundary": {
+            "title": "Da ist etwas schiefgelaufen",
+            "message": "Dieser Teil der Anwendung konnte nicht dargestellt werden. Du kannst es erneut versuchen oder die Seite neu laden.",
+            "tryAgain": "Erneut versuchen",
+            "reload": "Seite neu laden"
+        },
+        "queryState": {
+            "loadErrorTitle": "Laden fehlgeschlagen",
+            "tryAgain": "Erneut versuchen",
+            "conflict": "{{error}} — die Ansicht wurde neu geladen."
+        },
+        "dnsValidation": {
+            "subzoneRequired": "Gib einen Namen für die Subzone ein.",
+            "labelTooLong": "Jeder Namensteil darf höchstens 63 Zeichen lang sein.",
+            "lowercaseOnly": "Erlaubt sind nur Kleinbuchstaben, Ziffern und Bindestriche.",
+            "hyphenEdge": "Ein Namensteil darf nicht mit einem Bindestrich beginnen oder enden.",
+            "nameTooLong": "Der vollständige Name ist zu lang (höchstens 253 Zeichen).",
+            "labelLength": "Jeder Namensteil muss 1 bis 63 Zeichen lang sein.",
+            "nameCharacters": "Erlaubt sind nur Buchstaben, Ziffern, Bindestrich und Unterstrich.",
+            "valueRequired": "Ein Wert ist nötig.",
+            "ipv4": "Gib eine gültige IPv4-Adresse ein (z. B. 192.0.2.1).",
+            "ipv6": "Gib eine gültige IPv6-Adresse ein (z. B. 2001:db8::1)."
+        }
+    },
+    "providers": {
+        "confirm": {
+            "title": "Bist du sicher?",
+            "message": "Das lässt sich nicht rückgängig machen.",
+            "cancel": "Abbrechen",
+            "confirm": "Löschen"
+        },
+        "errorModal": {
+            "title": "Fehler",
+            "close": "Schließen"
+        },
+        "session": {
+            "title": "Deine Sitzung ist abgelaufen",
+            "message": "Du bist abgemeldet, deshalb kann auf dieser Seite nichts mehr gespeichert oder neu geladen werden, bis du dich wieder anmeldest. Beim Anmelden wird die Seite neu geladen und du landest wieder hier — kopiere vorher, was du getippt hast.",
+            "notNow": "Jetzt nicht",
+            "signIn": "Erneut anmelden"
+        },
+        "remoteConfig": {
+            "invalidBaseUrl": "Ungültige API-Basis-URL: {{url}}"
+        }
+    },
+    "swagger": {
+        "title": "API-Dokumentation",
+        "endpoint": "Die API ist erreichbar unter <1>{{baseUrl}}</1>.",
+        "specification": "Die vollständige API-Spezifikation steht in <1>swagger.json</1>.",
+        "client": "Ein generierter TypeScript-Client wird als <1><2>{{package}}</2></1> veröffentlicht; seine Version passt zu der oben angezeigten API-Version. Installiere ihn mit <3>{{install}}</3>."
+    },
+    "app": {
+        "loading": "Lädt…",
+        "notFound": "404: Seite nicht gefunden",
+        "signInTitle": "Anmeldung nötig",
+        "signInMessage": "Melde dich an, um deine DNS-Zonen und Cloud-Ressourcen zu sehen und zu verwalten.",
+        "logIn": "Anmelden",
+        "devLoginLabel": "Dev-Login — als beliebiger Nutzer anmelden",
+        "quickSignIn": "Schnell anmelden:"
+    }
+}

@@ -1,4 +1,5 @@
 import { Box, Text, Anchor } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { ExternalLink } from '/helper/external-link.jsx';
 import { useDynDnsConfig } from '/providers/dyndns-config.jsx';
 import { useCloudConfig } from '/providers/cloud-config.jsx';
@@ -11,6 +12,7 @@ const DYNDNS_REPO = 'https://github.com/pfisterer/dynamic-zones';
 const CLOUD_REPO = 'https://github.com/pfisterer/openstack-management-api';
 
 export function Footer({ title, version }) {
+    const { t } = useTranslation();
     // Both versions are reused from the config providers (each loads its API's
     // /config.json once) — the footer does not fetch anything itself.
     const { config: dynDnsConfig } = useDynDnsConfig();
@@ -40,7 +42,7 @@ export function Footer({ title, version }) {
                     </span>
                 ))}
                 <ExternalLink href="https://dennis-pfisterer.de" size="sm">
-                    © Dennis Pfisterer, DHBW
+                    {t('footer.copyright')}
                 </ExternalLink>
             </Text>
         </Box>

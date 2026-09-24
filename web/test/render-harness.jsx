@@ -1,6 +1,9 @@
 import { render } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import './jsdom-stubs.js';
+// Initialises i18next once for every test: a component calling t() without it
+// renders bare keys, which would pass a smoke test and fail in the browser.
+import '/i18n/index.js';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '/providers/auth.jsx';
 import { ConfirmProvider } from '/providers/confirm.jsx';

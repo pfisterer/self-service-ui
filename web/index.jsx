@@ -7,6 +7,11 @@ import { lazy, Suspense, useState } from 'react';
 import { Router, Route, Switch, useLocation } from 'wouter';
 
 import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+// Imported for its side effect: initialising i18next before the first render,
+// so nothing flashes in one language and settles in another.
+import '/i18n/index.js';
+import { useTranslation } from 'react-i18next';
+import { DatesProvider } from '@mantine/dates';
 import { MantineProvider, AppShell, v8CssVariablesResolver } from '@mantine/core';
 import { Container, Paper, Box, Center, Stack, Title, Text, Button, ThemeIcon, TextInput, Anchor, Group } from '@mantine/core';
 import { LogIn } from 'lucide-react';
@@ -68,10 +73,30 @@ createRoot(document.getElementById('app')).render(
             },
         }}>
         <ErrorBoundary>
-            <App name="Dynamic Zones DNS API" />
+            <Localized>
+                <App name="Dynamic Zones DNS API" />
+            </Localized>
         </ErrorBoundary>
     </MantineProvider>
 )
+
+// Localized hands the chosen language to Mantine's calendars, which format
+// their own month names and weekday headers.
+//
+// The `key` remounts the app when the language changes. Text inside components
+// follows by itself (useTranslation subscribes), but dates do not: they are
+// written by plain functions outside React — format-date.js and dayjs, called
+// from helpers that no hook can reach — so a card showing a date would keep the
+// old spelling until it next rendered for some other reason. Remounting on a
+// deliberate, rare click is the cheap way to make the whole screen agree.
+function Localized({ children }) {
+    const { i18n } = useTranslation();
+    return (
+        <DatesProvider key={i18n.resolvedLanguage} settings={{ locale: i18n.resolvedLanguage }}>
+            {children}
+        </DatesProvider>
+    );
+}
 
 function App() {
     return (
@@ -113,7 +138,7 @@ function AppRoutes() {
     const section = '/' + (location.split('/')[1] || '');
 
     return (
-        <Suspense fallback={<Container size="md" py="xl">Lädt…</Container>}>
+        <Suspense fallback={<Loading />}>
             <ErrorBoundary key={section}>
                 <Switch>
                     <Route path="/" component={Home} />
@@ -128,6 +153,7 @@ function AppRoutes() {
 }
 
 function Main() {
+    const { t } = useTranslation();
     const { user, login, useDummyAuth, dev_user } = useAuth()
     // Dev-only: the email to sign in as (dummy auth lets you be ANY user).
     const [devEmail, setDevEmail] = useState(dev_user || 'dennis.pfisterer@dhbw.de')
@@ -157,15 +183,15 @@ function Main() {
                                         <ThemeIcon size={72} radius="xl" variant="light">
                                             <LogIn size={38} />
                                         </ThemeIcon>
-                                        <Title order={2}>Sign in required</Title>
+                                        <Title order={2}>{t('app.signInTitle')}</Title>
                                         <Text c="dimmed" size="lg">
-                                            Please sign in to access and manage your DNS zones and cloud resources.
+                                            {t('app.signInMessage')}
                                         </Text>
                                         {useDummyAuth ? (
                                             // Dev/dummy auth: sign in as any user by typing an email.
                                             <Stack gap="sm" w="100%" maw={320}>
                                                 <TextInput
-                                                    label="Dev login — sign in as any user"
+                                                    label={t('app.devLoginLabel')}
                                                     placeholder="user@dhbw.de"
                                                     value={devEmail}
                                                     onChange={(e) => setDevEmail(e.currentTarget.value)}
@@ -173,11 +199,11 @@ function Main() {
                                                     data-autofocus
                                                 />
                                                 <Button size="lg" onClick={() => login(devEmail)} disabled={!devEmail.trim()} leftSection={<LogIn size={20} />}>
-                                                    Log in
+                                                    {t('app.logIn')}
                                                 </Button>
                                                 {/* One-click sign-in as common dev users. */}
                                                 <Stack gap={4} align="center" mt="xs">
-                                                    <Text size="xs" c="dimmed">Quick sign-in:</Text>
+                                                    <Text size="xs" c="dimmed">{t('app.quickSignIn')}</Text>
                                                     {['dennis.pfisterer@dhbw.de', 'clemens.martin@dhbw.de'].map(e => (
                                                         <Anchor key={e} size="sm" onClick={() => login(e)} style={{ cursor: 'pointer' }}>{e}</Anchor>
                                                     ))}
@@ -185,7 +211,7 @@ function Main() {
                                             </Stack>
                                         ) : (
                                             <Button size="lg" onClick={login} leftSection={<LogIn size={20} />}>
-                                                Log in
+                                                {t('app.logIn')}
                                             </Button>
                                         )}
                                     </Stack>
@@ -235,15 +261,17 @@ function Shell({ children, footer }) {
     );
 }
 
-// Shown while a section's client is still being built — see AppRoutes.
+// Shown while a section's chunk is still loading — see AppRoutes.
 function Loading() {
-    return <Container size="md" py="xl">Lädt…</Container>;
+    const { t } = useTranslation();
+    return <Container size="md" py="xl">{t('app.loading')}</Container>;
 }
 
 function NotFound() {
+    const { t } = useTranslation();
     return (
         <Container size="md">
-            <Paper p="lg" withBorder>404: Page not found</Paper>
+            <Paper p="lg" withBorder>{t('app.notFound')}</Paper>
         </Container>
     );
 }

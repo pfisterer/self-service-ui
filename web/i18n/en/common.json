@@ -1,0 +1,103 @@
+{
+    "language": {
+        "label": "Language",
+        "change": "Change language"
+    },
+    "nav": {
+        "home": "Home",
+        "cloudProjects": "Cloud Projects",
+        "dnsZones": "DNS Zones",
+        "apiTokens": "API Tokens",
+        "myProjects": "My Projects",
+        "myBudgets": "My Budgets",
+        "rootAdmin": "Root Admin",
+        "apiDocumentation": "API Documentation",
+        "zoneManagement": "Zone Management",
+        "administration": "Administration",
+        "pendingDot": "Requests are waiting for your decision"
+    },
+    "account": {
+        "signIn": "Sign in",
+        "signOut": "Sign out",
+        "greeting": "Hello, {{name}}!",
+        "signOutTitle": "Sign out?",
+        "signOutMessage": "This ends your DHBW Cloud session and takes you back to the sign-in page. Your bwIDM single sign-on session stays active, so signing in again may not ask for a password. To end that session as well, close your browser."
+    },
+    "footer": {
+        "copyright": "© Dennis Pfisterer, DHBW"
+    },
+    "dates": {
+        "pickerFormat": "D MMMM YYYY"
+    },
+    "helper": {
+        "codeBlock": {
+            "copy": "Copy",
+            "copied": "Copied",
+            "clickToCopy": "Click to copy",
+            "copyCode": "Copy code"
+        },
+        "copyableText": {
+            "copied": "Copied!",
+            "clickToCopy": "Click to copy"
+        },
+        "errorBoundary": {
+            "title": "Something went wrong",
+            "message": "This part of the app failed to render. You can try again or reload the page.",
+            "tryAgain": "Try again",
+            "reload": "Reload page"
+        },
+        "queryState": {
+            "loadErrorTitle": "Could not load",
+            "tryAgain": "Try again",
+            "conflict": "{{error}} — the view has been refreshed."
+        },
+        "dnsValidation": {
+            "subzoneRequired": "Enter a subzone name.",
+            "labelTooLong": "Each label may be at most 63 characters.",
+            "lowercaseOnly": "Only lowercase letters, digits and hyphens are allowed.",
+            "hyphenEdge": "A label must not start or end with a hyphen.",
+            "nameTooLong": "The full name is too long (max 253 characters).",
+            "labelLength": "Each label must be 1–63 characters.",
+            "nameCharacters": "Only letters, digits, hyphen and underscore are allowed.",
+            "valueRequired": "Value is required.",
+            "ipv4": "Enter a valid IPv4 address (e.g. 192.0.2.1).",
+            "ipv6": "Enter a valid IPv6 address (e.g. 2001:db8::1)."
+        }
+    },
+    "providers": {
+        "confirm": {
+            "title": "Are you sure?",
+            "message": "This action cannot be undone.",
+            "cancel": "Cancel",
+            "confirm": "Delete"
+        },
+        "errorModal": {
+            "title": "Error",
+            "close": "Close"
+        },
+        "session": {
+            "title": "Your session has expired",
+            "message": "You have been signed out, so nothing on this page can be saved or reloaded until you sign in again. Signing in reloads the page and brings you back here — copy anything you have typed before you do.",
+            "notNow": "Not now",
+            "signIn": "Sign in again"
+        },
+        "remoteConfig": {
+            "invalidBaseUrl": "Invalid API base URL: {{url}}"
+        }
+    },
+    "swagger": {
+        "title": "API Documentation",
+        "endpoint": "The API endpoint is available at <1>{{baseUrl}}</1>.",
+        "specification": "See <1>swagger.json</1> for the full API specification.",
+        "client": "A generated TypeScript client is published as <1><2>{{package}}</2></1>; its version matches the API version shown above. Install it with <3>{{install}}</3>."
+    },
+    "app": {
+        "loading": "Loading…",
+        "notFound": "404: Page not found",
+        "signInTitle": "Sign in required",
+        "signInMessage": "Please sign in to access and manage your DNS zones and cloud resources.",
+        "logIn": "Log in",
+        "devLoginLabel": "Dev login — sign in as any user",
+        "quickSignIn": "Quick sign-in:"
+    }
+}
