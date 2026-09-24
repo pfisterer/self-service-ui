@@ -268,14 +268,19 @@ export function beyondAutoApproveRefused(budget) {
     return hasAutoApprove(budget) && budget.allow_requests_beyond_auto_approve === false;
 }
 
-// autoApproveText says in one line what a budget grants without a manager,
-// or '' when it grants nothing that way.
-export function autoApproveText(resources, budget) {
-    if (!hasAutoApprove(budget)) return '';
-    const hard = beyondAutoApproveRefused(budget) ? '; nothing beyond that can be requested' : '';
-    if (isPoolAutoApprove(budget)) return `Approved automatically while the budget has room${hard}`;
-    const amount = resourceSummaryText(resources, budget.auto_approve.per_requester_limit);
-    return `Up to ${amount || 'the configured amount'} per person approved automatically${hard}`;
+// autoApproveFacts answers the two questions a budget's auto-approve raises —
+// what it grants without asking, and what happens to the rest — as two separate
+// values rather than one sentence assembled from clauses. null without a policy.
+export function autoApproveFacts(resources, budget) {
+    if (!hasAutoApprove(budget)) return null;
+    const amount = isPoolAutoApprove(budget)
+        ? '' : resourceSummaryText(resources, budget.auto_approve.per_requester_limit);
+    return {
+        // A pool grants whatever the budget still has, so it has no figure of
+        // its own to show.
+        grants: amount ? `Up to ${amount} per person` : 'While the budget has room',
+        beyond: beyondAutoApproveRefused(budget) ? 'Refused' : 'A manager decides',
+    };
 }
 
 // What happens when a request is sent — the same decision the API makes, made

@@ -294,9 +294,10 @@ export function DnsRecordsList({ zone, tsigKey }) {
         const toDelete = selectableRecords.filter(r => selected.has(recordKey(r)));
         if (toDelete.length === 0) return;
         const ok = await confirm({
-            title: `Delete ${toDelete.length} DNS record${toDelete.length > 1 ? 's' : ''}?`,
-            confirmLabel: `Delete ${toDelete.length} record${toDelete.length > 1 ? 's' : ''}`,
-            message: `Permanently delete the ${toDelete.length} selected record${toDelete.length > 1 ? 's' : ''}? This takes effect immediately.`,
+            title: 'Delete the selected DNS records?',
+            confirmLabel: 'Delete selected',
+            // A count beside a label needs no plural of its own.
+            message: `Selected records: ${toDelete.length}. Deleting takes effect immediately.`,
         });
         if (!ok) return;
         setBulkDeleting(true);
@@ -337,7 +338,7 @@ export function DnsRecordsList({ zone, tsigKey }) {
             {/* Bulk-action bar: only shown once records are selected. */}
             {selectedCount > 0 && (
                 <Group justify="space-between">
-                    <Text size="sm">{selectedCount} record{selectedCount > 1 ? 's' : ''} selected</Text>
+                    <Text size="sm">{`Selected records: ${selectedCount}`}</Text>
                     <Group gap="sm">
                         <Button variant="default" size="xs" onClick={() => setSelected(new Set())} disabled={bulkDeleting}>Clear</Button>
                         <Button color="red" size="xs" leftSection={<Trash2 size={16} />} onClick={handleBulkDelete} loading={bulkDeleting}>

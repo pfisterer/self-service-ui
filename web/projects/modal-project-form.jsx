@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Group, Select, Stack, Text, Textarea, TextInput } from '@mantine/core';
+import { Alert, Badge, Group, Select, Stack, Table, Text, Textarea, TextInput } from '@mantine/core';
 import { Clock, Zap } from 'lucide-react';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
@@ -11,7 +11,7 @@ import { formatDate } from '../format-date.js';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
-import { autoApproveHeadroom, changeOutcome, COLOR, freeAmount, isAvailability, isPoolAutoApprove, requestOutcome, resourceSummaryText, visibleResources } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, hasAutoApprove, isAvailability, isPoolAutoApprove, requestOutcome, resourceSummaryText, visibleResources } from './util-project.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
 
@@ -23,28 +23,19 @@ const TAB_MEMBERS = 'members';
 //   - budgets they manage → the project is created active immediately
 //   - budgets they may request under → the project awaits approval
 //     (or is approved instantly when the budget's auto-approve covers it)
-function BudgetSelect({ myBudgets, eligibleBudgets, resources, value, onChange, error }) {
+function BudgetSelect({ myBudgets, eligibleBudgets, value, onChange, error }) {
+    // Which budgets grant on the spot — shown as a badge beside the name
+    // instead of a clause appended to it.
+    const instantIds = useMemo(
+        () => new Set((eligibleBudgets || []).filter(hasAutoApprove).map(b => b.id)),
+        [eligibleBudgets]);
+
     const data = useMemo(() => {
         const managedIds = new Set((myBudgets || []).map(b => b.id));
-        const remainingText = (b) => resources
-            .filter(r => freeAmount(b, r.id) !== Infinity)
-            .map(r => `${freeAmount(b, r.id)} ${r.unit || ''} ${r.name}`.replace('  ', ' '))
-            .join(', ');
-
-        const managed = (myBudgets || []).map(b => ({
-            value: b.id,
-            label: `${b.name || b.id}${remainingText(b) ? ` — free: ${remainingText(b)}` : ''}`,
-        }));
-
+        const managed = (myBudgets || []).map(b => ({ value: b.id, label: b.name || b.id }));
         const eligible = (eligibleBudgets || [])
             .filter(b => !managedIds.has(b.id))
-            .map(b => {
-                const auto = b.auto_approve?.per_requester_limit;
-                const hint = !b.auto_approve ? ''
-                    : isPoolAutoApprove(b) ? ' — instant while it has room'
-                        : ` — instant up to ${resourceSummaryText(resources, auto)} per person`;
-                return { value: b.id, label: `${b.name || b.id}${hint}` };
-            });
+            .map(b => ({ value: b.id, label: b.name || b.id }));
 
         const groups = [];
         if (managed.length) groups.push({ group: 'Budgets you manage (created immediately)', items: managed });
@@ -52,7 +43,7 @@ function BudgetSelect({ myBudgets, eligibleBudgets, resources, value, onChange, 
         // spot, and the note under the form says which way it goes.
         if (eligible.length) groups.push({ group: 'Budgets you can request from', items: eligible });
         return groups;
-    }, [myBudgets, eligibleBudgets, resources]);
+    }, [myBudgets, eligibleBudgets]);
 
     if (!data.length) {
         return (
@@ -74,6 +65,16 @@ function BudgetSelect({ myBudgets, eligibleBudgets, resources, value, onChange, 
             onChange={onChange}
             error={error}
             placeholder="Choose where to request this project"
+            renderOption={({ option }) => (
+                <Group gap="xs" wrap="nowrap" style={{ flex: 1 }}>
+                    <Text size="sm" truncate>{option.label}</Text>
+                    {instantIds.has(option.value) && (
+                        <Badge size="xs" variant="light" color={COLOR.positive} leftSection={<Zap size="10" />}>
+                            Instant
+                        </Badge>
+                    )}
+                </Group>
+            )}
         />
     );
 }
@@ -82,12 +83,13 @@ function BudgetSelect({ myBudgets, eligibleBudgets, resources, value, onChange, 
 // will do — the one thing a requester cannot otherwise tell before it happened.
 function OutcomeNote({ outcome, isChange, budget, hasPolicy }) {
     if (!outcome) return null;
+    // One whole sentence per outcome — the budget is named by the picker above,
+    // so it does not have to be spliced into the sentence as well.
     if (outcome === 'blocked') {
         return (
             <Text size="sm" c={COLOR.negative} mt="sm">
-                More than {budget ? `“${budget.name || budget.id}”` : 'this budget'} grants you, and it takes
-                no requests beyond that. Ask for less, give resources back elsewhere, or ask one of its
-                managers to raise your share.
+                This budget grants no more than your share, and it takes no requests beyond that.
+                Ask for less, or ask one of its managers to raise your share.
             </Text>
         );
     }
@@ -99,7 +101,6 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy }) {
             </Text>
         );
     }
-    const name = budget ? `“${budget.name || budget.id}”` : 'its budget';
     if (outcome === 'direct' || outcome === 'instant') {
         const text = outcome === 'direct'
             ? 'You manage this budget — the project is created right away.'
@@ -113,16 +114,18 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy }) {
             </Group>
         );
     }
+    const waiting = hasPolicy
+        ? (isChange
+            ? 'More than this budget approves automatically. A manager decides, and until then the project keeps its current resources.'
+            : 'More than this budget approves automatically. A manager of this budget decides.')
+        : (isChange
+            ? 'A manager decides. Until then the project keeps its current resources.'
+            : 'A manager of this budget decides on this request.');
     return (
         <Stack gap={4} mt="sm">
             <Group gap={6} wrap="nowrap">
                 <Clock size="14" color="var(--mantine-color-orange-7)" style={{ flexShrink: 0 }} />
-                <Text size="sm" c="orange.8">
-                    {hasPolicy ? 'More than this budget approves automatically — ' : ''}
-                    {isChange
-                        ? `a manager of ${name} decides; until then the project keeps its current resources.`
-                        : `a manager of ${name} decides on this request.`}
-                </Text>
+                <Text size="sm" c="orange.8">{waiting}</Text>
             </Group>
             {budget?.admin_scope?.length > 0 && (
                 <Group gap={6} pl={20}>
@@ -394,7 +397,6 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 <BudgetSelect
                     myBudgets={myBudgets}
                     eligibleBudgets={eligibleBudgets}
-                    resources={resources}
                     value={parentId}
                     onChange={selectBudget}
                     error={form.errors.parentId}
@@ -461,12 +463,26 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                             this does not free anything up — the project stays over its quota until the
                             resources are actually released.
                         </Text>
-                        {overcommitted.map(r => (
-                            <Text key={r.id} size="sm">
-                                <b>{r.name}</b>: {r.requested}{r.unit ? ` ${r.unit}` : ''} requested,
-                                {' '}{r.used}{r.unit ? ` ${r.unit}` : ''} in use
-                            </Text>
-                        ))}
+                        {/* A table, not a sentence per resource: three headings
+                            carry what four spliced fragments used to. */}
+                        <Table withRowBorders={false} verticalSpacing={2} p={0}>
+                            <Table.Thead>
+                                <Table.Tr>
+                                    <Table.Th>Resource</Table.Th>
+                                    <Table.Th>Requested</Table.Th>
+                                    <Table.Th>In use</Table.Th>
+                                </Table.Tr>
+                            </Table.Thead>
+                            <Table.Tbody>
+                                {overcommitted.map(r => (
+                                    <Table.Tr key={r.id}>
+                                        <Table.Td>{r.unit ? `${r.name} (${r.unit})` : r.name}</Table.Td>
+                                        <Table.Td>{r.requested}</Table.Td>
+                                        <Table.Td>{r.used}</Table.Td>
+                                    </Table.Tr>
+                                ))}
+                            </Table.Tbody>
+                        </Table>
                     </Stack>
                 </Alert>
             )}

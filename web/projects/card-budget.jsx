@@ -1,7 +1,7 @@
 import { Check, Eye, FolderInput, FolderOpen, Pencil, Plus, Trash2, X, Zap } from 'lucide-react';
 import { Badge, Button, Card, Divider, Group, Stack, Text } from '@mantine/core';
 import { FactRow, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
-import { autoApproveText, beyondAutoApproveRefused, COLOR, expiryTone, expiryValue, hasAutoApprove, isPoolAutoApprove } from './util-project.jsx';
+import { autoApproveFacts, COLOR, expiryTone, expiryValue, hasAutoApprove } from './util-project.jsx';
 
 // BudgetCard renders one budget (inner tree node): who manages it, who may
 // request under it, and how full it is. Like ProjectCard it is presentational —
@@ -19,6 +19,7 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
     const isPending = node.status === 'pending';
     const isChangePending = node.status === 'change_pending';
     const autoApprove = hasAutoApprove(node);
+    const autoApproveInfo = autoApproveFacts(resources, node);
     const hasRequesters = (node.eligible_requesters || []).length > 0;
 
     return (
@@ -67,27 +68,27 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                             emptyMessage="Whoever manages the budget above" />
                     </FactRow>
 
-                    <FactRow label="Can request"
-                        hint={hasRequesters
-                            ? `They may ask for ${node.allow_sub_budget_requests === false ? 'projects' : 'projects and sub-budgets'} out of this budget.`
-                            : undefined}>
+                    <FactRow label="Can request">
                         <TokenBadgeList size="xs" tokens={node.eligible_requesters}
                             emptyMessage="Nobody — only its managers can put anything here" />
                     </FactRow>
 
-                    {autoApprove && (
-                        <FactRow label="Auto-approve"
-                            hint={(isPoolAutoApprove(node)
-                                ? 'Requests are granted without asking until the budget is used up'
-                                : 'Requests up to this size are granted without asking')
-                                + (beyondAutoApproveRefused(node)
-                                    ? '; anything beyond is refused.'
-                                    : "; anything beyond needs a manager's decision.")}>
-                            <Text size="xs">
-                                <Zap size="11" style={{ verticalAlign: '-1px', marginRight: 4, color: 'var(--mantine-color-green-7)' }} />
-                                {autoApproveText(resources, node)}
-                            </Text>
+                    {hasRequesters && (
+                        <FactRow label="May ask for">
+                            {node.allow_sub_budget_requests === false ? 'Projects' : 'Projects and sub-budgets'}
                         </FactRow>
+                    )}
+
+                    {autoApproveInfo && (
+                        <>
+                            <FactRow label="Granted at once">
+                                <Text size="xs">
+                                    <Zap size="11" style={{ verticalAlign: '-1px', marginRight: 4, color: 'var(--mantine-color-green-7)' }} />
+                                    {autoApproveInfo.grants}
+                                </Text>
+                            </FactRow>
+                            <FactRow label="Beyond that">{autoApproveInfo.beyond}</FactRow>
+                        </>
                     )}
 
                     {node.termination_date && (

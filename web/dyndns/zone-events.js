@@ -32,8 +32,10 @@ export function worstZoneEventColor(events) {
 export function zoneEventTimeline(ev, locale = undefined) {
     if (!ev?.first_seen || !ev?.last_seen) return '';
     const fmt = (iso) => new Date(iso).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
-    const times = ev.count > 1 ? `${ev.count}× since ${fmt(ev.first_seen)}` : `since ${fmt(ev.first_seen)}`;
-    return `${times}, last ${fmt(ev.last_seen)}`;
+    // One whole sentence per case instead of clauses stitched together.
+    return ev.count > 1
+        ? `Seen ${ev.count}× between ${fmt(ev.first_seen)} and ${fmt(ev.last_seen)}`
+        : `Seen on ${fmt(ev.first_seen)}`;
 }
 
 // zoneEventMailto builds a mailto: link to the zone's owners, with the

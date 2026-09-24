@@ -4,7 +4,7 @@ import { Badge, Button, Divider, Group, Modal, Paper, Stack, Table, Tabs, Text, 
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { NodeChangesDiff, NodeStatusBadge, QuotaBadges, TokenBadgeList, UserRoleBadgeList } from './component-common.jsx';
-import { autoApproveText, formatRelativeDate, hasAutoApprove, isBudget, nodeTitle, ownerEmail, statusLabel } from './util-project.jsx';
+import { autoApproveFacts, formatRelativeDate, isBudget, nodeTitle, ownerEmail, statusLabel } from './util-project.jsx';
 import { formatDateTime } from '../format-date.js';
 
 dayjs.extend(relativeTime);
@@ -45,6 +45,7 @@ function Row({ label, children }) {
 // NodeDetailsPanel is the "everything about this node" view for budgets and projects.
 function NodeDetailsPanel({ node, resources }) {
     const budget = isBudget(node);
+    const autoApprove = autoApproveFacts(resources, node);
 
     return (
         <Stack>
@@ -97,12 +98,19 @@ function NodeDetailsPanel({ node, resources }) {
                                     : 'May request projects and sub-budgets'}
                             </Text>
                         )}
-                        {/* Same as on the card: the auto-approve amount is a
-                            statement about these people, not a topic of its own. */}
-                        {hasAutoApprove(node) && (
-                            <Text size="xs" c="green.7" mt="4">{autoApproveText(resources, node)}</Text>
-                        )}
                     </div>
+                    {autoApprove && (
+                        <>
+                            <div>
+                                <Text size="xs" fw={600} c="dimmed" mb="4">Granted at once</Text>
+                                <Text size="xs" c="green.7">{autoApprove.grants}</Text>
+                            </div>
+                            <div>
+                                <Text size="xs" fw={600} c="dimmed" mb="4">Beyond that</Text>
+                                <Text size="xs">{autoApprove.beyond}</Text>
+                            </div>
+                        </>
+                    )}
                 </>
             )}
 

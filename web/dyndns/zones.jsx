@@ -72,7 +72,7 @@ export function DynDnsZones() {
                                     component={Link}
                                     to={"/zone/" + base.name}
                                     label={<Group gap={6} wrap="nowrap">{base.name}<ZoneEventIndicator events={eventsByZone[base.name]} /></Group>}
-                                    description={base.owners?.length > 1 ? `Shared with ${base.owners.length} owners: ${base.owners.join(', ')}` : undefined}
+                                    description={base.owners?.length > 1 ? `Shared with: ${base.owners.join(', ')}` : undefined}
                                     leftSection={<Globe size="16" />}
                                     active={activeZoneName === base.name}
                                     rightSection={base.allow_subdomains && base.exists ? (
@@ -92,7 +92,7 @@ export function DynDnsZones() {
                                         component={Link}
                                         to={"/zone/" + sz.name}
                                         label={<Group gap={6} wrap="nowrap">{sz.name}<ZoneEventIndicator events={eventsByZone[sz.name]} /></Group>}
-                                        description={sz.owners?.length > 1 ? `Shared with ${sz.owners.length} owners: ${sz.owners.join(', ')}` : undefined}
+                                        description={sz.owners?.length > 1 ? `Shared with: ${sz.owners.join(', ')}` : undefined}
                                         leftSection={<CornerDownRight size="14" />}
                                         active={activeZoneName === sz.name}
                                         style={{ paddingLeft: `${12 + subzoneDepth(sz.name, base.name) * 22}px` }}
@@ -269,9 +269,12 @@ function JoinZone({ zone, owners }) {
     return (
         <Stack gap="sm">
             <Text>
-                This is a shared zone{owners?.length ? <> currently managed by <b>{owners.join(', ')}</b></> : ''}.
-                Join it to co-manage its DNS records — you'll get your own TSIG key.
+                This is a shared zone. Join it to co-manage its DNS records — you'll get your own
+                TSIG key.
             </Text>
+            {owners?.length > 0 && (
+                <Text size="sm" c="dimmed">{`Currently managed by: ${owners.join(', ')}`}</Text>
+            )}
             <Group>
                 <Button leftSection={<Users size={16} />} onClick={() => join.mutate()} loading={join.isPending}>Join zone</Button>
             </Group>
@@ -337,7 +340,21 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
         const ok = await confirm({
             title: '⚠️ Delete zone?',
             confirmLabel: 'Delete zone',
-            message: (<Text size="sm">This permanently deletes the zone <b>{zone.zoneData.zone}</b> and all of its DNS records{zone.owners?.length > 1 ? <> for <b>all {zone.owners.length} owners</b></> : ''}. This cannot be undone.{zone.owners?.length > 1 ? ' To remove only yourself, use "Leave zone" instead.' : ''}</Text>),
+            // Two whole messages instead of one sentence with two switches in it.
+            message: zone.owners?.length > 1
+                ? (
+                    <Text size="sm">
+                        This permanently deletes the zone <b>{zone.zoneData.zone}</b>, all of its DNS
+                        records and every owner's access to it. This cannot be undone. To remove only
+                        yourself, use “Leave zone” instead.
+                    </Text>
+                )
+                : (
+                    <Text size="sm">
+                        This permanently deletes the zone <b>{zone.zoneData.zone}</b> and all of its
+                        DNS records. This cannot be undone.
+                    </Text>
+                ),
         });
         if (ok) deleteZone.mutate();
     }

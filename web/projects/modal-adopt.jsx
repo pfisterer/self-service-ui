@@ -101,9 +101,9 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
             submitColor={COLOR.outside}
         >
             <Alert color={COLOR.outside} variant="light" p="xs">
-                This OpenStack project ({node.os_project_id || 'unknown ID'}) is not managed
-                here yet. Adopting places it under a budget; the next synchronization run
-                then sends it through the normal approval flow. Its current members are kept.
+                This OpenStack project is not managed here yet. Adopting places it under a
+                budget; the next synchronization run then sends it through the normal approval
+                flow. Its current members are kept.
             </Alert>
 
             <TextInput

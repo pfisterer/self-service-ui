@@ -132,7 +132,8 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
 
                     {authorizedCount > 0 && (
                         <FactRow label="Members">
-                            {`the owner and ${authorizedCount} other${authorizedCount !== 1 ? 's' : ''}`}
+                            {/* A count beside a label needs no plural of its own. */}
+                            {`Owner + ${authorizedCount}`}
                         </FactRow>
                     )}
                 </Stack>

@@ -47,7 +47,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
             {searchable && (
                 <TextInput
                     size="xs"
-                    placeholder={`Filter ${resources.length} resources`}
+                    placeholder="Filter resources"
                     value={query}
                     onChange={e => setQuery(e.currentTarget.value)}
                     aria-label="Filter resources"

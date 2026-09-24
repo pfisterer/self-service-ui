@@ -20,7 +20,7 @@ export function ShowKeys({ zone }) {
                 (<ExternalLink href="https://datatracker.ietf.org/doc/html/rfc2136">RFC&nbsp;2136</ExternalLink>)
                 and zone transfers (AXFR). Anyone holding a key can modify the zone, so <b>keep it secret</b>.
                 <br /><br />
-                This zone has {zone_keys.length} key{zone_keys.length !== 1 ? 's' : ''}.
+                {`Keys in this zone: ${zone_keys.length}`}
             </TabIntro>
 
             {zone_keys.map((key, index) => (

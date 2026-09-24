@@ -45,8 +45,8 @@ describe('zoneEventTimeline', () => {
     };
 
     it('mentions the repeat count only when there is one', () => {
-        expect(zoneEventTimeline(ev, 'en-GB')).toMatch(/^3× since .+, last .+$/);
-        expect(zoneEventTimeline({ ...ev, count: 1 }, 'en-GB')).toMatch(/^since .+, last .+$/);
+        expect(zoneEventTimeline(ev, 'en-GB')).toMatch(/^Seen 3× between .+ and .+$/);
+        expect(zoneEventTimeline({ ...ev, count: 1 }, 'en-GB')).toMatch(/^Seen on .+$/);
     });
 
     it('renders nothing rather than "Invalid Date" for missing timestamps', () => {

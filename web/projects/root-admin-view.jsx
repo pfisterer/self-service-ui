@@ -145,7 +145,7 @@ export function RootAdminView() {
                 until someone reports missing access. */}
             {status?.preseed_conflicts?.length ? (
                 <Alert color={COLOR.attention} icon={<AlertTriangle size="16" />}
-                    title={`${status.preseed_conflicts.length} user(s) could not be prepared in OpenStack`}>
+                    title="Some users could not be prepared in OpenStack">
                     <Text size="sm" mb="xs">
                         These people did not get their role. Their OpenStack account is ambiguous — most
                         often the OIDC username differs from the email address. Assign the role to the

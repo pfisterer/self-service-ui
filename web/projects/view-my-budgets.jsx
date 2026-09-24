@@ -22,7 +22,7 @@ import { RejectModal } from './modal-reject.jsx';
 import { TransferOwnerModal } from './modal-transfer-owner.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
-import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, ownerEmail, REQUEST_TYPES, requestType } from './util-project.jsx';
+import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, REQUEST_TYPES, requestType } from './util-project.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
 // How long typing pauses before a search is sent.
@@ -362,13 +362,12 @@ export function MyBudgetsView() {
     };
 
     const handleRelease = async (node) => {
-        const owner = ownerEmail(node);
         const ok = await confirm({
             title: `Release project “${node.name || node.id}”?`,
             confirmLabel: 'Release',
-            message: owner
-                ? `This hands ${owner}'s project back: it and its resources are removed from OpenStack. This cannot be undone.`
-                : 'Releasing removes the project and its resources from OpenStack. This cannot be undone.',
+            // The owner is named on the card behind the dialog, so the sentence
+            // does not have to bend around their name.
+            message: 'Releasing removes the project and its resources from OpenStack. This cannot be undone.',
         });
         if (!ok) return;
         try {
@@ -416,7 +415,10 @@ export function MyBudgetsView() {
         <Stack>
             <Group justify="space-between" align="center">
                 <Text size="sm" c="dimmed">
-                    The budgets you manage, as a tree{requestableOnly.length > 0 ? ', plus the ones you may request from (read-only)' : ''}.
+                    {requestableOnly.length > 0
+                        ? 'The budgets you manage, plus the ones you may request from (read-only).'
+                        : 'The budgets you manage, as a tree.'}
+                    {' '}
                     Select a node to inspect it; delegate by creating a sub-budget with someone else in “Managed by”.
                 </Text>
                 {budgetRequestTargets.length > 0 && (
@@ -429,10 +431,9 @@ export function MyBudgetsView() {
 
             {myBudgets.items.length === 0 && (
                 <Alert color={COLOR.info} variant="light">
-                    You don't manage any budgets yet.
                     {budgetRequestTargets.length > 0
-                        ? ' You can request one from a budget that accepts sub-budget requests.'
-                        : ' A manager of a parent budget can delegate one to you.'}
+                        ? "You don't manage any budgets yet. You can request one from a budget that accepts sub-budget requests."
+                        : "You don't manage any budgets yet. A manager of a parent budget can delegate one to you."}
                 </Alert>
             )}
 
@@ -441,8 +442,7 @@ export function MyBudgetsView() {
                 stops being true. */}
             {myBudgets.items.length < myBudgets.total && (
                 <Alert color={COLOR.attention} variant="light">
-                    Showing {myBudgets.items.length} of {myBudgets.total} budgets you manage.
-                    Use the search to find the ones not listed.
+                    {`Budgets shown: ${myBudgets.items.length}/${myBudgets.total}.`} Use the search to find the ones not listed.
                 </Alert>
             )}
 
@@ -514,7 +514,7 @@ export function MyBudgetsView() {
                                         because the counts above are then partial. */}
                                     {waiting.items.length < waiting.total && (
                                         <Text size="xs" c={COLOR.attention} mb="xs">
-                                            Showing {waiting.items.length} of {waiting.total} open requests.
+                                            {`Open requests shown: ${waiting.items.length}/${waiting.total}`}
                                         </Text>
                                     )}
                                 </>

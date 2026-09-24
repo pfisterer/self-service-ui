@@ -39,7 +39,7 @@ export function ZoneEventIndicator({ events }) {
     if (!events?.length) return null;
     const label = events.length === 1
         ? events[0].message || 'There is a problem with this zone.'
-        : `${events.length} problems with this zone.`;
+        : `Problems with this zone: ${events.length}`;
     return (
         <Tooltip label={label}>
             <AlertTriangle
@@ -68,9 +68,8 @@ export function ZoneEventsBanner({ events }) {
                         {ev.detail && ev.detail !== ev.message && (
                             <Text size="sm">{ev.detail}</Text>
                         )}
-                        <Text size="xs" c="dimmed">
-                            {zoneEventTimeline(ev)} · reported by {ev.source}
-                        </Text>
+                        <Text size="xs" c="dimmed">{zoneEventTimeline(ev)}</Text>
+                        <Text size="xs" c="dimmed">{`Reported by ${ev.source}`}</Text>
                     </Stack>
                 </Alert>
             ))}

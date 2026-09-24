@@ -152,7 +152,7 @@ function MoreRow({ more, elementProps, onLoadMore }) {
             <UnstyledButton onClick={load} disabled={loading}>
                 <Text size="xs" c={COLOR.info} fw={500}>
                     {loading ? 'Loading…' : 'Show more'}
-                    <Text span size="xs" c="dimmed" fw={400}> — {more.loaded} of {more.total} loaded</Text>
+                    <Text span size="xs" c="dimmed" fw={400}>{` (${more.loaded}/${more.total})`}</Text>
                 </Text>
             </UnstyledButton>
         </Group>
@@ -278,12 +278,12 @@ export function NodeResultList({ nodes, selectedId, onSelect, total, onMore, emp
                     {onMore ? (
                         <UnstyledButton onClick={loadMore} disabled={loading}>
                             <Text size="xs" c={COLOR.info} fw={500}>
-                                {loading ? 'Loading…' : `Show more`}
-                                <Text span size="xs" c="dimmed" fw={400}> — {nodes.length} of {total}</Text>
+                                {loading ? 'Loading…' : 'Show more'}
+                                <Text span size="xs" c="dimmed" fw={400}>{` (${nodes.length}/${total})`}</Text>
                             </Text>
                         </UnstyledButton>
                     ) : (
-                        <Text size="xs" c="dimmed">Showing {nodes.length} of {total}</Text>
+                        <Text size="xs" c="dimmed">{`${nodes.length}/${total}`}</Text>
                     )}
                 </Group>
             )}

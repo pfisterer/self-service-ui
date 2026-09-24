@@ -101,7 +101,7 @@ export function MyProjectsView() {
                 being true, say it — a missing project is worse than a long list. */}
             {projects.items.length < projects.total && (
                 <Alert color={COLOR.attention} variant="light">
-                    Showing {projects.items.length} of your {projects.total} projects.
+                    {`Projects shown: ${projects.items.length}/${projects.total}`}
                 </Alert>
             )}
 

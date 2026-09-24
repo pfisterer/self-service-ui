@@ -44,9 +44,12 @@ export function MoveModal({ opened, onClose, onDone, node, targetBudgets }) {
             submitLabel="Move"
         >
             <Text size="sm" c="dimmed">
-                The {isBudget(node) ? 'budget (including everything under it)' : 'project'} will
-                be funded by the destination budget from then on. You must manage both the
-                current and the new location, and the destination needs enough free capacity.
+                {isBudget(node)
+                    ? 'This budget and everything under it will be funded by the destination budget from then on.'
+                    : 'This project will be funded by the destination budget from then on.'}
+                {' '}
+                You must manage both the current and the new location, and the destination needs
+                enough free capacity.
             </Text>
 
             <Select

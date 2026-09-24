@@ -156,7 +156,7 @@ function RuleFilter({ searchFilter, onSearchChange, filteredCount, totalCount })
                     <X size="16" />
                 </ActionIcon>
             )}
-            description={`Showing ${filteredCount} of ${totalCount} rules`}
+            description={`Rules shown: ${filteredCount}/${totalCount}`}
         />
     );
 }

@@ -85,7 +85,7 @@ export function CloudProjectManagement() {
                     title="This view failed to render"
                     message="Switch to another section or reload the page. If it persists, a record here may be malformed."
                 >
-                    <Suspense fallback={<div style={{ padding: '2rem' }}>Lädt…</div>}>
+                    <Suspense fallback={<div style={{ padding: '2rem' }}>Loading…</div>}>
                         <Switch>
                             <Route path="/projects" component={MyProjectsView} />
                             <Route path="/budgets" component={MyBudgetsView} />
