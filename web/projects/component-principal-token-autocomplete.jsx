@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Autocomplete, Loader, Stack, Text } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 
 /**
@@ -24,7 +25,8 @@ import { useNodesApi } from './api-nodes.jsx';
  *   disabled?: boolean
  *   limit?: number
  */
-export function PrincipalTokenAutocomplete({ value, onChange, onSelect, placeholder = 'e.g. group:cs-students', limit = 10 }) {
+export function PrincipalTokenAutocomplete({ value, onChange, onSelect, placeholder, limit = 10 }) {
+    const { t } = useTranslation();
     const api = useNodesApi();
     const [search, setSearch] = useState(value || '');
     // The token just handed over from the dropdown. Mantine calls onChange with
@@ -71,7 +73,7 @@ export function PrincipalTokenAutocomplete({ value, onChange, onSelect, placehol
     return (
         <Stack gap="4">
         <Autocomplete
-            placeholder={placeholder}
+            placeholder={placeholder ?? t('projects.principalSearch.placeholder')}
             value={value}
             data={groups.map(g => g.token)}
             filter={({ options }) => options}
@@ -104,7 +106,7 @@ export function PrincipalTokenAutocomplete({ value, onChange, onSelect, placehol
         />
         {failed && (
             <Text size="xs" c="orange.8">
-                The group directory is not reachable — no suggestions. You can still type a token by hand.
+                {t('projects.principalSearch.unreachable')}
             </Text>
         )}
         </Stack>

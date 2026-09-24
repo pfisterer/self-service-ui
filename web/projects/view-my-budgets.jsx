@@ -22,7 +22,8 @@ import { RejectModal } from './modal-reject.jsx';
 import { TransferOwnerModal } from './modal-transfer-owner.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
-import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, REQUEST_TYPES, requestType } from './util-project.jsx';
+import { useTranslation } from 'react-i18next';
+import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, requestTypes, requestType } from './util-project.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
 // How long typing pauses before a search is sent.
@@ -51,6 +52,7 @@ const CHILDREN_STALE_MS = 30_000;
 const EMPTY_PAGE = { items: [], total: 0 };
 
 export function MyBudgetsView() {
+    const { t } = useTranslation();
     const api = useNodesApi();
     const queryClient = useQueryClient();
     const { user } = useAuth();
@@ -323,8 +325,8 @@ export function MyBudgetsView() {
     };
 
     const treeData = useMemo(
-        () => budgetsToTreeData([...rootBudgets, ...requestableOnly], childrenMap),
-        [rootBudgets, requestableOnly, childrenMap],
+        () => budgetsToTreeData(t, [...rootBudgets, ...requestableOnly], childrenMap),
+        [t, rootBudgets, requestableOnly, childrenMap],
     );
 
     // Widening the scope only changes the inbox, not the tree. The scope is part
@@ -349,8 +351,8 @@ export function MyBudgetsView() {
 
     const handleDelete = async (node) => {
         const ok = await confirm({
-            title: `Delete budget “${node.name || node.id}”?`,
-            message: 'Only possible while nothing under it is active or awaiting a decision.',
+            title: t('projects.budgets.deleteTitle', { name: node.name || node.id }),
+            message: t('projects.budgets.deleteMessage'),
         });
         if (!ok) return;
         try {
@@ -363,11 +365,11 @@ export function MyBudgetsView() {
 
     const handleRelease = async (node) => {
         const ok = await confirm({
-            title: `Release project “${node.name || node.id}”?`,
-            confirmLabel: 'Release',
+            title: t('projects.budgets.releaseTitle', { name: node.name || node.id }),
+            confirmLabel: t('projects.actions.release'),
             // The owner is named on the card behind the dialog, so the sentence
             // does not have to bend around their name.
-            message: 'Releasing removes the project and its resources from OpenStack. This cannot be undone.',
+            message: t('projects.budgets.releaseMessage'),
         });
         if (!ok) return;
         try {
@@ -401,7 +403,7 @@ export function MyBudgetsView() {
     };
 
     if (!api || !config || myBudgetsQuery.isPending) return <Loading />;
-    if (myBudgetsQuery.isError) return <LoadError query={myBudgetsQuery} title="Could not load your budgets" />;
+    if (myBudgetsQuery.isError) return <LoadError query={myBudgetsQuery} title={t('projects.budgets.loadError')} />;
 
     const resources = config.resources || [];
     // Move targets: every budget visible in the tree.
@@ -416,10 +418,10 @@ export function MyBudgetsView() {
             <Group justify="space-between" align="center">
                 <Text size="sm" c="dimmed">
                     {requestableOnly.length > 0
-                        ? 'The budgets you manage, plus the ones you may request from (read-only).'
-                        : 'The budgets you manage, as a tree.'}
+                        ? t('projects.budgets.introWithRequestable')
+                        : t('projects.budgets.intro')}
                     {' '}
-                    Select a node to inspect it; delegate by creating a sub-budget with someone else in “Managed by”.
+                    {t('projects.budgets.introSelect')}
                 </Text>
                 {budgetRequestTargets.length > 0 && (
                     <Button size="xs" variant="light" leftSection={<Inbox size="14" />}
@@ -432,8 +434,8 @@ export function MyBudgetsView() {
             {myBudgets.items.length === 0 && (
                 <Alert color={COLOR.info} variant="light">
                     {budgetRequestTargets.length > 0
-                        ? "You don't manage any budgets yet. You can request one from a budget that accepts sub-budget requests."
-                        : "You don't manage any budgets yet. A manager of a parent budget can delegate one to you."}
+                        ? t('projects.budgets.noneCanRequest')
+                        : t('projects.budgets.none')}
                 </Alert>
             )}
 
@@ -442,7 +444,7 @@ export function MyBudgetsView() {
                 stops being true. */}
             {myBudgets.items.length < myBudgets.total && (
                 <Alert color={COLOR.attention} variant="light">
-                    {`Budgets shown: ${myBudgets.items.length}/${myBudgets.total}.`} Use the search to find the ones not listed.
+                    {t('projects.budgets.shown', { shown: myBudgets.items.length, total: myBudgets.total })}
                 </Alert>
             )}
 
@@ -463,12 +465,12 @@ export function MyBudgetsView() {
                                 value={filter}
                                 onChange={changeFilter}
                                 data={[
-                                    { value: '', label: 'All' },
+                                    { value: '', label: t('projects.budgets.filterAll') },
                                     {
                                         value: 'waiting',
                                         label: (
                                             <Group gap="4" wrap="nowrap" justify="center">
-                                                <span>Waiting</span>
+                                                <span>{t('projects.budgets.filterWaiting')}</span>
                                                 {waitingCount('waiting') > 0 && (
                                                     <Badge size="xs" circle color={COLOR.attention}>{waitingCount('waiting')}</Badge>
                                                 )}
@@ -492,11 +494,20 @@ export function MyBudgetsView() {
                                             value={filter}
                                             onChange={changeFilter}
                                             data={[
-                                                { value: 'waiting', label: `All (${waitingCount('waiting')})` },
-                                                ...REQUEST_TYPES.map(t => ({
-                                                    value: t.value,
-                                                    label: `${t.label} (${waitingCount(t.value)})`,
-                                                    disabled: waitingCount(t.value) === 0,
+                                                {
+                                                    value: 'waiting',
+                                                    label: t('projects.budgets.filterCount', {
+                                                        label: t('projects.budgets.filterAll'),
+                                                        count: waitingCount('waiting'),
+                                                    }),
+                                                },
+                                                ...requestTypes(t).map(kind => ({
+                                                    value: kind.value,
+                                                    label: t('projects.budgets.filterCount', {
+                                                        label: kind.label,
+                                                        count: waitingCount(kind.value),
+                                                    }),
+                                                    disabled: waitingCount(kind.value) === 0,
                                                 })),
                                             ]}
                                         />
@@ -504,7 +515,7 @@ export function MyBudgetsView() {
                                     <Checkbox
                                         size="xs"
                                         mb="xs"
-                                        label="Include requests in delegated sub-budgets"
+                                        label={t('projects.budgets.includeSubtree')}
                                         checked={includeSubtree}
                                         onChange={(e) => changeScope(e.currentTarget.checked)}
                                     />
@@ -514,7 +525,7 @@ export function MyBudgetsView() {
                                         because the counts above are then partial. */}
                                     {waiting.items.length < waiting.total && (
                                         <Text size="xs" c={COLOR.attention} mb="xs">
-                                            {`Open requests shown: ${waiting.items.length}/${waiting.total}`}
+                                            {t('projects.budgets.openShown', { shown: waiting.items.length, total: waiting.total })}
                                         </Text>
                                     )}
                                 </>
@@ -524,14 +535,14 @@ export function MyBudgetsView() {
                                 <TextInput
                                     size="xs"
                                     style={{ flex: 1 }}
-                                    placeholder="Search name, owner, group…"
-                                    aria-label="Search the budget tree"
+                                    placeholder={t('projects.budgets.searchPlaceholder')}
+                                    aria-label={t('projects.budgets.searchLabel')}
                                     leftSection={searchBusy ? <Loader size="12" /> : <Search size="13" />}
                                     value={search}
                                     onChange={(e) => changeSearch(e.currentTarget.value)}
                                     rightSection={search ? (
                                         <ActionIcon size="xs" variant="subtle" color="gray"
-                                            aria-label="Clear search" onClick={() => changeSearch('')}>
+                                            aria-label={t('projects.budgets.clearSearch')} onClick={() => changeSearch('')}>
                                             <X size="12" />
                                         </ActionIcon>
                                     ) : null}
@@ -548,14 +559,14 @@ export function MyBudgetsView() {
                                         onMore={loadMoreResults}
                                         selectedId={selected?.id}
                                         onSelect={select}
-                                        emptyText={searchBusy ? 'Searching…' : 'No matches.'}
+                                        emptyText={searchBusy ? t('projects.budgets.searching') : t('projects.budgets.noMatches')}
                                     />
                                 ) : filtering ? (
                                     <NodeResultList
                                         nodes={waitingList}
                                         selectedId={selected?.id}
                                         onSelect={select}
-                                        emptyText="Nothing is waiting for your decision."
+                                        emptyText={t('projects.budgets.nothingWaiting')}
                                     />
                                 ) : (
                                     <BudgetTree

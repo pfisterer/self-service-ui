@@ -1,4 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import i18n from '/i18n/index.js';
+
+// The real English resources, so a renamed key fails here rather than showing
+// the key itself on the screen.
+const t = i18n.getFixedT('en');
 import {
     UNLIMITED_QUOTA,
     autoApproveHeadroom,
@@ -168,9 +173,9 @@ describe('resourceSummaryText', () => {
 
 describe('statusLabel / isProvisioning', () => {
     it('translates the known statuses and passes an unknown one through', () => {
-        expect(statusLabel('pending')).toBe('Awaiting approval');
-        expect(statusLabel('approved')).toBe('Active');
-        expect(statusLabel('whatever')).toBe('whatever');
+        expect(statusLabel(t, 'pending')).toBe('Awaiting approval');
+        expect(statusLabel(t, 'approved')).toBe('Active');
+        expect(statusLabel(t, 'whatever')).toBe('whatever');
     });
 
     // "Active" for a project OpenStack has not created yet sends people looking
@@ -178,7 +183,7 @@ describe('statusLabel / isProvisioning', () => {
     it('says "Setting up" for an approved leaf without an OpenStack project', () => {
         const node = { kind: 'project', status: 'approved' };
         expect(isProvisioning(node, true)).toBe(true);
-        expect(statusLabel('approved', true)).toBe('Setting up');
+        expect(statusLabel(t, 'approved', true)).toBe('Setting up');
     });
 
     it('is not provisioning once the project exists, or when nothing provisions', () => {

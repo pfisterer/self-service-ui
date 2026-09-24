@@ -3,7 +3,12 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import '/test/jsdom-stubs.js';
+// The form and the validator both speak through i18next, so the instance has to
+// exist before either is used; the assertions below are its English values.
+import i18n from '/i18n/index.js';
 import { QuotaInputs, defaultQuota, validateQuota } from './component-quota-inputs.jsx';
+
+const t = (key, options) => i18n.t(key, options);
 
 // The form is where the two kinds have to look different, because the values do
 // not: 1 is "one core" in one row and "granted" in the next.
@@ -87,26 +92,26 @@ describe('validateQuota', () => {
     // call every granted one invalid — the form would refuse to submit a value
     // the API accepts.
     it('accepts a granted availability although it has no bounds', () => {
-        expect(validateQuota([ipv4], { 'dhbw-ipv4': 1 })).toEqual({});
-        expect(validateQuota([ipv4], { 'dhbw-ipv4': 0 })).toEqual({});
+        expect(validateQuota(t, [ipv4], { 'dhbw-ipv4': 1 })).toEqual({});
+        expect(validateQuota(t, [ipv4], { 'dhbw-ipv4': 0 })).toEqual({});
     });
 
     // A stored limit only carries the availabilities that were set; one missing
     // is not granted, not invalid. Flagging it blocked saving a budget whose
     // tab showed nothing wrong.
     it('treats a missing availability as not granted', () => {
-        expect(validateQuota([ipv4], {})).toEqual({});
-        expect(validateQuota([ipv4], { 'dhbw-ipv4': null })).toEqual({});
+        expect(validateQuota(t, [ipv4], {})).toEqual({});
+        expect(validateQuota(t, [ipv4], { 'dhbw-ipv4': null })).toEqual({});
     });
 
     it('rejects anything else on an availability', () => {
-        expect(validateQuota([ipv4], { 'dhbw-ipv4': 2 })['dhbw-ipv4']).toBeTruthy();
-        expect(validateQuota([ipv4], { 'dhbw-ipv4': -1 })['dhbw-ipv4']).toBeTruthy();
+        expect(validateQuota(t, [ipv4], { 'dhbw-ipv4': 2 })['dhbw-ipv4']).toBeTruthy();
+        expect(validateQuota(t, [ipv4], { 'dhbw-ipv4': -1 })['dhbw-ipv4']).toBeTruthy();
     });
 
     it('still range-checks a quantity', () => {
-        expect(validateQuota([cores], { cores: 4 })).toEqual({});
-        expect(validateQuota([cores], { cores: 999 }).cores).toBeTruthy();
+        expect(validateQuota(t, [cores], { cores: 4 })).toEqual({});
+        expect(validateQuota(t, [cores], { cores: 999 }).cores).toBeTruthy();
     });
 });
 

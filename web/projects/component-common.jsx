@@ -3,6 +3,7 @@ import { Calendar } from 'lucide-react';
 import { DatePickerInput } from '@mantine/dates';
 import { Badge, Box, Checkbox, Group, NumberInput, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
 import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { COLOR, UNLIMITED_QUOTA, formatRoleLabel, isAvailability, limitDelta, nodeChanges, resourceBarSegments, statusDescription, statusLabel, statusStyle } from './util-project.jsx';
 import { tokenDisplay, tokenEmail, useTokenLabels } from './token-labels.jsx';
@@ -38,13 +39,14 @@ export function FactRow({ label, hint, children }) {
 // and explains it on hover. The label is a word we invented for a state the
 // reader did not choose; the tooltip is where it says what that means for them.
 export function NodeStatusBadge({ status, size = 'sm', provisioning = false }) {
+    const { t } = useTranslation();
     const style = statusStyle(status, provisioning);
     const badge = (
         <Badge size={size} color={style.color} variant={style.variant}>
-            {statusLabel(status, provisioning)}
+            {statusLabel(t, status, provisioning)}
         </Badge>
     );
-    const description = statusDescription(status, provisioning);
+    const description = statusDescription(t, status, provisioning);
     if (!description) return badge;
     return (
         <Tooltip label={description} multiline w={300} withArrow>
@@ -133,6 +135,20 @@ export function UserRoleBadgeList({ users, label, labelColor, size = 'sm' }) {
     );
 }
 
+// usageText writes a bar's figures: what is committed, what is waiting on a
+// decision, and what a grant being looked at would add — "4 (+8 pending) / 20".
+// One string per case rather than three fragments glued together, because the
+// parenthesis and the order of the parts differ between languages.
+function usageText(t, approved, changePending, incoming, limit) {
+    const parts = [
+        changePending > 0 ? t('projects.usage.pending', { count: changePending }) : null,
+        incoming > 0 ? t('projects.usage.incoming', { count: incoming }) : null,
+    ].filter(Boolean);
+    return parts.length > 0
+        ? t('projects.usage.ofLimitWith', { used: approved, extra: parts.join(', '), limit })
+        : t('projects.usage.ofLimit', { used: approved, limit });
+}
+
 // ── Usage bars ──────────────────────────────────────────────────────────────
 
 // ResourceBar renders one resource row with a usage progress bar.
@@ -140,6 +156,7 @@ export function UserRoleBadgeList({ users, label, labelColor, size = 'sm' }) {
 // limit may be UNLIMITED_QUOTA (-1) to indicate no cap.
 // incoming (optional) adds a highlighted segment previewing a pending grant's impact.
 export function ResourceBar({ resource, limit, approved = 0, changePending = 0, incoming = 0 }) {
+    const { t } = useTranslation();
     const label = resource.unit ? `${resource.name} (${resource.unit})` : resource.name;
     const unlimited = limit === UNLIMITED_QUOTA;
 
@@ -148,7 +165,7 @@ export function ResourceBar({ resource, limit, approved = 0, changePending = 0, 
             <Group justify="space-between">
                 <Text size="xs">{label}</Text>
                 <Text size="xs" c="dimmed">
-                    {approved}{changePending > 0 ? ` + ${changePending} pending` : ''}{incoming > 0 ? ` + ${incoming} incoming` : ''} / ∞
+                    {usageText(t, approved, changePending, incoming, '∞')}
                 </Text>
             </Group>
         );
@@ -161,17 +178,12 @@ export function ResourceBar({ resource, limit, approved = 0, changePending = 0, 
     // add a hue that means nothing anywhere else in the UI.
     const color = totalPct >= 90 ? COLOR.negative : COLOR.info;
 
-    const suffix = [
-        changePending > 0 ? `+${changePending} pending` : null,
-        incoming > 0 ? `+${incoming} incoming` : null,
-    ].filter(Boolean).join(', ');
-
     return (
         <Stack gap="2">
             <Group justify="space-between">
                 <Text size="xs">{label}</Text>
                 <Text size="xs" c="dimmed">
-                    {approved}{suffix ? ` (${suffix})` : ''} / {limit}
+                    {usageText(t, approved, changePending, incoming, limit)}
                 </Text>
             </Group>
             <Progress.Root size="sm">
@@ -231,7 +243,9 @@ export function AvailabilityBadges({ resources }) {
 
 // NodeChangesDiff shows a before/after table for limit and termination date
 // plus added/removed authorized users. Renders nothing when nothing changed.
-export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateTo, usersFrom, usersTo, label = 'Proposed changes' }) {
+export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateTo, usersFrom, usersTo, label }) {
+    const { t } = useTranslation();
+    const heading = label ?? t('projects.changes.proposed');
     const { hasLimitChange, hasDateChange, added, removed, roleChanged, hasUserChanges } =
         nodeChanges({ resources, limitFrom, limitTo, dateFrom, dateTo, usersFrom, usersTo });
 
@@ -244,16 +258,16 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
 
     return (
         <Box mt="md">
-            <Text fw={600} size="sm" mb="xs">{label}</Text>
+            <Text fw={600} size="sm" mb="xs">{heading}</Text>
 
             {(hasLimitChange || hasDateChange) && (
                 <Table size="xs" mb={hasUserChanges ? 'md' : 0}>
                     <Table.Thead>
                         <Table.Tr>
-                            <Table.Th>Resource</Table.Th>
-                            <Table.Th>Before</Table.Th>
-                            <Table.Th>After</Table.Th>
-                            <Table.Th>Change</Table.Th>
+                            <Table.Th>{t('projects.changes.resource')}</Table.Th>
+                            <Table.Th>{t('projects.changes.before')}</Table.Th>
+                            <Table.Th>{t('projects.changes.after')}</Table.Th>
+                            <Table.Th>{t('projects.changes.change')}</Table.Th>
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
@@ -270,7 +284,7 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
                         })}
                         {hasDateChange && (
                             <Table.Tr>
-                                <Table.Td>End date</Table.Td>
+                                <Table.Td>{t('projects.changes.endDate')}</Table.Td>
                                 <Table.Td>{formatDate(dateFrom)}</Table.Td>
                                 <Table.Td>{formatDate(dateTo)}</Table.Td>
                                 {dateFrom ? (
@@ -286,11 +300,11 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
 
             {hasUserChanges && (
                 <Stack gap="xs">
-                    <UserRoleBadgeList users={added} label="Added:" />
-                    <UserRoleBadgeList users={removed} label="Removed:" labelColor="dimmed" />
+                    <UserRoleBadgeList users={added} label={t('projects.changes.added')} />
+                    <UserRoleBadgeList users={removed} label={t('projects.changes.removed')} labelColor="dimmed" />
                     {roleChanged.length > 0 && (
                         <div>
-                            <Text size="xs" c="dimmed" fw={600} mb="xs">Roles changed:</Text>
+                            <Text size="xs" c="dimmed" fw={600} mb="xs">{t('projects.changes.rolesChanged')}</Text>
                             <Stack gap="xs">
                                 {roleChanged.map(u => (
                                     <Group key={u.token} gap="xs" align="center">
@@ -340,7 +354,9 @@ export function pickedDate(value) {
     return value instanceof Date ? value : dayjs(value).toDate();
 }
 
-export function TerminationDatePicker({ value, onChange, error, readOnly = false, label = 'End date', optional = false, maxDate = null }) {
+export function TerminationDatePicker({ value, onChange, error, readOnly = false, label, optional = false, maxDate = null }) {
+    const { t } = useTranslation();
+    const heading = label ?? t('projects.endDate.label');
     const currentDate = value;
     // No date means no duration to show: a number standing next to an empty date
     // field claims something that is not stored anywhere.
@@ -356,9 +372,9 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
     const [pickedUnit, setPickedUnit] = useState(null);
 
     const selectData = [
-        { value: 'days', label: 'Days' },
-        { value: 'weeks', label: 'Weeks' },
-        { value: 'months', label: 'Months' },
+        { value: 'days', label: t('projects.endDate.days') },
+        { value: 'weeks', label: t('projects.endDate.weeks') },
+        { value: 'months', label: t('projects.endDate.months') },
     ];
 
     const daysUntil = currentDate
@@ -394,9 +410,9 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
         if (!currentDate) return null;
         return (
             <>
-                <Text mt="xs" mb="xs" size="xs" fw={600}>{label}</Text>
+                <Text mt="xs" mb="xs" size="xs" fw={600}>{heading}</Text>
                 <Badge variant="outline" color="gray" leftSection={<Calendar size="12" />}>
-                    Ends: {formatDate(currentDate)} ({dayjs(currentDate).fromNow()})
+                    {t('projects.endDate.ends', { date: formatDate(currentDate), relative: dayjs(currentDate).fromNow() })}
                 </Badge>
             </>
         );
@@ -406,8 +422,11 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
 
     const fields = (
         <Group gap="xs" align="flex-end">
-            <DatePickerInput style={{ flex: 1 }} size="xs" placeholder="Pick date" leftSection={<Calendar size="14" />}
-                label={`Date ${currentDate ? `(${dayjs(currentDate).fromNow()})` : ''}`}
+            <DatePickerInput style={{ flex: 1 }} size="xs" placeholder={t('projects.endDate.pick')} leftSection={<Calendar size="14" />}
+                valueFormat={t('dates.pickerFormat')}
+                label={currentDate
+                    ? t('projects.endDate.dateWithRelative', { relative: dayjs(currentDate).fromNow() })
+                    : t('projects.endDate.date')}
                 value={currentDate}
                 onChange={(v) => onChange?.(pickedDate(v))}
                 minDate={new Date()}
@@ -415,12 +434,12 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
                 disabled={!hasEndDate}
                 error={error}
             />
-            <NumberInput size="xs" w={110} label="Duration" min={1} max={365}
+            <NumberInput size="xs" w={110} label={t('projects.endDate.duration')} min={1} max={365}
                 value={durationValue ?? ''}
                 placeholder="—"
                 disabled={!hasEndDate}
                 onChange={(v) => updateDateFromDuration(v, durationUnit)} />
-            <Select size="xs" label="Unit" w={110} value={durationUnit} data={selectData}
+            <Select size="xs" label={t('projects.endDate.unit')} w={110} value={durationUnit} data={selectData}
                 disabled={!hasEndDate}
                 onChange={(u) => { setPickedUnit(u); updateDateFromDuration(durationValue, u); }} />
         </Group>
@@ -428,15 +447,15 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
 
     return (
         <Stack gap="xs">
-            <Text fw={600} size="sm">{label}</Text>
+            <Text fw={600} size="sm">{heading}</Text>
 
             {optional && !latest ? (
                 <>
                     {/* Ticking the box writes a real date right away, so the fields
                         below never describe something that is not stored. */}
                     <Checkbox
-                        label="Set an end date"
-                        description="Off means the budget runs until somebody changes it."
+                        label={t('projects.endDate.setEndDate')}
+                        description={t('projects.endDate.setEndDateHint')}
                         checked={hasEndDate}
                         onChange={e => onChange?.(e.currentTarget.checked
                             ? dateFromDuration(DEFAULT_DURATION_DAYS, 'days')
@@ -456,7 +475,7 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
             ) : fields}
             {latest && (
                 <Text size="xs" c="dimmed">
-                    At most until {formatDate(latest)}, when its budget ends.
+                    {t('projects.endDate.atMost', { date: formatDate(latest) })}
                 </Text>
             )}
         </Stack>

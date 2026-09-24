@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Anchor, Checkbox, Loader, Stack, Text } from '@mantine/core';
+import { Trans, useTranslation } from 'react-i18next';
 import { useForm } from '@mantine/form';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
@@ -15,6 +16,7 @@ import { COLOR, isBudget, nodeTitle, ownerEmail } from './util-project.jsx';
 // The manager sees the impact on the funding budget before deciding and may
 // grant an adjusted amount instead of the requested one.
 export function ApproveModal({ opened, onClose, onDone, resources, node }) {
+    const { t } = useTranslation();
     const api = useNodesApi();
 
     const isChange = node?.status === 'change_pending';
@@ -28,7 +30,7 @@ export function ApproveModal({ opened, onClose, onDone, resources, node }) {
         initialValues: { adjust: false, quota: { ...requested } },
         validate: (values) => (values.adjust
             ? Object.fromEntries(
-                Object.entries(validateQuota(resources, values.quota)).map(([id, msg]) => [`quota.${id}`, msg]))
+                Object.entries(validateQuota(t, resources, values.quota)).map(([id, msg]) => [`quota.${id}`, msg]))
             : {}),
     });
 
@@ -78,11 +80,11 @@ export function ApproveModal({ opened, onClose, onDone, resources, node }) {
             opened={opened}
             onClose={onClose}
             size="lg"
-            title={isChange ? `Approve change: ${nodeTitle(node)}` : `Approve: ${nodeTitle(node)}`}
+            title={t(isChange ? 'projects.approve.titleChange' : 'projects.approve.title', { name: nodeTitle(node) })}
             onSubmit={form.onSubmit(values => approve.mutate(values))}
             submitting={approve.isPending}
             submitError={approve.error && formatError(approve.error)}
-            submitLabel="Approve"
+            submitLabel={t('projects.actions.approve')}
             submitColor={COLOR.positive}
         >
             <Stack gap="4">
@@ -90,29 +92,28 @@ export function ApproveModal({ opened, onClose, onDone, resources, node }) {
                     whoever filed the request. */}
                 {(ownerEmail(node) || node.created_by) && (
                     <Text size="sm">
-                        <b>Requested by:</b>{' '}
+                        <b>{t('projects.approve.requestedByLabel')}</b>{' '}
                         <Anchor href={`mailto:${ownerEmail(node) || node.created_by}`} size="sm">
                             {ownerEmail(node) || node.created_by}
                         </Anchor>
                     </Text>
                 )}
-                {node.reason && <Text size="sm"><b>Purpose:</b> {node.reason}</Text>}
+                {node.reason && <Text size="sm"><b>{t('projects.approve.purposeLabel')}</b> {node.reason}</Text>}
                 {isBudget(node) && (
                     <Alert color={COLOR.info} variant="light" p="xs">
-                        This approves a <b>budget</b>: its managers can then approve requests and
-                        delegate further within the granted cap.
+                        <Trans i18nKey="projects.approve.budgetNote" components={{ 1: <b /> }} />
                     </Alert>
                 )}
             </Stack>
 
             <div>
-                <Text size="sm" fw={600} mb="xs">Requested amount</Text>
+                <Text size="sm" fw={600} mb="xs">{t('projects.approve.requestedAmount')}</Text>
                 <QuotaBadges resources={resources} quota={requested} />
             </div>
 
             <Checkbox
-                label="Grant a different amount"
-                description="Approve with an adjusted allocation instead of what was requested."
+                label={t('projects.approve.adjust')}
+                description={t('projects.approve.adjustHint')}
                 {...form.getInputProps('adjust', { type: 'checkbox' })}
             />
             {adjust && (
@@ -133,7 +134,7 @@ export function ApproveModal({ opened, onClose, onDone, resources, node }) {
                 : parent && (
                     <div>
                         <Text size="sm" fw={600} mb="xs">
-                            Impact on budget “{parent.name || parent.id}”
+                            {t('projects.approve.impact', { name: parent.name || parent.id })}
                         </Text>
                         <NodeUsageBars resources={resources} node={parent} incomingQuota={incoming} />
                     </div>

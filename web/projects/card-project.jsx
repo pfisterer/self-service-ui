@@ -2,6 +2,7 @@ import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, P
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge } from './component-common.jsx';
 import { COLOR, expiryTone, expiryValue, isImported, isProvisioning, openstackProjectUrl, overageEntries, overageText, ownerEmail, resourceSummaryText } from './util-project.jsx';
+import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
 import { formatDate } from '../format-date.js';
 
@@ -14,6 +15,7 @@ import { formatDate } from '../format-date.js';
 //   'owner'    the viewer owns this project (My Projects)
 //   'manager'  the viewer decides on it (Approvals)
 export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction }) {
+    const { t } = useTranslation();
     const act = (action) => onAction?.(action, node);
     const config = useProjectConfig();
 
@@ -57,11 +59,11 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         <NodeStatusBadge status={node.status} provisioning={provisioning} />
                         {node.os_overcommitted && (
                             <Tooltip label={overage.length > 0
-                                ? `Uses ${overageText(overage)} in OpenStack, more than granted. The budget is charged the larger figure, and creating new resources is blocked.`
-                                : 'The project currently uses more in OpenStack than was granted. Creating new resources is blocked.'}>
+                                ? t('projects.projectCard.overcommittedWithAmount', { amount: overageText(overage) })
+                                : t('projects.projectCard.overcommitted')}>
                                 <Badge color={COLOR.negative} variant="filled" style={{ cursor: 'default' }}>
                                     <AlertTriangle size="11" style={{ marginRight: 3, verticalAlign: 'middle' }} />
-                                    Overcommitted
+                                    {t('projects.projectCard.overcommittedBadge')}
                                 </Badge>
                             </Tooltip>
                         )}
@@ -75,7 +77,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 <Text fw={700} size="sm" mb="xs">
                     {openstackUrl ? (
                         <Anchor href={openstackUrl} target="_blank" rel="noopener noreferrer" inherit
-                            title="Open in OpenStack"
+                            title={t('projects.projectCard.openInOpenStack')}
                             style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             {node.name || node.reason} <ExternalLink size="12" />
                         </Anchor>
@@ -85,34 +87,34 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 {imported && (
                     <Alert color={COLOR.outside} variant="light" mb="xs" p="xs">
                         {(node.flags || []).includes('promote_on_reconcile')
-                            ? 'Queued for adoption — the next synchronization run will bring this project under management.'
+                            ? t('projects.projectCard.adoptionQueued')
                             : isManager
-                                ? 'This project exists in OpenStack but is not managed here yet. Use “Adopt” to place it under a budget.'
-                                : 'This project exists in OpenStack but is not managed here. It cannot be edited.'}
+                                ? t('projects.projectCard.importedManager')
+                                : t('projects.projectCard.imported')}
                     </Alert>
                 )}
 
                 {/* ── Key facts ──────────────────────────────────────────── */}
                 <Stack gap="6" mb="xs">
                     {isManager && owner && (
-                        <FactRow label="Owner">
+                        <FactRow label={t('projects.fact.owner')}>
                             <PersonBadge email={owner} size="xs" />
                         </FactRow>
                     )}
 
                     {parentName && (
-                        <FactRow label="Paid from">{parentName}</FactRow>
+                        <FactRow label={t('projects.fact.paidFrom')}>{parentName}</FactRow>
                     )}
 
                     {resourceSummary && (
-                        <FactRow label="Resources">{resourceSummary}</FactRow>
+                        <FactRow label={t('projects.fact.resources')}>{resourceSummary}</FactRow>
                     )}
 
                     {/* Only the resources that exceed their limit, so the row
                         stays short and every figure on it is the reason the
                         badge is there. */}
                     {overage.length > 0 && (
-                        <FactRow label="In use" hint="Charged to the budget instead of the granted amount.">
+                        <FactRow label={t('projects.fact.inUse')} hint={t('projects.projectCard.inUseHint')}>
                             <Text size="xs" c={COLOR.negative} fw={600}>{overageText(overage)}</Text>
                         </FactRow>
                     )}
@@ -121,19 +123,19 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         IS the message; anything further out reads like the rows
                         above it. */}
                     {node.termination_date && (
-                        <FactRow label="Valid until">
+                        <FactRow label={t('projects.fact.validUntil')}>
                             <Text size="xs" c={expiryTone(node.termination_date) === 'gray'
                                 ? undefined
                                 : `${expiryTone(node.termination_date)}.7`}>
-                                {expiryValue(node.termination_date)}
+                                {expiryValue(t, node.termination_date)}
                             </Text>
                         </FactRow>
                     )}
 
                     {authorizedCount > 0 && (
-                        <FactRow label="Members">
+                        <FactRow label={t('projects.fact.members')}>
                             {/* A count beside a label needs no plural of its own. */}
-                            {`Owner + ${authorizedCount}`}
+                            {t('projects.projectCard.ownerPlus', { count: authorizedCount })}
                         </FactRow>
                     )}
                 </Stack>
@@ -165,7 +167,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                     {/* Details carries the history with it, as a tab. Two buttons
                         for one dialog only made the row longer. */}
                     <Button variant="light" size="xs" onClick={() => act('details')}>
-                        <Eye size="13" style={{ marginRight: 4 }} />Details
+                        <Eye size="13" style={{ marginRight: 4 }} />{t('projects.actions.details')}
                     </Button>
 
                     {/* Editing is not an owner privilege: a manager of the funding
@@ -176,7 +178,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         they then approve, for owners and managers alike. */}
                     {(isApproved || isPending) && (
                         <Button variant="light" size="xs" onClick={() => act('change')}>
-                            <Pencil size="13" style={{ marginRight: 4 }} />Edit
+                            <Pencil size="13" style={{ marginRight: 4 }} />{t('projects.actions.edit')}
                         </Button>
                     )}
                     {/* Also a manager's to do: they carry the budget it is paid
@@ -185,7 +187,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         had to ask the owner to hand back resources. */}
                     {isApproved && (
                         <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('release')}>
-                            Release
+                            {t('projects.actions.release')}
                         </Button>
                     )}
 
@@ -193,25 +195,25 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                     {isManager && (isPending || isChangePending) && (
                         <>
                             <Button color={COLOR.positive} variant="light" size="xs" onClick={() => act('approve')}>
-                                <Check size="13" style={{ marginRight: 4 }} />Approve
+                                <Check size="13" style={{ marginRight: 4 }} />{t('projects.actions.approve')}
                             </Button>
                             <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('reject')}>
-                                <X size="13" style={{ marginRight: 4 }} />Reject
+                                <X size="13" style={{ marginRight: 4 }} />{t('projects.actions.reject')}
                             </Button>
                         </>
                     )}
                     {isManager && imported && !(node.flags || []).includes('promote_on_reconcile') && (
                         <Button color={COLOR.outside} variant="light" size="xs" onClick={() => act('adopt')}>
-                            <Rocket size="13" style={{ marginRight: 4 }} />Adopt
+                            <Rocket size="13" style={{ marginRight: 4 }} />{t('projects.actions.adopt')}
                         </Button>
                     )}
                     {isManager && isApproved && (
                         <>
                             <Button variant="light" size="xs" onClick={() => act('transfer')}>
-                                <ArrowRightLeft size="13" style={{ marginRight: 4 }} />Owner
+                                <ArrowRightLeft size="13" style={{ marginRight: 4 }} />{t('projects.actions.ownerAction')}
                             </Button>
                             <Button variant="light" size="xs" onClick={() => act('move')}>
-                                <FolderInput size="13" style={{ marginRight: 4 }} />Move
+                                <FolderInput size="13" style={{ marginRight: 4 }} />{t('projects.actions.move')}
                             </Button>
                         </>
                     )}

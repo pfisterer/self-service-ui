@@ -180,7 +180,7 @@ export function useNodesApi() {
                 const data = unwrapObject(await searchPrincipals({ client, query: { q, limit } }));
                 return [
                     ...(data?.groups || []).filter(g => g?.token),
-                    ...(data?.users || []).map(email => ({ token: `user:${email}`, description: 'Individual person' })),
+                    ...(data?.users || []).map(email => ({ token: `user:${email}`, description: null })),
                 ];
             },
             searchPrincipals: async (q, limit = 50) => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AlertCircle, ArrowRight, ArrowRightLeft, CalendarMinus, Check, FileText, FolderInput, LogOut, Pencil, Rocket, X } from 'lucide-react';
 import { Badge, Button, Divider, Group, Modal, Paper, Stack, Table, Tabs, Text, Timeline } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { NodeChangesDiff, NodeStatusBadge, QuotaBadges, TokenBadgeList, UserRoleBadgeList } from './component-common.jsx';
@@ -16,20 +17,22 @@ dayjs.extend(relativeTime);
 export const TAB_DETAILS = 'details';
 export const TAB_HISTORY = 'history';
 
-// Human-readable labels and icons for the lifecycle events the backend records.
-const EVENT_META = {
-    created: { label: 'Created', icon: FileText },
-    approved: { label: 'Approved', icon: Check },
-    rejected: { label: 'Rejected', icon: X },
-    change_requested: { label: 'Change requested', icon: ArrowRight },
-    change_rejected: { label: 'Change declined (kept as before)', icon: X },
-    amended: { label: 'Request updated', icon: Pencil },
-    updated: { label: 'Edited by a manager', icon: Pencil },
-    released: { label: 'Released', icon: LogOut },
-    reparented: { label: 'Moved to another budget', icon: FolderInput },
-    owner_transferred: { label: 'Ownership transferred', icon: ArrowRightLeft },
-    promote_requested: { label: 'Adoption queued', icon: Rocket },
-    end_shortened: { label: 'Ends earlier with its budget', icon: CalendarMinus },
+// The icon for each lifecycle event the backend records. The words live in the
+// translations under projects.inspect.events.<event>; an event we have no icon
+// for is one we have no words for either, and both fall back below.
+const EVENT_ICON = {
+    created: FileText,
+    approved: Check,
+    rejected: X,
+    change_requested: ArrowRight,
+    change_rejected: X,
+    amended: Pencil,
+    updated: Pencil,
+    released: LogOut,
+    reparented: FolderInput,
+    owner_transferred: ArrowRightLeft,
+    promote_requested: Rocket,
+    end_shortened: CalendarMinus,
 };
 
 // One label/value row of the details table.
@@ -44,23 +47,24 @@ function Row({ label, children }) {
 
 // NodeDetailsPanel is the "everything about this node" view for budgets and projects.
 function NodeDetailsPanel({ node, resources }) {
+    const { t } = useTranslation();
     const budget = isBudget(node);
-    const autoApprove = autoApproveFacts(resources, node);
+    const autoApprove = autoApproveFacts(t, resources, node);
 
     return (
         <Stack>
             <Table withRowBorders={false} verticalSpacing="4">
                 <Table.Tbody>
-                    <Row label="Status"><NodeStatusBadge status={node.status} /></Row>
-                    {node.reason && <Row label="Purpose">{node.reason}</Row>}
-                    {!budget && ownerEmail(node) && <Row label="Owner">{ownerEmail(node)}</Row>}
-                    <Row label={budget ? 'Resource cap' : 'Resources'}>
+                    <Row label={t('projects.inspect.status')}><NodeStatusBadge status={node.status} /></Row>
+                    {node.reason && <Row label={t('projects.inspect.purpose')}>{node.reason}</Row>}
+                    {!budget && ownerEmail(node) && <Row label={t('projects.fact.owner')}>{ownerEmail(node)}</Row>}
+                    <Row label={budget ? t('projects.inspect.resourceCap') : t('projects.fact.resources')}>
                         <QuotaBadges resources={resources} quota={node.limit} size="xs" />
                     </Row>
-                    {node.termination_date && <Row label="End date">{formatRelativeDate(node.termination_date)}</Row>}
-                    {node.created_by && <Row label="Created by">{node.created_by}</Row>}
-                    {node.created_at && <Row label="Created">{formatRelativeDate(node.created_at)}</Row>}
-                    <Row label="ID"><Text size="xs" ff="monospace">{node.id}</Text></Row>
+                    {node.termination_date && <Row label={t('projects.endDate.label')}>{formatRelativeDate(node.termination_date)}</Row>}
+                    {node.created_by && <Row label={t('projects.fact.createdBy')}>{node.created_by}</Row>}
+                    {node.created_at && <Row label={t('projects.inspect.created')}>{formatRelativeDate(node.created_at)}</Row>}
+                    <Row label={t('projects.inspect.id')}><Text size="xs" ff="monospace">{node.id}</Text></Row>
                 </Table.Tbody>
             </Table>
 
@@ -77,36 +81,36 @@ function NodeDetailsPanel({ node, resources }) {
 
             {budget && (
                 <>
-                    <Divider label="Access" labelPosition="left" />
+                    <Divider label={t('projects.inspect.access')} labelPosition="left" />
                     <div>
-                        <Text size="xs" fw={600} c="dimmed" mb="4">Managed by</Text>
+                        <Text size="xs" fw={600} c="dimmed" mb="4">{t('projects.fact.managedBy')}</Text>
                         <TokenBadgeList tokens={node.admin_scope}
-                            emptyMessage="Managers of the parent budgets only" />
+                            emptyMessage={t('projects.inspect.managedByEmpty')} />
                     </div>
                     <div>
-                        <Text size="xs" fw={600} c="dimmed" mb="4">Who can request here</Text>
+                        <Text size="xs" fw={600} c="dimmed" mb="4">{t('projects.forms.whoCanRequest')}</Text>
                         {/* The sub-budget rule restricts exactly these people, so it
                             reads as a line about them rather than as a separate fact.
                             With nobody listed there is nothing to restrict, and stating
                             the rule anyway contradicts the line above it. */}
                         <TokenBadgeList tokens={node.eligible_requesters}
-                            emptyMessage="Nobody — only its managers can put anything here" />
+                            emptyMessage={t('projects.fact.canRequestEmpty')} />
                         {node.eligible_requesters?.length > 0 && (
                             <Text size="xs" c="dimmed" mt="6">
                                 {node.allow_sub_budget_requests === false
-                                    ? 'May request projects only'
-                                    : 'May request projects and sub-budgets'}
+                                    ? t('projects.inspect.mayRequestProjects')
+                                    : t('projects.inspect.mayRequestProjectsAndBudgets')}
                             </Text>
                         )}
                     </div>
                     {autoApprove && (
                         <>
                             <div>
-                                <Text size="xs" fw={600} c="dimmed" mb="4">Granted at once</Text>
+                                <Text size="xs" fw={600} c="dimmed" mb="4">{t('projects.fact.grantedAtOnce')}</Text>
                                 <Text size="xs" c="green.7">{autoApprove.grants}</Text>
                             </div>
                             <div>
-                                <Text size="xs" fw={600} c="dimmed" mb="4">Beyond that</Text>
+                                <Text size="xs" fw={600} c="dimmed" mb="4">{t('projects.fact.beyondThat')}</Text>
                                 <Text size="xs">{autoApprove.beyond}</Text>
                             </div>
                         </>
@@ -116,10 +120,10 @@ function NodeDetailsPanel({ node, resources }) {
 
             {!budget && (
                 <>
-                    <Divider label="Members" labelPosition="left" />
+                    <Divider label={t('projects.fact.members')} labelPosition="left" />
                     <UserRoleBadgeList users={node.authorized_users} />
                     {(!node.authorized_users || node.authorized_users.length === 0) && (
-                        <Text size="xs" c="dimmed">Only the owner has access.</Text>
+                        <Text size="xs" c="dimmed">{t('projects.inspect.ownerOnly')}</Text>
                     )}
                 </>
             )}
@@ -139,6 +143,7 @@ function NodeDetailsPanel({ node, resources }) {
 
 // NodeHistoryPanel shows a node's lifecycle as a timeline, newest first.
 function NodeHistoryPanel({ node, resources }) {
+    const { t } = useTranslation();
     const history = node.history || [];
 
     if (history.length === 0) {
@@ -146,7 +151,7 @@ function NodeHistoryPanel({ node, resources }) {
             <Paper p="md" withBorder>
                 <Group gap="xs">
                     <AlertCircle size="18" />
-                    <Text>No history available.</Text>
+                    <Text>{t('projects.inspect.noHistory')}</Text>
                 </Group>
             </Paper>
         );
@@ -155,31 +160,39 @@ function NodeHistoryPanel({ node, resources }) {
     return (
         <Timeline active={history.length} bulletSize="24" lineWidth="2">
             {history.slice().reverse().map((h, i) => {
-                const meta = EVENT_META[h.event] ?? { label: h.event, icon: FileText };
-                const Icon = meta.icon;
+                const Icon = EVENT_ICON[h.event] ?? FileText;
+                // An event the backend adds before this UI knows it shows its own
+                // name rather than a blank line.
+                const label = EVENT_ICON[h.event] ? t(`projects.inspect.events.${h.event}`) : h.event;
                 return (
                     <Timeline.Item key={i} bullet={<Icon size="16" />}>
                         <Group justify="space-between" mb="xs">
-                            <Text fw={600}>{meta.label}</Text>
+                            <Text fw={600}>{label}</Text>
                             <Text size="xs" c="dimmed">{formatDateTime(h.timestamp)}</Text>
                         </Group>
 
-                        <Text size="sm">By: {h.actor}</Text>
+                        <Text size="sm">{t('projects.inspect.actor', { actor: h.actor })}</Text>
 
                         {h.status_from !== undefined && h.status_to && h.status_from !== h.status_to && (
                             <Group gap="xs" mt="xs">
-                                <Badge variant="outline" size="sm">{h.status_from ? statusLabel(h.status_from) : 'new'}</Badge>
+                                <Badge variant="outline" size="sm">
+                                    {h.status_from ? statusLabel(t, h.status_from) : t('projects.inspect.statusNew')}
+                                </Badge>
                                 <Text size="xs" c="dimmed">→</Text>
-                                <Badge variant="outline" size="sm">{statusLabel(h.status_to)}</Badge>
+                                <Badge variant="outline" size="sm">{statusLabel(t, h.status_to)}</Badge>
                             </Group>
                         )}
 
                         {(h.parent_from || h.parent_to) && h.parent_from !== h.parent_to && (
-                            <Text size="sm" mt="xs">Budget: {h.parent_from ?? '—'} → {h.parent_to ?? '—'}</Text>
+                            <Text size="sm" mt="xs">
+                                {t('projects.inspect.budgetChange', { from: h.parent_from ?? '—', to: h.parent_to ?? '—' })}
+                            </Text>
                         )}
 
                         {(h.owner_from || h.owner_to) && h.owner_from !== h.owner_to && (
-                            <Text size="sm" mt="xs">Owner: {h.owner_from ?? '—'} → {h.owner_to ?? '—'}</Text>
+                            <Text size="sm" mt="xs">
+                                {t('projects.inspect.ownerChange', { from: h.owner_from ?? '—', to: h.owner_to ?? '—' })}
+                            </Text>
                         )}
 
                         <NodeChangesDiff
@@ -188,19 +201,19 @@ function NodeHistoryPanel({ node, resources }) {
                             limitTo={h.limit_to}
                             dateFrom={h.termination_date_from}
                             dateTo={h.termination_date_to}
-                            label="Changes"
+                            label={t('projects.inspect.changes')}
                         />
 
                         {h.limit_to && !h.limit_from && (
                             <div style={{ marginTop: 8 }}>
-                                <Text size="xs" fw={600} c="dimmed" mb="xs">Granted resources:</Text>
+                                <Text size="xs" fw={600} c="dimmed" mb="xs">{t('projects.inspect.grantedResources')}</Text>
                                 <QuotaBadges resources={resources} quota={h.limit_to} size="xs" />
                             </div>
                         )}
 
                         {h.reason && (
                             <div style={{ marginTop: 8 }}>
-                                <Text size="xs" fw={600} c="dimmed">Reason:</Text>
+                                <Text size="xs" fw={600} c="dimmed">{t('projects.inspect.reason')}</Text>
                                 <Text size="sm">{h.reason}</Text>
                             </div>
                         )}
@@ -218,6 +231,7 @@ function NodeHistoryPanel({ node, resources }) {
  * directly on the timeline instead of making the user switch tabs.
  */
 export function NodeInspectModal({ opened, onClose, node, resources, initialTab = TAB_DETAILS }) {
+    const { t } = useTranslation();
     // Opening again — for another node, or via the other trigger — must land on
     // the requested tab, not on whatever was open the last time. The call sites
     // key this modal on (action, node), so a fresh open is a fresh mount and
@@ -229,14 +243,15 @@ export function NodeInspectModal({ opened, onClose, node, resources, initialTab 
 
     return (
         <Modal opened={opened} onClose={onClose} size="lg"
-            title={`${isBudget(node) ? 'Budget' : 'Project'}: ${nodeTitle(node)}`}>
+            title={t(isBudget(node) ? 'projects.inspect.titleBudget' : 'projects.inspect.titleProject',
+                { name: nodeTitle(node) })}>
             <Stack>
                 <Tabs value={tab} onChange={setTab}>
                     <Tabs.List mb="md">
-                        <Tabs.Tab value={TAB_DETAILS}>Details</Tabs.Tab>
+                        <Tabs.Tab value={TAB_DETAILS}>{t('projects.actions.details')}</Tabs.Tab>
                         {/* Nothing to show yet on a node that was just created —
                             the tab says so instead of opening an empty timeline. */}
-                        <Tabs.Tab value={TAB_HISTORY} disabled={!hasHistory}>History</Tabs.Tab>
+                        <Tabs.Tab value={TAB_HISTORY} disabled={!hasHistory}>{t('projects.inspect.tabHistory')}</Tabs.Tab>
                     </Tabs.List>
 
                     <Tabs.Panel value={TAB_DETAILS}>
@@ -248,7 +263,7 @@ export function NodeInspectModal({ opened, onClose, node, resources, initialTab 
                 </Tabs>
 
                 <Group justify="flex-end">
-                    <Button variant="default" onClick={onClose}>Close</Button>
+                    <Button variant="default" onClick={onClose}>{t('projects.actions.close')}</Button>
                 </Group>
             </Stack>
         </Modal>

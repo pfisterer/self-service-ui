@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { ActionIcon, Badge, Button, Group, Loader, Paper, Text, TextInput } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { Repeat, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useDebouncedValue } from '@mantine/hooks';
@@ -158,13 +159,14 @@ export function RoleSwitchProvider({ children }) {
 // RoleSwitchButton is the collapsed state: one unobtrusive button, rendered by
 // the caller wherever it should sit. Draws nothing while the panel is open.
 export function RoleSwitchButton() {
+    const { t } = useTranslation();
     const ctx = useContext(RoleSwitchContext);
     if (!ctx?.ready || ctx.open) return null;
     return (
         <Button size="compact-xs" variant="subtle" color={COLOR.identity}
             leftSection={<Repeat size={13} />}
             onClick={ctx.expand}>
-            Context switch
+            {t('projects.roleSwitch.button')}
         </Button>
     );
 }
@@ -175,6 +177,7 @@ export function RoleSwitchButton() {
 // switch is ACTIVE — hiding the fact that you are currently someone else would
 // be the one genuinely dangerous state.
 export function RoleSwitchPanel() {
+    const { t } = useTranslation();
     const ctx = useContext(RoleSwitchContext);
     if (!ctx?.ready || !ctx.open) return null;
     const {
@@ -193,22 +196,26 @@ export function RoleSwitchPanel() {
                 <Repeat size={13} style={{ color: 'var(--mantine-color-dimmed)', flexShrink: 0 }} />
 
                 {impersonatedUser
-                    ? <Badge color={COLOR.outside} variant="filled" size="sm" style={{ textTransform: 'none' }}>Acting as {impersonatedUser}</Badge>
+                    ? <Badge color={COLOR.outside} variant="filled" size="sm" style={{ textTransform: 'none' }}>
+                        {t('projects.roleSwitch.actingAs', { name: impersonatedUser })}
+                    </Badge>
                     : selectedGroup
-                        ? <Badge color={COLOR.negative} variant="filled" size="sm" style={{ textTransform: 'none' }}>Acting as {selectedGroup}</Badge>
-                        : <Text size="xs" c="dimmed" fw={600}>Become</Text>}
+                        ? <Badge color={COLOR.negative} variant="filled" size="sm" style={{ textTransform: 'none' }}>
+                            {t('projects.roleSwitch.actingAs', { name: selectedGroup })}
+                        </Badge>
+                        : <Text size="xs" c="dimmed" fw={600}>{t('projects.roleSwitch.become')}</Text>}
 
                 <TextInput
                     value={query}
                     onInput={(event) => setQuery(event.currentTarget.value || '')}
                     onKeyDown={(event) => { if (event.key === 'Enter') submitQuery(); }}
-                    placeholder="Search a user, or type any email…"
+                    placeholder={t('projects.roleSwitch.searchPlaceholder')}
                     size="xs"
                     w={260}
                     disabled={updating}
                 />
                 <Button size="compact-xs" variant="light" color={COLOR.outside} onClick={submitQuery} disabled={updating || !submitTarget}>
-                    Become
+                    {t('projects.roleSwitch.become')}
                 </Button>
                 {updating ? <Loader size="xs" /> : null}
 
@@ -228,21 +235,21 @@ export function RoleSwitchPanel() {
                         </Badge>
                     );
                 })}
-                {hasMore && <Text size="xs" c="dimmed">more matches — keep typing.</Text>}
+                {hasMore && <Text size="xs" c="dimmed">{t('projects.roleSwitch.moreMatches')}</Text>}
                 {query.trim() && matches.length === 0 && (
-                    <Text size="xs" c="dimmed">No match — a full email works anyway.</Text>
+                    <Text size="xs" c="dimmed">{t('projects.roleSwitch.noMatch')}</Text>
                 )}
 
                 <Group gap={4} align="center" ml="auto" wrap="nowrap">
                     {isSwitched && (
                         <Button size="compact-xs" variant="subtle" color={COLOR.negative} disabled={updating} onClick={clearOverride}>
-                            Reset
+                            {t('projects.roleSwitch.reset')}
                         </Button>
                     )}
                     {/* No way to close while switched: the badge above is the only
                         thing telling you that you are not yourself right now. */}
                     {canCollapse && (
-                        <ActionIcon size="sm" variant="subtle" color="gray" onClick={collapse} title="Close">
+                        <ActionIcon size="sm" variant="subtle" color="gray" onClick={collapse} title={t('projects.actions.close')}>
                             <X size={14} />
                         </ActionIcon>
                     )}

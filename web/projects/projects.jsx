@@ -1,4 +1,5 @@
 import { createContext, useContext, lazy, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Route, Switch, useRoute, Redirect } from 'wouter';
 import { Container } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
@@ -31,6 +32,7 @@ export function useProjectConfig() {
 const EMPTY_CONFIG = { resources: [], openstackRoles: [], dummyDevUsers: [] };
 
 export function CloudProjectManagement() {
+    const { t } = useTranslation();
     const api = useNodesApi();
     const { isRoot, ready } = useCloudStatus();
 
@@ -82,10 +84,10 @@ export function CloudProjectManagement() {
                     index.jsx would blank all of /projects instead. */}
                 <ErrorBoundary
                     key={getActiveSection()}
-                    title="This view failed to render"
-                    message="Switch to another section or reload the page. If it persists, a record here may be malformed."
+                    title={t('projects.shell.renderErrorTitle')}
+                    message={t('projects.shell.renderErrorMessage')}
                 >
-                    <Suspense fallback={<div style={{ padding: '2rem' }}>Loading…</div>}>
+                    <Suspense fallback={<div style={{ padding: '2rem' }}>{t('projects.actions.loading')}</div>}>
                         <Switch>
                             <Route path="/projects" component={MyProjectsView} />
                             <Route path="/budgets" component={MyBudgetsView} />

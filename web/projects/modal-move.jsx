@@ -1,4 +1,5 @@
 import { Select, Text } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { useForm, isNotEmpty } from '@mantine/form';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
@@ -10,6 +11,7 @@ import { isBudget, nodeTitle } from './util-project.jsx';
 // MoveModal reparents a node under another budget. The server checks that the
 // mover manages BOTH sides and that the target has capacity.
 export function MoveModal({ opened, onClose, onDone, node, targetBudgets }) {
+    const { t } = useTranslation();
     const api = useNodesApi();
 
     // The node itself and its current parent are not meaningful targets.
@@ -17,7 +19,7 @@ export function MoveModal({ opened, onClose, onDone, node, targetBudgets }) {
 
     const form = useForm({
         initialValues: { targetId: null },
-        validate: { targetId: isNotEmpty('Please choose the destination budget') },
+        validate: { targetId: isNotEmpty(t('projects.move.targetRequired')) },
     });
 
     const move = useApiMutation({
@@ -37,27 +39,26 @@ export function MoveModal({ opened, onClose, onDone, node, targetBudgets }) {
             opened={opened}
             onClose={onClose}
             size="md"
-            title={`Move: ${nodeTitle(node)}`}
+            title={t('projects.move.title', { name: nodeTitle(node) })}
             onSubmit={form.onSubmit(values => move.mutate(values))}
             submitting={move.isPending}
             submitError={move.error && formatError(move.error)}
-            submitLabel="Move"
+            submitLabel={t('projects.actions.move')}
         >
+            {/* Two whole sentences, not one spliced together: the first says what
+                moving does, the second what it takes — each translatable on its own. */}
             <Text size="sm" c="dimmed">
-                {isBudget(node)
-                    ? 'This budget and everything under it will be funded by the destination budget from then on.'
-                    : 'This project will be funded by the destination budget from then on.'}
+                {isBudget(node) ? t('projects.move.budgetScope') : t('projects.move.projectScope')}
                 {' '}
-                You must manage both the current and the new location, and the destination needs
-                enough free capacity.
+                {t('projects.move.requirement')}
             </Text>
 
             <Select
-                label="Move to"
+                label={t('projects.move.target')}
                 required
                 searchable
                 data={targets.map(b => ({ value: b.id, label: b.name || b.id }))}
-                placeholder="Choose the destination budget"
+                placeholder={t('projects.move.targetPlaceholder')}
                 {...form.getInputProps('targetId')}
             />
         </FormModal>

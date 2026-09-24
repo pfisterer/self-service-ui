@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Select, Text, Textarea, TextInput } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { useForm, isEmail, isNotEmpty, hasLength } from '@mantine/form';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
@@ -17,6 +18,7 @@ const DEFAULT_TERM_DAYS = 180;
 // responsible owner and the budget that will fund it. On the next
 // synchronization run the project enters the normal approval flow.
 export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets = [] }) {
+    const { t } = useTranslation();
     const api = useNodesApi();
 
     // Best guess for the owner: the first personal account among the project's
@@ -36,16 +38,16 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
         initialValues: {
             owner: firstUser ? firstUser.token.slice(5) : '',
             targetId: null,
-            reason: node?.os_project_name ? `Adopted OpenStack project “${node.os_project_name}”` : '',
+            reason: node?.os_project_name ? t('projects.adopt.reasonDefault', { name: node.os_project_name }) : '',
             quota: { ...(node?.limit || {}) },
             terminationDate: defaultTerminationDate,
         },
         validate: (values) => ({
-            owner: isEmail('Please enter the owner’s email address')(values.owner.trim()),
-            targetId: isNotEmpty('Please choose the funding budget')(values.targetId),
-            reason: hasLength({ min: 5 }, 'Please describe the purpose (at least 5 characters)')(values.reason.trim()),
+            owner: isEmail(t('projects.adopt.ownerRequired'))(values.owner.trim()),
+            targetId: isNotEmpty(t('projects.adopt.budgetRequired'))(values.targetId),
+            reason: hasLength({ min: 5 }, t('projects.adopt.purposeRequired'))(values.reason.trim()),
             ...Object.fromEntries(
-                Object.entries(validateQuota(resources, values.quota)).map(([id, msg]) => [`quota.${id}`, msg])),
+                Object.entries(validateQuota(t, resources, values.quota)).map(([id, msg]) => [`quota.${id}`, msg])),
         }),
     });
 
@@ -64,10 +66,10 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
         const mineIds = new Set(mine.map(m => m.value));
         const owners = ownerBudgets.filter(b => !mineIds.has(b.id)).map(b => ({ value: b.id, label: b.name || b.id }));
         const groups = [];
-        if (mine.length) groups.push({ group: 'Budgets you manage', items: mine });
-        if (owners.length) groups.push({ group: 'Budgets the owner can request under', items: owners });
+        if (mine.length) groups.push({ group: t('projects.adopt.budgetsYouManage'), items: mine });
+        if (owners.length) groups.push({ group: t('projects.adopt.budgetsOwnerCanRequest'), items: owners });
         return groups;
-    }, [myBudgets, ownerBudgetsQuery.data]);
+    }, [myBudgets, ownerBudgetsQuery.data, t]);
 
     const adopt = useApiMutation({
         mutationFn: (values) => api.adopt(node.id, {
@@ -93,40 +95,38 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
             opened={opened}
             onClose={onClose}
             size="lg"
-            title={`Adopt project: ${nodeTitle(node)}`}
+            title={t('projects.adopt.title', { name: nodeTitle(node) })}
             onSubmit={form.onSubmit(values => adopt.mutate(values))}
             submitting={adopt.isPending}
             submitError={adopt.error && formatError(adopt.error)}
-            submitLabel="Adopt"
+            submitLabel={t('projects.actions.adopt')}
             submitColor={COLOR.outside}
         >
             <Alert color={COLOR.outside} variant="light" p="xs">
-                This OpenStack project is not managed here yet. Adopting places it under a
-                budget; the next synchronization run then sends it through the normal approval
-                flow. Its current members are kept.
+                {t('projects.adopt.note')}
             </Alert>
 
             <TextInput
-                label="Owner"
-                description="The person who will be responsible for this project."
-                placeholder="someone@dhbw.de"
+                label={t('projects.adopt.owner')}
+                description={t('projects.adopt.ownerHint')}
+                placeholder={t('projects.adopt.ownerPlaceholder')}
                 required
                 {...form.getInputProps('owner')}
             />
 
             <Select
-                label="Fund from budget"
+                label={t('projects.adopt.budget')}
                 required
                 searchable
                 data={targetData}
-                placeholder="Choose the budget that provides the resources"
+                placeholder={t('projects.adopt.budgetPlaceholder')}
                 {...form.getInputProps('targetId')}
             />
 
-            <Textarea label="Purpose" required rows={2} {...form.getInputProps('reason')} />
+            <Textarea label={t('projects.adopt.purpose')} required rows={2} {...form.getInputProps('reason')} />
 
             <div>
-                <Text fw={600} size="sm" mb="xs">Granted resources</Text>
+                <Text fw={600} size="sm" mb="xs">{t('projects.adopt.grantedResources')}</Text>
                 <QuotaInputs
                     resources={resources}
                     value={form.values.quota}
@@ -142,8 +142,7 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
 
             {(node.external_group_assignments || []).length > 0 && (
                 <Alert color="gray" variant="light" p="xs">
-                    This project has OpenStack groups assigned outside this system;
-                    they are preserved automatically.
+                    {t('projects.adopt.externalGroups')}
                 </Alert>
             )}
         </FormModal>

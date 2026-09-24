@@ -1,4 +1,5 @@
 import { Text, TextInput } from '@mantine/core';
+import { Trans, useTranslation } from 'react-i18next';
 import { useForm, isEmail } from '@mantine/form';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
@@ -9,12 +10,13 @@ import { nodeTitle, ownerEmail } from './util-project.jsx';
 
 // TransferOwnerModal hands a project to a new responsible person.
 export function TransferOwnerModal({ opened, onClose, onDone, node }) {
+    const { t } = useTranslation();
     const api = useNodesApi();
 
     const form = useForm({
         initialValues: { email: '' },
         transformValues: (values) => ({ email: values.email.trim() }),
-        validate: { email: isEmail('Please enter the new owner’s email address') },
+        validate: { email: isEmail(t('projects.transferOwner.newOwnerRequired')) },
     });
 
     const transfer = useApiMutation({
@@ -34,21 +36,22 @@ export function TransferOwnerModal({ opened, onClose, onDone, node }) {
             opened={opened}
             onClose={onClose}
             size="md"
-            title={`Transfer ownership: ${nodeTitle(node)}`}
+            title={t('projects.transferOwner.title', { name: nodeTitle(node) })}
             onSubmit={form.onSubmit(values => transfer.mutate(values))}
             submitting={transfer.isPending}
             submitError={transfer.error && formatError(transfer.error)}
-            submitLabel="Transfer"
+            submitLabel={t('projects.transferOwner.submit')}
         >
             <Text size="sm" c="dimmed">
-                The owner is the person responsible for a project — they can edit it,
-                request changes and release it. Current owner: <b>{ownerEmail(node) || '—'}</b>
+                {t('projects.transferOwner.explain')}{' '}
+                <Trans i18nKey="projects.transferOwner.currentOwner"
+                    values={{ email: ownerEmail(node) || '—' }} components={{ 1: <b /> }} />
             </Text>
 
             <TextInput
-                label="New owner"
-                description="Email address of the person taking over."
-                placeholder="someone@dhbw.de"
+                label={t('projects.transferOwner.newOwner')}
+                description={t('projects.transferOwner.newOwnerHint')}
+                placeholder={t('projects.transferOwner.newOwnerPlaceholder')}
                 required
                 {...form.getInputProps('email')}
             />

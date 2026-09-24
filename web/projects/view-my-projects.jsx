@@ -15,6 +15,7 @@ import { NodeInspectModal } from './modal-inspect.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
+import { useTranslation } from 'react-i18next';
 import { COLOR, getAuthUserEmail } from './util-project.jsx';
 
 // MyProjectsView lists the projects the signed-in user owns and lets them
@@ -22,6 +23,7 @@ import { COLOR, getAuthUserEmail } from './util-project.jsx';
 // sit the budgets the user may draw from — for somebody without budgets of
 // their own this is the whole cloud section (see nav.jsx).
 export function MyProjectsView() {
+    const { t } = useTranslation();
     const api = useNodesApi();
     const confirm = useConfirm();
     const config = useProjectConfig();
@@ -52,9 +54,9 @@ export function MyProjectsView() {
 
     const handleRelease = async (node) => {
         const ok = await confirm({
-            title: 'Release project?',
-            message: 'Releasing removes the project and its resources from OpenStack. This cannot be undone.',
-            confirmLabel: 'Release',
+            title: t('projects.myProjects.releaseTitle'),
+            message: t('projects.budgets.releaseMessage'),
+            confirmLabel: t('projects.actions.release'),
         });
         if (ok) release.mutate(node.id);
     };
@@ -65,7 +67,7 @@ export function MyProjectsView() {
     };
 
     if (!api || !config || projectsQuery.isPending) return <Loading />;
-    if (projectsQuery.isError) return <LoadError query={projectsQuery} title="Could not load your projects" />;
+    if (projectsQuery.isError) return <LoadError query={projectsQuery} title={t('projects.myProjects.loadError')} />;
 
     const resources = config.resources || [];
     const projects = projectsQuery.data ?? { items: [], total: 0 };
@@ -82,10 +84,10 @@ export function MyProjectsView() {
         <Stack>
             <Group justify="space-between" align="center">
                 <Text size="sm" c="dimmed">
-                    A project is your own space in the DHBW cloud with the resources you request.
+                    {t('projects.myProjects.intro')}
                 </Text>
                 <Button size="xs" leftSection={<Plus size="16" />} onClick={() => setNewProjectBudget('')}>
-                    New project
+                    {t('projects.actions.newProject')}
                 </Button>
             </Group>
 
@@ -101,20 +103,18 @@ export function MyProjectsView() {
                 being true, say it — a missing project is worse than a long list. */}
             {projects.items.length < projects.total && (
                 <Alert color={COLOR.attention} variant="light">
-                    {`Projects shown: ${projects.items.length}/${projects.total}`}
+                    {t('projects.myProjects.shown', { shown: projects.items.length, total: projects.total })}
                 </Alert>
             )}
 
             {projects.items.length === 0 && (
                 canRequest ? (
                     <Alert color={COLOR.info} variant="light">
-                        You don't have any projects yet. Click “New project” to get started — budgets
-                        marked “Instant” create it right away.
+                        {t('projects.myProjects.noneCanRequest')}
                     </Alert>
                 ) : (
                     <Alert color={COLOR.attention} variant="light">
-                        You don't have any projects yet, and no budget currently accepts requests
-                        from you. Ask your lecturer or administrator to add you to a budget.
+                        {t('projects.myProjects.none')}
                     </Alert>
                 )
             )}

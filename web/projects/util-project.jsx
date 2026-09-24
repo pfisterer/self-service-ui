@@ -56,36 +56,20 @@ export const COLOR = {
 
 // Every status also carries the sentence that explains it. A badge is a label,
 // not an explanation, and the words we chose ("Released", "Imported") are ours
-// rather than everyday English — so each one has to say what it means for the
+// rather than everyday language — so each one has to say what it means for the
 // person reading it: what happened, what it costs, what they can do next.
+// The words themselves live in the translations under projects.status.<status>;
+// only the colours are decided here.
 const STATUS_META = {
-    pending: {
-        label: 'Awaiting approval', color: COLOR.attention, variant: 'outline',
-        description: 'Requested, but nothing exists yet. Someone who manages the paying budget has to approve it first.',
-    },
-    approved: {
-        label: 'Active', color: COLOR.positive, variant: 'filled',
-        description: 'Approved and running. The OpenStack project exists and the resources shown here are reserved for you.',
-    },
-    change_pending: {
-        label: 'Change requested', color: COLOR.attention, variant: 'outline',
-        description: 'A change is waiting for a decision. Until it is approved the project keeps running on its previous limits, and those are what it costs.',
-    },
-    rejected: {
-        label: 'Rejected', color: COLOR.negative, variant: 'filled',
-        description: 'The request was turned down. Nothing was created and nothing is charged to the budget.',
-    },
-    released: {
-        // The one people ask about: they gave the project up, expect it gone,
-        // and see it still listed and still charged. Both are true and both are
-        // deliberate — releasing asks for deletion, it does not perform it.
-        label: 'Released', color: COLOR.identity, variant: 'light',
-        description: 'You gave this project up. It stays listed — and keeps using its budget — until OpenStack has actually deleted it, because until then the machines are still running. This cannot be undone.',
-    },
-    imported: {
-        label: 'Imported', color: COLOR.outside, variant: 'light',
-        description: 'Found in OpenStack but not managed here — it was created outside the self-service. It has to be adopted into a budget before it can be changed.',
-    },
+    pending: { color: COLOR.attention, variant: 'outline' },
+    approved: { color: COLOR.positive, variant: 'filled' },
+    change_pending: { color: COLOR.attention, variant: 'outline' },
+    rejected: { color: COLOR.negative, variant: 'filled' },
+    // The one people ask about: they gave the project up, expect it gone, and
+    // see it still listed and still charged. Both are true and both are
+    // deliberate — releasing asks for deletion, it does not perform it.
+    released: { color: COLOR.identity, variant: 'light' },
+    imported: { color: COLOR.outside, variant: 'light' },
 };
 
 // A leaf that is approved but has no OpenStack project yet. The reconciler runs
@@ -93,10 +77,7 @@ const STATUS_META = {
 // window "Active" sends people looking for a project that is not there.
 // Only meaningful while provisioning actually runs; with the reconciler off,
 // nothing ever gets an ID and every project would be stuck on "Setting up".
-const PROVISIONING_META = {
-    label: 'Setting up', color: COLOR.attention, variant: 'filled',
-    description: 'Approved. The OpenStack project is being created — this usually takes a few minutes.',
-};
+const PROVISIONING_META = { color: COLOR.attention, variant: 'filled' };
 
 // openstackProjectUrl is where a project opens in the OpenStack dashboard, or
 // null when there is nowhere to go: no dashboard configured, no OpenStack
@@ -121,17 +102,19 @@ export function statusStyle(status, provisioning = false) {
     return STATUS_META[status] ?? { color: 'gray', variant: 'outline' };
 }
 
-// Returns the human-readable label for a status string.
-export function statusLabel(status, provisioning = false) {
-    if (provisioning) return PROVISIONING_META.label;
-    return STATUS_META[status]?.label ?? status;
+// Returns the human-readable label for a status string. Takes `t` rather than
+// reaching for the i18n instance: this module is imported by plain functions as
+// well as components, and a parameter keeps both honest.
+export function statusLabel(t, status, provisioning = false) {
+    if (provisioning) return t('projects.status.provisioning.label');
+    return STATUS_META[status] ? t(`projects.status.${status}.label`) : status;
 }
 
 // Returns the sentence explaining a status, or '' for one we have no words for
 // — callers render no tooltip rather than an empty one.
-export function statusDescription(status, provisioning = false) {
-    if (provisioning) return PROVISIONING_META.description;
-    return STATUS_META[status]?.description ?? '';
+export function statusDescription(t, status, provisioning = false) {
+    if (provisioning) return t('projects.status.provisioning.description');
+    return STATUS_META[status] ? t(`projects.status.${status}.description`) : '';
 }
 
 // Returns true for reconciler-imported OpenStack projects that are not yet
@@ -271,15 +254,19 @@ export function beyondAutoApproveRefused(budget) {
 // autoApproveFacts answers the two questions a budget's auto-approve raises —
 // what it grants without asking, and what happens to the rest — as two separate
 // values rather than one sentence assembled from clauses. null without a policy.
-export function autoApproveFacts(resources, budget) {
+export function autoApproveFacts(t, resources, budget) {
     if (!hasAutoApprove(budget)) return null;
     const amount = isPoolAutoApprove(budget)
         ? '' : resourceSummaryText(resources, budget.auto_approve.per_requester_limit);
     return {
         // A pool grants whatever the budget still has, so it has no figure of
         // its own to show.
-        grants: amount ? `Up to ${amount} per person` : 'While the budget has room',
-        beyond: beyondAutoApproveRefused(budget) ? 'Refused' : 'A manager decides',
+        grants: amount
+            ? t('projects.autoApprove.perPerson', { amount })
+            : t('projects.autoApprove.whileRoom'),
+        beyond: beyondAutoApproveRefused(budget)
+            ? t('projects.autoApprove.beyondRefused')
+            : t('projects.autoApprove.beyondManager'),
     };
 }
 
@@ -531,16 +518,18 @@ export function expiryTone(d) {
 // (in a year)" / "Expired 2/8/2026 (2 days ago)". The relative part comes from
 // dayjs' relativeTime plugin, so "in 13 days", "in a month", "in a year" are
 // phrased the way a person would say them.
-export function expiryLabel(d) {
+export function expiryLabel(t, d) {
     if (!d) return '';
-    return `${isExpired(d) ? 'Expired' : 'Valid until'} ${formatRelativeDate(d)}`;
+    return isExpired(d)
+        ? t('projects.expiry.expiredOn', { date: formatRelativeDate(d) })
+        : t('projects.expiry.validUntil', { date: formatRelativeDate(d) });
 }
 
 // expiryValue is the same information without the leading words, for places
 // that already carry a "Valid until:" label of their own.
-export function expiryValue(d) {
+export function expiryValue(t, d) {
     if (!d) return '';
-    return isExpired(d) ? `${formatRelativeDate(d)} — expired` : formatRelativeDate(d);
+    return isExpired(d) ? t('projects.expiry.expiredValue', { date: formatRelativeDate(d) }) : formatRelativeDate(d);
 }
 
 export function isExpired(d) {
@@ -550,13 +539,12 @@ export function isExpired(d) {
 // ── Requests waiting for a decision ─────────────────────────────────────────
 
 // The four kinds of thing a manager decides on. Used by the filter in the
-// budget tree; the keys are also what `requestType` returns.
-export const REQUEST_TYPES = [
-    { value: 'project', label: 'New projects' },
-    { value: 'budget', label: 'New budgets' },
-    { value: 'change', label: 'Change requests' },
-    { value: 'imported', label: 'Imported' },
-];
+// budget tree; the values are also what `requestType` returns.
+export const REQUEST_TYPE_VALUES = ['project', 'budget', 'change', 'imported'];
+
+export function requestTypes(t) {
+    return REQUEST_TYPE_VALUES.map(value => ({ value, label: t(`projects.requestTypes.${value}`) }));
+}
 
 // Classifies a node into one of REQUEST_TYPES; null when it waits for nobody.
 export function requestType(node) {

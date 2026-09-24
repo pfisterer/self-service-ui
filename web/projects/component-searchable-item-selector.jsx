@@ -1,4 +1,5 @@
 import { Badge, Button, Group, Loader, Paper, Stack, Text, TextInput } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 
 export function SearchableItemSelector({
     label,
@@ -8,25 +9,27 @@ export function SearchableItemSelector({
     searchResults,
     isSearching,
     onSearch,
-    placeholder = 'Search and add...',
-    searchDescription = 'Type to search',
-    emptyMessage = 'No items selected',
-    buttonLabel = 'Add',
+    placeholder,
+    searchDescription,
+    emptyMessage,
+    buttonLabel,
     renderItem,
     renderSearchResult,
     error,
     isActive = true,
     onFocus,
 }) {
+    const { t } = useTranslation();
+    const addLabel = buttonLabel ?? t('projects.forms.add');
     return (
         <div>
             <Text fw={600} mb="xs">{label}</Text>
             <Stack gap="sm">
                 <TextInput
-                    placeholder={placeholder}
+                    placeholder={placeholder ?? t('projects.itemSelector.placeholder')}
                     onChange={(e) => onSearch(e.target.value)}
                     onFocus={onFocus}
-                    description={searchDescription}
+                    description={searchDescription ?? t('projects.itemSelector.searchHint')}
                     rightSection={isSearching && <Loader size="xs" />}
                 />
 
@@ -34,7 +37,7 @@ export function SearchableItemSelector({
                     <Paper p="sm" withBorder style={{ maxHeight: '200px', overflowY: 'auto' }}>
                         <Stack gap="xs">
                             {searchResults.map((item) => renderSearchResult
-                                ? renderSearchResult(item, onAdd, buttonLabel)
+                                ? renderSearchResult(item, onAdd, addLabel)
                                 : (
                                     <Group justify="space-between" key={item.id || item}>
                                         <Text size="sm">{item.name || item}</Text>
@@ -43,7 +46,7 @@ export function SearchableItemSelector({
                                             variant="light"
                                             onClick={() => onAdd(item)}
                                         >
-                                            {buttonLabel}
+                                            {addLabel}
                                         </Button>
                                     </Group>
                                 )
@@ -53,7 +56,7 @@ export function SearchableItemSelector({
                 )}
 
                 {selectedItems.length === 0 ? (
-                    <Text size="xs" c="dimmed" fw={500}>{emptyMessage}</Text>
+                    <Text size="xs" c="dimmed" fw={500}>{emptyMessage ?? t('projects.itemSelector.empty')}</Text>
                 ) : renderItem ? (
                     <Stack gap="xs">
                         {selectedItems.map(item => renderItem(item, onRemove))}
@@ -65,6 +68,7 @@ export function SearchableItemSelector({
                                 key={item}
                                 rightSection={<button
                                     type="button"
+                                    aria-label={t('projects.forms.remove')}
                                     onClick={() => onRemove(item)}
                                     style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: '0', margin: '0', display: 'flex', alignItems: 'center' }}
                                 >

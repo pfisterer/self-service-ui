@@ -1,4 +1,5 @@
 import { Badge, Button, Group, Select, Text, Stack } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { COLOR, formatRoleLabel } from './util-project.jsx';
 import { SearchableItemSelector } from './component-searchable-item-selector.jsx';
 
@@ -14,11 +15,13 @@ export function TokenRoleEditor({
     roles,
     defaultOpenstackRole = 'member',
     error,
-    emptyMessage = 'No authorized users',
+    emptyMessage,
     isActive = true,
     onFocus = null,
     readOnly = false,
 }) {
+    const { t } = useTranslation();
+    const noUsers = emptyMessage ?? t('projects.memberEditor.empty');
     const renderSearchResult = (item, onAdd, buttonLabel) => (
         <Group justify="space-between" key={item}>
             <Text size="sm">{item}</Text>
@@ -38,7 +41,7 @@ export function TokenRoleEditor({
             <Group justify="space-between" key={auth.token} align="center">
                 <Text size="sm">{auth.token}</Text>
                 <Group gap="xs">
-                    <Text size="xs" c="dimmed">OpenStack role</Text>
+                    <Text size="xs" c="dimmed">{t('projects.memberEditor.openstackRole')}</Text>
                     <Select
                         size="xs"
                         value={auth.openstack_role}
@@ -52,7 +55,7 @@ export function TokenRoleEditor({
                         variant="light"
                         onClick={() => onRemove(auth.token)}
                     >
-                        Remove
+                        {t('projects.forms.remove')}
                     </Button>
                 </Group>
             </Group>
@@ -65,7 +68,7 @@ export function TokenRoleEditor({
             <Stack gap="xs">
                 {label && <Text size="sm" fw={600}>{label}</Text>}
                 {users.length === 0
-                    ? <Text size="xs" c="dimmed">{emptyMessage}</Text>
+                    ? <Text size="xs" c="dimmed">{noUsers}</Text>
                     : users.map(auth => (
                         <Group key={auth.token} gap="xs">
                             <Text size="sm">{auth.token}</Text>
@@ -88,10 +91,10 @@ export function TokenRoleEditor({
             searchResults={searchResults}
             isSearching={isSearching}
             onSearch={onSearch}
-            placeholder="Search and add users/groups..."
-            searchDescription="Type to search for users or groups to authorize"
-            emptyMessage={emptyMessage}
-            buttonLabel="Add"
+            placeholder={t('projects.memberEditor.placeholder')}
+            searchDescription={t('projects.memberEditor.searchHint')}
+            emptyMessage={noUsers}
+            buttonLabel={t('projects.forms.add')}
             renderItem={renderItem}
             renderSearchResult={renderSearchResult}
             error={error}

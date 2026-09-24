@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Badge, Button, Group, Stack, Text } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { PrincipalTokenAutocomplete } from './component-principal-token-autocomplete.jsx';
 import { tokenDisplay, useTokenLabels } from './token-labels.jsx';
 
@@ -7,6 +8,7 @@ import { tokenDisplay, useTokenLabels } from './token-labels.jsx';
 // eligible requesters). Group tokens autocomplete from the directory; user
 // tokens (user:someone@…) can be typed directly.
 export function TokenListEditor({ label, description, tokens, onChange, placeholder, error }) {
+    const { t } = useTranslation();
     const [draft, setDraft] = useState('');
     const labels = useTokenLabels(tokens);
 
@@ -21,7 +23,7 @@ export function TokenListEditor({ label, description, tokens, onChange, placehol
         setDraft('');
     };
 
-    const remove = (token) => onChange(tokens.filter(t => t !== token));
+    const remove = (token) => onChange(tokens.filter(existing => existing !== token));
 
     return (
         <Stack gap="xs">
@@ -36,20 +38,20 @@ export function TokenListEditor({ label, description, tokens, onChange, placehol
                         value={draft}
                         onChange={setDraft}
                         onSelect={add}
-                        placeholder={placeholder ?? 'group:name or user:email@…'}
+                        placeholder={placeholder ?? t('projects.tokenList.placeholder')}
                     />
                 </div>
-                <Button variant="light" onClick={() => add()} disabled={!draft.trim()}>Add</Button>
+                <Button variant="light" onClick={() => add()} disabled={!draft.trim()}>{t('projects.forms.add')}</Button>
             </Group>
 
             {tokens.length === 0
-                ? <Text size="xs" c="dimmed">Nobody added yet.</Text>
+                ? <Text size="xs" c="dimmed">{t('projects.tokenList.empty')}</Text>
                 : (
                     <Group gap="xs" wrap="wrap">
                         {tokens.map(token => (
                             <Badge key={token} variant="outline" color="gray" style={{ textTransform: 'none' }}
                                 rightSection={
-                                    <span role="button" style={{ cursor: 'pointer' }} onClick={() => remove(token)}>×</span>
+                                    <span role="button" aria-label={t('projects.forms.remove')} style={{ cursor: 'pointer' }} onClick={() => remove(token)}>×</span>
                                 }>
                                 {tokenDisplay(token, labels[token])}
                             </Badge>
