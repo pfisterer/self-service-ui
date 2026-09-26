@@ -44,6 +44,20 @@ auth:
   oidc:
     issuerUrl: https://sso.example.cloud/realms/example
     clientId: example-cloud-dns
+    # The provider's endpoints, stated rather than discovered. With all three of
+    # authorizationUrl, tokenUrl and jwksUrl set, the BFF starts without asking
+    # the provider anything — which is what keeps an identity provider that is
+    # down from taking the whole site with it: on 2026-09-25 a Keycloak outage
+    # left oauth2-proxy in CrashLoopBackOff and the self-service answered "no
+    # available server" for as long as it lasted. Leave them empty to discover
+    # them from the issuer at startup, as before.
+    #   Keycloak: <issuer>/protocol/openid-connect/{auth,token,certs,logout}
+    authorizationUrl: ""
+    tokenUrl: ""
+    jwksUrl: ""
+    # Where signing out ends the provider's session. Empty falls back to the
+    # Keycloak path below the issuer.
+    endSessionUrl: ""
 
 #------------------------------------
 # Ingress Configuration

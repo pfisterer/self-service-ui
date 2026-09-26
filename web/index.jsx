@@ -32,6 +32,7 @@ import { RoleSwitchProvider } from './projects/component-group-role-switcher.jsx
 import { Home } from '/home/home.jsx';
 import { Delayed } from '/helper/delayed.jsx';
 import { ErrorBoundary } from '/helper/error-boundary.jsx';
+import { SignInOutageBanner } from '/helper/sign-in-status.jsx';
 import { ClientProvider } from './providers/client.jsx';
 
 // Route-level code splitting: the projects and dyndns trees (swagger-ui lives
@@ -172,6 +173,9 @@ function Main() {
             where the state has to live so the bar can render it. */}
         <RoleSwitchProvider>
         <Shell footer={footer}>
+                    {/* Above the sign-in prompt as well: that is where a person
+                        lands who is about to try a login that cannot work. */}
+                    <SignInOutageBanner />
                     {!user ? (
                         <Delayed waitMs={200}>
                             {/* Prominent, space-filling sign-in prompt: a large card

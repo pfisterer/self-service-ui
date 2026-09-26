@@ -100,8 +100,12 @@ export function AuthProvider({ children }) {
             // must be registered on the BFF client (config.js oidc.client_id).
             const oidc = window.appconfig?.oidc || {};
             const back = window.location.origin + '/';
-            const endSession = oidc.issuer_url
-                ? `${oidc.issuer_url}/protocol/openid-connect/logout` +
+            // Stated in the deployment where it is known; the Keycloak path
+            // below the issuer otherwise, which is what this always used.
+            const endSessionBase = oidc.end_session_url
+                || (oidc.issuer_url ? `${oidc.issuer_url}/protocol/openid-connect/logout` : '');
+            const endSession = endSessionBase
+                ? `${endSessionBase}` +
                 `?post_logout_redirect_uri=${encodeURIComponent(back)}` +
                 `&client_id=${encodeURIComponent(oidc.client_id || '')}`
                 : back;

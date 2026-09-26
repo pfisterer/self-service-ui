@@ -26,6 +26,7 @@ window.appconfig = {
   "oidc": {
     "client_id": "${OIDC_CLIENT_ID}",
     "issuer_url": "${OIDC_ISSUER_URL}",
+    "end_session_url": "${OIDC_END_SESSION_URL}",
   }
 };
 EOF

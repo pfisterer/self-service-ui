@@ -80,6 +80,8 @@ spec:
               value: "{{ .Values.auth.oidc.issuerUrl  }}"
             - name: OIDC_CLIENT_ID
               value: "{{ .Values.auth.oidc.clientId }}"
+            - name: OIDC_END_SESSION_URL
+              value: "{{ .Values.auth.oidc.endSessionUrl }}"
 
 ---
 apiVersion: v1

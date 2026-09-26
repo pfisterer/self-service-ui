@@ -71,7 +71,11 @@
           "required": ["issuerUrl", "clientId"],
           "properties": {
             "issuerUrl": { "type": "string", "minLength": 1 },
-            "clientId": { "type": "string", "minLength": 1 }
+            "clientId": { "type": "string", "minLength": 1 },
+            "authorizationUrl": { "type": "string" },
+            "tokenUrl": { "type": "string" },
+            "jwksUrl": { "type": "string" },
+            "endSessionUrl": { "type": "string" }
           }
         }
       }

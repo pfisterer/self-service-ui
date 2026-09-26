@@ -98,6 +98,10 @@
         "signInMessage": "Please sign in to access and manage your DNS zones and cloud resources.",
         "logIn": "Log in",
         "devLoginLabel": "Dev login — sign in as any user",
-        "quickSignIn": "Quick sign-in:"
+        "quickSignIn": "Quick sign-in:",
+        "signInOutage": {
+            "title": "Signing in is currently unavailable",
+            "message": "The university's sign-in service is not responding. If you are signed in, you can keep working. A new sign-in will only work again once the service is back — nothing needs to be done on your side."
+        }
     }
 }

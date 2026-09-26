@@ -28,6 +28,7 @@ export default defineConfig(({ mode }) => {
       oidc: {
         client_id: env.OIDC_CLIENT_ID || '',
         issuer_url: env.OIDC_ISSUER_URL || '',
+        end_session_url: env.OIDC_END_SESSION_URL || '',
       },
     };
     mkdirSync(path.dirname(cfgPath), { recursive: true });

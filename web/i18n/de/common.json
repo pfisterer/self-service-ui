@@ -98,6 +98,10 @@
         "signInMessage": "Melde dich an, um deine DNS-Zonen und Cloud-Ressourcen zu sehen und zu verwalten.",
         "logIn": "Anmelden",
         "devLoginLabel": "Dev-Login — als beliebiger Nutzer anmelden",
-        "quickSignIn": "Schnell anmelden:"
+        "quickSignIn": "Schnell anmelden:",
+        "signInOutage": {
+            "title": "Die Anmeldung ist gerade nicht möglich",
+            "message": "Der Anmeldedienst der DHBW antwortet nicht. Wenn du angemeldet bist, kannst du weiterarbeiten. Eine neue Anmeldung klappt erst wieder, wenn der Dienst zurück ist — du musst dafür nichts tun."
+        }
     }
 }

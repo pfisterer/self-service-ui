@@ -43,6 +43,18 @@ spec:
           args:
             - --provider=oidc
             - --oidc-issuer-url={{ .Values.auth.oidc.issuerUrl }}
+            {{- with .Values.auth.oidc }}
+            {{- if and .authorizationUrl .tokenUrl .jwksUrl }}
+            # The endpoints come from the configuration, so starting up asks the
+            # provider nothing and a provider that is down cannot keep this pod
+            # from running. The issuer above is still checked against every
+            # token; what is skipped is fetching the discovery document.
+            - --skip-oidc-discovery=true
+            - --login-url={{ .authorizationUrl }}
+            - --redeem-url={{ .tokenUrl }}
+            - --oidc-jwks-url={{ .jwksUrl }}
+            {{- end }}
+            {{- end }}
             - --http-address=0.0.0.0:4180
             - --reverse-proxy=true
             # Everything goes to the UI pod (Caddy), which serves the SPA and
