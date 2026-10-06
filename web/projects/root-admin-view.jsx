@@ -10,25 +10,26 @@ import { COLOR } from './util-project.jsx';
 import { formatDateTime } from '../format-date.js';
 
 
-// The reconciler publishes each project's termination date as a Keystone tag, so
-// "what has run out" is answerable from a shell with OpenStack credentials — no
-// account here, no database access. The query is shown rather than run: it reads
-// the cloud directly, which is the point of having it, and an admin holding those
+// The reconciler writes each managed project's state as Keystone tags (status,
+// termination date, contact, …), so "what is there and in which state" is
+// answerable from a shell with OpenStack credentials — no account here, no
+// database access. The query is shown rather than run: it reads the cloud
+// directly, which is the point of having it, and an admin holding those
 // credentials is who it is for.
 //
 // Notes on the shape: /v3/projects is used instead of `openstack project list`
-// because the CLI does not print tags; the timestamps are RFC3339 in UTC, which
-// sorts and compares as plain text, so `<` against the current time is enough.
-function overdueQuery(prefix) {
+// because the CLI does not print tags; `prefix:value` tags become an object, the
+// rest stays a list, so nothing here has to know which prefixes exist.
+// OS_AUTH_URL comes with or without /v3, depending on the openrc.
+function managedProjectsQuery(tag) {
     return [
         'TOKEN=$(openstack token issue -f value -c id) &&',
-        'curl -s -H "X-Auth-Token: $TOKEN" "$OS_AUTH_URL/projects" \\',
-        `  | jq -r --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '`,
-        '      .projects[]',
-        `      | (.tags[]? | select(startswith("${prefix}")) | ltrimstr("${prefix}")) as $due`,
-        '      | select($due < $now)',
-        "      | [$due, .name, .description] | @tsv' \\",
-        '  | sort',
+        `curl -s -H "X-Auth-Token: $TOKEN" "\${OS_AUTH_URL%/v3}/v3/projects?tags=${tag}" \\`,
+        "  | jq '[.projects[] | {",
+        '        id, name, enabled, description,',
+        '        tags:   ([.tags[]? | capture("^(?<key>[^:]+):(?<value>.*)$")] | from_entries),',
+        '        labels: [.tags[]? | select(contains(":") | not)]',
+        "      }] | sort_by(.name)'",
     ].join('\n');
 }
 
@@ -128,16 +129,16 @@ export function RootAdminView() {
                 </SimpleGrid>
             </Paper>
 
-            {status?.termination_tag_prefix ? (
+            {status?.managed_tag ? (
                 <Paper withBorder p="md" radius="sm">
                     <Stack gap="xs">
-                        <Title order={5}>{t('projects.rootAdmin.overdueTitle')}</Title>
+                        <Title order={5}>{t('projects.rootAdmin.cliTitle')}</Title>
                         <Text size="sm" c="dimmed">
-                            <Trans i18nKey="projects.rootAdmin.overdueText"
-                                values={{ tag: `${status.termination_tag_prefix}<timestamp>` }}
+                            <Trans i18nKey="projects.rootAdmin.cliText"
+                                values={{ tag: status.managed_tag }}
                                 components={{ 1: <Text span ff="monospace" size="sm" /> }} />
                         </Text>
-                        <CodeBlock language="bash" code={overdueQuery(status.termination_tag_prefix)} />
+                        <CodeBlock language="bash" code={managedProjectsQuery(status.managed_tag)} />
                     </Stack>
                 </Paper>
             ) : null}

@@ -394,8 +394,8 @@
         "osOnlyRemoved": "Nur in OpenStack, entfernt",
         "orphanedUsersRemoved": "Entfernte verwaiste Zugriffe",
         "lastError": "Letzter Fehler",
-        "overdueTitle": "Abgelaufene Projekte auf der Kommandozeile",
-        "overdueText": "Jedes verwaltete Projekt trägt sein Enddatum als Tag <1>{{tag}}</1>. Dieser Befehl listet damit, was abgelaufen ist — direkt aus OpenStack, mit den eigenen Zugangsdaten. Projekte ohne Datum tragen keinen Tag und tauchen nie auf.",
+        "cliTitle": "Verwaltete Projekte auf der Kommandozeile",
+        "cliText": "Jedes verwaltete Projekt trägt den Tag <1>{{tag}}</1> und dazu Zustand, Enddatum und Kontakt als Tags. Dieser Befehl liest sie direkt aus OpenStack, mit den eigenen Zugangsdaten, und gibt sie als JSON aus. Abgelaufene Projekte z. B. mit <1>jq 'map(select(.tags.termination // empty | . < (now | todate)))'</1>.",
         "preseedTitle": "Einige Zugriffe konnten in OpenStack nicht vorbereitet werden",
         "preseedText": "Diese Personen haben ihre Rolle nicht bekommen. Ihr OpenStack-Konto ist nicht eindeutig — meist weicht der OIDC-Benutzername von der E-Mail-Adresse ab. Abhilfe: die Rolle von Hand am richtigen Konto vergeben oder den Benutzernamen korrigieren; der nächste Abgleich versucht es erneut."
     },

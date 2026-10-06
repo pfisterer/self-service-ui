@@ -394,8 +394,8 @@
         "osOnlyRemoved": "OpenStack-only removed",
         "orphanedUsersRemoved": "Orphaned users removed",
         "lastError": "Last error",
-        "overdueTitle": "Overdue projects, from the command line",
-        "overdueText": "Every managed project carries its termination date as the tag <1>{{tag}}</1>, so this lists what has run out — straight from OpenStack, with your own credentials sourced. Projects without a date carry no tag and never appear.",
+        "cliTitle": "Managed projects, from the command line",
+        "cliText": "Every managed project carries the tag <1>{{tag}}</1>, plus its state, termination date and contact as tags. This command reads them straight from OpenStack, with your own credentials sourced, and prints them as JSON. Overdue ones e.g. with <1>jq 'map(select(.tags.termination // empty | . < (now | todate)))'</1>.",
         "preseedTitle": "Some users could not be prepared in OpenStack",
         "preseedText": "These people did not get their role. Their OpenStack account is ambiguous — most often the OIDC username differs from the email address. Assign the role to the correct account by hand, or correct the username; the next sync retries."
     },
