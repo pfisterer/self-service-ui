@@ -16,7 +16,8 @@
         "showMore": "Show more",
         "loading": "Loading…",
         "adopt": "Adopt",
-        "ownerAction": "Owner"
+        "ownerAction": "Owner",
+        "allocate": "Allocation"
     },
     "adopt": {
         "title": "Adopt project: {{name}}",
@@ -235,7 +236,10 @@
             "reparented": "Moved to another budget",
             "owner_transferred": "Ownership transferred",
             "promote_requested": "Adoption queued",
-            "end_shortened": "Ends earlier with its budget"
+            "end_shortened": "Ends earlier with its budget",
+            "term_shortened": "Term shortened to the budget's maximum",
+            "allocation_set": "Allocation changed",
+            "allocation_removed": "Allocation removed"
         }
     },
     "itemSelector": {
@@ -531,6 +535,31 @@
         "moreActions": "More actions",
         "noMatches": "No project matches these filters.",
         "none": "No projects are paid from this budget yet.",
-        "projectTitle": "Project"
+        "projectTitle": "Project",
+        "titleAllocated": "Allocations from this budget ({{count}})",
+        "allocatedOnly": "Only projects with an allocation from this budget",
+        "inBudget": "in {{name}}",
+        "deep": "Also show projects in sub-budgets",
+        "titleDeep": "Projects in this budget and below ({{count}})"
+    },
+    "allocation": {
+        "title": "Allocation: {{name}}",
+        "explain": "An allocation gives a single project resources from a budget further up, without the budgets in between having to hold them. It counts only against that budget and the ones above it.",
+        "from": "Allocate from",
+        "fromHint": "Budgets above the project’s own budget that you manage.",
+        "reason": "Reason",
+        "reasonHint": "Visible to everyone who sees the project, the budgets in between included.",
+        "reasonRequired": "Please give a reason (at least 5 characters).",
+        "save": "Save allocation",
+        "remove": "Remove allocation",
+        "giveBack": "Give back",
+        "grantedBy": "Allocated by {{who}} on {{date}}",
+        "noSources": "No budget above this project can allocate here. Allocations are granted by the managers of a budget further up.",
+        "badge": "Allocation",
+        "ownBudget": "Own budget",
+        "ownShareOnly": "This changes only the project’s own share. On top of it come by allocation: {{list}}.",
+        "fact": "Allocations",
+        "factValue_one": "{{count}} project · {{summary}}",
+        "factValue_other": "{{count}} projects · {{summary}}"
     }
 }

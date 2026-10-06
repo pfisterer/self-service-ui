@@ -648,6 +648,36 @@ export function useAsyncRefresh(fetcher, onError) {
     return { loading, loaded, refresh };
 }
 
+// ── Allocations ─────────────────────────────────────────────────────────────
+//
+// A project may draw from budgets ABOVE its own on top of its own limit (an
+// allocation, granted by that budget's managers). node.limit stays the own
+// share — what a change request edits; OpenStack gets the sum.
+
+export function hasAllocations(node) {
+    return (node?.allocations || []).length > 0;
+}
+
+// effectiveLimit is the own share (or the given one, e.g. a waiting proposal)
+// plus every allocation. Availabilities come from one place only, so adding
+// their 0s and 1s is the same as "any of them grants it".
+export function effectiveLimit(node, own = node?.limit) {
+    const out = { ...(own || {}) };
+    for (const a of node?.allocations || []) {
+        for (const [id, v] of Object.entries(a.limit || {})) out[id] = (out[id] ?? 0) + v;
+    }
+    return out;
+}
+
+// availabilityElsewhere reports whether the project already gets an
+// availability from somewhere other than budgetId's allocation — its own
+// limit, a waiting proposal, or another allocation. Such an availability is
+// not offered again: it comes from one place.
+export function availabilityElsewhere(node, resourceId, budgetId) {
+    if ((node?.limit?.[resourceId] ?? 0) === 1 || (node?.pending?.limit?.[resourceId] ?? 0) === 1) return true;
+    return (node?.allocations || []).some(a => a.budget_id !== budgetId && (a.limit?.[resourceId] ?? 0) === 1);
+}
+
 // projectActions says which actions a project offers, for its owner or for a
 // manager of the budget it is paid from. One answer for the card and the
 // budget's project table, so the two cannot drift apart.
@@ -660,6 +690,10 @@ export function projectActions(node, { manager = false } = {}) {
     const pending = node?.status === 'pending';
     const decidable = pending || node?.status === 'change_pending';
     return {
+        // A manager may be one further up who grants from their budget; the
+        // holder may give an allocation back. Which budgets a viewer may
+        // allocate from, the dialog asks the API.
+        allocate: (manager && (approved || decidable)) || (hasAllocations(node) && (approved || decidable)),
         details: true,
         change: approved || pending,
         release: approved,

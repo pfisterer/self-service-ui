@@ -1,7 +1,7 @@
-import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Pencil, Rocket, Users, X } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Gift, Pencil, Rocket, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, TokenBadgeList } from './component-common.jsx';
-import { COLOR, expiryTone, expiryValue, getAuthUserEmail, isImported, isProvisioning, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText } from './util-project.jsx';
+import { COLOR, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
@@ -50,7 +50,10 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     // Resources shown in the summary line: the proposed limit while a change
     // awaits approval, the current limit otherwise.
     const summaryQuota = (isChangePending && node.pending?.limit) ? node.pending.limit : node.limit;
-    const resourceSummary = resourceSummaryText(resources, summaryQuota);
+    // In total, allocations from budgets further up included — that is what
+    // the project has in OpenStack. Where it comes from is the next row.
+    const resourceSummary = resourceSummaryText(resources, effectiveLimit(node, summaryQuota));
+    const allocated = hasAllocations(node);
 
     // What OpenStack measures where that exceeds the limit above. This is the
     // number the budget is actually charged, so leaving it off turns the
@@ -129,12 +132,31 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         </FactRow>
                     )}
 
-                    {parentName && (
-                        <FactRow label={t('projects.fact.paidFrom')}>{parentName}</FactRow>
-                    )}
-
                     {resourceSummary && (
                         <FactRow label={t('projects.fact.resources')}>{resourceSummary}</FactRow>
+                    )}
+
+                    {/* With allocations, which budget pays for what: the own
+                        share from the project's budget, the rest from further up. */}
+                    {allocated ? (
+                        <FactRow label={t('projects.fact.paidFrom')}>
+                            <Stack gap={2}>
+                                <Text size="xs">
+                                    <b>{parentName || t('projects.allocation.ownBudget')}</b>
+                                    {' · '}{resourceSummaryText(resources, summaryQuota) || '—'}
+                                </Text>
+                                {node.allocations.map(a => (
+                                    <Text size="xs" key={a.budget_id}>
+                                        <Gift size="11" style={{ verticalAlign: '-1px', marginRight: 4, color: `var(--mantine-color-${COLOR.info}-7)` }} />
+                                        <b>{a.budget_name || a.budget_id}</b>
+                                        {' · '}{resourceSummaryText(resources, a.limit)}
+                                        <Text span size="xs" c="dimmed">{' '}({t('projects.allocation.badge')})</Text>
+                                    </Text>
+                                ))}
+                            </Stack>
+                        </FactRow>
+                    ) : parentName && (
+                        <FactRow label={t('projects.fact.paidFrom')}>{parentName}</FactRow>
                     )}
 
                     {/* Only the resources that exceed their limit, so the row
@@ -234,6 +256,11 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                                 <X size="13" style={{ marginRight: 4 }} />{t('projects.actions.reject')}
                             </Button>
                         </>
+                    )}
+                    {can.allocate && (
+                        <Button variant="light" size="xs" onClick={() => act('allocate')}>
+                            <Gift size="13" style={{ marginRight: 4 }} />{t('projects.actions.allocate')}
+                        </Button>
                     )}
                     {can.adopt && (
                         <Button color={COLOR.outside} variant="light" size="xs" onClick={() => act('adopt')}>

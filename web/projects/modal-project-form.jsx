@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Alert, Badge, Group, Paper, Select, Stack, Table, Text, Textarea, TextInput } from '@mantine/core';
-import { Clock, Zap } from 'lucide-react';
+import { Clock, Gift, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
@@ -14,7 +14,7 @@ import { QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
 import { canonicalToken } from './util-principal-import.js';
-import { autoApproveHeadroom, changeOutcome, COLOR, defaultsWithin, hasAutoApprove, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, defaultsWithin, effectiveLimit, hasAllocations, hasAutoApprove, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
 
@@ -480,16 +480,28 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // keep running, only new ones are refused — so nothing tells the requester
     // afterwards. Only resources OpenStack actually measures appear in
     // os_in_use, so an absent entry means "unknown", not "zero".
+    // Compared with everything the project would hold — its allocations from
+    // further up stay, so they count against what is in use too.
     const overcommitted = useMemo(() => {
         const inUse = node?.os_in_use;
         if (!inUse) return [];
+        const total = effectiveLimit(node, quota);
         return (resources || [])
-            .filter(r => typeof inUse[r.id] === 'number' && (quota[r.id] ?? 0) < inUse[r.id])
-            .map(r => ({ ...r, used: inUse[r.id], requested: quota[r.id] ?? 0 }));
+            .filter(r => typeof inUse[r.id] === 'number' && (total[r.id] ?? 0) < inUse[r.id])
+            .map(r => ({ ...r, used: inUse[r.id], requested: total[r.id] ?? 0 }));
     }, [node, resources, quota]);
 
     const resourcesTab = (
         <Stack>
+            {isChange && hasAllocations(node) && (
+                <Alert color={COLOR.info} variant="light" p="xs" icon={<Gift size="16" />}>
+                    <Text size="xs">
+                        {t('projects.allocation.ownShareOnly', {
+                            list: node.allocations.map(a => `${a.budget_name || a.budget_id}: ${resourceSummaryText(resources, a.limit)}`).join(' · '),
+                        })}
+                    </Text>
+                </Alert>
+            )}
             {overcommitted.length > 0 && (
                 <Alert color={COLOR.negative} variant="light" title={t('projects.projectForm.belowInUseTitle')}>
                     <Stack gap="4">

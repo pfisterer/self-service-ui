@@ -16,7 +16,8 @@
         "showMore": "Mehr anzeigen",
         "loading": "Lädt…",
         "adopt": "Übernehmen",
-        "ownerAction": "Verantwortlich"
+        "ownerAction": "Verantwortlich",
+        "allocate": "Sonderzuteilung"
     },
     "adopt": {
         "title": "Projekt übernehmen: {{name}}",
@@ -235,7 +236,10 @@
             "reparented": "In ein anderes Budget verschoben",
             "owner_transferred": "Verantwortung übertragen",
             "promote_requested": "Zur Übernahme vorgemerkt",
-            "end_shortened": "Endet früher mit seinem Budget"
+            "end_shortened": "Endet früher mit seinem Budget",
+            "term_shortened": "Laufzeit auf das Höchstmaß des Budgets gekürzt",
+            "allocation_set": "Sonderzuteilung geändert",
+            "allocation_removed": "Sonderzuteilung entfernt"
         }
     },
     "itemSelector": {
@@ -531,6 +535,31 @@
         "moreActions": "Weitere Aktionen",
         "noMatches": "Kein Projekt passt zu diesen Filtern.",
         "none": "Aus diesem Budget wird noch kein Projekt bezahlt.",
-        "projectTitle": "Projekt"
+        "projectTitle": "Projekt",
+        "titleAllocated": "Sonderzuteilungen aus diesem Budget ({{count}})",
+        "allocatedOnly": "Nur Projekte mit Sonderzuteilung aus diesem Budget",
+        "inBudget": "in {{name}}",
+        "deep": "Auch Projekte aus Unterbudgets",
+        "titleDeep": "Projekte in diesem Budget und darunter ({{count}})"
+    },
+    "allocation": {
+        "title": "Sonderzuteilung: {{name}}",
+        "explain": "Eine Sonderzuteilung gibt einem einzelnen Projekt Ressourcen aus einem Budget weiter oben, ohne dass die Budgets dazwischen sie haben müssen. Sie zählt nur bei diesem Budget und darüber.",
+        "from": "Zuteilen aus",
+        "fromHint": "Budgets oberhalb des Projekt-Budgets, die Sie verwalten.",
+        "reason": "Begründung",
+        "reasonHint": "Sichtbar für alle, die das Projekt sehen, auch für die Budgets dazwischen.",
+        "reasonRequired": "Bitte eine Begründung angeben (mindestens 5 Zeichen).",
+        "save": "Zuteilung speichern",
+        "remove": "Zuteilung entfernen",
+        "giveBack": "Zurückgeben",
+        "grantedBy": "Zugeteilt von {{who}} am {{date}}",
+        "noSources": "Aus keinem Budget oberhalb dieses Projekts kann hier zugeteilt werden. Sonderzuteilungen vergeben die Verwaltenden eines höheren Budgets.",
+        "badge": "Sonderzuteilung",
+        "ownBudget": "Eigenes Budget",
+        "ownShareOnly": "Hier wird nur der eigene Anteil des Projekts geändert. Dazu kommen per Sonderzuteilung: {{list}}.",
+        "fact": "Sonderzuteilungen",
+        "factValue_one": "{{count}} Projekt · {{summary}}",
+        "factValue_other": "{{count}} Projekte · {{summary}}"
     }
 }

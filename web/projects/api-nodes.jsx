@@ -8,10 +8,10 @@ import { cloudProjectsEnabled } from '/features.js';
 import {
     approveNode, clearRoleSwitch, createNode, createToken, deleteNode,
     deleteToken, getAdminReconcileStatus, getConfig, getNode, getRoleSwitch,
-    listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
+    listAllocationSources, listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
     listMyNodes, listNodeChildren, listNodesToManage, listTokens, promoteNode,
     rejectNode, releaseNode, reparentNode, requestNodeChange, searchNodes,
-    searchPrincipals, setRoleSwitch, transferNodeOwner,
+    searchPrincipals, setNodeAllocation, setRoleSwitch, transferNodeOwner,
     triggerAdminReconcile, updateNode,
 } from '@dhbw-cloud/os-mgt-client';
 import { normalizeObjectResponse } from './util-project.jsx';
@@ -28,6 +28,12 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 function unwrapObject(res) {
     if (apiErrorMessage(res)) throw apiError(res);
     return normalizeObjectResponse(res);
+}
+
+function unwrapArray(res) {
+    if (apiErrorMessage(res)) throw apiError(res);
+    const data = res?.data ?? res;
+    return Array.isArray(data) ? data : [];
 }
 
 function unwrapVoid(res) {
@@ -82,8 +88,10 @@ export function useNodesApi() {
             // The filters narrow and order on the server (see ChildFilter in
             // the API): the browser only ever holds the page it shows. Empty
             // values are left out of the query rather than sent as "".
-            listChildren: async (id, { limit = PAGE_SIZE, offset = 0, kind, q, status, group, groupMode, sort, order } = {}) => {
+            listChildren: async (id, { limit = PAGE_SIZE, offset = 0, kind, q, status, group, groupMode, sort, order, allocated, deep } = {}) => {
                 const query = { limit, offset };
+                if (allocated) query.allocated = true;
+                if (deep) query.deep = true;
                 if (kind) query.kind = kind;
                 if (q) query.q = q;
                 if (status?.length) query.status = status.join(',');
@@ -145,6 +153,14 @@ export function useNodesApi() {
                 unwrapObject(await transferNodeOwner({
                     client, path: { id }, body: { new_owner: newOwner }, headers: JSON_HEADERS,
                 })),
+            // Allocations: what a project draws from a budget above its own.
+            // The limit is the whole allocation from that budget; {} removes it.
+            setAllocation: async (id, { budgetId, limit, reason }) =>
+                unwrapObject(await setNodeAllocation({
+                    client, path: { id }, body: { budget_id: budgetId, limit, reason }, headers: JSON_HEADERS,
+                })),
+            listAllocationSources: async (id) =>
+                unwrapArray(await listAllocationSources({ client, path: { id } })),
             adopt: async (id, body) =>
                 unwrapObject(await promoteNode({ client, path: { id }, body, headers: JSON_HEADERS })),
             deleteNode: async (id) =>

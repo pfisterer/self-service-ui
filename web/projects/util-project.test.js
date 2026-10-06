@@ -32,6 +32,9 @@ import {
     visibleResources,
     defaultsWithin,
     projectActions,
+    effectiveLimit,
+    availabilityElsewhere,
+    hasAllocations,
     roomIn,
 } from './util-project.jsx';
 
@@ -638,13 +641,43 @@ describe('projectActions', () => {
     });
 
     it('lets a manager decide what waits and restructure what runs', () => {
-        expect(on(projectActions({ status: 'change_pending' }, { manager: true }))).toEqual(['approve', 'details', 'reject']);
+        expect(on(projectActions({ status: 'change_pending' }, { manager: true }))).toEqual(['allocate', 'approve', 'details', 'reject']);
         expect(on(projectActions({ status: 'approved' }, { manager: true })))
-            .toEqual(['change', 'details', 'move', 'release', 'transfer']);
+            .toEqual(['allocate', 'change', 'details', 'move', 'release', 'transfer']);
+    });
+
+    it('lets an owner open the allocations only to give one back', () => {
+        expect(projectActions({ status: 'approved' }).allocate).toBe(false);
+        expect(projectActions({ status: 'approved', allocations: [{ budget_id: 'b', limit: { gpu: 1 } }] }).allocate).toBe(true);
     });
 
     it('offers adopting an imported project unless it is already on its way', () => {
         expect(projectActions({ status: 'imported' }, { manager: true }).adopt).toBe(true);
         expect(projectActions({ status: 'imported', flags: ['promote_on_reconcile'] }, { manager: true }).adopt).toBe(false);
+    });
+});
+
+describe('allocations', () => {
+    const node = {
+        limit: { cores: 4, ipv4: 0 },
+        allocations: [
+            { budget_id: 'uni', limit: { cores: 12, gpu: 1, ipv4: 1 } },
+            { budget_id: 'dept', limit: { cores: 2 } },
+        ],
+    };
+
+    it('adds every allocation to the own share', () => {
+        expect(effectiveLimit(node)).toEqual({ cores: 18, gpu: 1, ipv4: 1 });
+        expect(effectiveLimit(node, { cores: 1 })).toEqual({ cores: 15, gpu: 1, ipv4: 1 });
+        expect(effectiveLimit({ limit: { cores: 2 } })).toEqual({ cores: 2 });
+    });
+
+    it('knows where an availability already comes from', () => {
+        expect(availabilityElsewhere(node, 'ipv4', 'dept')).toBe(true);
+        expect(availabilityElsewhere(node, 'ipv4', 'uni')).toBe(false);
+        expect(availabilityElsewhere({ limit: { ipv4: 1 } }, 'ipv4', 'uni')).toBe(true);
+        expect(availabilityElsewhere({ limit: {}, pending: { limit: { ipv4: 1 } } }, 'ipv4', 'uni')).toBe(true);
+        expect(hasAllocations(node)).toBe(true);
+        expect(hasAllocations({})).toBe(false);
     });
 });

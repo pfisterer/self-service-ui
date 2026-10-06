@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Check, Eye, FolderInput, MoreHorizontal, Pencil, Rocket, Search, X } from 'lucide-react';
-import { ActionIcon, Badge, Group, Loader, Menu, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
+import { ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Check, Eye, FolderInput, Gift, MoreHorizontal, Pencil, Rocket, Search, X } from 'lucide-react';
+import { ActionIcon, Badge, Checkbox, Group, Loader, Menu, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +8,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { NodeStatusBadge } from './component-common.jsx';
 import { PrincipalTokenAutocomplete } from './component-principal-token-autocomplete.jsx';
-import { COLOR, expiryTone, expiryValue, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel } from './util-project.jsx';
+import { COLOR, effectiveLimit, expiryTone, expiryValue, hasAllocations, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel } from './util-project.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 
 // Rows per page. A table, unlike the tree it replaces for projects, pages
@@ -25,7 +25,12 @@ const FILTER_STATUSES = ['approved', 'pending', 'change_pending', 'imported', 'r
 // server; the table holds one page. Each row carries the actions the project
 // card offers (projectActions decides both), the frequent ones as icons and the
 // rarer ones in a menu; clicking a row opens the full card.
-export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
+//
+// allocatedOnly switches the table from the budget's own projects to the ones
+// anywhere below that draw an allocation from it — the exceptions its managers
+// handed out past the budgets in between. Controlled by the view, so the
+// budget card's "allocations" line can switch it on.
+export function BudgetProjectsTable({ budget, resources, onAction, onOpen, allocatedOnly = false, onAllocatedOnlyChange }) {
     const { t } = useTranslation();
     const api = useNodesApi();
 
@@ -36,17 +41,20 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
     const [groupMode, setGroupMode] = useState('access');
     const [sort, setSort] = useState({ key: 'name', order: 'asc' });
     const [page, setPage] = useState(1);
+    // Projects of the sub-budgets too: a budget that only structures its
+    // sub-budgets has no projects of its own and would show an empty table.
+    const [deep, setDeep] = useState(false);
     const [q] = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS);
 
     // Every filter change starts over at the first page: page 7 of the old
     // result means nothing for the new one.
     const refilter = (apply) => (value) => { apply(value); setPage(1); };
 
-    const params = { q, status: statuses, group, groupMode, sort: sort.key, order: sort.order, page };
+    const params = { q, status: statuses, group, groupMode, sort: sort.key, order: sort.order, page, allocated: allocatedOnly, deep };
     const query = useQuery({
         queryKey: projectKeys.budgetProjects(budget.id, params),
         queryFn: () => api.listChildren(budget.id, {
-            kind: 'project', q, status: statuses, group, groupMode,
+            kind: 'project', q, status: statuses, group, groupMode, allocated: allocatedOnly, deep: deep && !allocatedOnly,
             sort: sort.key, order: sort.order,
             limit: TABLE_PAGE_SIZE, offset: (page - 1) * TABLE_PAGE_SIZE,
         }),
@@ -80,8 +88,35 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
         <Paper withBorder radius="md" p="md">
             <Stack gap="sm">
                 <Group justify="space-between" align="center">
-                    <Title order={5}>{t('projects.budgetProjects.title', { count: total })}</Title>
+                    <Title order={5}>{allocatedOnly
+                        ? t('projects.budgetProjects.titleAllocated', { count: total })
+                        : deep
+                            ? t('projects.budgetProjects.titleDeep', { count: total })
+                            : t('projects.budgetProjects.title', { count: total })}</Title>
                     {query.isFetching && <Loader size="xs" />}
+                </Group>
+
+                <Group gap="lg">
+                    {/* Only where there are sub-budgets to look into. The
+                        allocation view already spans the whole subtree. */}
+                    {(budget.child_budget_count > 0 || deep) && (
+                        <Checkbox
+                            size="xs"
+                            label={t('projects.budgetProjects.deep')}
+                            checked={deep}
+                            disabled={allocatedOnly}
+                            onChange={(e) => refilter(setDeep)(e.currentTarget.checked)}
+                        />
+                    )}
+                    {/* Only where there is something to switch to. */}
+                    {(budget.allocated_out?.projects > 0 || allocatedOnly) && (
+                        <Switch
+                            size="xs"
+                            label={t('projects.budgetProjects.allocatedOnly')}
+                            checked={allocatedOnly}
+                            onChange={(e) => { onAllocatedOnlyChange?.(e.currentTarget.checked); setPage(1); }}
+                        />
+                    )}
                 </Group>
 
                 {/* ── Filters ─────────────────────────────────────────── */}
@@ -157,6 +192,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
                             <Table.Tbody>
                                 {items.map(node => (
                                     <ProjectRow key={node.id} node={node} resources={resources}
+                                        showBudget={allocatedOnly || (deep && node.parent_id !== budget.id)}
                                         onAction={onAction} onOpen={onOpen} />
                                 ))}
                                 {items.length === 0 && !query.isPending && (
@@ -198,7 +234,7 @@ function SortHeader({ label, sortKey, sort, onSort }) {
     );
 }
 
-function ProjectRow({ node, resources, onAction, onOpen }) {
+function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
     const { t } = useTranslation();
     const can = projectActions(node, { manager: true });
     // A click on an action must not also open the row.
@@ -207,7 +243,22 @@ function ProjectRow({ node, resources, onAction, onOpen }) {
     return (
         <Table.Tr style={{ cursor: 'pointer' }} onClick={() => onOpen(node)}>
             <Table.Td maw={260}>
-                <Text size="sm" fw={500} truncate>{nodeTitle(node)}</Text>
+                <Group gap={6} wrap="nowrap">
+                    <Text size="sm" fw={500} truncate>{nodeTitle(node)}</Text>
+                    {hasAllocations(node) && (
+                        <Tooltip label={node.allocations.map(a =>
+                            `${a.budget_name || a.budget_id}: ${resourceSummaryText(resources, a.limit)}`).join(' · ')}>
+                            <Badge size="xs" variant="light" color={COLOR.info} tt="none" leftSection={<Gift size="10" />}
+                                style={{ flexShrink: 0 }}>
+                                {t('projects.allocation.badge')}
+                            </Badge>
+                        </Tooltip>
+                    )}
+                </Group>
+                {/* Listed from a budget further up, the row says where it lives. */}
+                {showBudget && node.parent_name && (
+                    <Text size="xs" c="dimmed" truncate>{t('projects.budgetProjects.inBudget', { name: node.parent_name })}</Text>
+                )}
             </Table.Td>
             <Table.Td maw={240}>
                 <Text size="xs" truncate>{ownerEmail(node)}</Text>
@@ -218,7 +269,7 @@ function ProjectRow({ node, resources, onAction, onOpen }) {
                 <NodeStatusBadge status={node.status} size="xs" full />
             </Table.Td>
             <Table.Td>
-                <Text size="xs">{resourceSummaryText(resources, node.pending?.limit || node.limit)}</Text>
+                <Text size="xs">{resourceSummaryText(resources, effectiveLimit(node, node.pending?.limit || node.limit))}</Text>
             </Table.Td>
             <Table.Td>
                 <Text size="xs" c={node.termination_date ? expiryTone(node.termination_date) : 'dimmed'}>
@@ -232,7 +283,7 @@ function ProjectRow({ node, resources, onAction, onOpen }) {
                     {can.approve && <RowAction label={t('projects.actions.approve')} color={COLOR.positive} onClick={act('approve')}><Check size="14" /></RowAction>}
                     {can.reject && <RowAction label={t('projects.actions.reject')} color={COLOR.negative} onClick={act('reject')}><X size="14" /></RowAction>}
                     {can.adopt && <RowAction label={t('projects.actions.adopt')} color={COLOR.outside} onClick={act('adopt')}><Rocket size="14" /></RowAction>}
-                    {(can.transfer || can.move || can.release) && (
+                    {(can.transfer || can.move || can.release || can.allocate) && (
                         <Menu position="bottom-end" withinPortal>
                             <Menu.Target>
                                 <ActionIcon variant="subtle" color="gray" size="sm"
@@ -242,6 +293,7 @@ function ProjectRow({ node, resources, onAction, onOpen }) {
                                 </ActionIcon>
                             </Menu.Target>
                             <Menu.Dropdown onClick={(e) => e.stopPropagation()}>
+                                {can.allocate && <Menu.Item leftSection={<Gift size="13" />} onClick={act('allocate')}>{t('projects.actions.allocate')}</Menu.Item>}
                                 {can.transfer && <Menu.Item leftSection={<ArrowRightLeft size="13" />} onClick={act('transfer')}>{t('projects.actions.ownerAction')}</Menu.Item>}
                                 {can.move && <Menu.Item leftSection={<FolderInput size="13" />} onClick={act('move')}>{t('projects.actions.move')}</Menu.Item>}
                                 {can.release && <Menu.Item color={COLOR.negative} onClick={act('release')}>{t('projects.actions.release')}</Menu.Item>}

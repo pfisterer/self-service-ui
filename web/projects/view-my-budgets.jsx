@@ -14,6 +14,7 @@ import { ProjectCard } from './card-project.jsx';
 import { BudgetTree, MORE_SUFFIX, NodeResultList, budgetsToTreeData, budgetChildCount } from './component-budget-tree.jsx';
 import { BudgetProjectsTable } from './component-budget-projects.jsx';
 import { AdoptModal } from './modal-adopt.jsx';
+import { AllocationModal } from './modal-allocation.jsx';
 import { ApproveModal } from './modal-approve.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
@@ -108,6 +109,10 @@ export function MyBudgetsView() {
     // The project a table row was opened for, shown as its full card in a
     // dialog so the table stays where it was.
     const [openProject, setOpenProject] = useState(null);
+    // Whether the selected budget's table lists the projects it allocated to
+    // further down instead of its own; kept per budget, so choosing another
+    // budget starts with its own projects.
+    const [allocatedFor, setAllocatedFor] = useState(null);
 
     // Which of the managed budgets are drawn at the top.
     //
@@ -409,6 +414,7 @@ export function MyBudgetsView() {
             return setBudgetForm({ mode: 'edit', node, parent });
         }
         if (action === 'delete') return handleDelete(node);
+        if (action === 'show-allocated') return setAllocatedFor(node.id);
         dlg.open(action, node);
     };
 
@@ -609,7 +615,9 @@ export function MyBudgetsView() {
                                     when another budget is picked. */}
                                 {!selected.request_only && (
                                     <BudgetProjectsTable key={selected.id} budget={selected} resources={resources}
-                                        onAction={handleAction} onOpen={setOpenProject} />
+                                        onAction={handleAction} onOpen={setOpenProject}
+                                        allocatedOnly={allocatedFor === selected.id}
+                                        onAllocatedOnlyChange={(on) => setAllocatedFor(on ? selected.id : null)} />
                                 )}
                             </Stack>
                         ) : (
@@ -654,6 +662,8 @@ export function MyBudgetsView() {
             <MoveModal key={`movemodal:${dlg.key}`} opened={dlg.is('move')} onClose={dlg.close} onDone={refresh}
                 node={dlg.node} targetBudgets={moveTargets} />
             <TransferOwnerModal key={`transferownermodal:${dlg.key}`} opened={dlg.is('transfer')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
+            <AllocationModal key={`allocationmodal:${dlg.key}`} opened={dlg.is('allocate')} onClose={dlg.close} onDone={refresh}
+                node={dlg.node} resources={resources} />
             <AdoptModal key={`adoptmodal:${dlg.key}`} opened={dlg.is('adopt')} onClose={dlg.close} onDone={refresh}
                 resources={resources} node={dlg.node} myBudgets={myBudgets.items} />
             {/* A manager may edit a project of theirs, so the change dialog has to
