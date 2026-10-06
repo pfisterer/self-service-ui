@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Check, Eye, FolderInput, Gift, MoreHorizontal, Pencil, Rocket, Search, X } from 'lucide-react';
+import { ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Check, Eye, FolderInput, Gift, MoreHorizontal, Pencil, Rocket, Search, Trash2, X } from 'lucide-react';
 import { ActionIcon, Badge, Checkbox, Group, Loader, Menu, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
-import { NodeStatusBadge } from './component-common.jsx';
+import { DeletingBadge, NodeStatusBadge } from './component-common.jsx';
 import { PrincipalTokenAutocomplete } from './component-principal-token-autocomplete.jsx';
-import { COLOR, effectiveLimit, expiryTone, expiryValue, hasAllocations, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel } from './util-project.jsx';
+import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel } from './util-project.jsx';
+import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 
 // Rows per page. A table, unlike the tree it replaces for projects, pages
@@ -18,7 +19,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 // The statuses a project can be filtered by, in the order a manager thinks
 // about them: what runs, what waits, what came from outside, what is gone.
-const FILTER_STATUSES = ['approved', 'pending', 'change_pending', 'imported', 'rejected', 'released'];
+const FILTER_STATUSES = ['approved', 'pending', 'change_pending', 'imported', 'rejected', 'released', 'archived'];
 
 // BudgetProjectsTable lists the projects paid from one budget, under the
 // budget's card in My Budgets. Filtering, sorting and paging happen on the
@@ -236,7 +237,8 @@ function SortHeader({ label, sortKey, sort, onSort }) {
 
 function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
     const { t } = useTranslation();
-    const can = projectActions(node, { manager: true });
+    const config = useProjectConfig();
+    const can = projectActions(node, { manager: true, canDelete: deletesOnRequest(config?.retirement) });
     // A click on an action must not also open the row.
     const act = (action) => (e) => { e.stopPropagation(); onAction(action, node); };
 
@@ -266,14 +268,18 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
             {/* The status is the one cell that must never be cut: "Change
                 requested" and "Awaiting approval" are what a manager scans for. */}
             <Table.Td style={{ whiteSpace: 'nowrap' }}>
-                <NodeStatusBadge status={node.status} size="xs" full />
+                {/* Being deleted says more than released or archived. */}
+                {deletionRequested(node)
+                    ? <DeletingBadge size="xs" />
+                    : <NodeStatusBadge status={node.status} size="xs" full />}
             </Table.Td>
             <Table.Td>
                 <Text size="xs">{resourceSummaryText(resources, effectiveLimit(node, node.pending?.limit || node.limit))}</Text>
             </Table.Td>
             <Table.Td>
-                <Text size="xs" c={node.termination_date ? expiryTone(node.termination_date) : 'dimmed'}>
-                    {expiryValue(t, node.termination_date) || '—'}
+                {/* A given-up project has no end date that means anything. */}
+                <Text size="xs" c={node.termination_date && !isRetired(node) ? expiryTone(node.termination_date) : 'dimmed'}>
+                    {(!isRetired(node) && expiryValue(t, node.termination_date)) || '—'}
                 </Text>
             </Table.Td>
             <Table.Td>
@@ -283,7 +289,7 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
                     {can.approve && <RowAction label={t('projects.actions.approve')} color={COLOR.positive} onClick={act('approve')}><Check size="14" /></RowAction>}
                     {can.reject && <RowAction label={t('projects.actions.reject')} color={COLOR.negative} onClick={act('reject')}><X size="14" /></RowAction>}
                     {can.adopt && <RowAction label={t('projects.actions.adopt')} color={COLOR.outside} onClick={act('adopt')}><Rocket size="14" /></RowAction>}
-                    {(can.transfer || can.move || can.release || can.allocate) && (
+                    {(can.transfer || can.move || can.release || can.allocate || can.deleteForGood) && (
                         <Menu position="bottom-end" withinPortal>
                             <Menu.Target>
                                 <ActionIcon variant="subtle" color="gray" size="sm"
@@ -297,6 +303,7 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
                                 {can.transfer && <Menu.Item leftSection={<ArrowRightLeft size="13" />} onClick={act('transfer')}>{t('projects.actions.ownerAction')}</Menu.Item>}
                                 {can.move && <Menu.Item leftSection={<FolderInput size="13" />} onClick={act('move')}>{t('projects.actions.move')}</Menu.Item>}
                                 {can.release && <Menu.Item color={COLOR.negative} onClick={act('release')}>{t('projects.actions.release')}</Menu.Item>}
+                                {can.deleteForGood && <Menu.Item color={COLOR.negative} leftSection={<Trash2 size="13" />} onClick={act('delete-for-good')}>{t('projects.actions.deleteForGood')}</Menu.Item>}
                             </Menu.Dropdown>
                         </Menu>
                     )}

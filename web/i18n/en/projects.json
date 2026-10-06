@@ -17,7 +17,8 @@
         "loading": "Loading…",
         "adopt": "Adopt",
         "ownerAction": "Owner",
-        "allocate": "Allocation"
+        "allocate": "Allocation",
+        "deleteForGood": "Delete for good"
     },
     "adopt": {
         "title": "Adopt project: {{name}}",
@@ -104,8 +105,6 @@
     "budgets": {
         "deleteTitle": "Delete budget “{{name}}”?",
         "deleteMessage": "Only possible while nothing under it is active or awaiting a decision.",
-        "releaseTitle": "Release project “{{name}}”?",
-        "releaseMessage": "Releasing removes the project and its resources from OpenStack. This cannot be undone.",
         "loadError": "Could not load your budgets",
         "intro": "The budgets you manage, as a tree.",
         "introWithRequestable": "The budgets you manage, plus the ones you may request from (read-only).",
@@ -193,7 +192,9 @@
         "members": "Members",
         "owner": "Owner",
         "inUse": "In use",
-        "admins": "Admins"
+        "admins": "Admins",
+        "archivedOn": "Archived on",
+        "deletion": "Deletion"
     },
     "forms": {
         "add": "Add",
@@ -239,7 +240,9 @@
             "end_shortened": "Ends earlier with its budget",
             "term_shortened": "Term shortened to the budget's maximum",
             "allocation_set": "Allocation changed",
-            "allocation_removed": "Allocation removed"
+            "allocation_removed": "Allocation removed",
+            "archived": "Archived",
+            "deletion_requested": "Deletion for good requested"
         }
     },
     "itemSelector": {
@@ -263,7 +266,6 @@
         "targetRequired": "Please choose the destination budget"
     },
     "myProjects": {
-        "releaseTitle": "Release project?",
         "loadError": "Could not load your projects",
         "intro": "A project is your own space in the DHBW cloud with the resources you request.",
         "shown": "Projects shown: {{shown}}/{{total}}",
@@ -298,7 +300,9 @@
         "imported": "This project exists in OpenStack but is not managed here. It cannot be edited.",
         "inUseHint": "Charged to the budget instead of the granted amount.",
         "sharedBy": "Shared by {{owner}}",
-        "membersMore": "+{{count}} more"
+        "membersMore": "+{{count}} more",
+        "deleting": "Being deleted",
+        "deletingHint": "Everything in the OpenStack project is deleted within the next minutes; then the project disappears from this list."
     },
     "projectForm": {
         "titleNew": "New project",
@@ -426,7 +430,11 @@
         },
         "released": {
             "label": "Released",
-            "description": "You gave this project up. It stays listed — and keeps using its budget — until OpenStack has actually deleted it, because until then the machines are still running. This cannot be undone."
+            "description": "This project was given up. Depending on the setup it is archived or deleted shortly; until then its machines keep running and it holds its budget. This cannot be undone."
+        },
+        "archived": {
+            "label": "Archived",
+            "description": "Given up and shut down: nobody can log in any more, the machines are shelved, the floating IPs returned. Volumes and data are kept until the project is deleted for good."
         },
         "imported": {
             "label": "Imported",
@@ -462,7 +470,8 @@
         "pending": "+{{count}} pending",
         "incoming": "+{{count}} incoming",
         "ofLimit": "{{used}} / {{limit}}",
-        "ofLimitWith": "{{used}} ({{extra}}) / {{limit}}"
+        "ofLimitWith": "{{used}} ({{extra}}) / {{limit}}",
+        "retired": "{{count}} of it given up"
     },
     "relations": {
         "dozent": "Lecturer",
@@ -561,5 +570,26 @@
         "fact": "Allocations",
         "factValue_one": "{{count}} project · {{summary}}",
         "factValue_other": "{{count}} projects · {{summary}}"
+    },
+    "retire": {
+        "releaseTitle": "Release project “{{name}}”?",
+        "deleteTitle": "Delete project “{{name}}” for good?",
+        "archive": "The project is archived: nobody can log in any more, the machines are shelved, the floating IPs returned.",
+        "keptGrace_one": "Volumes and data are kept for {{count}} more day, then everything is deleted. “Delete for good” does it sooner.",
+        "keptGrace_other": "Volumes and data are kept for {{count}} more days, then everything is deleted. “Delete for good” does it sooner.",
+        "keptOnRequest": "Volumes and data are kept until the project is deleted with “Delete for good”.",
+        "keptForever": "Volumes and data are kept.",
+        "chargeStorage": "From then on it holds only its storage in the budget.",
+        "chargeNothing": "From then on it holds no budget any more.",
+        "noArchive": "The project is marked for deletion; its machines keep running until it is deleted in OpenStack.",
+        "deletedAfter_one": "After {{count}} day it is deleted with everything in it.",
+        "deletedAfter_other": "After {{count}} days it is deleted with everything in it.",
+        "chargeUntilGone": "Until then it keeps holding its budget.",
+        "deleteWhat": "Everything in the OpenStack project is deleted within the next minutes: machines, volumes, snapshots, images, networks and all data on them.",
+        "deleteAfter": "Then the project disappears from the list. What it used stays in the usage statistics.",
+        "irreversible": "This cannot be undone.",
+        "deleteNow": "Delete for good right away",
+        "deleteNowHint": "Instead of archiving, everything is deleted at once, volumes and data included.",
+        "confirmName": "To confirm, type the project name: <1>{{name}}</1>"
     }
 }

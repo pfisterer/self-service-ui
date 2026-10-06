@@ -144,8 +144,9 @@ export function UserRoleBadgeList({ users, label, labelColor, size = 'sm' }) {
 // decision, and what a grant being looked at would add — "4 (+8 pending) / 20".
 // One string per case rather than three fragments glued together, because the
 // parenthesis and the order of the parts differ between languages.
-function usageText(t, approved, changePending, incoming, limit) {
+function usageText(t, approved, changePending, incoming, limit, retired = 0) {
     const parts = [
+        retired > 0 ? t('projects.usage.retired', { count: retired }) : null,
         changePending > 0 ? t('projects.usage.pending', { count: changePending }) : null,
         incoming > 0 ? t('projects.usage.incoming', { count: incoming }) : null,
     ].filter(Boolean);
@@ -158,9 +159,12 @@ function usageText(t, approved, changePending, incoming, limit) {
 
 // ResourceBar renders one resource row with a usage progress bar.
 // approved and changePending are plain numbers (already extracted by the caller).
+// retired is the part of approved that released and archived projects still
+// hold — counted, because the budget is charged for it, and named, because
+// otherwise a full bar over a list of given-up projects makes no sense.
 // limit may be UNLIMITED_QUOTA (-1) to indicate no cap.
 // incoming (optional) adds a highlighted segment previewing a pending grant's impact.
-export function ResourceBar({ resource, limit, approved = 0, changePending = 0, incoming = 0 }) {
+export function ResourceBar({ resource, limit, approved = 0, changePending = 0, incoming = 0, retired = 0 }) {
     const { t } = useTranslation();
     const label = resource.unit ? `${resource.name} (${resource.unit})` : resource.name;
     const unlimited = limit === UNLIMITED_QUOTA;
@@ -170,7 +174,7 @@ export function ResourceBar({ resource, limit, approved = 0, changePending = 0, 
             <Group justify="space-between">
                 <Text size="xs">{label}</Text>
                 <Text size="xs" c="dimmed">
-                    {usageText(t, approved, changePending, incoming, '∞')}
+                    {usageText(t, approved, changePending, incoming, '∞', retired)}
                 </Text>
             </Group>
         );
@@ -188,7 +192,7 @@ export function ResourceBar({ resource, limit, approved = 0, changePending = 0, 
             <Group justify="space-between">
                 <Text size="xs">{label}</Text>
                 <Text size="xs" c="dimmed">
-                    {usageText(t, approved, changePending, incoming, limit)}
+                    {usageText(t, approved, changePending, incoming, limit, retired)}
                 </Text>
             </Group>
             <Progress.Root size="sm">
@@ -217,16 +221,21 @@ export function NodeUsageBars({ resources, node, incomingQuota = null }) {
 
     return (
         <Stack gap="xs">
-            {quantities.map(r => (
-                <ResourceBar
-                    key={r.id}
-                    resource={r}
-                    limit={node.limit?.[r.id] ?? 0}
-                    approved={usage.approved?.limit?.[r.id] ?? 0}
-                    changePending={usage.change_pending?.limit?.[r.id] ?? 0}
-                    incoming={incomingQuota?.[r.id] ?? 0}
-                />
-            ))}
+            {quantities.map(r => {
+                // Only what the deployment charges shows up under these keys.
+                const retired = (usage.released?.limit?.[r.id] ?? 0) + (usage.archived?.limit?.[r.id] ?? 0);
+                return (
+                    <ResourceBar
+                        key={r.id}
+                        resource={r}
+                        limit={node.limit?.[r.id] ?? 0}
+                        approved={(usage.approved?.limit?.[r.id] ?? 0) + retired}
+                        retired={retired}
+                        changePending={usage.change_pending?.limit?.[r.id] ?? 0}
+                        incoming={incomingQuota?.[r.id] ?? 0}
+                    />
+                );
+            })}
             <AvailabilityBadges resources={granted} />
         </Stack>
     );
@@ -549,4 +558,17 @@ export function MaxTermInput({ value, onChange, bound = null }) {
 export function formatTerm(t, days) {
     const unit = durationUnitFor(days);
     return t(`projects.maxTerm.${unit}`, { count: Math.round(days / DAYS_PER_UNIT[unit]) });
+}
+
+// DeletingBadge marks a released or archived project whose deletion for good is
+// under way — from the request until it disappears from the list.
+export function DeletingBadge({ size = 'sm' }) {
+    const { t } = useTranslation();
+    return (
+        <Tooltip label={t('projects.projectCard.deletingHint')} multiline w={260}>
+            <Badge size={size} color={COLOR.negative} variant="light" style={{ cursor: 'default' }}>
+                {t('projects.projectCard.deleting')}
+            </Badge>
+        </Tooltip>
+    );
 }

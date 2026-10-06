@@ -69,8 +69,46 @@ const STATUS_META = {
     // see it still listed and still charged. Both are true and both are
     // deliberate — releasing asks for deletion, it does not perform it.
     released: { color: COLOR.identity, variant: 'light' },
+    // Released and put away: nobody logs in, servers shelved, volumes kept.
+    archived: { color: COLOR.identity, variant: 'outline' },
     imported: { color: COLOR.outside, variant: 'light' },
 };
+
+// ── Retirement: released → archived → deleted ───────────────────────────────
+
+// isRetired: given up, but its OpenStack project may still exist.
+export function isRetired(node) {
+    return node?.status === 'released' || node?.status === 'archived';
+}
+
+// deletionRequested: someone asked for it to be deleted for good, and the
+// reconciler is on it.
+export function deletionRequested(node) {
+    return (node?.flags || []).includes('delete_requested');
+}
+
+// deletesOnRequest: the deployment deletes a released project when asked.
+export function deletesOnRequest(retirement) {
+    const mode = retirement?.delete;
+    return !!mode && mode !== 'never';
+}
+
+// lastEventAt is when the given history event last happened, or null.
+export function lastEventAt(node, event) {
+    const entry = [...(node?.history || [])].reverse().find(h => h.event === event);
+    return entry?.timestamp ?? null;
+}
+
+// scheduledDeletion is the day a retired project is deleted by itself — only
+// under after-grace: release day plus the grace days, as the reconciler tags it.
+export function scheduledDeletion(node, retirement) {
+    if (retirement?.delete !== 'after-grace' || !isRetired(node)) return null;
+    const released = lastEventAt(node, 'released');
+    if (!released) return null;
+    const d = new Date(released);
+    d.setUTCDate(d.getUTCDate() + (retirement.deleteGraceDays || 30));
+    return d.toISOString();
+}
 
 // A leaf that is approved but has no OpenStack project yet. The reconciler runs
 // on an interval, so "granted" and "usable" are minutes apart — and calling that
@@ -685,7 +723,11 @@ export function availabilityElsewhere(node, resourceId, budgetId) {
 // Editing is not an owner privilege: on a pending request a manager's edit
 // amends it in place, on an approved project it becomes a proposal. Release is
 // a manager's to do as well — they carry the budget it is paid from.
-export function projectActions(node, { manager = false } = {}) {
+//
+// Deleting for good is offered on a released or archived project wherever the
+// deployment deletes on request (canDelete, from the config), until it is
+// under way.
+export function projectActions(node, { manager = false, canDelete = false } = {}) {
     const approved = node?.status === 'approved';
     const pending = node?.status === 'pending';
     const decidable = pending || node?.status === 'change_pending';
@@ -697,6 +739,7 @@ export function projectActions(node, { manager = false } = {}) {
         details: true,
         change: approved || pending,
         release: approved,
+        deleteForGood: canDelete && isRetired(node) && !deletionRequested(node),
         approve: manager && decidable,
         reject: manager && decidable,
         adopt: manager && isImported(node) && !(node.flags || []).includes('promote_on_reconcile'),

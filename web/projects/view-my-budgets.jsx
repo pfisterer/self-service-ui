@@ -15,6 +15,7 @@ import { BudgetTree, MORE_SUFFIX, NodeResultList, budgetsToTreeData, budgetChild
 import { BudgetProjectsTable } from './component-budget-projects.jsx';
 import { AdoptModal } from './modal-adopt.jsx';
 import { AllocationModal } from './modal-allocation.jsx';
+import { RetireModal } from './modal-retire.jsx';
 import { ApproveModal } from './modal-approve.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
@@ -375,23 +376,6 @@ export function MyBudgetsView() {
         }
     };
 
-    const handleRelease = async (node) => {
-        const ok = await confirm({
-            title: t('projects.budgets.releaseTitle', { name: node.name || node.id }),
-            confirmLabel: t('projects.actions.release'),
-            // The owner is named on the card behind the dialog, so the sentence
-            // does not have to bend around their name.
-            message: t('projects.budgets.releaseMessage'),
-        });
-        if (!ok) return;
-        try {
-            await api.release(node.id);
-            refresh();
-        } catch (e) {
-            showError(formatError(e));
-        }
-    };
-
     // Central action dispatch for both node kinds. An action started from the
     // project dialog closes it: the dialog it opens is the next thing to look at, and
     // the card behind it would show the state before the change.
@@ -400,7 +384,6 @@ export function MyBudgetsView() {
         if (action === 'sub-budget') return setBudgetForm({ mode: 'create', parent: node });
         // From a read-only budget: request under it — `parent` preselects it.
         if (action === 'request-here') return setBudgetForm({ mode: 'request', parent: node });
-        if (action === 'release') return handleRelease(node);
         if (action === 'edit') {
             // Editing a budget IS delegating from its parent, so the form has
             // to offer the PARENT's resource scope: the child's own scope can
@@ -664,6 +647,8 @@ export function MyBudgetsView() {
             <TransferOwnerModal key={`transferownermodal:${dlg.key}`} opened={dlg.is('transfer')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
             <AllocationModal key={`allocationmodal:${dlg.key}`} opened={dlg.is('allocate')} onClose={dlg.close} onDone={refresh}
                 node={dlg.node} resources={resources} />
+            <RetireModal key={`retiremodal:${dlg.key}`} opened={dlg.is('release') || dlg.is('delete-for-good')}
+                mode={dlg.is('delete-for-good') ? 'delete' : 'release'} onClose={dlg.close} onDone={refresh} node={dlg.node} />
             <AdoptModal key={`adoptmodal:${dlg.key}`} opened={dlg.is('adopt')} onClose={dlg.close} onDone={refresh}
                 resources={resources} node={dlg.node} myBudgets={myBudgets.items} />
             {/* A manager may edit a project of theirs, so the change dialog has to

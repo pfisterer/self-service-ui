@@ -1,7 +1,7 @@
-import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Gift, Pencil, Rocket, Users, X } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Gift, Pencil, Rocket, Trash2, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
-import { FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, TokenBadgeList } from './component-common.jsx';
-import { COLOR, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText } from './util-project.jsx';
+import { DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, TokenBadgeList } from './component-common.jsx';
+import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
@@ -31,7 +31,10 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     const isRejected = node.status === 'rejected';
     const hasHistory = (node.history || []).length > 0;
     const isManager = perspective === 'manager';
-    const can = projectActions(node, { manager: isManager });
+    const can = projectActions(node, { manager: isManager, canDelete: deletesOnRequest(config?.retirement) });
+    // Given up: when it was put away, and when it goes by itself.
+    const archivedAt = node.status === 'archived' ? lastEventAt(node, 'archived') : null;
+    const deletionAt = deletionRequested(node) ? null : scheduledDeletion(node, config?.retirement);
 
     const createdDate = node.created_at ? formatDate(node.created_at) : '';
     const owner = ownerEmail(node);
@@ -73,6 +76,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 <Group justify="space-between" mb="xs">
                     <Group gap="xs">
                         <NodeStatusBadge status={node.status} provisioning={provisioning} />
+                        {deletionRequested(node) && <DeletingBadge size="sm" />}
                         {/* Who shared it says it all, so it stands on the badge rather
                             than behind a hover nobody finds. Not uppercased: an
                             address in capitals is hard to read. */}
@@ -171,7 +175,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                     {/* Only a date that is close keeps a colour, because then it
                         IS the message; anything further out reads like the rows
                         above it. */}
-                    {node.termination_date && (
+                    {node.termination_date && !isRetired(node) && (
                         <FactRow label={t('projects.fact.validUntil')}>
                             <Text size="xs" c={expiryTone(node.termination_date) === 'gray'
                                 ? undefined
@@ -179,6 +183,13 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                                 {expiryValue(t, node.termination_date)}
                             </Text>
                         </FactRow>
+                    )}
+
+                    {archivedAt && (
+                        <FactRow label={t('projects.fact.archivedOn')}>{formatDate(archivedAt)}</FactRow>
+                    )}
+                    {deletionAt && (
+                        <FactRow label={t('projects.fact.deletion')}>{formatDate(deletionAt)}</FactRow>
                     )}
 
                     {memberTokens.length > 0 && (
@@ -243,6 +254,11 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                     {can.release && (
                         <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('release')}>
                             {t('projects.actions.release')}
+                        </Button>
+                    )}
+                    {can.deleteForGood && (
+                        <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('delete-for-good')}>
+                            <Trash2 size="13" style={{ marginRight: 4 }} />{t('projects.actions.deleteForGood')}
                         </Button>
                     )}
 

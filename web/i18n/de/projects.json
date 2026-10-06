@@ -17,7 +17,8 @@
         "loading": "Lädt…",
         "adopt": "Übernehmen",
         "ownerAction": "Verantwortlich",
-        "allocate": "Sonderzuteilung"
+        "allocate": "Sonderzuteilung",
+        "deleteForGood": "Endgültig löschen"
     },
     "adopt": {
         "title": "Projekt übernehmen: {{name}}",
@@ -104,8 +105,6 @@
     "budgets": {
         "deleteTitle": "Budget „{{name}}“ löschen?",
         "deleteMessage": "Nur möglich, solange darunter nichts aktiv ist und nichts auf eine Entscheidung wartet.",
-        "releaseTitle": "Projekt „{{name}}“ freigeben?",
-        "releaseMessage": "Beim Freigeben werden das Projekt und seine Ressourcen aus OpenStack entfernt. Das lässt sich nicht rückgängig machen.",
         "loadError": "Die Budgets konnten nicht geladen werden",
         "intro": "Die selbst verwalteten Budgets als Baum.",
         "introWithRequestable": "Die selbst verwalteten Budgets, dazu die, aus denen angefragt werden darf (nur lesbar).",
@@ -193,7 +192,9 @@
         "members": "Mitglieder",
         "owner": "Verantwortlich",
         "inUse": "In Benutzung",
-        "admins": "Admins"
+        "admins": "Admins",
+        "archivedOn": "Archiviert am",
+        "deletion": "Löschung"
     },
     "forms": {
         "add": "Hinzufügen",
@@ -239,7 +240,9 @@
             "end_shortened": "Endet früher mit seinem Budget",
             "term_shortened": "Laufzeit auf das Höchstmaß des Budgets gekürzt",
             "allocation_set": "Sonderzuteilung geändert",
-            "allocation_removed": "Sonderzuteilung entfernt"
+            "allocation_removed": "Sonderzuteilung entfernt",
+            "archived": "Archiviert",
+            "deletion_requested": "Endgültiges Löschen angefordert"
         }
     },
     "itemSelector": {
@@ -263,7 +266,6 @@
         "targetRequired": "Bitte das Zielbudget wählen"
     },
     "myProjects": {
-        "releaseTitle": "Projekt freigeben?",
         "loadError": "Die Projekte konnten nicht geladen werden",
         "intro": "Ein Projekt ist ein eigener Bereich in der DHBW-Cloud, mit den angefragten Ressourcen.",
         "shown": "Gezeigte Projekte: {{shown}}/{{total}}",
@@ -298,7 +300,9 @@
         "imported": "Dieses Projekt existiert in OpenStack, wird hier aber nicht verwaltet. Es lässt sich nicht bearbeiten.",
         "inUseHint": "Wird dem Budget statt der gewährten Menge berechnet.",
         "sharedBy": "Geteilt von {{owner}}",
-        "membersMore": "+{{count}} weitere"
+        "membersMore": "+{{count}} weitere",
+        "deleting": "Wird gelöscht",
+        "deletingHint": "Alles im OpenStack-Projekt wird in den nächsten Minuten gelöscht; danach verschwindet das Projekt aus dieser Liste."
     },
     "projectForm": {
         "titleNew": "Neues Projekt",
@@ -426,7 +430,11 @@
         },
         "released": {
             "label": "Freigegeben",
-            "description": "Dieses Projekt wurde aufgegeben. Es bleibt in der Liste und belegt weiter sein Budget, bis OpenStack es wirklich gelöscht hat — bis dahin laufen die Maschinen ja noch. Das lässt sich nicht rückgängig machen."
+            "description": "Dieses Projekt wurde aufgegeben. Je nach Einstellung wird es in Kürze archiviert oder gelöscht; bis dahin laufen seine Maschinen weiter und es belegt sein Budget. Das lässt sich nicht rückgängig machen."
+        },
+        "archived": {
+            "label": "Archiviert",
+            "description": "Aufgegeben und stillgelegt: Anmelden ist nicht mehr möglich, die Maschinen sind abgelegt (shelved), die Floating IPs zurückgegeben. Volumes und Daten bleiben erhalten, bis das Projekt endgültig gelöscht wird."
         },
         "imported": {
             "label": "Importiert",
@@ -462,7 +470,8 @@
         "pending": "+{{count}} angefragt",
         "incoming": "+{{count}} kommt hinzu",
         "ofLimit": "{{used}} / {{limit}}",
-        "ofLimitWith": "{{used}} ({{extra}}) / {{limit}}"
+        "ofLimitWith": "{{used}} ({{extra}}) / {{limit}}",
+        "retired": "davon {{count}} aufgegeben"
     },
     "relations": {
         "dozent": "Dozent:in",
@@ -561,5 +570,26 @@
         "fact": "Sonderzuteilungen",
         "factValue_one": "{{count}} Projekt · {{summary}}",
         "factValue_other": "{{count}} Projekte · {{summary}}"
+    },
+    "retire": {
+        "releaseTitle": "Projekt „{{name}}“ freigeben?",
+        "deleteTitle": "Projekt „{{name}}“ endgültig löschen?",
+        "archive": "Das Projekt wird archiviert: Anmelden ist nicht mehr möglich, die Maschinen werden abgelegt (shelved), die Floating IPs zurückgegeben.",
+        "keptGrace_one": "Volumes und Daten bleiben noch {{count}} Tag erhalten, dann wird alles gelöscht. Früher geht es über „Endgültig löschen“.",
+        "keptGrace_other": "Volumes und Daten bleiben noch {{count}} Tage erhalten, dann wird alles gelöscht. Früher geht es über „Endgültig löschen“.",
+        "keptOnRequest": "Volumes und Daten bleiben erhalten, bis das Projekt über „Endgültig löschen“ gelöscht wird.",
+        "keptForever": "Volumes und Daten bleiben erhalten.",
+        "chargeStorage": "Ab dann belegt es im Budget nur noch seinen Speicher.",
+        "chargeNothing": "Ab dann belegt es kein Budget mehr.",
+        "noArchive": "Das Projekt wird zum Löschen vorgemerkt; seine Maschinen laufen weiter, bis es in OpenStack gelöscht ist.",
+        "deletedAfter_one": "Nach {{count}} Tag wird es mit allem darin gelöscht.",
+        "deletedAfter_other": "Nach {{count}} Tagen wird es mit allem darin gelöscht.",
+        "chargeUntilGone": "Bis dahin belegt es weiter sein Budget.",
+        "deleteWhat": "Alles im OpenStack-Projekt wird in den nächsten Minuten gelöscht: Maschinen, Volumes, Snapshots, Images, Netze und alle Daten darauf.",
+        "deleteAfter": "Danach verschwindet das Projekt aus der Liste. Was es verbraucht hat, bleibt in der Verbrauchsstatistik.",
+        "irreversible": "Das lässt sich nicht rückgängig machen.",
+        "deleteNow": "Gleich endgültig löschen",
+        "deleteNowHint": "Statt zu archivieren, wird alles sofort gelöscht, auch Volumes und Daten.",
+        "confirmName": "Zur Bestätigung den Projektnamen eingeben: <1>{{name}}</1>"
     }
 }

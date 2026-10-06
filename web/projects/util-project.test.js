@@ -6,6 +6,11 @@ import i18n from '/i18n/index.js';
 const t = i18n.getFixedT('en');
 import {
     UNLIMITED_QUOTA,
+    deletesOnRequest,
+    deletionRequested,
+    isRetired,
+    lastEventAt,
+    scheduledDeletion,
     autoApproveHeadroom,
     childrenById,
     expiryTone,
@@ -679,5 +684,40 @@ describe('allocations', () => {
         expect(availabilityElsewhere({ limit: {}, pending: { limit: { ipv4: 1 } } }, 'ipv4', 'uni')).toBe(true);
         expect(hasAllocations(node)).toBe(true);
         expect(hasAllocations({})).toBe(false);
+    });
+});
+
+describe('retirement', () => {
+    const released = { status: 'released', history: [{ event: 'released', timestamp: '2026-10-01T10:00:00Z' }] };
+    const archived = { ...released, status: 'archived', history: [...released.history, { event: 'archived', timestamp: '2026-10-01T10:05:00Z' }] };
+    const deleting = { ...archived, flags: ['delete_requested'] };
+
+    it('knows which projects are given up', () => {
+        expect(isRetired(released)).toBe(true);
+        expect(isRetired(archived)).toBe(true);
+        expect(isRetired({ status: 'approved' })).toBe(false);
+        expect(deletionRequested(deleting)).toBe(true);
+        expect(deletionRequested(archived)).toBe(false);
+    });
+
+    it('deletes on request in every mode but never', () => {
+        expect(deletesOnRequest({ delete: 'never' })).toBe(false);
+        expect(deletesOnRequest({})).toBe(false);
+        for (const mode of ['on-request', 'after-grace', 'immediately']) expect(deletesOnRequest({ delete: mode })).toBe(true);
+    });
+
+    it('dates the deletion only under after-grace, from the release', () => {
+        expect(scheduledDeletion(archived, { delete: 'after-grace', deleteGraceDays: 30 })).toBe('2026-10-31T10:00:00.000Z');
+        expect(scheduledDeletion(archived, { delete: 'on-request', deleteGraceDays: 30 })).toBeNull();
+        expect(scheduledDeletion({ status: 'approved' }, { delete: 'after-grace' })).toBeNull();
+        expect(lastEventAt(archived, 'archived')).toBe('2026-10-01T10:05:00Z');
+    });
+
+    it('offers deleting for good on a given-up project, where allowed and not under way', () => {
+        expect(projectActions(archived, { canDelete: true }).deleteForGood).toBe(true);
+        expect(projectActions(released, { canDelete: true }).deleteForGood).toBe(true);
+        expect(projectActions(archived, { canDelete: false }).deleteForGood).toBe(false);
+        expect(projectActions(deleting, { canDelete: true }).deleteForGood).toBe(false);
+        expect(projectActions({ status: 'approved' }, { canDelete: true }).deleteForGood).toBe(false);
     });
 });

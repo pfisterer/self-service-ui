@@ -10,7 +10,7 @@ import {
     deleteToken, getAdminReconcileStatus, getConfig, getNode, getRoleSwitch,
     listAllocationSources, listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
     listMyNodes, listNodeChildren, listNodesToManage, listTokens, promoteNode,
-    rejectNode, releaseNode, reparentNode, requestNodeChange, searchNodes,
+    rejectNode, releaseNode, reparentNode, requestNodeChange, requestNodeDeletion, searchNodes,
     searchPrincipals, setNodeAllocation, setRoleSwitch, transferNodeOwner,
     triggerAdminReconcile, updateNode,
 } from '@dhbw-cloud/os-mgt-client';
@@ -141,8 +141,13 @@ export function useNodesApi() {
                     body: reason ? { reason } : {},
                     headers: JSON_HEADERS,
                 })),
-            release: async (id) =>
-                unwrapObject(await releaseNode({ client, path: { id } })),
+            // With deleteNow the project is also marked for deletion for good.
+            release: async (id, { deleteNow = false } = {}) =>
+                unwrapObject(await releaseNode({
+                    client, path: { id }, body: deleteNow ? { delete: true } : {}, headers: JSON_HEADERS,
+                })),
+            requestDeletion: async (id) =>
+                unwrapObject(await requestNodeDeletion({ client, path: { id } })),
 
             // ── Structural operations ────────────────────────────────────
             move: async (id, newParentId) =>

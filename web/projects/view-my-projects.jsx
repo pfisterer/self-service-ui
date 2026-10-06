@@ -2,9 +2,8 @@ import { useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { Alert, Button, Divider, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
-import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
+import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
-import { useConfirm } from '/providers/confirm.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { ProjectCard } from './card-project.jsx';
@@ -13,6 +12,7 @@ import { BudgetFormModal } from './modal-budget-form.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
 import { NodeInspectModal } from './modal-inspect.jsx';
 import { AllocationModal } from './modal-allocation.jsx';
+import { RetireModal } from './modal-retire.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
@@ -26,7 +26,6 @@ import { COLOR, getAuthUserEmail, ownerEmail } from './util-project.jsx';
 export function MyProjectsView() {
     const { t } = useTranslation();
     const api = useNodesApi();
-    const confirm = useConfirm();
     const config = useProjectConfig();
     const { user } = useAuth();
     const cloudStatus = useCloudStatus();
@@ -48,24 +47,7 @@ export function MyProjectsView() {
         ],
     });
 
-    const release = useApiMutation({
-        mutationFn: (id) => api.release(id),
-        invalidates: [projectKeys.tree()],
-    });
-
-    const handleRelease = async (node) => {
-        const ok = await confirm({
-            title: t('projects.myProjects.releaseTitle'),
-            message: t('projects.budgets.releaseMessage'),
-            confirmLabel: t('projects.actions.release'),
-        });
-        if (ok) release.mutate(node.id);
-    };
-
-    const handleAction = (action, node) => {
-        if (action === 'release') return handleRelease(node);
-        dlg.open(action, node);
-    };
+    const handleAction = (action, node) => dlg.open(action, node);
 
     if (!api || !config || projectsQuery.isPending) return <Loading />;
     if (projectsQuery.isError) return <LoadError query={projectsQuery} title={t('projects.myProjects.loadError')} />;
@@ -191,6 +173,8 @@ export function MyProjectsView() {
             {/* Here only to give an allocation back. */}
             <AllocationModal key={`allocate:${dlg.key}`} opened={dlg.is('allocate')}
                 onClose={dlg.close} node={dlg.node} resources={resources} />
+            <RetireModal key={`retire:${dlg.key}`} opened={dlg.is('release') || dlg.is('delete-for-good')}
+                mode={dlg.is('delete-for-good') ? 'delete' : 'release'} onClose={dlg.close} node={dlg.node} />
         </Stack>
     );
 }

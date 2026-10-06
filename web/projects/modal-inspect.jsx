@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, ArrowRight, ArrowRightLeft, CalendarMinus, Check, FileText, FolderInput, Gift, LogOut, Pencil, Rocket, X } from 'lucide-react';
+import { AlertCircle, Archive, ArrowRight, ArrowRightLeft, CalendarMinus, Check, FileText, FolderInput, Gift, LogOut, Pencil, Rocket, Trash2, X } from 'lucide-react';
 import { Badge, Button, Divider, Group, Modal, Paper, Stack, Table, Tabs, Text, Timeline } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
@@ -36,6 +36,8 @@ const EVENT_ICON = {
     term_shortened: CalendarMinus,
     allocation_set: Gift,
     allocation_removed: Gift,
+    archived: Archive,
+    deletion_requested: Trash2,
 };
 
 // One label/value row of the details table.
