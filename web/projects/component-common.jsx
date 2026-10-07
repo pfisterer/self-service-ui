@@ -13,21 +13,19 @@ dayjs.extend(relativeTime);
 
 // ── Facts ───────────────────────────────────────────────────────────────────
 
-// FactRow is the single shape in which a card states a fact: a dimmed label of
-// fixed width, the value beside it. Every card uses it for every fact, so the
-// eye finds "who owns this" or "when does it end" in the same place on a
-// project and on a budget — instead of one card using headings, the other
-// label/value rows and both mixing in badges.
-//
-// `hint` is a second, smaller line under the value: the place for the sentence
-// that explains what the value means to someone seeing it for the first time.
 // InfoPopover is the (i) after a control whose label cannot say everything:
-// a click opens the longer explanation, so the label stays one line.
+// hovering shows the longer explanation, so the label stays one line. A tap
+// opens it too — a touch screen has no hover — and a tap elsewhere closes it.
+// The click only opens: as a toggle it would close what hovering just opened.
 export function InfoPopover({ label, children, width = 300 }) {
+    const [opened, setOpened] = useState(false);
     return (
-        <Popover width={width} position="bottom-start" withArrow shadow="md">
+        <Popover width={width} position="bottom-start" withArrow shadow="md"
+            opened={opened} onChange={setOpened}>
             <Popover.Target>
-                <ActionIcon variant="subtle" color="gray" size="sm" aria-label={label}>
+                <ActionIcon variant="subtle" color="gray" size="sm" aria-label={label}
+                    onMouseEnter={() => setOpened(true)} onMouseLeave={() => setOpened(false)}
+                    onClick={() => setOpened(true)}>
                     <Info size="14" />
                 </ActionIcon>
             </Popover.Target>
@@ -38,6 +36,14 @@ export function InfoPopover({ label, children, width = 300 }) {
     );
 }
 
+// FactRow is the single shape in which a card states a fact: a dimmed label of
+// fixed width, the value beside it. Every card uses it for every fact, so the
+// eye finds "who owns this" or "when does it end" in the same place on a
+// project and on a budget — instead of one card using headings, the other
+// label/value rows and both mixing in badges.
+//
+// `hint` is a second, smaller line under the value: the place for the sentence
+// that explains what the value means to someone seeing it for the first time.
 export function FactRow({ label, hint, children }) {
     return (
         <Group gap="xs" wrap="nowrap" align="flex-start">
