@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Check, Eye, FolderInput, Gift, MoreHorizontal, Pencil, Rocket, Search, Trash2, X } from 'lucide-react';
-import { ActionIcon, Badge, Checkbox, Group, Loader, Menu, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
+import { ActionIcon, Badge, Group, Loader, Menu, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
-import { DeletingBadge, NodeStatusBadge } from './component-common.jsx';
+import { DeletingBadge, InfoPopover, NodeStatusBadge } from './component-common.jsx';
 import { PrincipalTokenAutocomplete } from './component-principal-token-autocomplete.jsx';
 import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
@@ -101,22 +101,32 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                     {/* Only where there are sub-budgets to look into. The
                         allocation view already spans the whole subtree. */}
                     {(budget.child_budget_count > 0 || deep) && (
-                        <Checkbox
-                            size="xs"
-                            label={t('projects.budgetProjects.deep')}
-                            checked={deep}
-                            disabled={allocatedOnly}
-                            onChange={(e) => refilter(setDeep)(e.currentTarget.checked)}
-                        />
+                        <Group gap={4} wrap="nowrap">
+                            <Switch
+                                size="xs"
+                                label={t('projects.budgetProjects.deep')}
+                                checked={deep}
+                                disabled={allocatedOnly}
+                                onChange={(e) => refilter(setDeep)(e.currentTarget.checked)}
+                            />
+                            <InfoPopover label={t('projects.budgetProjects.deep')}>
+                                {t('projects.budgetProjects.deepHelp')}
+                            </InfoPopover>
+                        </Group>
                     )}
                     {/* Only where there is something to switch to. */}
                     {(budget.allocated_out?.projects > 0 || allocatedOnly) && (
-                        <Switch
-                            size="xs"
-                            label={t('projects.budgetProjects.allocatedOnly')}
-                            checked={allocatedOnly}
-                            onChange={(e) => { onAllocatedOnlyChange?.(e.currentTarget.checked); setPage(1); }}
-                        />
+                        <Group gap={4} wrap="nowrap">
+                            <Switch
+                                size="xs"
+                                label={t('projects.budgetProjects.allocatedOnly')}
+                                checked={allocatedOnly}
+                                onChange={(e) => { onAllocatedOnlyChange?.(e.currentTarget.checked); setPage(1); }}
+                            />
+                            <InfoPopover label={t('projects.budgetProjects.allocatedOnly')}>
+                                {t('projects.budgetProjects.allocatedOnlyHelp')}
+                            </InfoPopover>
+                        </Group>
                     )}
                 </Group>
 

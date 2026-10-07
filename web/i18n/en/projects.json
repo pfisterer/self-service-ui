@@ -559,7 +559,9 @@
         "allocatedOnly": "Only projects with an allocation from this budget",
         "inBudget": "in {{name}}",
         "deep": "Also show projects in sub-budgets",
-        "titleDeep": "Projects in this budget and below ({{count}})"
+        "titleDeep": "Projects in this budget and below ({{count}})",
+        "deepHelp": "Also lists the projects of every budget below this one, at any depth. Each project then shows which budget pays for it. Cannot be combined with \"Only projects with an allocation\", which searches the whole subtree anyway.",
+        "allocatedOnlyHelp": "Instead of this budget's own projects, lists every project below it, at any depth, that received an allocation from this budget: resources on top of what its own budget gives it. They count for this budget and the ones above, not for the budgets in between."
     },
     "allocation": {
         "title": "Allocation: {{name}}",

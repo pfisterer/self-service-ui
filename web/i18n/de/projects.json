@@ -559,7 +559,9 @@
         "allocatedOnly": "Nur Projekte mit Sonderzuteilung aus diesem Budget",
         "inBudget": "in {{name}}",
         "deep": "Auch Projekte aus Unterbudgets",
-        "titleDeep": "Projekte in diesem Budget und darunter ({{count}})"
+        "titleDeep": "Projekte in diesem Budget und darunter ({{count}})",
+        "deepHelp": "Zeigt zusätzlich die Projekte aller Budgets unterhalb dieses Budgets, über alle Ebenen. Bei jedem Projekt steht dann, aus welchem Budget es bezahlt wird. Nicht kombinierbar mit „Nur Projekte mit Sonderzuteilung“, das ohnehin den ganzen Teilbaum durchsucht.",
+        "allocatedOnlyHelp": "Zeigt statt der eigenen Projekte dieses Budgets alle Projekte darunter, egal wie tief, die eine Sonderzuteilung aus diesem Budget erhalten haben, also Ressourcen zusätzlich zu dem, was ihr eigenes Budget ihnen gibt. Diese Ressourcen zählen bei diesem Budget und darüber, nicht bei den Budgets dazwischen."
     },
     "allocation": {
         "title": "Sonderzuteilung: {{name}}",

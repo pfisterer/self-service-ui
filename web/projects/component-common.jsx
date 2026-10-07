@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar, Info } from 'lucide-react';
 import { DatePickerInput } from '@mantine/dates';
-import { Badge, Box, Button, Checkbox, Group, NumberInput, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Badge, Box, Button, Checkbox, Group, NumberInput, Popover, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -21,6 +21,23 @@ dayjs.extend(relativeTime);
 //
 // `hint` is a second, smaller line under the value: the place for the sentence
 // that explains what the value means to someone seeing it for the first time.
+// InfoPopover is the (i) after a control whose label cannot say everything:
+// a click opens the longer explanation, so the label stays one line.
+export function InfoPopover({ label, children, width = 300 }) {
+    return (
+        <Popover width={width} position="bottom-start" withArrow shadow="md">
+            <Popover.Target>
+                <ActionIcon variant="subtle" color="gray" size="sm" aria-label={label}>
+                    <Info size="14" />
+                </ActionIcon>
+            </Popover.Target>
+            <Popover.Dropdown>
+                <Text size="xs">{children}</Text>
+            </Popover.Dropdown>
+        </Popover>
+    );
+}
+
 export function FactRow({ label, hint, children }) {
     return (
         <Group gap="xs" wrap="nowrap" align="flex-start">
