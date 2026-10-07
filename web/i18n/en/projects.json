@@ -648,5 +648,36 @@
         "csvHint": "Download the table shown as a CSV file",
         "valueEur": "Value",
         "valueHint": "at a public cloud's list prices"
+    },
+    "purge": {
+        "progress": "Step {{index}} of {{steps}}: {{step}}",
+        "step": {
+            "access": "Taking over the project",
+            "clusters": "Kubernetes clusters",
+            "stacks": "Heat stacks",
+            "leases": "Reservations",
+            "load-balancers": "Load balancers",
+            "floating-ips": "Floating IPs",
+            "servers": "Servers",
+            "backups": "Volume backups",
+            "snapshots": "Snapshots",
+            "volumes": "Volumes",
+            "images": "Images",
+            "dns-zones": "DNS zones",
+            "object-storage": "Object storage",
+            "secret-containers": "Secret containers",
+            "secrets": "Secrets",
+            "routers": "Routers",
+            "ports": "Ports",
+            "networks": "Networks",
+            "security-groups": "Security groups",
+            "project": "Deleting the project"
+        },
+        "blocked": {
+            "unreachable": "Waiting: the service for this step is not answering right now. It is retried automatically.",
+            "failed": "Something cannot be deleted ({{detail}}). It is retried; if it stays that way, operations can help.",
+            "not_switched_on": "Waiting: deleting this kind of content is not switched on yet. The project stays until it is, or until the content is removed by hand.",
+            "no_session": "Waiting: signing in to the project is not possible right now. It is retried automatically."
+        }
     }
 }

@@ -585,13 +585,44 @@ export function formatTerm(t, days) {
 
 // DeletingBadge marks a released or archived project whose deletion for good is
 // under way — from the request until it disappears from the list.
-export function DeletingBadge({ size = 'sm' }) {
+export function DeletingBadge({ size = 'sm', purge = null }) {
     const { t } = useTranslation();
+    // Where the reconciler has started, the tooltip says how far it got.
+    const label = purge ? purgeLines(t, purge).join(' ') : t('projects.projectCard.deletingHint');
     return (
-        <Tooltip label={t('projects.projectCard.deletingHint')} multiline w={260}>
+        <Tooltip label={label} multiline w={260}>
             <Badge size={size} color={COLOR.negative} variant="light" style={{ cursor: 'default' }}>
                 {t('projects.projectCard.deleting')}
             </Badge>
         </Tooltip>
+    );
+}
+
+// purgeLines says how far emptying a project before its deletion has got —
+// the step, and why it waits where it is not just OpenStack finishing up.
+export function purgeLines(t, purge) {
+    const lines = [t('projects.purge.progress', {
+        index: purge.index, steps: purge.steps,
+        step: t(`projects.purge.step.${purge.step}`, { defaultValue: purge.step }),
+    })];
+    if (purge.blocked) {
+        lines.push(t(`projects.purge.blocked.${purge.blocked}`, { detail: purge.detail, defaultValue: '' }));
+    }
+    return lines.filter(Boolean);
+}
+
+// PurgeProgress shows it on a project card: a bar for the steps, and the
+// reason it waits in the colour of a problem.
+export function PurgeProgress({ purge }) {
+    const { t } = useTranslation();
+    if (!purge) return null;
+    const [progress, reason] = purgeLines(t, purge);
+    return (
+        <Stack gap="4" mb="xs">
+            <Text size="xs" c="dimmed">{progress}</Text>
+            <Progress size="xs" value={purge.steps ? (purge.index / purge.steps) * 100 : 0}
+                color={purge.blocked ? COLOR.attention : COLOR.negative} />
+            {reason && <Text size="xs" c={`${COLOR.attention}.7`}>{reason}</Text>}
+        </Stack>
     );
 }

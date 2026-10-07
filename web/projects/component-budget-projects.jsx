@@ -280,7 +280,7 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
             <Table.Td style={{ whiteSpace: 'nowrap' }}>
                 {/* Being deleted says more than released or archived. */}
                 {deletionRequested(node)
-                    ? <DeletingBadge size="xs" />
+                    ? <DeletingBadge size="xs" purge={node.purge} />
                     : <NodeStatusBadge status={node.status} size="xs" full />}
             </Table.Td>
             <Table.Td>

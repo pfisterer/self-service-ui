@@ -648,5 +648,36 @@
         "csvHint": "Die angezeigte Tabelle als CSV-Datei herunterladen",
         "valueEur": "Gegenwert",
         "valueHint": "zu Listenpreisen einer Public Cloud"
+    },
+    "purge": {
+        "progress": "Schritt {{index}} von {{steps}}: {{step}}",
+        "step": {
+            "access": "Projekt übernehmen",
+            "clusters": "Kubernetes-Cluster",
+            "stacks": "Heat-Stacks",
+            "leases": "Reservierungen",
+            "load-balancers": "Load Balancer",
+            "floating-ips": "Floating IPs",
+            "servers": "Server",
+            "backups": "Volume-Backups",
+            "snapshots": "Snapshots",
+            "volumes": "Volumes",
+            "images": "Images",
+            "dns-zones": "DNS-Zonen",
+            "object-storage": "Object Storage",
+            "secret-containers": "Secret-Container",
+            "secrets": "Secrets",
+            "routers": "Router",
+            "ports": "Ports",
+            "networks": "Netze",
+            "security-groups": "Security Groups",
+            "project": "Projekt löschen"
+        },
+        "blocked": {
+            "unreachable": "Wartet: Der Dienst für diesen Schritt antwortet gerade nicht. Es wird automatisch weiter versucht.",
+            "failed": "Etwas lässt sich nicht löschen ({{detail}}). Es wird weiter versucht; bleibt es dabei, kann der Betrieb helfen.",
+            "not_switched_on": "Wartet: Das Löschen dieser Inhalte ist im Betrieb noch nicht freigeschaltet. Das Projekt bleibt bestehen, bis es freigeschaltet ist oder die Inhalte von Hand entfernt sind.",
+            "no_session": "Wartet: Die Anmeldung im Projekt ist gerade nicht möglich. Es wird automatisch weiter versucht."
+        }
     }
 }
