@@ -85,6 +85,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 autoApproveQuota: { ...(node.auto_approve?.per_requester_limit || defaultQuota(resources)) },
                 terminationDate: node.termination_date ? new Date(node.termination_date) : null,
                 maxTermDays: node.max_project_term_days ?? null,
+                inheritsLimit: !!node.inherits_limit,
             }
             : {
                 parentId: parent?.id ?? eligibleBudgets[0]?.id ?? null,
@@ -116,6 +117,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 terminationDate: endOf(parent?.id ?? eligibleBudgets[0]?.id ?? null),
                 // Under a budget that limits its projects, so does this one.
                 maxTermDays: termOf(parent?.id ?? eligibleBudgets[0]?.id ?? null),
+                inheritsLimit: false,
             },
         validate: (values) => ({
             name: (values.name || '').trim().length < 3
@@ -134,9 +136,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
             adminScope: !values.adminScope.length
                 ? t('projects.budgetForm.adminScopeRequired')
                 : null,
-            ...Object.fromEntries(
+            ...(values.inheritsLimit ? {} : Object.fromEntries(
                 Object.entries(validateQuota(t, visibleResources(resources, scopeFor(values.parentId)), values.quota, { allowUnlimited: true }))
-                    .map(([id, msg]) => [`quota.${id}`, msg])),
+                    .map(([id, msg]) => [`quota.${id}`, msg]))),
             ...(values.autoApproveEnabled && values.autoApproveIndividual
                 ? Object.fromEntries(
                     Object.entries(validateQuota(t, visibleResources(resources, scopeFor(values.parentId)), values.autoApproveQuota))
@@ -145,7 +147,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         }),
     });
 
-    const { quota, adminScope, eligibleRequesters, autoApproveEnabled, autoApproveIndividual, autoApproveQuota, allowRequestsBeyond, autoApproveExtensions } = form.values;
+    const { quota, adminScope, eligibleRequesters, autoApproveEnabled, autoApproveIndividual, autoApproveQuota, allowRequestsBeyond, autoApproveExtensions, inheritsLimit } = form.values;
+    // The budget whose limit one that inherits passes on, by name where known.
+    const inheritedFrom = isEdit ? node?.parent_name : parent?.name;
     const offered = visibleResources(resources, scopeFor(form.values.parentId));
 
     // The budget the new one would draw from: the picked one when requesting,
@@ -228,8 +232,11 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         } else if (node.auto_approve) {
             body.clear_auto_approve = true;
         }
+        // Inheriting, the limit is the parent's and not sent; switching it off
+        // keeps the inherited values unless they were changed here.
+        if (values.inheritsLimit !== !!node.inherits_limit) body.inherits_limit = values.inheritsLimit;
         const limitChanged = (resources || []).some(r => (quota[r.id] ?? 0) !== (node.limit?.[r.id] ?? 0));
-        if (limitChanged) body.limit = quota;
+        if (limitChanged && !values.inheritsLimit) body.limit = quota;
         const prevDate = node.termination_date ? new Date(node.termination_date).getTime() : null;
         const nextDate = terminationDate ? terminationDate.getTime() : null;
         if (prevDate !== nextDate && nextDate) body.termination_date = terminationDate.toISOString();
@@ -250,7 +257,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 kind: 'budget',
                 name: values.name,
                 reason: values.reason,
-                limit: values.quota,
+                limit: values.inheritsLimit ? {} : values.quota,
+                inherits_limit: values.inheritsLimit,
                 admin_scope: values.adminScope,
                 eligible_requesters: values.eligibleRequesters,
                 allow_sub_budget_requests: values.allowSubBudgetRequests,
@@ -350,21 +358,42 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         </Stack>
     );
 
+    // Passing on the whole limit above is for managers only — a requester
+    // asks for an amount.
     const resourcesTab = (
-        <div>
-            <Text fw={600} size="sm">{t('projects.budgetForm.resourceCap')}</Text>
-            <Text size="xs" c="dimmed" mb="xs">
-                {t('projects.budgetForm.resourceCapHint')}
-            </Text>
-            <QuotaInputs
-                resources={offered}
-                value={quota}
-                errors={Object.fromEntries(offered.map(r => [r.id, form.errors[`quota.${r.id}`]]))}
-                allowUnlimited
-                headroom={headroom}
-                onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}
-            />
-        </div>
+        <Stack>
+            {!isRequest && (
+                <Switch
+                    label={t('projects.budgetForm.inheritsLimit')}
+                    description={t('projects.budgetForm.inheritsLimitHint')}
+                    {...form.getInputProps('inheritsLimit', { type: 'checkbox' })}
+                />
+            )}
+            {inheritsLimit ? (
+                <Alert variant="light" color={COLOR.info} icon={<Info size="16" />} p="xs">
+                    <Text size="xs">
+                        {inheritedFrom
+                            ? t('projects.budgetForm.inheritsLimitFrom', { name: inheritedFrom })
+                            : t('projects.budgetForm.inheritsLimitFromAbove')}
+                    </Text>
+                </Alert>
+            ) : (
+                <div>
+                    <Text fw={600} size="sm">{t('projects.budgetForm.resourceCap')}</Text>
+                    <Text size="xs" c="dimmed" mb="xs">
+                        {t('projects.budgetForm.resourceCapHint')}
+                    </Text>
+                    <QuotaInputs
+                        resources={offered}
+                        value={quota}
+                        errors={Object.fromEntries(offered.map(r => [r.id, form.errors[`quota.${r.id}`]]))}
+                        allowUnlimited
+                        headroom={headroom}
+                        onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}
+                    />
+                </div>
+            )}
+        </Stack>
     );
 
     // Two questions, two boxes: who runs this budget, and who may ask it for

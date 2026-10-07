@@ -118,6 +118,13 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                             </Anchor>
                         </FactRow>
                     )}
+                    {node.inherits_limit && (
+                        <FactRow label={t('projects.budgetCard.inheritsLimit')}>
+                            <Text size="xs">{node.parent_name
+                                ? t('projects.budgetCard.inheritsLimitFrom', { name: node.parent_name })
+                                : t('projects.budgetCard.inheritsLimitFromAbove')}</Text>
+                        </FactRow>
+                    )}
                     {node.max_project_term_days && (
                         <FactRow label={t('projects.maxTerm.fact')}>
                             <Text size="xs">{t('projects.maxTerm.factValue', { duration: formatTerm(t, node.max_project_term_days) })}</Text>

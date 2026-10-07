@@ -435,6 +435,16 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 />
             )}
 
+            {/* A budget for structure only hands out the limit above it; a
+                project there is fine, but rarely what was meant. */}
+            {!isChange && budgetById(parentId)?.inherits_limit && (
+                <Alert variant="light" color={COLOR.info} p="xs">
+                    <Text size="xs">{budgetById(parentId).parent_name
+                        ? t('projects.projectForm.inheritingBudget', { name: budgetById(parentId).parent_name })
+                        : t('projects.projectForm.inheritingBudgetAbove')}</Text>
+                </Alert>
+            )}
+
             {/* Say why the numbers on the next tab just changed by themselves.
                 What happens beyond them — a manager, or a refusal — and a share
                 that is used up are the note under the form's business. */}

@@ -58,7 +58,10 @@
     "budgetCard": {
         "autoApproveBadge": "Automatisch",
         "resourceUsage": "Ressourcen-Nutzung",
-        "managedByHint": "Diese Personen genehmigen Anfragen und können Teile dieses Budgets weitergeben."
+        "managedByHint": "Diese Personen genehmigen Anfragen und können Teile dieses Budgets weitergeben.",
+        "inheritsLimit": "Limit",
+        "inheritsLimitFrom": "übernommen von „{{name}}“",
+        "inheritsLimitFromAbove": "übernommen vom Budget darüber"
     },
     "budgetForm": {
         "titleEdit": "Budget bearbeiten: {{name}}",
@@ -100,7 +103,11 @@
         "individual": "Persönliche Grenzen anwenden",
         "individualOn": "Jede Person bekommt höchstens die Mengen unten, über all ihre Projekte hier zusammengerechnet — die Einstellung für einen Kurs.",
         "individualOff": "Aus: Alle ziehen aus dem ganzen Budget, bis es aufgebraucht ist — die Einstellung für einen persönlichen oder Team-Pool. Eingeschaltet bekommt jede Person einen festen Anteil.",
-        "neverNeedApproval": "Egal, was hier eingestellt ist: Ressourcen zurückgeben, ein Projekt früher beenden und seine Mitglieder ändern brauchen nie eine Genehmigung."
+        "neverNeedApproval": "Egal, was hier eingestellt ist: Ressourcen zurückgeben, ein Projekt früher beenden und seine Mitglieder ändern brauchen nie eine Genehmigung.",
+        "inheritsLimit": "Limit des übergeordneten Budgets übernehmen",
+        "inheritsLimitHint": "Für Budgets, die nur der Gliederung dienen: Es gilt das Limit des Budgets darüber, auch wenn es sich später ändert. Alles darunter teilt sich dieses Limit mit den anderen Teilen des übergeordneten Budgets. Verwaltung, Anfragen und automatische Genehmigung bleiben eigene Einstellungen.",
+        "inheritsLimitFrom": "Es gilt das Limit von „{{name}}“.",
+        "inheritsLimitFromAbove": "Es gilt das Limit des Budgets darüber."
     },
     "budgets": {
         "deleteTitle": "Budget „{{name}}“ löschen?",
@@ -350,7 +357,9 @@
         "adminsHint": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt freigeben. Zugang in OpenStack entsteht dadurch nicht.",
         "access": "Zugang in OpenStack",
         "accessHint": "Wer in OpenStack Zugang zum Projekt erhält, und mit welcher Rolle.",
-        "adminsEmpty": "Niemand außer dem Owner."
+        "adminsEmpty": "Niemand außer dem Owner.",
+        "inheritingBudget": "Dieses Budget dient nur der Gliederung und übernimmt das Limit von „{{name}}“. Ein Projekt hier wird direkt aus dem übergeordneten Budget versorgt — meist gehört es in ein Teilbudget darunter.",
+        "inheritingBudgetAbove": "Dieses Budget dient nur der Gliederung und übernimmt das Limit des Budgets darüber. Ein Projekt hier wird direkt aus dem übergeordneten Budget versorgt — meist gehört es in ein Teilbudget darunter."
     },
     "quotaInputs": {
         "filter": "Ressourcen filtern",
@@ -464,7 +473,8 @@
         "requestOnly": "Aus diesem Budget darf angefragt werden, verwaltet wird es aber von anderen — daher nur lesbar.",
         "autoApprove": "Automatisch: kleine Anfragen werden ohne Nachfrage genehmigt.",
         "inBudget": "in {{name}}",
-        "projectCount": "{{count}} Projekte aus diesem Budget"
+        "projectCount": "{{count}} Projekte aus diesem Budget",
+        "inheritsLimit": "Dient der Gliederung: übernimmt das Limit des Budgets darüber."
     },
     "usage": {
         "pending": "+{{count}} angefragt",

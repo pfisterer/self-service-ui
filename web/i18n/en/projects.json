@@ -58,7 +58,10 @@
     "budgetCard": {
         "autoApproveBadge": "Auto-approve",
         "resourceUsage": "Resource usage",
-        "managedByHint": "They approve requests and can pass parts of this budget on."
+        "managedByHint": "They approve requests and can pass parts of this budget on.",
+        "inheritsLimit": "Limit",
+        "inheritsLimitFrom": "taken from “{{name}}”",
+        "inheritsLimitFromAbove": "taken from the budget above"
     },
     "budgetForm": {
         "titleEdit": "Edit budget: {{name}}",
@@ -100,7 +103,11 @@
         "individual": "Apply individual limits",
         "individualOn": "Each person gets at most the amounts below, summed over all their projects here — the setup for a course.",
         "individualOff": "Off: everybody draws from the whole budget until it is used up — the setup for a personal or team pool. Switch on to give each person a fixed share.",
-        "neverNeedApproval": "Whatever is set here: giving resources back, ending a project sooner and changing its members never need an approval."
+        "neverNeedApproval": "Whatever is set here: giving resources back, ending a project sooner and changing its members never need an approval.",
+        "inheritsLimit": "Use the limit of the budget above",
+        "inheritsLimitHint": "For budgets that only structure the tree: the limit of the budget above applies, also when it changes later. Everything below shares that limit with the rest of the budget above. Managers, requests and automatic approval remain settings of their own.",
+        "inheritsLimitFrom": "The limit of “{{name}}” applies.",
+        "inheritsLimitFromAbove": "The limit of the budget above applies."
     },
     "budgets": {
         "deleteTitle": "Delete budget “{{name}}”?",
@@ -350,7 +357,9 @@
         "adminsHint": "Administer the project here together with the owner: rename it, request changes, edit this list and release it. This gives no access in OpenStack.",
         "access": "Access in OpenStack",
         "accessHint": "Who gets into the project in OpenStack, and with which role.",
-        "adminsEmpty": "Nobody besides the owner."
+        "adminsEmpty": "Nobody besides the owner.",
+        "inheritingBudget": "This budget only structures the tree and uses the limit of “{{name}}”. A project here draws directly from the budget above — it usually belongs in a sub-budget below.",
+        "inheritingBudgetAbove": "This budget only structures the tree and uses the limit of the budget above. A project here draws directly from the budget above — it usually belongs in a sub-budget below."
     },
     "quotaInputs": {
         "filter": "Filter resources",
@@ -464,7 +473,8 @@
         "requestOnly": "You can request from this budget, but you don't manage it — shown read-only.",
         "autoApprove": "Auto-approve: small requests are approved automatically.",
         "inBudget": "in {{name}}",
-        "projectCount": "{{count}} projects paid from this budget"
+        "projectCount": "{{count}} projects paid from this budget",
+        "inheritsLimit": "Structures the tree: uses the limit of the budget above."
     },
     "usage": {
         "pending": "+{{count}} pending",

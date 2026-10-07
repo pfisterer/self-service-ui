@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ChevronDown, ChevronRight, CloudDownload, Eye, FileText, Folder, Zap } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, CloudDownload, CornerLeftUp, Eye, FileText, Folder, Zap } from 'lucide-react';
 import { Box, Group, Loader, Text, Tooltip, Tree, UnstyledButton } from '@mantine/core';
 import { COLOR, isBudget, isImported, nodeTitle, statusDescription, statusLabel, statusStyle } from './util-project.jsx';
 
@@ -105,6 +105,11 @@ function NodeMarkers({ node }) {
             {node.request_only && (
                 <Tooltip label={t('projects.tree.requestOnly')}>
                     <Eye size="12" color="var(--mantine-color-gray-6)" style={{ flexShrink: 0 }} />
+                </Tooltip>
+            )}
+            {node.inherits_limit && (
+                <Tooltip label={t('projects.tree.inheritsLimit')}>
+                    <CornerLeftUp size="12" color="var(--mantine-color-gray-6)" style={{ flexShrink: 0 }} />
                 </Tooltip>
             )}
             {node.auto_approve && (
