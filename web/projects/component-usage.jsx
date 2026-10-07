@@ -7,7 +7,7 @@ import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { COLOR, isBudget } from './util-project.jsx';
-import { averageStorage, GROUPINGS, groupProjects, idleProject, percent, PERIODS, periodRange, toCSV } from './util-usage.js';
+import { averageIPv4, averageStorage, GROUPINGS, groupProjects, idleProject, percent, PERIODS, periodRange, toCSV } from './util-usage.js';
 
 // What projects actually used, from the rows the reconciler collects once a
 // day: per project and for everything below a budget (UsagePanel), and the
@@ -62,14 +62,17 @@ const DailyChart = lazy(() => import('./component-usage-chart.jsx'));
 function Totals({ report }) {
     const { t } = useTranslation();
     const avg = averageStorage(report);
+    const ipv4 = averageIPv4(report);
     return (
         <>
-            <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
+            <SimpleGrid cols={{ base: 2, sm: 5 }} spacing="md">
                 <Stat label={t('projects.consumption.serverHours')} value={num(report.server_hours)} />
                 <Stat label={t('projects.consumption.vcpuHours')} value={num(report.vcpu_hours)} />
                 <Stat label={t('projects.consumption.ramGbHours')} value={num(report.ram_gb_hours)} />
                 <Stat label={t('projects.consumption.storageAvg')} value={avg === null ? '—' : `${num(avg, 1)} GB`}
                     hint={avg === null ? t('projects.consumption.noStorageSample') : null} />
+                <Stat label={t('projects.consumption.ipv4Avg')} value={ipv4 === null ? '—' : num(ipv4, 1)}
+                    hint={ipv4 === null ? t('projects.consumption.noIpv4Sample') : null} />
             </SimpleGrid>
             <Stack gap="xs">
                 <UtilizationBar label={t('projects.consumption.cores')} ratio={report.utilization?.cores} />
@@ -199,6 +202,7 @@ export function UsageReportPanel() {
         { label: t('projects.consumption.vcpuHours'), value: r => r.vcpu_hours },
         { label: t('projects.consumption.ramGbHours'), value: r => r.ram_gb_hours },
         { label: t('projects.consumption.storageGbDays'), value: r => r.storage_gb_days },
+        { label: t('projects.consumption.ipv4Days'), value: r => r.public_ipv4_days },
         { label: t('projects.consumption.coresUsed'), value: r => percent(r.utilization.cores) },
         ...(withValue ? [{ label: t('projects.consumption.valueEur'), value: r => r.value_eur }] : []),
     ];
@@ -259,6 +263,7 @@ export function UsageReportPanel() {
                                                         <Table.Td ta="right">{num(r.vcpu_hours)}</Table.Td>
                                                         <Table.Td ta="right">{num(r.ram_gb_hours)}</Table.Td>
                                                         <Table.Td ta="right">{num(r.storage_gb_days)}</Table.Td>
+                                                        <Table.Td ta="right">{num(r.public_ipv4_days)}</Table.Td>
                                                         <Table.Td ta="right">{percent(r.utilization.cores) === null ? '—' : `${percent(r.utilization.cores)} %`}</Table.Td>
                                                         {withValue && <Table.Td ta="right">{eur(r.value_eur)}</Table.Td>}
                                                     </Table.Tr>

@@ -647,7 +647,10 @@
         },
         "csvHint": "Download the table shown as a CSV file",
         "valueEur": "Value",
-        "valueHint": "at a public cloud's list prices"
+        "valueHint": "at a public cloud's list prices",
+        "ipv4Avg": "Average public IPv4",
+        "noIpv4Sample": "Not counted for this period",
+        "ipv4Days": "IPv4 days"
     },
     "purge": {
         "progress": "Step {{index}} of {{steps}}: {{step}}",

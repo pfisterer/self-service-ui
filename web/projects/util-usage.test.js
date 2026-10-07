@@ -48,6 +48,16 @@ describe('idleProject', () => {
     });
 });
 
+describe('groupProjects IPv4', () => {
+    it('sums the address days and their counted days', () => {
+        const g = groupProjects([
+            { node_id: 'a', budget_path: [{ id: 'b' }], public_ipv4_days: 3, ipv4_sampled_days: 2 },
+            { node_id: 'c', budget_path: [{ id: 'b' }], public_ipv4_days: 1, ipv4_sampled_days: 2 },
+        ], 'budget');
+        expect([g[0].public_ipv4_days, g[0].ipv4_sampled_days]).toEqual([4, 4]);
+    });
+});
+
 describe('toCSV', () => {
     it('quotes what needs it and rounds numbers', () => {
         const csv = toCSV([{ label: 'Name', value: r => r.n }, { label: 'h', value: r => r.h }],

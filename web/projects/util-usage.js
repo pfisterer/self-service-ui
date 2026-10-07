@@ -31,6 +31,9 @@ export const percent = (r) => (r === null || r === undefined ? null : Math.round
 // averageStorage is the mean of the daily storage samples in GB.
 export const averageStorage = (t) => (t?.sampled_days ? t.storage_gb_days / t.sampled_days : null);
 
+// averageIPv4 is the mean number of public IPv4 addresses held per counted day.
+export const averageIPv4 = (t) => (t?.ipv4_sampled_days ? t.public_ipv4_days / t.ipv4_sampled_days : null);
+
 // idleProject says whether a project ran nothing in a period of at least 30
 // days while it still holds resources — the cue to ask whether it is needed.
 export function idleProject(report, node) {
@@ -60,6 +63,7 @@ function groupKey(p, by) {
 }
 
 const SUMMED = ['server_hours', 'vcpu_hours', 'ram_gb_hours', 'storage_gb_days', 'sampled_days',
+    'public_ipv4_days', 'ipv4_sampled_days',
     'reserved_core_hours', 'reserved_ram_gb_hours', 'reserved_storage_gb_days'];
 
 // groupProjects sums the report's projects by the chosen level, biggest vCPU
