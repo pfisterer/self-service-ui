@@ -7,6 +7,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { NodeChangesDiff, NodeStatusBadge, QuotaBadges, TokenBadgeList, UserRoleBadgeList } from './component-common.jsx';
 import { autoApproveFacts, formatRelativeDate, isBudget, nodeTitle, ownerEmail, statusLabel } from './util-project.jsx';
 import { formatDateTime } from '../format-date.js';
+import { UsagePanel } from './component-usage.jsx';
 
 dayjs.extend(relativeTime);
 
@@ -16,6 +17,7 @@ dayjs.extend(relativeTime);
 
 export const TAB_DETAILS = 'details';
 export const TAB_HISTORY = 'history';
+export const TAB_USAGE = 'usage';
 
 // The icon for each lifecycle event the backend records. The words live in the
 // translations under projects.inspect.events.<event>; an event we have no icon
@@ -245,18 +247,25 @@ export function NodeInspectModal({ opened, onClose, node, resources, initialTab 
 
     if (!node) return null;
     const hasHistory = (node.history || []).length > 0;
+    // A budget's consumption is its managers' business; a budget someone may
+    // only request from does not show it. A project shows it to everyone who
+    // sees the project — once it exists in OpenStack, before that there is none.
+    const showsUsage = isBudget(node) ? !node.request_only : !!node.os_project_id;
 
     return (
         <Modal opened={opened} onClose={onClose} size="lg"
             title={t(isBudget(node) ? 'projects.inspect.titleBudget' : 'projects.inspect.titleProject',
                 { name: nodeTitle(node) })}>
             <Stack>
-                <Tabs value={tab} onChange={setTab}>
+                {/* Panels mount when chosen: the usage tab fetches on open,
+                    not for everyone who only looks at the details. */}
+                <Tabs value={tab} onChange={setTab} keepMounted={false}>
                     <Tabs.List mb="md">
                         <Tabs.Tab value={TAB_DETAILS}>{t('projects.actions.details')}</Tabs.Tab>
                         {/* Nothing to show yet on a node that was just created —
                             the tab says so instead of opening an empty timeline. */}
                         <Tabs.Tab value={TAB_HISTORY} disabled={!hasHistory}>{t('projects.inspect.tabHistory')}</Tabs.Tab>
+                        {showsUsage && <Tabs.Tab value={TAB_USAGE}>{t('projects.consumption.tab')}</Tabs.Tab>}
                     </Tabs.List>
 
                     <Tabs.Panel value={TAB_DETAILS}>
@@ -265,6 +274,11 @@ export function NodeInspectModal({ opened, onClose, node, resources, initialTab 
                     <Tabs.Panel value={TAB_HISTORY}>
                         <NodeHistoryPanel node={node} resources={resources} />
                     </Tabs.Panel>
+                    {showsUsage && (
+                        <Tabs.Panel value={TAB_USAGE}>
+                            <UsagePanel node={node} />
+                        </Tabs.Panel>
+                    )}
                 </Tabs>
 
                 <Group justify="flex-end">

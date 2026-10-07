@@ -8,6 +8,7 @@ import { projectKeys } from './query-keys.js';
 import { Trans, useTranslation } from 'react-i18next';
 import { COLOR } from './util-project.jsx';
 import { formatDateTime } from '../format-date.js';
+import { UsageReportPanel } from './component-usage.jsx';
 
 
 // The reconciler writes each managed project's state as Keystone tags (status,
@@ -33,7 +34,18 @@ function managedProjectsQuery(tag) {
     ].join('\n');
 }
 
+// RootAdminView: the reconciler's state, and the evaluation of what all
+// projects used — which needs no reconciler to be read.
 export function RootAdminView() {
+    return (
+        <Stack gap="xl">
+            <ReconcilerPanel />
+            <UsageReportPanel />
+        </Stack>
+    );
+}
+
+function ReconcilerPanel() {
     const api = useNodesApi();
 
     const statusQuery = useQuery({

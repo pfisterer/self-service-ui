@@ -601,5 +601,50 @@
         "deleteNow": "Gleich endgültig löschen",
         "deleteNowHint": "Statt zu archivieren, wird alles sofort gelöscht, auch Volumes und Daten.",
         "confirmName": "Zur Bestätigung den Projektnamen eingeben: <1>{{name}}</1>"
+    },
+    "consumption": {
+        "tab": "Verbrauch",
+        "period": {
+            "30": "30 Tage",
+            "90": "90 Tage",
+            "365": "12 Monate",
+            "lifetime": "Gesamt"
+        },
+        "range": "{{from}} bis {{to}}",
+        "loadError": "Verbrauch konnte nicht geladen werden",
+        "empty": "Für diesen Zeitraum liegen keine Verbrauchsdaten vor.",
+        "serverHours": "VM-Stunden",
+        "vcpuHours": "vCPU-Stunden",
+        "ramGbHours": "RAM-GB-Stunden",
+        "storageAvg": "Speicher im Mittel",
+        "storageGbDays": "Speicher-GB-Tage",
+        "noStorageSample": "Nur nachträglich erfasste Tage, ohne Speicherwert",
+        "cores": "Kerne",
+        "ram": "RAM",
+        "storage": "Speicher",
+        "ofReserved": "{{pct}} % des Reservierten genutzt",
+        "notReserved": "nichts reserviert",
+        "dailyVcpu": "vCPU-Stunden pro Tag",
+        "used": "genutzt",
+        "reserved": "reserviert",
+        "idle": "In den letzten 30 Tagen lief in diesem Projekt keine VM. Wird es nicht mehr gebraucht, gibt das Freigeben die Ressourcen an das Budget zurück.",
+        "project": "Projekt",
+        "projects": "Projekte",
+        "coresUsed": "Kerne genutzt",
+        "topProjects": "Höchster Verbrauch",
+        "lowestUtilization": "Geringste Auslastung",
+        "backfilled_one": "{{count}} Tag wurde nachträglich erfasst: ohne Speicherwert, Name und Budget vom Tag der Erfassung.",
+        "backfilled_other": "{{count}} Tage wurden nachträglich erfasst: ohne Speicherwert, Name und Budget vom Tag der Erfassung.",
+        "reportTitle": "Verbrauchsauswertung",
+        "reportText": "Was alle Projekte von {{from}} bis {{to}} tatsächlich genutzt haben, auch freigegebene und gelöschte. Zugeordnet wird nach dem Budget, unter dem ein Projekt am jeweiligen Tag stand.",
+        "groupBy": {
+            "project": "Projekt",
+            "budget": "Budget",
+            "level1": "Standort (1. Ebene)",
+            "level2": "Fakultät (2. Ebene)"
+        },
+        "csvHint": "Die angezeigte Tabelle als CSV-Datei herunterladen",
+        "valueEur": "Gegenwert",
+        "valueHint": "zu Listenpreisen einer Public Cloud"
     }
 }

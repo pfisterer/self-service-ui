@@ -28,6 +28,10 @@ export const projectKeys = {
     search: (q, offset) => ['projects', 'tree', 'search', q, offset],
     config: () => ['projects', 'config'],
     rootStatus: () => ['projects', 'root-status'],
+    // Consumption is collected once a day and no write in the tree changes the
+    // past, so it lives outside tree() and is not invalidated by edits.
+    usage: (id, period) => ['projects', 'usage', id, period],
+    usageReport: (period) => ['projects', 'usage-report', period],
     // Deliberately outside tree(): a credential is not a node, and no write in
     // the tree changes the list of tokens.
     apiTokens: () => ['projects', 'api-tokens'],

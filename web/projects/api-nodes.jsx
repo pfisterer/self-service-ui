@@ -7,7 +7,7 @@ import { cloudProjectsEnabled } from '/features.js';
 // is the whole point of depending on the client by version (see d6).
 import {
     approveNode, clearRoleSwitch, createNode, createToken, deleteNode,
-    deleteToken, getAdminReconcileStatus, getConfig, getNode, getRoleSwitch,
+    deleteToken, getAdminReconcileStatus, getConfig, getNode, getNodeUsage, getRoleSwitch, getUsageReport,
     listAllocationSources, listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
     listMyNodes, listNodeChildren, listNodesToManage, listTokens, promoteNode,
     rejectNode, releaseNode, reparentNode, requestNodeChange, requestNodeDeletion, searchNodes,
@@ -170,6 +170,10 @@ export function useNodesApi() {
                 unwrapObject(await promoteNode({ client, path: { id }, body, headers: JSON_HEADERS })),
             deleteNode: async (id) =>
                 unwrapVoid(await deleteNode({ client, path: { id } })),
+            // What a project — or everything below a budget — used, per day
+            // and per project; { from, to } are YYYY-MM-DD, both included.
+            nodeUsage: async (id, period) =>
+                unwrapObject(await getNodeUsage({ client, path: { id }, query: period })),
 
             // ── Root-admin surface ───────────────────────────────────────
             // Role-switch eligibility doubles as "is a root admin".
@@ -192,6 +196,8 @@ export function useNodesApi() {
                 return unwrapObject(res);
             },
             triggerReconcile: async () => unwrapObject(await triggerAdminReconcile({ client })),
+            // Every project's consumption, with euro values where prices are set.
+            usageReport: async (period) => unwrapObject(await getUsageReport({ client, query: period })),
             clearRoleSwitch: async () => unwrapObject(await clearRoleSwitch({ client })),
             setRoleSwitch: async (body) =>
                 unwrapObject(await setRoleSwitch({ client, body, headers: JSON_HEADERS })),

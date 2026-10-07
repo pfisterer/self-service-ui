@@ -52,6 +52,10 @@ export default defineConfig(({ mode }) => {
           // async chunk and is intentionally not listed here). vite 8 / rolldown
           // requires manualChunks to be a function, not the object map.
           manualChunks(id) {
+            // Charts only where usage is shown, which imports them lazily: left
+            // to the bundler they stay in that async chunk instead of the one
+            // every page loads.
+            if (id.includes('/node_modules/@mantine/charts/')) return undefined;
             if (id.includes('/node_modules/@mantine/')) return 'mantine';
             if (/\/node_modules\/(react|react-dom|wouter)\//.test(id)) return 'vendor';
           },

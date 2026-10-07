@@ -1,0 +1,57 @@
+import { describe, expect, it } from 'vitest';
+import { groupProjects, idleProject, periodRange, toCSV } from './util-usage.js';
+
+describe('periodRange', () => {
+    const now = new Date('2026-10-07T12:00:00Z');
+    it('ends yesterday and includes both days', () => {
+        expect(periodRange('30', now)).toEqual({ from: '2026-09-07', to: '2026-10-06' });
+    });
+    it('reaches back to the creation for the lifetime', () => {
+        expect(periodRange('lifetime', now, '2026-10-01T08:00:00Z')).toEqual({ from: '2026-10-01', to: '2026-10-06' });
+    });
+    it('caps the lifetime of an old or unknown project', () => {
+        expect(periodRange('lifetime', now).from).toBe('2023-10-05');
+    });
+});
+
+describe('groupProjects', () => {
+    const path = (...ids) => ids.map(id => ({ id, name: id.toUpperCase() }));
+    const projects = [
+        { node_id: 'p1', project_name: 'a', budget_path: path('course', 'faculty', 'ma', 'root'), vcpu_hours: 10, reserved_core_hours: 40, value_eur: 1 },
+        { node_id: 'p2', project_name: 'b', budget_path: path('faculty', 'ma', 'root'), vcpu_hours: 30, reserved_core_hours: 40, value_eur: 2 },
+        { node_id: 'p3', project_name: 'c', budget_path: path('s', 'root'), vcpu_hours: 5, reserved_core_hours: 0 },
+    ];
+    it('sums by location, the level below the root', () => {
+        const g = groupProjects(projects, 'level1');
+        expect(g.map(x => [x.id, x.projects, x.vcpu_hours])).toEqual([['ma', 2, 40], ['s', 1, 5]]);
+        // 40 of 80 reserved core hours, not the mean of 25 % and 75 %.
+        expect(g[0].utilization.cores).toBe(0.5);
+        expect(g[0].value_eur).toBe(3);
+        expect(g[1].utilization.cores).toBeNull();
+        expect(g[1].value_eur).toBeNull();
+    });
+    it('puts a project with a short path under its deepest budget', () => {
+        expect(groupProjects(projects, 'level2').map(x => x.id)).toEqual(['faculty', 's']);
+    });
+    it('groups by the project\'s own budget', () => {
+        expect(groupProjects(projects, 'budget').map(x => x.id)).toEqual(['faculty', 'course', 's']);
+    });
+});
+
+describe('idleProject', () => {
+    const days = Array.from({ length: 30 }, () => ({}));
+    it('flags an active project that ran nothing for 30 days', () => {
+        expect(idleProject({ days, server_hours: 0 }, { status: 'approved' })).toBe(true);
+        expect(idleProject({ days, server_hours: 1 }, { status: 'approved' })).toBe(false);
+        expect(idleProject({ days: days.slice(1), server_hours: 0 }, { status: 'approved' })).toBe(false);
+        expect(idleProject({ days, server_hours: 0 }, { status: 'archived' })).toBe(false);
+    });
+});
+
+describe('toCSV', () => {
+    it('quotes what needs it and rounds numbers', () => {
+        const csv = toCSV([{ label: 'Name', value: r => r.n }, { label: 'h', value: r => r.h }],
+            [{ n: 'Lab, "KI"', h: 1.23456 }, { n: 'x', h: null }]);
+        expect(csv).toBe('Name,h\n"Lab, ""KI""",1.23\nx,\n');
+    });
+});
