@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Info, User, Users } from 'lucide-react';
+import { Archive, Calendar, CircleCheck, CircleHelp, CirclePlus, CircleX, Clock, CloudDownload, Info, LogOut, Trash2, User, Users } from 'lucide-react';
 import { DatePickerInput } from '@mantine/dates';
 import { ActionIcon, Anchor, Badge, Box, Button, Checkbox, Group, NumberInput, Popover, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
 import dayjs from 'dayjs';
@@ -79,6 +79,37 @@ export function NodeStatusBadge({ status, size = 'sm', provisioning = false, ful
     return (
         <Tooltip label={description} multiline w={300} withArrow>
             <span style={{ cursor: 'help' }}>{badge}</span>
+        </Tooltip>
+    );
+}
+
+// StatusIcon is NodeStatusBadge for tight spaces: one icon in the status's
+// colour, the label and the explanation on hover. A project being deleted
+// shows that instead, with how far it got.
+const STATUS_ICONS = {
+    pending: Clock,
+    approved: CircleCheck,
+    change_pending: CirclePlus,
+    rejected: CircleX,
+    released: LogOut,
+    archived: Archive,
+    imported: CloudDownload,
+};
+
+export function StatusIcon({ status, deleting = false, purge = null, size = 16 }) {
+    const { t } = useTranslation();
+    const Icon = deleting ? Trash2 : (STATUS_ICONS[status] ?? CircleHelp);
+    const color = deleting ? COLOR.negative : statusStyle(status).color;
+    const title = deleting ? t('projects.projectCard.deleting') : statusLabel(t, status);
+    const detail = deleting
+        ? (purge ? purgeLines(t, purge).join(' ') : t('projects.projectCard.deletingHint'))
+        : statusDescription(t, status);
+    return (
+        <Tooltip label={<><b>{title}</b>{detail ? <><br />{detail}</> : null}</>} multiline w={280} withArrow>
+            <Box component="span" aria-label={title}
+                style={{ display: 'inline-flex', cursor: 'help', color: `var(--mantine-color-${color}-6)` }}>
+                <Icon size={size} />
+            </Box>
         </Tooltip>
     );
 }

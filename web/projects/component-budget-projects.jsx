@@ -6,7 +6,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
-import { DeletingBadge, InfoPopover, NodeStatusBadge } from './component-common.jsx';
+import { InfoPopover, StatusIcon } from './component-common.jsx';
 import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
 import { COLOR, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
@@ -212,13 +212,13 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                                         place under the name, the end date under the
                                         status. Six side by side did not fit the
                                         detail panel and scrolled sideways. */}
-                                    <Table.Th w="30%">
+                                    <Table.Th w="34%">
                                         <Group gap="md" rowGap={0} wrap="wrap">
                                             <SortButton label={t('projects.budgetProjects.colName')} sortKey="name" sort={sort} onSort={toggleSort} />
                                             <SortButton label={t('projects.budgetProjects.colOwner')} sortKey="owner" sort={sort} onSort={toggleSort} dimmed />
                                         </Group>
                                     </Table.Th>
-                                    <Table.Th w="20%">
+                                    <Table.Th w={124}>
                                         <Group gap="md" rowGap={0} wrap="wrap">
                                             <SortButton label={t('projects.budgetProjects.colStatus')} sortKey="status" sort={sort} onSort={toggleSort} />
                                             <SortButton label={t('projects.budgetProjects.colValidUntil')} sortKey="termination_date" sort={sort} onSort={toggleSort} dimmed />
@@ -380,20 +380,22 @@ function ProjectRow({ node, resources, columns, onAction, onOpen, showBudget = f
             {/* The status is the one cell that must never be cut: "Change
                 requested" and "Awaiting approval" are what a manager scans for.
                 The end date sits under it: both answer "how is it doing". */}
+            {/* The status as an icon, its name and meaning on hover, the end date
+                beside it: the badge with words like "Change requested" took a
+                fifth of the table. Being deleted says more than released. */}
             <Table.Td style={{ whiteSpace: 'nowrap' }}>
-                {/* Being deleted says more than released or archived. */}
-                {deletionRequested(node)
-                    ? <DeletingBadge size="xs" purge={node.purge} />
-                    : <NodeStatusBadge status={node.status} size="xs" full />}
-                {/* A given-up project has no end date that means anything. The
-                    colour says whether it is close; how far off, is on hover. */}
-                {node.termination_date && !isRetired(node) && (
-                    <Tooltip label={expiryValue(t, node.termination_date)} openDelay={300}>
-                        <Text size="xs" mt={2} c={expiryTone(node.termination_date)}>
-                            {t('projects.budgetProjects.until', { date: formatDate(node.termination_date) })}
-                        </Text>
-                    </Tooltip>
-                )}
+                <Group gap={6} wrap="nowrap">
+                    <StatusIcon status={node.status} deleting={deletionRequested(node)} purge={node.purge} />
+                    {/* A given-up project has no end date that means anything.
+                        The colour says whether it is close; how far, on hover. */}
+                    {node.termination_date && !isRetired(node) ? (
+                        <Tooltip label={expiryValue(t, node.termination_date)} openDelay={300}>
+                            <Text size="xs" c={expiryTone(node.termination_date)}>
+                                {formatDate(node.termination_date)}
+                            </Text>
+                        </Tooltip>
+                    ) : <Text size="xs" c="dimmed">—</Text>}
+                </Group>
             </Table.Td>
             <ResourceCells node={node} columns={columns} />
             <Table.Td>
