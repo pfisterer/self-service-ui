@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronsDownUp, ChevronsUpDown, Inbox, Search, X } from 'lucide-react';
-import { ActionIcon, Alert, Badge, Button, Checkbox, Grid, Modal, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, Tooltip, useTree } from '@mantine/core';
+import { ActionIcon, Alert, Badge, Box, Button, Checkbox, Flex, Modal, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, Tooltip, useTree } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -484,9 +484,14 @@ export function MyBudgetsView() {
                 // align="flex-start": tree and detail panel each keep their
                 // natural height — otherwise the panel card stretches to the
                 // tree's height and its action bar floats far below the content.
-                <Grid gutter="md" align="flex-start">
+                // The tree takes the width its rows need, within bounds; the
+                // detail panel gets the rest. A fixed third for the tree left it
+                // half empty on a flat tree and squeezed the project table next
+                // to it into scrolling sideways.
+                <Flex gap="md" align="flex-start" direction={{ base: 'column', md: 'row' }}>
                     {/* ── Tree navigation ────────────────────────────────── */}
-                    <Grid.Col span={{ base: 12, md: 5, lg: 4 }}>
+                    <Box w={{ base: '100%', md: 'fit-content' }} miw={{ md: 240 }} maw={{ md: 380 }}
+                        style={{ flexShrink: 0 }}>
                         <Paper withBorder p="xs" radius="md">
                             {/* Filter first, then search: the filter answers "what
                                 needs me", the search "where is this one thing". */}
@@ -620,10 +625,10 @@ export function MyBudgetsView() {
                                 )}
                             </ScrollArea.Autosize>
                         </Paper>
-                    </Grid.Col>
+                    </Box>
 
                     {/* ── Detail panel: the selected node ────────────────── */}
-                    <Grid.Col span={{ base: 12, md: 7, lg: 8 }}>
+                    <Box w="100%" style={{ flex: 1, minWidth: 0 }}>
                         {!selected && (
                             <Alert color={COLOR.info} variant="light">
                                 {t('projects.budgets.selectHint')}
@@ -649,8 +654,8 @@ export function MyBudgetsView() {
                             <ProjectCard node={selected} resources={resources} parentName={selected.parent_name}
                                 perspective="manager" onAction={handleAction} />
                         ))}
-                    </Grid.Col>
-                </Grid>
+                    </Box>
+                </Flex>
             )}
 
             <Modal opened={!!openProject} onClose={() => setOpenProject(null)} size="lg" centered

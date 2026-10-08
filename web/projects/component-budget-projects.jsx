@@ -233,7 +233,9 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                                     {/* The row markers: reserved on the first line of
                                         a row, in use on the second. */}
                                     {compact ? (
-                                        <Table.Th w={40}><VisuallyHidden>{t('projects.budgetProjects.colResources')}</VisuallyHidden></Table.Th>
+                                        <Table.Th w={104}>
+                                            <Text size="sm" fw={600} style={{ whiteSpace: 'nowrap' }}>{t('projects.budgetProjects.colResources')}</Text>
+                                        </Table.Th>
                                     ) : (
                                         <Table.Th w={22} px={0}><VisuallyHidden>{t('projects.budgetProjects.colResources')}</VisuallyHidden></Table.Th>
                                     )}
