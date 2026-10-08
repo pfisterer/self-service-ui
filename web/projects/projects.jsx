@@ -40,13 +40,13 @@ export function CloudProjectManagement() {
     // one section resets when the user navigates to another.
     const [matchProjects] = useRoute('/projects');
     const [matchBudgets] = useRoute('/budgets');
-    const [matchAdminSync] = useRoute('/admin-sync');
+    const [matchAdmin] = useRoute('/admin/:page?');
     const [matchApiDoc] = useRoute('/api-doc');
 
     function getActiveSection() {
         if (matchProjects) return 'projects';
         if (matchBudgets) return 'budgets';
-        if (matchAdminSync) return 'admin-sync';
+        if (matchAdmin) return 'admin';
         if (matchApiDoc) return 'api-doc';
         return '';
     }
@@ -91,7 +91,11 @@ export function CloudProjectManagement() {
                         <Switch>
                             <Route path="/projects" component={MyProjectsView} />
                             <Route path="/budgets" component={MyBudgetsView} />
-                            {isRoot ? <Route path="/admin-sync" component={RootAdminView} /> : null}
+                            {isRoot ? <Route path="/admin/:page?" component={RootAdminView} /> : null}
+                            {/* The admin page used to be one page under this name. */}
+                            <Route path="/admin-sync">
+                                <Redirect to="/admin" replace />
+                            </Route>
                             <Route path="/api-doc" component={CloudProjectsApiSwagger} />
                             {/* /projects itself, before anything is known. */}
                             <Route path="/">
@@ -105,7 +109,7 @@ export function CloudProjectManagement() {
 
                                 Only once the status is KNOWN, though. isRoot starts
                                 false on every page load, so redirecting before the
-                                answer arrives throws a root admin off /admin-sync on
+                                answer arrives throws a root admin off /admin on
                                 every single reload — which is exactly what it did. */}
                             <Route>
                                 {ready ? <Redirect to="/projects" replace /> : <Loading size="sm" />}

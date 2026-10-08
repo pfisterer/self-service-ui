@@ -53,7 +53,7 @@ export function useNav() {
                 // Only for someone who manages a budget or may request one —
                 // for everybody else the page is a single "nothing here" box.
                 hasBudgets && { label: t('nav.myBudgets'), href: '/projects/budgets', dot: pending > 0 },
-                isRoot && { label: t('nav.rootAdmin'), href: '/projects/admin-sync' },
+                isRoot && { label: t('nav.rootAdmin'), href: '/projects/admin' },
                 { label: t('nav.apiDocumentation'), href: '/projects/api-doc' },
             ].filter(Boolean),
         },

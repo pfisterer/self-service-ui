@@ -397,6 +397,9 @@
         "reset": "Reset"
     },
     "rootAdmin": {
+        "pageSync": "Sync",
+        "pageCatalog": "Availabilities",
+        "pageUsage": "Usage",
         "loadError": "Could not load sync status",
         "disabled": "Reconciler is disabled.",
         "title": "OpenStack Sync Status",
@@ -654,9 +657,10 @@
         "groupBy": {
             "project": "Project",
             "budget": "Budget",
-            "level1": "Location (level 1)",
-            "level2": "Faculty (level 2)"
+            "level1": "Level 1 below the root",
+            "level2": "Level 2 below the root"
         },
+        "groupByExample": "{{label}} (e.g. {{names}})",
         "csvHint": "Download the table shown as a CSV file",
         "valueEur": "Value",
         "valueHint": "at a public cloud's list prices",

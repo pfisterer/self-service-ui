@@ -397,6 +397,9 @@
         "reset": "Zurücksetzen"
     },
     "rootAdmin": {
+        "pageSync": "Abgleich",
+        "pageCatalog": "Verfügbarkeiten",
+        "pageUsage": "Verbrauch",
         "loadError": "Der Abgleichstatus konnte nicht geladen werden",
         "disabled": "Der Abgleich ist abgeschaltet.",
         "title": "OpenStack-Abgleich",
@@ -654,9 +657,10 @@
         "groupBy": {
             "project": "Projekt",
             "budget": "Budget",
-            "level1": "Standort (1. Ebene)",
-            "level2": "Fakultät (2. Ebene)"
+            "level1": "Ebene 1 unter der Wurzel",
+            "level2": "Ebene 2 unter der Wurzel"
         },
+        "groupByExample": "{{label}} (z. B. {{names}})",
         "csvHint": "Die angezeigte Tabelle als CSV-Datei herunterladen",
         "valueEur": "Gegenwert",
         "valueHint": "zu Listenpreisen einer Public Cloud",

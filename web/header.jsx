@@ -66,7 +66,7 @@ function PendingDot({ ml = 0 }) {
 // A vertical list gets the same marker turned 90°: an accent on the leading
 // edge. A full-width underline down there would read as a divider between
 // items, not as "this is the one you are on".
-function SubNavItem({ item, active, onClick, vertical = false }) {
+export function SubNavItem({ item, active, onClick, vertical = false }) {
     const accent = `2px solid ${active ? 'var(--mantine-color-dhbw-6)' : 'transparent'}`;
     return (
         <Link href={item.href} onClick={onClick} style={vertical ? { width: '100%' } : undefined}>

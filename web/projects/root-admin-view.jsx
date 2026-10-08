@@ -1,4 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
+import { Redirect } from 'wouter';
+import { SubNavItem } from '/header.jsx';
+import { SUBNAV_HEIGHT } from '/nav.jsx';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { Alert, Badge, Button, Group, Paper, SimpleGrid, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
 import { CodeBlock } from '/helper/codeblock.jsx';
@@ -35,15 +38,34 @@ function managedProjectsQuery(tag) {
     ].join('\n');
 }
 
-// RootAdminView: the reconciler's state, the availabilities of the catalogue,
-// and the evaluation of what all projects used — which needs no reconciler to
-// be read.
-export function RootAdminView() {
+// The root admins' pages. Each is a URL of its own (/projects/admin/<page>),
+// so a page can be linked to and survives a reload.
+const ADMIN_PAGES = [
+    { id: 'sync', label: 'projects.rootAdmin.pageSync', component: ReconcilerPanel },
+    { id: 'catalog', label: 'projects.rootAdmin.pageCatalog', component: CatalogPanel },
+    { id: 'usage', label: 'projects.rootAdmin.pageUsage', component: UsageReportPanel },
+];
+
+// RootAdminView: one page per concern — the reconciler's state, the
+// availabilities of the catalogue, and the evaluation of what all projects
+// used — under a third navigation level that looks like the second one in
+// the header, so it reads as the next step down rather than as something
+// belonging to the page.
+export function RootAdminView({ params }) {
+    const { t } = useTranslation();
+    const page = ADMIN_PAGES.find(p => p.id === params?.page);
+    if (!page) return <Redirect to={`/admin/${ADMIN_PAGES[0].id}`} replace />;
+    const Page = page.component;
     return (
-        <Stack gap="xl">
-            <ReconcilerPanel />
-            <CatalogPanel />
-            <UsageReportPanel />
+        <Stack gap="lg">
+            <Group gap="0" wrap="nowrap" h={SUBNAV_HEIGHT}
+                style={{ borderBottom: '1px solid var(--mantine-color-gray-3)', overflowX: 'auto' }}>
+                {ADMIN_PAGES.map(p => (
+                    <SubNavItem key={p.id} item={{ href: `/admin/${p.id}`, label: t(p.label) }}
+                        active={p.id === page.id} />
+                ))}
+            </Group>
+            <Page />
         </Stack>
     );
 }
