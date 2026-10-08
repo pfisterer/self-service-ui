@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupProjects, idleProject, periodRange, toCSV } from './util-usage.js';
+import { groupingExamples, groupProjects, idleProject, periodRange, toCSV } from './util-usage.js';
 
 describe('periodRange', () => {
     const now = new Date('2026-10-07T12:00:00Z');
@@ -21,7 +21,7 @@ describe('groupProjects', () => {
         { node_id: 'p2', project_name: 'b', budget_path: path('faculty', 'ma', 'root'), vcpu_hours: 30, reserved_core_hours: 40, value_eur: 2 },
         { node_id: 'p3', project_name: 'c', budget_path: path('s', 'root'), vcpu_hours: 5, reserved_core_hours: 0 },
     ];
-    it('sums by location, the level below the root', () => {
+    it('sums by the level below the root', () => {
         const g = groupProjects(projects, 'level1');
         expect(g.map(x => [x.id, x.projects, x.vcpu_hours])).toEqual([['ma', 2, 40], ['s', 1, 5]]);
         // 40 of 80 reserved core hours, not the mean of 25 % and 75 %.
@@ -35,6 +35,11 @@ describe('groupProjects', () => {
     });
     it('groups by the project\'s own budget', () => {
         expect(groupProjects(projects, 'budget').map(x => x.id)).toEqual(['faculty', 'course', 's']);
+    });
+    it('names examples of a level from the data, sorted', () => {
+        expect(groupingExamples(projects, 'level1')).toEqual(['MA', 'S']);
+        expect(groupingExamples(projects, 'level2', 1)).toEqual(['FACULTY']);
+        expect(groupingExamples([], 'level1')).toEqual([]);
     });
 });
 

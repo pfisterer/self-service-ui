@@ -96,6 +96,14 @@ export function groupProjects(projects, by) {
         .sort((a, b) => b.vcpu_hours - a.vcpu_hours || a.name.localeCompare(b.name));
 }
 
+// groupingExamples names up to `max` groups a level produces in this report —
+// what "level 1" means depends on how the tree is built, so the choice shows
+// it instead of guessing a word like "location" for it.
+export function groupingExamples(projects, by, max = 2) {
+    return groupProjects(projects, by).map(g => g.name).filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)).slice(0, max);
+}
+
 // toCSV writes rows as CSV with a header; fields are quoted where they need it.
 // Numbers keep a dot as decimal separator, which every spreadsheet can import.
 export function toCSV(columns, rows) {

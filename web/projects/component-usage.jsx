@@ -7,7 +7,7 @@ import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { COLOR, isBudget } from './util-project.jsx';
-import { averageIPv4, averageStorage, GROUPINGS, groupProjects, idleProject, percent, PERIODS, periodRange, toCSV } from './util-usage.js';
+import { averageIPv4, averageStorage, GROUPINGS, groupingExamples, groupProjects, idleProject, percent, PERIODS, periodRange, toCSV } from './util-usage.js';
 
 // What projects actually used, from the rows the reconciler collects once a
 // day: per project and for everything below a budget (UsagePanel), and the
@@ -224,7 +224,8 @@ export function UsageReportPanel() {
                     <Title order={5}>{t('projects.consumption.reportTitle')}</Title>
                     <Group gap="xs">
                         <Select size="xs" w={180} value={by} onChange={(v) => v && setBy(v)} allowDeselect={false}
-                            data={GROUPINGS.map(g => ({ value: g, label: t(`projects.consumption.groupBy.${g}`) }))} />
+                            comboboxProps={{ width: 'max-content', position: 'bottom-end' }}
+                            data={GROUPINGS.map(g => ({ value: g, label: groupingLabel(t, g, report?.projects) }))} />
                         <PeriodPicker value={periodKey} onChange={setPeriodKey} />
                         <Tooltip label={t('projects.consumption.csvHint')}>
                             <Button size="xs" variant="light" leftSection={<Download size="14" />}
@@ -279,4 +280,13 @@ export function UsageReportPanel() {
             </Stack>
         </Paper>
     );
+}
+
+// groupingLabel: the levels below the root carry an example from the data, so
+// it is clear which budgets "level 1" means in this tree.
+function groupingLabel(t, by, projects) {
+    const label = t(`projects.consumption.groupBy.${by}`);
+    if (by !== 'level1' && by !== 'level2') return label;
+    const names = groupingExamples(projects, by);
+    return names.length ? t('projects.consumption.groupByExample', { label, names: names.join(', ') }) : label;
 }
