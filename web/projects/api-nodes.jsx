@@ -6,13 +6,13 @@ import { cloudProjectsEnabled } from '/features.js';
 // only wrong at runtime, while a missing named export fails the build — which
 // is the whole point of depending on the client by version (see d6).
 import {
-    approveNode, clearRoleSwitch, createNode, createToken, deleteNode,
-    deleteToken, getAdminReconcileStatus, getConfig, getNode, getNodeUsage, getRoleSwitch, getUsageReport,
-    listAllocationSources, listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
+    addCatalogEntry, approveNode, clearRoleSwitch, createNode, createToken, deleteNode,
+    deleteToken, getAdminReconcileStatus, getCatalogEntry, getConfig, getNode, getNodeUsage, getRoleSwitch, getUsageReport,
+    listAllocationSources, listCatalog, listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
     listMyNodes, listNodeChildren, listNodesToManage, listTokens, promoteNode,
-    rejectNode, releaseNode, reparentNode, requestNodeChange, requestNodeDeletion, searchNodes,
+    rejectNode, releaseNode, removeCatalogEntry, reparentNode, restoreCatalogEntry, requestNodeChange, requestNodeDeletion, searchNodes,
     searchPrincipals, setNodeAllocation, setRoleSwitch, transferNodeOwner,
-    triggerAdminReconcile, updateNode,
+    triggerAdminReconcile, updateCatalogEntry, updateNode, withdrawCatalogEntry,
 } from '@dhbw-cloud/os-mgt-client';
 import { normalizeObjectResponse } from './util-project.jsx';
 
@@ -198,6 +198,17 @@ export function useNodesApi() {
             triggerReconcile: async () => unwrapObject(await triggerAdminReconcile({ client })),
             // Every project's consumption, with euro values where prices are set.
             usageReport: async (period) => unwrapObject(await getUsageReport({ client, query: period })),
+            // The availabilities of the resource catalogue (networks, images,
+            // flavours), managed here instead of in the deployment.
+            listCatalog: async () => unwrapArray(await listCatalog({ client })),
+            catalogEntry: async (id) => unwrapObject(await getCatalogEntry({ client, path: { id } })),
+            addCatalogEntry: async (body) =>
+                unwrapObject(await addCatalogEntry({ client, body, headers: JSON_HEADERS })),
+            updateCatalogEntry: async (id, body) =>
+                unwrapObject(await updateCatalogEntry({ client, path: { id }, body, headers: JSON_HEADERS })),
+            withdrawCatalogEntry: async (id) => unwrapObject(await withdrawCatalogEntry({ client, path: { id } })),
+            restoreCatalogEntry: async (id) => unwrapObject(await restoreCatalogEntry({ client, path: { id } })),
+            removeCatalogEntry: async (id) => unwrapVoid(await removeCatalogEntry({ client, path: { id } })),
             clearRoleSwitch: async () => unwrapObject(await clearRoleSwitch({ client })),
             setRoleSwitch: async (body) =>
                 unwrapObject(await setRoleSwitch({ client, body, headers: JSON_HEADERS })),

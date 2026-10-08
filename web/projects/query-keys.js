@@ -28,6 +28,10 @@ export const projectKeys = {
     search: (q, offset) => ['projects', 'tree', 'search', q, offset],
     config: () => ['projects', 'config'],
     rootStatus: () => ['projects', 'root-status'],
+    // Root admins' view of the availabilities; a change there also changes
+    // config() (what is offered) and tree() (the stored limits).
+    catalog: () => ['projects', 'catalog'],
+    catalogEntry: (id) => ['projects', 'catalog', id],
     // Consumption is collected once a day and no write in the tree changes the
     // past, so it lives outside tree() and is not invalidated by edits.
     usage: (id, period) => ['projects', 'usage', id, period],
