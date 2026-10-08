@@ -23,14 +23,16 @@ import enProjects from './en/projects.json';
 import enDyndns from './en/dyndns.json';
 import enTokens from './en/tokens.json';
 import enHome from './en/home.json';
+import enLlm from './en/llm.json';
 import deCommon from './de/common.json';
 import deProjects from './de/projects.json';
 import deDyndns from './de/dyndns.json';
 import deTokens from './de/tokens.json';
 import deHome from './de/home.json';
+import deLlm from './de/llm.json';
 
-const en = { ...enCommon, projects: enProjects, dyndns: enDyndns, tokens: enTokens, home: enHome };
-const de = { ...deCommon, projects: deProjects, dyndns: deDyndns, tokens: deTokens, home: deHome };
+const en = { ...enCommon, projects: enProjects, dyndns: enDyndns, tokens: enTokens, home: enHome, llm: enLlm };
+const de = { ...deCommon, projects: deProjects, dyndns: deDyndns, tokens: deTokens, home: deHome, llm: deLlm };
 import { setDateLocale } from '../format-date.js';
 
 // Where the preference is kept. Namespaced, because an artifact origin is

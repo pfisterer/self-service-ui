@@ -1,0 +1,330 @@
+{
+    "overview": {
+        "title": "DHBW language models — in the browser and via API",
+        "serviceOf": "A service of <1>dhbw.cloud</1>",
+        "intro": "This service pools DHBW's LLM resources behind one shared, <1>OpenAI-compatible endpoint</1> — usable with any tool that accepts a base URL and an API key.",
+        "introChat": "Chatting needs no key: the DHBW chat runs right in the browser.",
+        "openChat": "Open the DHBW chat",
+        "createKey": "Create an API key",
+        "steps": {
+            "signIn": {
+                "title": "1 · Sign in",
+                "a": "Sign in with the DHBW account",
+                "b": "The quota follows from the access rule",
+                "c": "Usage always visible under “Usage”"
+            },
+            "key": {
+                "title": "2 · Get an API key",
+                "a": "One API key per device or project",
+                "b": "Visible exactly once",
+                "c": "Deletable at any time without touching the others"
+            },
+            "use": {
+                "title": "3 · Use it",
+                "a": "Works with VS Code, the OpenAI SDK, Continue, Zed, curl",
+                "b": "Stable model names: chat-default, chat-fast, code",
+                "c": "The pool absorbs failures by itself"
+            }
+        },
+        "access": {
+            "title": "Access in two lines",
+            "hint": "Base URL and API key are all any client needs."
+        },
+        "models": {
+            "title": "Which model names are stable",
+            "stable": "Use the neutral names <1>{{names}}</1>. They stay valid and always point to whatever is best available right now.",
+            "concrete": "The model list also contains the concrete model names of the participating machines. These <1>can disappear at any time</1> — when a GPU is needed for a course or a different model is loaded. Anything meant to outlive a session should therefore use the neutral names."
+        },
+        "promises": {
+            "title": "What the service guarantees",
+            "logging": "<1>No prompt logging.</1> Request contents are stored neither centrally nor at the sites.",
+            "fair": "<1>Fair sharing.</1> Tiered quotas per person, short-term and monthly.",
+            "local": "<1>No data leaves.</1> Requests stay within DHBW — nothing is passed to commercial providers."
+        },
+        "tools": {
+            "title": "What it works with",
+            "hint": "Any tool that accepts an OpenAI-compatible endpoint. Enter the base URL from above and an API key there. The linked guides come from the projects themselves.",
+            "tool": "Tool",
+            "kind": "Use",
+            "description": "Description",
+            "ownCode": "For your own programs: <1>examples for the OpenAI SDK, LangChain, LlamaIndex and curl</1> in the LiteLLM documentation."
+        }
+    },
+    "tools": {
+        "kind": {
+            "ide": "IDE",
+            "terminal": "Terminal",
+            "desktop": "Desktop chat"
+        },
+        "description": {
+            "vscode": "Copilot Chat with a custom endpoint, no subscription — guide and ready-made JSON when creating an API key",
+            "continue": "Code assistant for VS Code and JetBrains",
+            "cline": "Agent for VS Code",
+            "zed": "Editor with a built-in assistant",
+            "aider": "Pair programming in the terminal",
+            "cherry": "Chat for macOS, Windows and Linux",
+            "anythingllm": "Desktop app with document storage",
+            "msty": "Chat with a side-by-side view of several models"
+        }
+    },
+    "vscode": {
+        "title": "For VS Code (GitHub Copilot Chat)",
+        "scope": "Built in since VS Code 1.122, no GitHub account or Copilot subscription needed. Applies to chat and agent mode, not to inline completions.",
+        "steps": {
+            "palette": "Open the command palette (<2>⇧⌘P</2> or <3>Ctrl+Shift+P</3>) and choose <1>Chat: Manage Language Models</1>.",
+            "add": "<1>Add Models</1> → <1>Custom Endpoint</1>. Enter <2>DHBW</2> as the name, paste the API key from above, API type <1>Chat Completions</1>.",
+            "json": "Click the gear next to <1>DHBW</1> — the file <2>chatLanguageModels.json</2> opens. In the “DHBW” entry, replace <3>\"models\": [ … ]</3> with the JSON below; keep the API key line. Save.",
+            "select": "Pick the model <1>DHBW Code</1> at the top of the chat window."
+        },
+        "keepIds": "Do not change the model names: <2>\"id\"</2> must be exactly code, chat-default or chat-fast.",
+        "docs": "VS Code guide",
+        "names": {
+            "code": "DHBW Code",
+            "chat": "DHBW Chat",
+            "fast": "DHBW Fast"
+        }
+    },
+    "keys": {
+        "title": "API keys",
+        "count": "at most {{max}} at a time · {{own}} in use",
+        "chatNotCounted": "the DHBW chat key does not count",
+        "namePlaceholder": "Name (required), e.g. vscode",
+        "create": "Create API key",
+        "full": "Limit reached — delete an old key before creating a new one.",
+        "name": "Name",
+        "spend": "Spend",
+        "reset": "next reset",
+        "none": "no API keys yet",
+        "delete": "delete",
+        "chatKey": "DHBW chat (automatic)",
+        "deleteTitle": "Delete API key?",
+        "deleteConfirm": "Delete",
+        "deleteMessage": "“{{name}}” stops working immediately. Programs using it get errors from then on.",
+        "deleteChatMessage": "The DHBW chat key is created again at the next chat sign-in. Running chats fail until then.",
+        "newTitle": "New API key",
+        "onceTitle": "Shown only once",
+        "onceText": "This API key is never shown again — store it now.",
+        "shellTitle": "For the shell",
+        "shellHint": "Both lines together — many tools read exactly these two variables.",
+        "close": "Close"
+    },
+    "usage": {
+        "monthly": "Monthly quota",
+        "allKeys": "Across all API keys",
+        "of": "of {{budget}}",
+        "resetAt": "Reset: {{date}}",
+        "live": "Values come live from the gateway.",
+        "limits": "Limits and models",
+        "inForce": "Currently in force",
+        "rpm": "{{n}} requests per minute",
+        "tpm": "{{n}} tokens per minute",
+        "allModels": "all models",
+        "perKey": "Usage per API key",
+        "perKeyHint": "Each API key has its own short-term budget; the monthly quota is shared by all.",
+        "shortTerm": "Short-term spend",
+        "period": "Period",
+        "explainTitle": "What is shown here",
+        "explain": {
+            "units": "<1>Units:</1> spend and budgets are accounting units, not euros. Every model has an internal price per token (input and output separately), which gives the cost of each request. That way long and short requests can be weighed fairly.",
+            "monthly": "<1>Monthly quota:</1> everything spent across all of the account's API keys (including the DHBW chat) since the last reset. Once it is used up, requests are refused until the reset.",
+            "shortTerm": "<1>Short-term spend:</1> a smaller budget per API key for the given period (e.g. 4 h). It keeps a runaway loop from using up the whole monthly quota at once and is fully available again after the reset. 0.0000 therefore means nothing spent since the last reset — not that the key was never used."
+        }
+    },
+    "fleet": {
+        "state": {
+            "active": "active",
+            "silent": "silent",
+            "blocked": "blocked"
+        },
+        "inference": {
+            "reachable": "reachable",
+            "failing": "failing",
+            "partial": "partial",
+            "paused": "paused",
+            "unregistered": "not registered",
+            "unknown": "unknown"
+        },
+        "scripts": {
+            "current": "current",
+            "outdated": "outdated",
+            "heldBack": "held back",
+            "unknown": "unknown"
+        },
+        "scriptsTip": {
+            "current": "The scripts on the machine match what the service ships.",
+            "outdated": "The machine runs an older version and fetches the new one at its next check-in. Normal for up to an hour after a rollout — it reports the version from before that run's update.",
+            "heldBack": "Older version, on purpose: the rollout currently reaches only the canary devices. Arrives once that list is emptied.",
+            "unknown": "The machine does not report its version — its scripts predate the report. Resolves with the next update."
+        },
+        "days_one": "{{count}} day",
+        "days_other": "{{count}} days",
+        "hours_one": "{{count}} hour",
+        "hours_other": "{{count}} hours",
+        "minutes_one": "{{count}} minute",
+        "minutes_other": "{{count}} minutes",
+        "adminUi": {
+            "title": "LiteLLM admin UI",
+            "hint": "Models, sites, spend history, team management — signs in automatically.",
+            "open": "Open"
+        },
+        "jamf": {
+            "title": "Enrol Macs via JAMF",
+            "hint": "One profile, one package, one policy — identical for every device. No script parameter, no device variable, no list of serial numbers.",
+            "readme": "detailed guide"
+        },
+        "profile": {
+            "title": "1 · Configuration profile",
+            "hint": "Contains the enrolment address and token. JAMF: Computers → Configuration Profiles → Upload, scope to the device group. The three fields are optional and apply to every device in scope — use one profile per group for several sites. Downloading the same profile again yields the same UUID and replaces the existing one.",
+            "location": "Location",
+            "operator": "Operator (group)",
+            "contact": "Technical contact",
+            "download": "Download profile",
+            "secret": "The profile carries the token of the whole fleet: do not pass it on by mail or ticket, delete it locally after the upload to JAMF."
+        },
+        "package": {
+            "title": "2 · Package and policy",
+            "download": "Download {{file}}",
+            "info": "{{size}} MB · uploaded {{date}}",
+            "delete": "delete",
+            "deleteHint": "Only removes the download from the service. Nothing changes on the devices or in JAMF. Upload again with build-bundle.sh --upload.",
+            "deleteTitle": "Delete package?",
+            "deleteConfirm": "Delete",
+            "deleteMessage": "{{file}} is removed from the service. The devices are not affected.",
+            "missing": "No package is stored in the service yet. Operations uploads it with <2>fleet/macos/build-bundle.sh --upload</2>.",
+            "policy": "Settings → Packages → Upload\nPolicy:  Packages → Install  (package above)\nTrigger: Recurring Check-in\nExecution Frequency: Once per computer\nScope:   the same device group as the profile",
+            "hint": "No script in the policy, no parameters. The order of profile and package does not matter: if the package comes first, the first run exits 0 and the hourly check-in completes the enrolment later. The package (identifier <2>{{id}}</2>) installs files under /usr/local/libexec/dhbw-llm/ and sets up the check-in service.",
+            "allowList": "<1>Note:</1> enrolment is limited to {{count}} approved serial numbers — new devices must first be listed in the inventory (<2>fleet.allowedSerials</2>)."
+        },
+        "net": {
+            "title": "3 · Network",
+            "out": "outbound",
+            "in": "inbound",
+            "nothing": "nothing",
+            "hint": "Both currently IPv6 only — in an IPv4-only network enrolment fails. Requires Apple Silicon with at least 16 GB."
+        },
+        "check": {
+            "title": "4 · Verify",
+            "hint": "After the check-in the device appears in the table below within minutes (at the latest after {{minutes}} minutes). On the device: enrolment, handshake (under 2 minutes), GPU (must show Metal, not cpu):"
+        },
+        "updates": {
+            "title": "Updates",
+            "mode": {
+                "off": "Self-update: off",
+                "all": "Self-update: all devices",
+                "canary": "Self-update: canary devices only"
+            },
+            "explain": {
+                "off": "Scripts come only from the package — a patch means a new package via JAMF.",
+                "all": "At every hourly check-in the Macs compare their scripts with the service's version and replace what differs. A patch needs no new package.",
+                "canary": "Staged: only the canary devices get the current version; all others keep theirs until the canary list is emptied."
+            },
+            "root": "A new package is only needed when the WireGuard binaries change. This lets the service run code as root on the devices; JAMF remains the way back if a patch fails.",
+            "canaries": "Canary devices"
+        },
+        "machines": {
+            "title": "Device fleet",
+            "summary": "{{count}} enrolled · pool {{pool}} ({{capacity}} addresses)",
+            "csv": "Inventory as CSV",
+            "spread": "Model distribution:",
+            "assignment": "What runs on which machine follows from its memory class; exceptions per serial number live in the inventory (<2>fleet.overrides</2>). Takes effect at the next hourly check-in.",
+            "pathsTitle": "Check-in and inference are two separate paths",
+            "paths": "<1>Check-in</1> is the control path: every hour the machine calls the enrolment endpoint over public HTTPS and fetches its assignment. “Silent” means that has not happened for three intervals. <1>Inference</1> is the data path: whether LiteLLM reached the machine through the tunnel at the last health check. <1>Paused</1> is not a failure: someone is working at the machine, so it stopped its inference service and gets no requests.",
+            "none": "no enrolments yet"
+        },
+        "linux": {
+            "title": "Enrol Linux machines without device management",
+            "hint": "Run as root on the machine. It generates its own key pair, enrols, and sets up two systemd timers. This does <1>not</1> install an inference service — the site keeps running its own; it only has to listen on the tunnel address.",
+            "badContact": "not a valid address",
+            "options": "Optional: <2>--operator \"Labor WI\"</2> (group the machine belongs to, <1>not</1> an address), <2>--port 8000</2> for vLLM instead of Ollama, <2>--gate always</2> for a dedicated machine.",
+            "secret": "The command contains the enrolment token of the whole fleet — it does not belong in a ticket or a chat."
+        },
+        "col": {
+            "name": "Name",
+            "address": "Address",
+            "profile": "Class",
+            "model": "Model",
+            "lastSeen": "last seen",
+            "scripts": "Version",
+            "state": "Check-in",
+            "inference": "Inference"
+        },
+        "stateTip": {
+            "blocked": "Blocked centrally: the machine is refused and not part of the pool.",
+            "silent": "No check-in at the enrolment endpoint for {{since}}. Says nothing about the tunnel — the Inference column does.",
+            "active": "The machine checks in hourly and last did so on schedule."
+        },
+        "inferenceTip": {
+            "reachable": "LiteLLM reached this machine through the tunnel at the last health check.",
+            "failing": "No deployment on this machine answers: {{error}}",
+            "partial": "Only some of its models answer: {{error}}",
+            "paused": "Intended: someone is working at the machine, so it paused its inference service. Comes back by itself once nobody is signed in.",
+            "unregistered": "LiteLLM does not know this machine. The sync runs every five minutes and only adds machines that currently answer.",
+            "unknown": "LiteLLM's health data could not be fetched."
+        },
+        "unknownError": "unknown error",
+        "noContact": "no technical contact",
+        "direct": "direct",
+        "directTip": "Connected without a tunnel. Protection then rests solely on the endpoint's API key, no longer on the network topology.",
+        "external": "chosen by the site",
+        "externalTip": "This machine runs its own inference service — its model cannot be switched from here. Shown is what it serves.",
+        "differsTip": "Assigned is {{model}}, present is something else: the agent did not apply the assignment.",
+        "has": "has {{models}}",
+        "dedicated": "dedicated",
+        "disabled": "disabled",
+        "pkg": "package {{version}}",
+        "canary": "canary",
+        "block": "block",
+        "unblock": "unblock",
+        "blockTip": "The machine is refused and stays refused — even if it enrols again. Its entry and address are kept. This is the way for a stolen or misbehaving device.",
+        "unblockTip": "Lift the block: the machine is admitted again at its next check-in and keeps its address.",
+        "forget": "remove",
+        "forgetTip": "Delete the entry and free the address. This does NOT keep the machine out — if it checks in again it is enrolled with a new address. To keep it out: block it.",
+        "forgetTitle": "Remove machine?",
+        "forgetConfirm": "Remove",
+        "forgetMessage": "{{name}} ({{serial}}) is removed from the fleet and its address freed. If the machine checks in again it is enrolled anew — block it instead to keep it out."
+    },
+    "access": {
+        "title": "Access rules",
+        "hint": "Who may use the LLM service, with which role and quota. People and groups come from the role-provider. Without a matching rule there is no access — not to the chat either.",
+        "add": "Add rule",
+        "token": "Token",
+        "role": "Role",
+        "tier": "Quota tier",
+        "comment": "Comment",
+        "changed": "changed",
+        "fromConfig": "from the configuration",
+        "bootstrapTip": "Admins from the configuration. They make sure someone can always maintain this list and cannot be changed here.",
+        "edit": "edit",
+        "delete": "delete",
+        "deleteTitle": "Delete rule?",
+        "deleteConfirm": "Delete",
+        "deleteMessage": "The rule for {{token}} is deleted. Anyone who had access only through it loses it within a few minutes.",
+        "howTitle": "How the rules work",
+        "how": {
+            "none": "<1>No rule, no access.</1> That applies to API keys and the DHBW chat alike.",
+            "highest": "<1>Several rules:</1> the highest role wins; for equal roles a person rule (<2>user:</2>) beats a group rule (<2>group:</2>).",
+            "roles": "<1>Roles:</1> “Use” may create keys and use the chat, “Fleet management” may also look after the device fleet, “Administration” may also maintain these rules."
+        },
+        "addTitle": "Add rule",
+        "editTitle": "Edit rule",
+        "kindUser": "Person",
+        "kindGroup": "Group",
+        "email": "Email address",
+        "group": "Group",
+        "groupHint": "Searches the role-provider by id or name (from two characters).",
+        "tokenPreview": "Token:",
+        "commentPlaceholder": "e.g. course WWI23SEB",
+        "cancel": "Cancel",
+        "save": "Save"
+    },
+    "roles": {
+        "user": "Use",
+        "fleet-admin": "Fleet management",
+        "admin": "Administration"
+    },
+    "noAccess": {
+        "title": "No access to the LLM service",
+        "text": "There is no access rule for this account. Access is granted by the service's administrators.",
+        "page": "This page is not available for this role."
+    }
+}

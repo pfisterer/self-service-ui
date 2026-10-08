@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => {
       cloudResourcesBaseUrl: env.CLOUD_RESOURCES_BASE_URL || '',
       cloudResourcesMcpUrl: env.CLOUD_RESOURCES_MCP_URL || '',
       dynamicZonesMcpUrl: env.DYNAMIC_ZONE_MCP_URL || '',
+      llmBaseUrl: env.LLM_BASE_URL || '',
       acmeServer: env.ACME_SERVER || 'https://certificates.dhbw.cloud',
       dummyAuth: env.DUMMY_AUTH === 'true',
       oidc: {
@@ -63,7 +64,19 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 8084
+      port: 8084,
+      // The LLM API has no CORS: in production Caddy serves it same-origin
+      // under /api/llm/ (see Caddyfile). The dev server does the same when
+      // LLM_DEV_UPSTREAM names a local llm-management-api, e.g.
+      //   LLM_BASE_URL=http://localhost:8084/api/llm/
+      //   LLM_DEV_UPSTREAM=http://localhost:8086
+      proxy: env.LLM_DEV_UPSTREAM ? {
+        '/api/llm': {
+          target: env.LLM_DEV_UPSTREAM,
+          changeOrigin: true,
+          rewrite: (p) => p.replace(/^\/api\/llm/, ''),
+        },
+      } : undefined,
     },
     // Unit tests. Two kinds, and the default stays the cheap one.
     //

@@ -1,9 +1,10 @@
 import { useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
-import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
 import { TOKEN_SCOPES, tokenScopeLabel, tokenScopePath } from '/tokens/scopes.js';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
+import { useLlmMe } from '/llm/use-llm-me.jsx';
 
 // The whole navigation as data, in one place: the header renders it two ways
 // (two bars on a wide screen, one vertical list in the burger) and the shell
@@ -36,6 +37,7 @@ export function useNav() {
     const { t } = useTranslation();
     const { isRoot, pending, hasBudgets } = useCloudStatus();
     const { hasPolicy } = useDnsPolicyStatus();
+    const llm = useLlmMe();
 
 
 
@@ -70,6 +72,23 @@ export function useNav() {
                 // events). Old /policy links redirect (see dyndns-routes).
                 hasPolicy && { label: t('nav.administration'), href: '/dyndns/administration' },
                 { label: t('nav.apiDocumentation'), href: '/dyndns/api-doc' },
+            ].filter(Boolean),
+        },
+        // Only for someone with an access rule: without one the service
+        // refuses everything, chat included, so the menu offers nothing.
+        // Its API keys are LiteLLM keys for the model endpoint — a different
+        // thing from the API tokens below, which manage this platform.
+        llmEnabled && llm.hasAccess && {
+            id: 'llm',
+            label: t('nav.llm'),
+            base: '/llm',
+            items: [
+                { label: t('nav.llmOverview'), href: '/llm/overview' },
+                { label: t('nav.llmKeys'), href: '/llm/keys' },
+                { label: t('nav.llmUsage'), href: '/llm/usage' },
+                llm.isFleetAdmin && { label: t('nav.llmFleet'), href: '/llm/fleet' },
+                llm.isAdmin && { label: t('nav.llmAccess'), href: '/llm/access' },
+                { label: t('nav.apiDocumentation'), href: '/llm/api-doc' },
             ].filter(Boolean),
         },
         // Last, and a category of its own with nothing under it: tokens belong

@@ -36,6 +36,14 @@ selfServiceUI:
   # default applies.
   dynamicZonesUpstream: ""
   cloudResourcesUpstream: ""
+  # LLM service (llm-management-api). Empty llmBaseUrl hides the LLM section.
+  # Unlike the two above, it is NOT in this cluster: llmUpstream is the address
+  # of the other cluster's ingress (host:port, always TLS) and llmHost the name
+  # to ask it for, which is also checked against its certificate — see the
+  # Caddyfile for why the two differ.
+  llmBaseUrl: ""
+  llmUpstream: ""
+  llmHost: ""
 
 #------------------------------------
 # OIDC/Auth Configuration

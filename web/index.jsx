@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { lazy, Suspense, useState } from 'react';
 import { Router, Route, Switch, useLocation } from 'wouter';
 
-import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { apiTokensEnabled, cloudProjectsEnabled, dnsZonesEnabled, llmEnabled } from '/features.js';
 // Imported for its side effect: initialising i18next before the first render,
 // so nothing flashes in one language and settles in another.
 import '/i18n/index.js';
@@ -45,6 +45,8 @@ const DynamicDnsManagement = lazy(() =>
 // Lazy for the same reason, and one reason more: this page touches BOTH section
 // facades, so eagerly importing it would pull every operation of both SDKs into
 // the main bundle.
+const LlmManagement = lazy(() =>
+    import('./llm/llm-routes.jsx').then(m => ({ default: m.LlmManagement })));
 const ApiTokens = lazy(() =>
     import('./tokens/api-tokens.jsx').then(m => ({ default: m.ApiTokens })));
 
@@ -146,6 +148,7 @@ function AppRoutes() {
                     <Route path="/" component={Home} />
                     {dnsZonesEnabled && <Route path="/dyndns" component={DynamicDnsManagement} nest />}
                     {cloudProjectsEnabled && <Route path="/projects" component={CloudProjectManagement} nest />}
+                    {llmEnabled && <Route path="/llm" component={LlmManagement} nest />}
                     {apiTokensEnabled && <Route path="/tokens" component={ApiTokens} nest />}
                     <Route component={NotFound} />
                 </Switch>

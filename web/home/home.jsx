@@ -1,8 +1,9 @@
 import { Link } from 'wouter';
 import { Container, Stack, Group, Title, Text, Paper, Button, ThemeIcon, SimpleGrid, List, Alert } from '@mantine/core';
-import { Globe, ListPlus, ShieldCheck, ArrowRight, ServerCog, FolderKanban } from 'lucide-react';
+import { Globe, ListPlus, ShieldCheck, ArrowRight, ServerCog, FolderKanban, Sparkles } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { useLlmMe } from '/llm/use-llm-me.jsx';
 
 // First-run friendly landing page: explain what this portal is for and give a
 // short, scannable path through it. Most users arrive here on their first login
@@ -87,6 +88,8 @@ export function Home() {
     const acmeHost = acmeServer.replace(/^https?:\/\//, '').replace(/\/$/, '');
     const withProjects = cloudProjectsEnabled;
     const withDns = dnsZonesEnabled;
+    // Offered only to someone the LLM service lets in — see use-llm-me.jsx.
+    const { hasAccess: withLlm } = useLlmMe();
 
     // Every step below the first one is about zones and certificates, so a
     // deployment without the DNS API keeps only the project step rather than
@@ -144,6 +147,25 @@ export function Home() {
                         ))}
                     </SimpleGrid>
                 </div>
+
+                {withLlm && (
+                    <Paper p="lg" shadow="xs" radius="md" withBorder>
+                        <Group justify="space-between" wrap="wrap" gap="md">
+                            <Group gap="md" wrap="nowrap" style={{ flex: '1 1 420px' }}>
+                                <ThemeIcon size={44} radius="md" variant="light" color="grape">
+                                    <Sparkles size="24" />
+                                </ThemeIcon>
+                                <div>
+                                    <Text fw={600}>{t('home.llm.title')}</Text>
+                                    <Text size="sm" c="dimmed">{t('home.llm.body')}</Text>
+                                </div>
+                            </Group>
+                            <Button component={Link} to="/llm/overview" variant="light" rightSection={<ArrowRight size="18" />}>
+                                {t('home.llm.open')}
+                            </Button>
+                        </Group>
+                    </Paper>
+                )}
 
                 {/* DHBW ACME callout — about the zones this portal hands out, so
                     it goes with them. */}

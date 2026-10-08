@@ -41,5 +41,10 @@
     "acme": {
         "title": "TLS certificates: use the DHBW ACME server",
         "body": "For the zones you create here you <1>must</1> obtain TLS certificates from DHBW's own ACME certificate authority at <2>{{host}}</2>. These zones are set up to authorize only the DHBW CA (via CAA records), so public CAs such as <3>Let's Encrypt can not be used</3> for these hostnames. The DHBW server is free, has no public rate limits, and also issues certificates for services that are only reachable from <4>inside the DHBW network / VPN</4>. Each zone's <5>TLS Certificates</5> tab generates cert-manager manifests pre-filled for exactly this server."
+    },
+    "llm": {
+        "title": "Language models (LLM)",
+        "body": "The DHBW chat in the browser and an OpenAI-compatible endpoint for VS Code and your own programs — with a personal API key and quota.",
+        "open": "Open the LLM service"
     }
 }

@@ -6,12 +6,14 @@ import hljs from 'highlight.js/lib/core';
 import yaml from 'highlight.js/lib/languages/yaml';
 import bash from 'highlight.js/lib/languages/bash';
 import ini from 'highlight.js/lib/languages/ini';
+import json from 'highlight.js/lib/languages/json';
 import plaintext from 'highlight.js/lib/languages/plaintext';
 import './codeblock.css';
 
 hljs.registerLanguage('yaml', yaml);
 hljs.registerLanguage('bash', bash);
 hljs.registerLanguage('ini', ini);
+hljs.registerLanguage('json', json);
 hljs.registerLanguage('plaintext', plaintext);
 
 export function CodeBlock({ code, language }) {

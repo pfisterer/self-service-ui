@@ -20,6 +20,11 @@ export function CloudProjectsApiSwagger() {
         npmPackage="@dhbw-cloud/os-mgt-client" />;
 }
 
+export function LlmApiSwagger() {
+    return <ApiDocumentation baseUrl={window.appconfig.llmBaseUrl} title="LLM Management API"
+        npmPackage="@dhbw-cloud/llm-client" />;
+}
+
 function ApiDocumentation({ baseUrl, title, npmPackage }) {
     const { t } = useTranslation();
     // All resolved RELATIVE to baseUrl (which has a trailing slash). In BFF mode

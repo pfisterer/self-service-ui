@@ -21,6 +21,12 @@ export const cloudProjectsEnabled = Boolean(window?.appconfig?.cloudResourcesBas
 // belonging to it.
 export const dnsZonesEnabled = Boolean(window?.appconfig?.dynamicZonesBaseUrl);
 
+// The LLM service (llm-management-api) runs in a cluster of its own; this UI
+// only offers its section. Whether a person may SEE it is not decided here but
+// by the service: without an access rule, /v1/me answers with an empty role
+// and the section stays hidden (see llm/use-llm-me.jsx).
+export const llmEnabled = Boolean(window?.appconfig?.llmBaseUrl);
+
 // At least one API has to be there for a token to be issuable at all.
 export const apiTokensEnabled = dnsZonesEnabled || cloudProjectsEnabled;
 

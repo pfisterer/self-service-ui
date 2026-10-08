@@ -1,0 +1,330 @@
+{
+    "overview": {
+        "title": "Sprachmodelle der DHBW — im Browser und per API",
+        "serviceOf": "Ein Service von <1>dhbw.cloud</1>",
+        "intro": "Dieser Dienst bündelt LLM-Ressourcen der DHBW zu einem gemeinsamen, <1>OpenAI-kompatiblen Endpunkt</1> — nutzbar mit jedem Werkzeug, das eine Basis-URL und einen API Key zulässt.",
+        "introChat": "Zum Chatten braucht es keinen Key: der DHBW-Chat läuft direkt im Browser.",
+        "openChat": "Zum DHBW-Chat",
+        "createKey": "API Key erstellen",
+        "steps": {
+            "signIn": {
+                "title": "1 · Anmelden",
+                "a": "Login mit dem DHBW-Konto",
+                "b": "Das Kontingent ergibt sich aus der Zugriffsregel",
+                "c": "Verbrauch jederzeit unter „Verbrauch“"
+            },
+            "key": {
+                "title": "2 · API Key holen",
+                "a": "Ein eigener API Key je Gerät oder Projekt",
+                "b": "Nur ein einziges Mal sichtbar",
+                "c": "Jederzeit löschbar, ohne die anderen zu berühren"
+            },
+            "use": {
+                "title": "3 · Einsetzen",
+                "a": "Funktioniert mit VS Code, OpenAI-SDK, Continue, Zed, curl",
+                "b": "Stabile Modellnamen: chat-default, chat-fast, code",
+                "c": "Ausfälle fängt der Verbund selbst ab"
+            }
+        },
+        "access": {
+            "title": "Zugang in zwei Zeilen",
+            "hint": "Basis-URL und API Key genügen — mehr braucht kein Client."
+        },
+        "models": {
+            "title": "Welche Modellnamen stabil sind",
+            "stable": "Empfohlen sind die neutralen Namen <1>{{names}}</1>. Sie bleiben dauerhaft gültig und zeigen jeweils auf das, was gerade am besten verfügbar ist.",
+            "concrete": "In der Modellliste stehen zusätzlich die konkreten Modellnamen der beteiligten Maschinen. Diese <1>können jederzeit verschwinden</1> — etwa wenn eine GPU für eine Lehrveranstaltung gebraucht oder ein anderes Modell geladen wird. Für alles, was länger als eine Sitzung leben soll, gehören deshalb die neutralen Namen in die Konfiguration."
+        },
+        "promises": {
+            "title": "Was der Dienst zusichert",
+            "logging": "<1>Keine Prompt-Protokollierung.</1> Anfrageinhalte werden weder zentral noch an den Standorten gespeichert.",
+            "fair": "<1>Faire Verteilung.</1> Gestaffelte Kontingente je Person, kurzfristig und monatlich.",
+            "local": "<1>Kein Datenabfluss.</1> Die Anfragen verlassen die DHBW nicht — keine Weitergabe an kommerzielle Anbieter."
+        },
+        "tools": {
+            "title": "Womit sich das nutzen lässt",
+            "hint": "Jedes Werkzeug, das einen OpenAI-kompatiblen Endpunkt zulässt. Dort werden die Basis-URL von oben und der eigene API Key eingetragen. Die verlinkten Anleitungen stammen von den Projekten selbst.",
+            "tool": "Werkzeug",
+            "kind": "Einsatz",
+            "description": "Beschreibung",
+            "ownCode": "Für eigene Programme: <1>Beispiele für OpenAI-SDK, LangChain, LlamaIndex und curl</1> in der LiteLLM-Dokumentation."
+        }
+    },
+    "tools": {
+        "kind": {
+            "ide": "Entwicklungsumgebung",
+            "terminal": "Terminal",
+            "desktop": "Desktop-Chat"
+        },
+        "description": {
+            "vscode": "Copilot Chat mit eigenem Endpunkt, ohne Abo — Anleitung und fertiges JSON beim Anlegen eines API Keys",
+            "continue": "Code-Assistent für VS Code und JetBrains",
+            "cline": "Agent für VS Code",
+            "zed": "Editor mit eingebautem Assistenten",
+            "aider": "Programmieren im Terminal",
+            "cherry": "Chat für macOS, Windows und Linux",
+            "anythingllm": "Desktop-App mit Dokumentenablage",
+            "msty": "Chat mit Vergleichsansicht mehrerer Modelle"
+        }
+    },
+    "vscode": {
+        "title": "Für VS Code (GitHub Copilot Chat)",
+        "scope": "Eingebaut ab VS Code 1.122, ohne GitHub-Konto und ohne Copilot-Abo. Gilt für Chat und Agent-Modus, nicht für die Vervollständigung beim Tippen.",
+        "steps": {
+            "palette": "Befehlspalette öffnen (<2>⇧⌘P</2> bzw. <3>Strg+Umschalt+P</3>) und <1>Chat: Manage Language Models</1> wählen.",
+            "add": "<1>Add Models</1> → <1>Custom Endpoint</1>. Als Namen <2>DHBW</2> eingeben, den API Key von oben einfügen, als API-Typ <1>Chat Completions</1>.",
+            "json": "Auf das Zahnrad neben <1>DHBW</1> klicken — die Datei <2>chatLanguageModels.json</2> öffnet sich. Im Eintrag „DHBW“ den Teil <3>\"models\": [ … ]</3> durch das JSON unten ersetzen; die Zeile mit dem API Key stehen lassen. Speichern.",
+            "select": "Im Chat-Fenster oben das Modell <1>DHBW Code</1> auswählen."
+        },
+        "keepIds": "Den Modellnamen nicht ändern: <2>\"id\"</2> muss genau code, chat-default oder chat-fast lauten.",
+        "docs": "Anleitung von VS Code",
+        "names": {
+            "code": "DHBW Code",
+            "chat": "DHBW Chat",
+            "fast": "DHBW Schnell"
+        }
+    },
+    "keys": {
+        "title": "API Keys",
+        "count": "höchstens {{max}} gleichzeitig · {{own}} vergeben",
+        "chatNotCounted": "der Key des DHBW-Chats zählt nicht mit",
+        "namePlaceholder": "Name (Pflicht), z. B. vscode",
+        "create": "API Key erstellen",
+        "full": "Höchstzahl erreicht — für einen neuen Key zuerst einen alten löschen.",
+        "name": "Name",
+        "spend": "Verbrauch",
+        "reset": "nächste Zurücksetzung",
+        "none": "noch keine API Keys",
+        "delete": "löschen",
+        "chatKey": "DHBW-Chat (automatisch)",
+        "deleteTitle": "API Key löschen?",
+        "deleteConfirm": "Löschen",
+        "deleteMessage": "„{{name}}“ wird sofort ungültig. Programme, die ihn verwenden, bekommen ab dann einen Fehler.",
+        "deleteChatMessage": "Der Key des DHBW-Chats wird bei der nächsten Chat-Anmeldung neu angelegt. Laufende Chats brechen bis dahin ab.",
+        "newTitle": "Neuer API Key",
+        "onceTitle": "Einmalig sichtbar",
+        "onceText": "Dieser API Key wird nie wieder angezeigt — jetzt speichern.",
+        "shellTitle": "Für die Shell",
+        "shellHint": "Beide Zeilen zusammen — viele Werkzeuge lesen genau diese beiden Variablen.",
+        "close": "Schließen"
+    },
+    "usage": {
+        "monthly": "Monatskontingent",
+        "allKeys": "Über alle API Keys zusammen",
+        "of": "von {{budget}}",
+        "resetAt": "Zurücksetzung: {{date}}",
+        "live": "Die Werte kommen live vom Gateway.",
+        "limits": "Grenzen und Modelle",
+        "inForce": "Aktuell in Kraft",
+        "rpm": "{{n}} Anfragen pro Minute",
+        "tpm": "{{n}} Tokens pro Minute",
+        "allModels": "alle Modelle",
+        "perKey": "Verbrauch je API Key",
+        "perKeyHint": "Jeder API Key hat ein eigenes Kurzfrist-Budget; das Monatskontingent gilt für alle gemeinsam.",
+        "shortTerm": "Kurzfrist-Verbrauch",
+        "period": "Zeitraum",
+        "explainTitle": "Was hier angezeigt wird",
+        "explain": {
+            "units": "<1>Einheiten:</1> Verbrauch und Budgets sind Verrechnungseinheiten, keine Euro. Jedes Modell hat einen internen Preis je Token (Eingabe und Ausgabe getrennt); daraus ergibt sich der Verbrauch jeder Anfrage. So lassen sich lange und kurze Anfragen fair gegeneinander aufrechnen.",
+            "monthly": "<1>Monatskontingent:</1> alles, was über alle eigenen API Keys zusammen verbraucht wurde (einschließlich DHBW-Chat), seit der letzten Zurücksetzung. Ist es aufgebraucht, werden Anfragen bis zur Zurücksetzung abgelehnt.",
+            "shortTerm": "<1>Kurzfrist-Verbrauch:</1> je API Key ein kleineres Budget für den angegebenen Zeitraum (z. B. 4 h). Es verhindert, dass eine fehlerhafte Schleife das ganze Monatskontingent auf einmal verbraucht, und steht nach der Zurücksetzung wieder voll zur Verfügung. 0.0000 heißt also: seit der letzten Zurücksetzung nichts verbraucht — nicht, dass der Key nie genutzt wurde."
+        }
+    },
+    "fleet": {
+        "state": {
+            "active": "aktiv",
+            "silent": "ohne Rückmeldung",
+            "blocked": "gesperrt"
+        },
+        "inference": {
+            "reachable": "erreichbar",
+            "failing": "gestört",
+            "partial": "teilweise",
+            "paused": "angehalten",
+            "unregistered": "nicht registriert",
+            "unknown": "unbekannt"
+        },
+        "scripts": {
+            "current": "aktuell",
+            "outdated": "veraltet",
+            "heldBack": "zurückgehalten",
+            "unknown": "unbekannt"
+        },
+        "scriptsTip": {
+            "current": "Die Skripte auf der Maschine entsprechen dem ausgelieferten Stand.",
+            "outdated": "Die Maschine hat einen älteren Stand und holt den neuen beim nächsten Abgleich. Direkt nach einem Rollout bis zu einer Stunde normal — sie meldet den Stand vor der Aktualisierung desselben Laufs.",
+            "heldBack": "Älterer Stand, absichtlich: der Rollout läuft gerade nur auf den Testgeräten. Kommt, sobald die Testliste geleert wird.",
+            "unknown": "Die Maschine meldet ihren Stand nicht — ihre Skripte sind älter als diese Meldung. Erledigt sich mit der nächsten Aktualisierung."
+        },
+        "days_one": "{{count}} Tag",
+        "days_other": "{{count}} Tagen",
+        "hours_one": "{{count}} Stunde",
+        "hours_other": "{{count}} Stunden",
+        "minutes_one": "{{count}} Minute",
+        "minutes_other": "{{count}} Minuten",
+        "adminUi": {
+            "title": "LiteLLM-Oberfläche",
+            "hint": "Modelle, Standorte, Spend-Historie, Team-Verwaltung — Anmeldung erfolgt automatisch.",
+            "open": "Öffnen"
+        },
+        "jamf": {
+            "title": "Macs per JAMF aufnehmen",
+            "hint": "Ein Profil, ein Paket, eine Policy — für alle Geräte identisch. Kein Skriptparameter, keine Gerätevariable, keine Liste von Seriennummern.",
+            "readme": "ausführliche Anleitung"
+        },
+        "profile": {
+            "title": "1 · Configuration Profile",
+            "hint": "Enthält Anmeldeadresse und Anmeldetoken. JAMF: Computers → Configuration Profiles → Upload, Scope auf die Gerätegruppe. Die drei Felder sind optional und gelten für alle Geräte im Scope — für mehrere Standorte je Gruppe ein eigenes Profil. Dasselbe Profil erneut heruntergeladen hat dieselbe UUID und ersetzt das vorhandene.",
+            "location": "Standort",
+            "operator": "Betreiber (Gruppe)",
+            "contact": "Technischer Kontakt",
+            "download": "Profil herunterladen",
+            "secret": "Das Profil trägt das Token der gesamten Flotte: nicht per Mail oder Ticket weitergeben, nach dem Upload in JAMF lokal löschen."
+        },
+        "package": {
+            "title": "2 · Paket und Policy",
+            "download": "{{file}} herunterladen",
+            "info": "{{size}} MB · hinterlegt {{date}}",
+            "delete": "löschen",
+            "deleteHint": "Nimmt nur den Download aus dem Dienst. Auf den Geräten und in JAMF ändert sich nichts. Neu ablegen mit build-bundle.sh --upload.",
+            "deleteTitle": "Paket löschen?",
+            "deleteConfirm": "Löschen",
+            "deleteMessage": "{{file}} wird aus dem Dienst entfernt. Die Geräte sind davon nicht betroffen.",
+            "missing": "Im Dienst ist noch kein Paket hinterlegt. Der Betrieb legt es mit <2>fleet/macos/build-bundle.sh --upload</2> ab.",
+            "policy": "Settings → Packages → Upload\nPolicy:  Packages → Install  (Paket oben)\nTrigger: Recurring Check-in\nExecution Frequency: Once per computer\nScope:   dieselbe Gerätegruppe wie das Profil",
+            "hint": "Kein Skript in der Policy, keine Parameter. Die Reihenfolge von Profil und Paket ist gleichgültig: kommt das Paket zuerst, endet der erste Lauf mit Exit 0 und der stündliche Abgleich holt die Anmeldung nach. Das Paket (Kennung <2>{{id}}</2>) legt Dateien unter /usr/local/libexec/dhbw-llm/ ab und richtet den Abgleichdienst ein.",
+            "allowList": "<1>Achtung:</1> Die Aufnahme ist auf {{count}} freigegebene Seriennummern beschränkt — neue Geräte müssen vorher im Inventar (<2>fleet.allowedSerials</2>) stehen."
+        },
+        "net": {
+            "title": "3 · Netz",
+            "out": "ausgehend",
+            "in": "eingehend",
+            "nothing": "nichts",
+            "hint": "Beides derzeit nur über IPv6 — in einem reinen IPv4-Netz scheitert die Anmeldung. Voraussetzung: Apple Silicon mit mindestens 16 GB."
+        },
+        "check": {
+            "title": "4 · Kontrolle",
+            "hint": "Nach dem Check-in erscheint das Gerät binnen Minuten unten in der Tabelle (spätestens nach {{minutes}} Minuten). Auf dem Gerät: Anmeldung, Handshake (unter 2 Minuten), GPU (muss Metal zeigen, nicht cpu):"
+        },
+        "updates": {
+            "title": "Aktualisierungen",
+            "mode": {
+                "off": "Selbstaktualisierung: aus",
+                "all": "Selbstaktualisierung: alle Geräte",
+                "canary": "Selbstaktualisierung: nur Testgeräte"
+            },
+            "explain": {
+                "off": "Die Skripte kommen ausschließlich aus dem Paket — ein Patch ist ein neues Paket über JAMF.",
+                "all": "Die Macs vergleichen bei jedem stündlichen Abgleich ihre Skripte mit dem Stand des Dienstes und tauschen aus, was abweicht. Ein Patch braucht kein neues Paket.",
+                "canary": "Gestaffelt: nur die Testgeräte bekommen den aktuellen Stand; alle anderen behalten ihren, bis die Testliste geleert wird."
+            },
+            "root": "Ein neues Paket ist nur nötig, wenn sich die WireGuard-Programme ändern. Der Dienst kann damit Code als root auf den Geräten ausführen; JAMF bleibt der Weg zur Wiederherstellung, falls ein Patch fehlschlägt.",
+            "canaries": "Testgeräte"
+        },
+        "machines": {
+            "title": "Geräteflotte",
+            "summary": "{{count}} angemeldet · Pool {{pool}} ({{capacity}} Adressen)",
+            "csv": "Inventar als CSV",
+            "spread": "Modellverteilung:",
+            "assignment": "Was auf welcher Maschine läuft, bestimmt die Klasse nach Arbeitsspeicher; Ausnahmen je Seriennummer stehen im Inventar (<2>fleet.overrides</2>). Wirksam beim nächsten stündlichen Abgleich.",
+            "pathsTitle": "Meldung und Inferenz sind zwei verschiedene Wege",
+            "paths": "<1>Meldung</1> ist der Steuerweg: die Maschine ruft stündlich über öffentliches HTTPS den Anmeldepunkt und holt ihre Zuteilung. „Ohne Rückmeldung“ heißt, dass das seit drei Intervallen ausblieb. <1>Inferenz</1> ist der Datenweg: ob LiteLLM die Maschine beim letzten Gesundheitscheck durch den Tunnel erreicht hat. <1>Angehalten</1> ist kein Ausfall: dort arbeitet gerade jemand, die Maschine hat ihren Inferenzdienst gestoppt und bekommt keine Anfragen.",
+            "none": "noch keine Anmeldung"
+        },
+        "linux": {
+            "title": "Linux-Rechner ohne Geräteverwaltung aufnehmen",
+            "hint": "Auf der Maschine als root ausführen. Sie erzeugt ihr Schlüsselpaar selbst, meldet sich an und richtet zwei systemd-Timer ein. Einen Inferenzdienst installiert das <1>nicht</1> — den betreibt der Standort weiter selbst, er muss nur auf der Tunneladresse lauschen.",
+            "badContact": "keine gültige Adresse",
+            "options": "Freiwillig dazu: <2>--operator \"Labor WI\"</2> (Gruppe, der die Maschine zugerechnet wird, <1>keine</1> Adresse), <2>--port 8000</2> für vLLM statt Ollama, <2>--gate always</2> für eine dedizierte Maschine.",
+            "secret": "Der Befehl enthält das Anmelde-Token der gesamten Flotte — er gehört nicht in ein Ticket und nicht in einen Chat."
+        },
+        "col": {
+            "name": "Name",
+            "address": "Adresse",
+            "profile": "Klasse",
+            "model": "Modell",
+            "lastSeen": "zuletzt",
+            "scripts": "Stand",
+            "state": "Meldung",
+            "inference": "Inferenz"
+        },
+        "stateTip": {
+            "blocked": "Zentral gesperrt: die Maschine wird abgewiesen und ist nicht im Verbund.",
+            "silent": "Seit {{since}} kein Abgleich über den Anmeldepunkt. Sagt nichts über den Tunnel aus — das zeigt die Spalte Inferenz.",
+            "active": "Die Maschine meldet sich stündlich und hat das zuletzt planmäßig getan."
+        },
+        "inferenceTip": {
+            "reachable": "LiteLLM hat diese Maschine beim letzten Gesundheitscheck durch den Tunnel erreicht.",
+            "failing": "Kein Deployment dieser Maschine antwortet: {{error}}",
+            "partial": "Nur ein Teil der Modelle antwortet: {{error}}",
+            "paused": "Gewollt: an der Maschine arbeitet jemand, deshalb hat sie ihren Inferenzdienst angehalten. Kommt von selbst zurück, sobald niemand mehr angemeldet ist.",
+            "unregistered": "LiteLLM kennt diese Maschine nicht. Der Abgleich läuft alle fünf Minuten und nimmt nur Maschinen auf, die gerade antworten.",
+            "unknown": "Die Gesundheitsdaten von LiteLLM waren nicht abrufbar."
+        },
+        "unknownError": "unbekannter Fehler",
+        "noContact": "kein technischer Kontakt",
+        "direct": "direkt",
+        "directTip": "Ohne Tunnel angebunden. Der Schutz liegt dann allein beim API-Schlüssel des Endpunkts, nicht mehr bei der Netztopologie.",
+        "external": "vom Standort bestimmt",
+        "externalTip": "Diese Maschine betreibt ihren Inferenzdienst selbst — ihr Modell lässt sich von hier nicht umschalten. Angezeigt wird, was sie anbietet.",
+        "differsTip": "Zugeteilt ist {{model}}, vorhanden ist etwas anderes: der Agent hat die Zuweisung nicht umgesetzt.",
+        "has": "hat {{models}}",
+        "dedicated": "dediziert",
+        "disabled": "stillgelegt",
+        "pkg": "Paket {{version}}",
+        "canary": "Testgerät",
+        "block": "sperren",
+        "unblock": "freigeben",
+        "blockTip": "Die Maschine wird abgewiesen und bleibt es — auch wenn sie sich neu anmeldet. Der Eintrag und die Adresse bleiben erhalten. Das ist der Weg für ein gestohlenes oder auffälliges Gerät.",
+        "unblockTip": "Sperre aufheben: die Maschine wird beim nächsten Abgleich wieder aufgenommen und behält ihre Adresse.",
+        "forget": "entfernen",
+        "forgetTip": "Eintrag löschen und Adresse freigeben. Das hält die Maschine NICHT fern — meldet sie sich wieder, wird sie mit neuer Adresse aufgenommen. Zum Fernhalten: sperren.",
+        "forgetTitle": "Maschine entfernen?",
+        "forgetConfirm": "Entfernen",
+        "forgetMessage": "{{name}} ({{serial}}) wird aus der Flotte entfernt und die Adresse frei. Meldet sich die Maschine erneut, wird sie neu aufgenommen — zum Fernhalten stattdessen sperren."
+    },
+    "access": {
+        "title": "Zugriffsregeln",
+        "hint": "Wer den LLM-Dienst nutzen darf, mit welcher Rolle und welchem Kontingent. Personen und Gruppen kommen aus dem role-provider. Ohne passende Regel gibt es keinen Zugang — auch nicht zum Chat.",
+        "add": "Regel hinzufügen",
+        "token": "Token",
+        "role": "Rolle",
+        "tier": "Kontingentklasse",
+        "comment": "Kommentar",
+        "changed": "geändert",
+        "fromConfig": "aus der Konfiguration",
+        "bootstrapTip": "Admins aus der Konfiguration. Sie stellen sicher, dass immer jemand diese Liste pflegen kann, und lassen sich hier nicht ändern.",
+        "edit": "bearbeiten",
+        "delete": "löschen",
+        "deleteTitle": "Regel löschen?",
+        "deleteConfirm": "Löschen",
+        "deleteMessage": "Die Regel für {{token}} wird gelöscht. Wer nur über sie Zugang hatte, verliert ihn binnen weniger Minuten.",
+        "howTitle": "Wie die Regeln wirken",
+        "how": {
+            "none": "<1>Keine Regel, kein Zugang.</1> Das gilt für API Keys und den DHBW-Chat gleichermaßen.",
+            "highest": "<1>Mehrere Regeln:</1> es gilt die höchste Rolle; bei gleicher Rolle geht eine Personenregel (<2>user:</2>) einer Gruppenregel (<2>group:</2>) vor.",
+            "roles": "<1>Rollen:</1> „Nutzung“ darf Keys anlegen und den Chat verwenden, „Flottenverwaltung“ zusätzlich die Geräteflotte betreuen, „Administration“ zusätzlich diese Regeln pflegen."
+        },
+        "addTitle": "Regel hinzufügen",
+        "editTitle": "Regel bearbeiten",
+        "kindUser": "Person",
+        "kindGroup": "Gruppe",
+        "email": "E-Mail-Adresse",
+        "group": "Gruppe",
+        "groupHint": "Suche im role-provider nach Kennung oder Name (ab zwei Zeichen).",
+        "tokenPreview": "Token:",
+        "commentPlaceholder": "z. B. Kurs WWI23SEB",
+        "cancel": "Abbrechen",
+        "save": "Speichern"
+    },
+    "roles": {
+        "user": "Nutzung",
+        "fleet-admin": "Flottenverwaltung",
+        "admin": "Administration"
+    },
+    "noAccess": {
+        "title": "Kein Zugang zum LLM-Dienst",
+        "text": "Für dieses Konto gibt es keine Zugriffsregel. Den Zugang vergibt die Administration des Dienstes.",
+        "page": "Diese Seite ist für die eigene Rolle nicht freigegeben."
+    }
+}

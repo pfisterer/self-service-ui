@@ -4,6 +4,7 @@ import { useSession } from '/providers/session.jsx';
 
 import { client as projectsClient } from '@dhbw-cloud/os-mgt-client';
 import { client as dyndnsClient } from '@dhbw-cloud/dynamic-zones-client';
+import { client as llmClient } from '@dhbw-cloud/llm-client';
 
 // The generated clients are build-time dependencies (see d6). They used to be
 // fetched from the API server at runtime, which meant a UI built against an
@@ -20,8 +21,9 @@ import { client as dyndnsClient } from '@dhbw-cloud/dynamic-zones-client';
 // children until the client existed.
 projectsClient.setConfig({ baseUrl: window?.appconfig?.cloudResourcesBaseUrl });
 dyndnsClient.setConfig({ baseUrl: window?.appconfig?.dynamicZonesBaseUrl });
+llmClient.setConfig({ baseUrl: window?.appconfig?.llmBaseUrl });
 
-const CLIENTS = { projects: projectsClient, dyndns: dyndnsClient };
+const CLIENTS = { projects: projectsClient, dyndns: dyndnsClient, llm: llmClient };
 
 // The interceptors need values that live in React (the token, the dev user,
 // the session's expire callback) but must exist before the first request. So

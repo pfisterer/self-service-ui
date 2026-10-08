@@ -14,7 +14,13 @@
         "apiDocumentation": "API-Dokumentation",
         "zoneManagement": "Zonen",
         "administration": "Verwaltung",
-        "pendingDot": "Anfragen warten auf eine Entscheidung"
+        "pendingDot": "Anfragen warten auf eine Entscheidung",
+        "llm": "LLM",
+        "llmOverview": "Übersicht",
+        "llmKeys": "API Keys",
+        "llmUsage": "Verbrauch",
+        "llmFleet": "Flotte",
+        "llmAccess": "Zugriffsregeln"
     },
     "account": {
         "signIn": "Anmelden",

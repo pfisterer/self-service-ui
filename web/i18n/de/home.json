@@ -41,5 +41,10 @@
     "acme": {
         "title": "TLS-Zertifikate: nur über den ACME-Server der DHBW",
         "body": "Für die hier angelegten Zonen <1>müssen</1> TLS-Zertifikate von der ACME-Zertifizierungsstelle der DHBW unter <2>{{host}}</2> kommen. Diese Zonen erlauben (über CAA-Einträge) nur die DHBW-CA, öffentliche CAs wie <3>Let's Encrypt funktionieren dafür nicht</3>. Der DHBW-Server ist kostenlos, hat keine öffentlichen Rate-Limits und stellt auch Zertifikate für Dienste aus, die nur <4>aus dem DHBW-Netz / VPN</4> erreichbar sind. Der Tab <5>TLS-Zertifikate</5> jeder Zone erzeugt cert-manager-Manifeste, die genau auf diesen Server vorausgefüllt sind."
+    },
+    "llm": {
+        "title": "Sprachmodelle (LLM)",
+        "body": "Der DHBW-Chat im Browser und ein OpenAI-kompatibler Endpunkt für VS Code und eigene Programme — mit eigenem API Key und Kontingent.",
+        "open": "Zum LLM-Dienst"
     }
 }
