@@ -756,6 +756,8 @@
         "noServers": "keine VM",
         "reserved": "Reserviert (zugeteilt)",
         "inUse": "Belegt, Stand des letzten Abgleichs",
-        "vms": "VMs"
+        "vms": "VMs",
+        "sortReserved": "Nach reserviertem {{name}} sortieren",
+        "sortInUse": "Nach belegtem {{name}} sortieren"
     }
 }

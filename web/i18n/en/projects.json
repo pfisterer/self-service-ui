@@ -756,6 +756,8 @@
         "noServers": "no VM",
         "reserved": "Reserved (granted)",
         "inUse": "In use, as of the last sync",
-        "vms": "VMs"
+        "vms": "VMs",
+        "sortReserved": "Sort by reserved {{name}}",
+        "sortInUse": "Sort by {{name}} in use"
     }
 }

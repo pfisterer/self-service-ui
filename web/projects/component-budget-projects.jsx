@@ -85,10 +85,12 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
     const pages = Math.max(1, Math.ceil(total / TABLE_PAGE_SIZE));
     const filtered = q || statuses.length > 0 || group;
 
+    // Amounts start with the biggest: "who uses most" is the question there.
     const toggleSort = (key) => {
+        const numeric = key === 'servers' || key.includes(':');
         setSort(prev => (prev.key === key
             ? { key, order: prev.order === 'asc' ? 'desc' : 'asc' }
-            : { key, order: 'asc' }));
+            : { key, order: numeric ? 'desc' : 'asc' }));
         setPage(1);
     };
 
@@ -243,6 +245,17 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                                         <Table.Th key={c.id} ta="right" px={6}>
                                             <Text size="xs" fw={600} lh={1.2}>{c.label}</Text>
                                             {c.unit && <Text size="10px" c="dimmed" lh={1.2}>{c.unit}</Text>}
+                                            {/* One sort per line of the cells below: what was
+                                                granted, what is in use — the same marks as
+                                                in front of the rows. VMs have only the second. */}
+                                            <Group gap={2} justify="flex-end" wrap="nowrap" mt={2}>
+                                                {c.id !== VMS && (
+                                                    <ResourceSort icon={Package} label={t('projects.resources.sortReserved', { name: c.label })}
+                                                        sortKey={`reserved:${c.id}`} sort={sort} onSort={toggleSort} />
+                                                )}
+                                                <ResourceSort icon={Activity} label={t('projects.resources.sortInUse', { name: c.label })}
+                                                    sortKey={c.id === VMS ? 'servers' : `used:${c.id}`} sort={sort} onSort={toggleSort} />
+                                            </Group>
                                         </Table.Th>
                                     ))}
                                     <Table.Th w={84}><VisuallyHidden>{t('projects.budgetProjects.colActions')}</VisuallyHidden></Table.Th>
@@ -276,6 +289,24 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                 )}
             </Stack>
         </Paper>
+    );
+}
+
+// ResourceSort is a sort control for a resource column: the mark of the line it
+// sorts by (reserved or in use), with the direction once it is the active sort.
+function ResourceSort({ icon: Icon, label, sortKey, sort, onSort }) {
+    const active = sort.key === sortKey;
+    const Arrow = sort.order === 'asc' ? ArrowUp : ArrowDown;
+    return (
+        <Tooltip label={label} openDelay={300}>
+            <UnstyledButton onClick={() => onSort(sortKey)} aria-label={label}
+                aria-sort={active ? (sort.order === 'asc' ? 'ascending' : 'descending') : undefined}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 1,
+                    color: active ? 'var(--mantine-color-dhbw-7)' : 'var(--mantine-color-gray-5)' }}>
+                <Icon size={11} />
+                {active && <Arrow size={10} />}
+            </UnstyledButton>
+        </Tooltip>
     );
 }
 
