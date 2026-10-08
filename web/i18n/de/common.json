@@ -68,6 +68,11 @@
             "valueRequired": "Ein Wert ist nötig.",
             "ipv4": "Bitte eine gültige IPv4-Adresse eingeben (z. B. 192.0.2.1).",
             "ipv6": "Bitte eine gültige IPv6-Adresse eingeben (z. B. 2001:db8::1)."
+        },
+        "principalSearch": {
+            "placeholder": "z. B. mannheim UND beschäftigte",
+            "syntax": "Mehrere Wörter: eines davon · \"…\": genaue Phrase · UND oder +Wort: muss vorkommen · * als Platzhalter. Rollen wie #beschaeftigte werden mit ihrer Gruppe angeboten.",
+            "unreachable": "Das Gruppenverzeichnis ist nicht erreichbar — keine Vorschläge. Ein Token lässt sich trotzdem von Hand eintippen."
         }
     },
     "providers": {

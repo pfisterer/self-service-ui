@@ -307,15 +307,10 @@
         },
         "addTitle": "Regel hinzufügen",
         "editTitle": "Regel bearbeiten",
-        "kindUser": "Person",
-        "kindGroup": "Gruppe",
-        "email": "E-Mail-Adresse",
-        "group": "Gruppe",
-        "groupHint": "Suche im role-provider nach Kennung oder Name (ab zwei Zeichen).",
-        "tokenPreview": "Token:",
         "commentPlaceholder": "z. B. Kurs WWI23SEB",
         "cancel": "Abbrechen",
-        "save": "Speichern"
+        "save": "Speichern",
+        "tokenInvalid": "Bitte ein Token der Form user:<E-Mail> oder group:<Kennung> angeben."
     },
     "roles": {
         "user": "Nutzung",

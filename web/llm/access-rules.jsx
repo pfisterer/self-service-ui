@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useDebouncedValue } from '@mantine/hooks';
 import { Trans, useTranslation } from 'react-i18next';
 import {
-    Alert, Autocomplete, Badge, Button, Code, Container, Group, Modal, Paper, SegmentedControl,
-    Select, Stack, Table, Text, TextInput, Title, Tooltip,
+    Alert, Badge, Button, Code, Container, Group, Modal, Paper, Select, Stack, Table, Text, TextInput, Title, Tooltip,
 } from '@mantine/core';
 import { Lock, Pencil, Plus, Trash2 } from 'lucide-react';
 import { formatDateTime } from '/format-date.js';
+import { PrincipalTokenAutocomplete } from '/helper/principal-token-autocomplete.jsx';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
@@ -16,16 +15,9 @@ import { llmKeys } from '/llm/query-keys.js';
 const ROLES = ['user', 'fleet-admin', 'admin'];
 const ROLE_COLOUR = { user: 'gray', 'fleet-admin': 'blue', admin: 'dhbw' };
 
-// A token is "user:<email>" or "group:<id>" — the role-provider's notation.
-// The editor splits it into kind and value so nobody has to type the prefix.
-const splitToken = (token = '') => {
-    const [kind, ...rest] = token.split(':');
-    return kind === 'group' || kind === 'user' ? { kind, value: rest.join(':') } : { kind: 'user', value: token };
-};
-const joinToken = (kind, value) => {
-    // A pasted "group:…" or "user:…" must not end up doubled.
-    return `${kind}:${value.trim().replace(/^(user|group):/i, '')}`;
-};
+// What a rule may name: one person or one group (optionally with a relation,
+// e.g. "group:wwi23seb#dozent"), in the role-provider's notation.
+const TOKEN_OK = /^(user:[^@\s]+@[^@\s]+|group:\S+)$/i;
 
 export function LlmAccessRules() {
     const { t } = useTranslation();
@@ -138,20 +130,10 @@ export function LlmAccessRules() {
 function RuleEditor({ rule, tiers, onClose }) {
     const { t } = useTranslation();
     const api = useLlmApi();
-    const initial = splitToken(rule.token);
-    const [kind, setKind] = useState(initial.kind);
-    const [value, setValue] = useState(initial.value);
+    const [token, setToken] = useState(rule.token ?? '');
     const [role, setRole] = useState(rule.role ?? 'user');
     const [tier, setTier] = useState(rule.tier ?? tiers[0] ?? null);
     const [comment, setComment] = useState(rule.comment ?? '');
-    const [search] = useDebouncedValue(value.trim(), 300);
-
-    const groups = useQuery({
-        queryKey: llmKeys.groups(search),
-        queryFn: () => api.searchGroups(search),
-        enabled: kind === 'group' && search.length >= 2,
-        staleTime: 60_000,
-    });
 
     const save = useApiMutation({
         mutationFn: (body) => (rule.id ? api.updateAccessRule(rule.id, body) : api.createAccessRule(body)),
@@ -161,27 +143,18 @@ function RuleEditor({ rule, tiers, onClose }) {
         onConflict: onClose,
     });
 
-    const valid = kind === 'user' ? /^[^@\s]+@[^@\s]+$/.test(value.trim()) : value.trim().length > 0;
-    const options = (groups.data ?? []).map(g => ({
-        value: g.token.replace(/^group:/, ''),
-        label: g.display_name ? `${g.token.replace(/^group:/, '')} — ${g.display_name}` : g.token.replace(/^group:/, ''),
-    }));
+    // A bare address is a person — the same reading as the projects' token lists.
+    const trimmed = token.trim();
+    const normalized = /^[^:\s]+@\S+$/.test(trimmed) ? `user:${trimmed}` : trimmed;
+    const valid = TOKEN_OK.test(normalized);
 
     return (
         <Modal opened onClose={onClose} title={t(rule.id ? 'llm.access.editTitle' : 'llm.access.addTitle')} size="lg" centered>
             <Stack gap="sm">
-                <SegmentedControl value={kind} onChange={setKind}
-                    data={[{ value: 'user', label: t('llm.access.kindUser') }, { value: 'group', label: t('llm.access.kindGroup') }]} />
-                {kind === 'user' ? (
-                    <TextInput label={t('llm.access.email')} placeholder="vorname.nachname@dhbw.de" value={value}
-                        onChange={e => setValue(e.currentTarget.value)} data-autofocus />
-                ) : (
-                    <Autocomplete label={t('llm.access.group')} description={t('llm.access.groupHint')}
-                        placeholder="wwi23seb" value={value} onChange={setValue}
-                        data={options} filter={({ options: o }) => o} limit={25}
-                        comboboxProps={{ withinPortal: true }} />
-                )}
-                <Text size="xs" c="dimmed">{t('llm.access.tokenPreview')} <Code>{value.trim() ? joinToken(kind, value) : '—'}</Code></Text>
+                <PrincipalTokenAutocomplete single label={t('llm.access.token')}
+                    value={token} onChange={setToken}
+                    search={api.searchPrincipalDetails} searchKey={llmKeys.principals()} />
+                {trimmed && !valid && <Text size="xs" c="orange.8">{t('llm.access.tokenInvalid')}</Text>}
                 <Group grow>
                     <Select label={t('llm.access.role')} value={role} onChange={setRole} allowDeselect={false}
                         data={ROLES.map(r => ({ value: r, label: t(`llm.roles.${r}`) }))} />
@@ -193,7 +166,7 @@ function RuleEditor({ rule, tiers, onClose }) {
                 <Group justify="flex-end" mt="sm">
                     <Button variant="default" onClick={onClose}>{t('llm.access.cancel')}</Button>
                     <Button loading={save.isPending} disabled={!valid || !tier}
-                        onClick={() => save.mutate({ token: joinToken(kind, value), role, tier, comment })}>
+                        onClick={() => save.mutate({ token: normalized, role, tier, comment })}>
                         {t('llm.access.save')}
                     </Button>
                 </Group>

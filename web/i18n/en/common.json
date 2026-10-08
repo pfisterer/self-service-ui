@@ -68,6 +68,11 @@
             "valueRequired": "Value is required.",
             "ipv4": "Enter a valid IPv4 address (e.g. 192.0.2.1).",
             "ipv6": "Enter a valid IPv6 address (e.g. 2001:db8::1)."
+        },
+        "principalSearch": {
+            "placeholder": "e.g. mannheim UND beschäftigte",
+            "syntax": "Several words: any of them · \"…\": exact phrase · UND or +word: required · * wildcard. Roles such as #beschaeftigte are offered with their group.",
+            "unreachable": "The group directory is not reachable — no suggestions. You can still type a token by hand."
         }
     },
     "providers": {

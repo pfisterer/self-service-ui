@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { DeletingBadge, InfoPopover, NodeStatusBadge } from './component-common.jsx';
-import { PrincipalTokenAutocomplete } from './component-principal-token-autocomplete.jsx';
+import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
 import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
@@ -175,7 +175,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                         </Badge>
                     ) : (
                         <div style={{ flex: '1 1 260px' }}>
-                            <PrincipalTokenAutocomplete
+                            <ProjectsPrincipalAutocomplete
                                 value={groupDraft}
                                 onChange={setGroupDraft}
                                 onSelect={applyGroup}

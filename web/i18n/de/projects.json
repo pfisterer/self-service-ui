@@ -292,11 +292,6 @@
         "shareInUse": "Nichts mehr frei – der eigene Anteil ({{share}}) ist durch die eigenen Projekte belegt",
         "budgetUsedUp": "Nichts mehr frei – das Budget ist ausgeschöpft"
     },
-    "principalSearch": {
-        "placeholder": "z. B. mannheim UND beschäftigte",
-        "syntax": "Mehrere Wörter: eines davon · \"…\": genaue Phrase · UND oder +Wort: muss vorkommen · * als Platzhalter. Rollen wie #beschaeftigte werden mit ihrer Gruppe angeboten.",
-        "unreachable": "Das Gruppenverzeichnis ist nicht erreichbar — keine Vorschläge. Ein Token lässt sich trotzdem von Hand eintippen."
-    },
     "projectCard": {
         "overcommittedBadge": "Über dem Limit",
         "overcommittedWithAmount": "Nutzt {{amount}} in OpenStack, mehr als gewährt. Dem Budget wird der höhere Wert berechnet, und neue Ressourcen sind gesperrt.",

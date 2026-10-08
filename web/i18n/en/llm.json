@@ -307,15 +307,10 @@
         },
         "addTitle": "Add rule",
         "editTitle": "Edit rule",
-        "kindUser": "Person",
-        "kindGroup": "Group",
-        "email": "Email address",
-        "group": "Group",
-        "groupHint": "Searches the role-provider by id or name (from two characters).",
-        "tokenPreview": "Token:",
         "commentPlaceholder": "e.g. course WWI23SEB",
         "cancel": "Cancel",
-        "save": "Save"
+        "save": "Save",
+        "tokenInvalid": "Please enter a token of the form user:<email> or group:<id>."
     },
     "roles": {
         "user": "Use",

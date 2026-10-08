@@ -6,7 +6,7 @@ import { useClient } from '/providers/client.jsx';
 import {
     blockMachine, createAccessRule, createKey, deleteAccessRule, deleteFleetPackage,
     deleteKey, forgetMachine, getFleet, getMe, getUsage, listAccessRules, listTiers,
-    searchGroups, unblockMachine, updateAccessRule,
+    searchPrincipals, unblockMachine, updateAccessRule,
 } from '@dhbw-cloud/llm-client';
 
 // useLlmApi is the one place that knows the transport of the LLM section.
@@ -41,7 +41,15 @@ export function useLlmApi() {
             updateAccessRule: (id, rule) => call(updateAccessRule, { path: { id }, body: rule, headers: JSON_HEADERS }),
             deleteAccessRule: (id) => call(deleteAccessRule, { path: { id } }),
             listTiers: async () => (await call(listTiers)) ?? [],
-            searchGroups: async (q) => (await call(searchGroups, { query: { q } })) ?? [],
+            // Same shape as the projects facade's searchPrincipalDetails, for
+            // the shared PrincipalTokenAutocomplete: groups first, then people.
+            searchPrincipalDetails: async (q, limit = 10) => {
+                const data = await call(searchPrincipals, { query: { q, limit } });
+                return [
+                    ...(data?.groups ?? []).filter(g => g?.token),
+                    ...(data?.users ?? []).map(email => ({ token: `user:${email}`, description: null })),
+                ];
+            },
         };
     }, [client]);
 }

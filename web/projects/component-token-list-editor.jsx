@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Badge, Button, Group, Stack, Text } from '@mantine/core';
 import { ListPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { PrincipalTokenAutocomplete } from './component-principal-token-autocomplete.jsx';
+import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
 import { PrincipalImportModal } from './modal-principal-import.jsx';
 import { tokenDisplay, useTokenLabels } from './token-labels.jsx';
 import { COLOR } from './util-project.jsx';
@@ -55,7 +55,7 @@ export function TokenListEditor({ label, description, tokens, onChange, placehol
 
             <Group gap="xs" align="flex-start" wrap="nowrap">
                 <div style={{ flex: 1 }}>
-                    <PrincipalTokenAutocomplete
+                    <ProjectsPrincipalAutocomplete
                         value={draft}
                         onChange={setDraft}
                         onSelect={add}

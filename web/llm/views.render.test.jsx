@@ -62,7 +62,7 @@ beforeEach(() => {
         getFleet: async () => FLEET,
         listAccessRules: async () => RULES,
         listTiers: async () => ['staff', 'student'],
-        searchGroups: async () => [],
+        searchPrincipalDetails: async () => [],
     };
     consoleErrors = [];
     vi.spyOn(console, 'error').mockImplementation((...args) => { consoleErrors.push(args.join(' ')); });
