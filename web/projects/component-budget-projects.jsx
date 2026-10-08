@@ -198,28 +198,35 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                 {query.isError ? (
                     <LoadError query={query} title={t('projects.budgetProjects.loadError')} />
                 ) : (
-                    <Table.ScrollContainer minWidth={560}>
-                        <Table highlightOnHover verticalSpacing="xs" fz="sm">
+                    // Fixed layout with set shares, not "as wide as the content": the
+                    // content of a row — a long name, a status badge, resources that
+                    // must not break inside an entry — always added up to more than
+                    // the detail panel has, and the table scrolled sideways. Now
+                    // each column gets its share, names cut off with an ellipsis and
+                    // resources wrap between entries. Only a phone-narrow panel
+                    // still scrolls.
+                    <Table.ScrollContainer minWidth={480}>
+                        <Table highlightOnHover verticalSpacing="xs" fz="sm" layout="fixed">
                             <Table.Thead>
                                 <Table.Tr>
                                     {/* Four columns, two of them stacked: owner and
                                         place under the name, the end date under the
                                         status. Six side by side did not fit the
                                         detail panel and scrolled sideways. */}
-                                    <Table.Th>
-                                        <Group gap="md" wrap="nowrap">
+                                    <Table.Th w="36%">
+                                        <Group gap="md" rowGap={0} wrap="wrap">
                                             <SortButton label={t('projects.budgetProjects.colName')} sortKey="name" sort={sort} onSort={toggleSort} />
                                             <SortButton label={t('projects.budgetProjects.colOwner')} sortKey="owner" sort={sort} onSort={toggleSort} dimmed />
                                         </Group>
                                     </Table.Th>
-                                    <Table.Th>
-                                        <Group gap="md" wrap="nowrap">
+                                    <Table.Th w="25%">
+                                        <Group gap="md" rowGap={0} wrap="wrap">
                                             <SortButton label={t('projects.budgetProjects.colStatus')} sortKey="status" sort={sort} onSort={toggleSort} />
                                             <SortButton label={t('projects.budgetProjects.colValidUntil')} sortKey="termination_date" sort={sort} onSort={toggleSort} dimmed />
                                         </Group>
                                     </Table.Th>
                                     <Table.Th>{t('projects.budgetProjects.colResources')}</Table.Th>
-                                    <Table.Th w={1}><VisuallyHidden>{t('projects.budgetProjects.colActions')}</VisuallyHidden></Table.Th>
+                                    <Table.Th w={84}><VisuallyHidden>{t('projects.budgetProjects.colActions')}</VisuallyHidden></Table.Th>
                                 </Table.Tr>
                             </Table.Thead>
                             <Table.Tbody>
@@ -279,7 +286,7 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
 
     return (
         <Table.Tr style={{ cursor: 'pointer' }} onClick={() => onOpen(node)}>
-            <Table.Td maw={320}>
+            <Table.Td>
                 <Group gap={6} wrap="nowrap">
                     <Text size="sm" fw={500} truncate>{nodeTitle(node)}</Text>
                     {hasAllocations(node) && (
@@ -328,7 +335,7 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
                     quota={effectiveLimit(node, node.pending?.limit || node.limit)} />
             </Table.Td>
             <Table.Td>
-                <Group gap="2" wrap="nowrap" justify="flex-end">
+                <Group gap="2" wrap="wrap" justify="flex-end">
                     <RowAction label={t('projects.actions.details')} onClick={act('details')}><Eye size="14" /></RowAction>
                     {can.change && <RowAction label={t('projects.actions.edit')} onClick={act('change')}><Pencil size="14" /></RowAction>}
                     {can.approve && <RowAction label={t('projects.actions.approve')} color={COLOR.positive} onClick={act('approve')}><Check size="14" /></RowAction>}
