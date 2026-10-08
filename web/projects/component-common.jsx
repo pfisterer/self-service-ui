@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Calendar, Info } from 'lucide-react';
+import { Calendar, Info, User, Users } from 'lucide-react';
 import { DatePickerInput } from '@mantine/dates';
-import { ActionIcon, Badge, Box, Button, Checkbox, Group, NumberInput, Popover, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Anchor, Badge, Box, Button, Checkbox, Group, NumberInput, Popover, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -85,28 +85,32 @@ export function NodeStatusBadge({ status, size = 'sm', provisioning = false, ful
 
 // PersonBadge names a person and lets you write to them: everything the UI says
 // about who is responsible ends in a question ("can I ask them?"), and the
-// address is right there. A group has no mailbox, so it stays a plain badge.
-export function PersonBadge({ email, children, color = COLOR.identity, variant = 'outline', size = 'sm' }) {
+// address is right there. A group has no mailbox, so it stays plain text.
+//
+// Text with a small icon rather than an outlined pill: a card names half a
+// dozen people and groups, and as many pills made it restless without saying
+// anything more. The icon tells a person from a group, the link appears on
+// hover.
+export function PersonBadge({ email, children, size = 'sm' }) {
     const label = children ?? email;
-    if (!email) {
-        return (
-            <Badge size={size} variant={variant} color={color} style={{ textTransform: 'none' }}>
-                {label}
-            </Badge>
-        );
-    }
+    const Icon = email ? User : Users;
+    const content = (
+        <Group component="span" gap={4} wrap="nowrap" style={{ display: 'inline-flex', verticalAlign: 'middle' }}>
+            <Icon size={size === 'xs' ? 12 : 14} style={{ flexShrink: 0, color: 'var(--mantine-color-gray-6)' }} />
+            <Text span size={size}>{label}</Text>
+        </Group>
+    );
+    if (!email) return content;
     return (
-        <Badge component="a" href={`mailto:${email}`} title={`Write to ${email}`}
-            size={size} variant={variant} color={color}
-            style={{ textTransform: 'none', cursor: 'pointer' }}>
-            {label}
-        </Badge>
+        <Anchor href={`mailto:${email}`} title={`Write to ${email}`} c="inherit" underline="hover" size={size}>
+            {content}
+        </Anchor>
     );
 }
 
 // TokenBadgeList renders a list of user:/group: tokens as badges, showing the
 // group's display name next to the token where the directory knows one.
-export function TokenBadgeList({ tokens, color = COLOR.identity, emptyMessage = null, size = 'sm' }) {
+export function TokenBadgeList({ tokens, emptyMessage = null, size = 'sm' }) {
     const labels = useTokenLabels(tokens);
     if (!tokens || tokens.length === 0) {
         return emptyMessage
@@ -114,9 +118,9 @@ export function TokenBadgeList({ tokens, color = COLOR.identity, emptyMessage = 
             : null;
     }
     return (
-        <Group gap="xs" wrap="wrap">
+        <Group gap="md" rowGap={2} wrap="wrap">
             {tokens.map(token => (
-                <PersonBadge key={token} email={tokenEmail(token)} size={size} color={color}>
+                <PersonBadge key={token} email={tokenEmail(token)} size={size}>
                     {tokenDisplay(token, labels[token])}
                 </PersonBadge>
             ))}
@@ -151,12 +155,11 @@ export function UserRoleBadgeList({ users, label, labelColor, size = 'sm' }) {
     return (
         <div>
             {label && <Text size="xs" c={labelColor} fw={600} mb="xs">{label}</Text>}
-            <Group gap="xs" wrap="wrap">
+            <Group gap="md" rowGap={2} wrap="wrap">
                 {users.map(u => (
-                    <Badge key={`${u.token}:${u.openstack_role}`} size={size} variant="outline" color={COLOR.identity}
-                        style={{ textTransform: 'none' }}>
-                        {u.token} ({formatRoleLabel(u.openstack_role)})
-                    </Badge>
+                    <PersonBadge key={`${u.token}:${u.openstack_role}`} email={tokenEmail(u.token)} size={size}>
+                        {u.token} <Text span inherit c="dimmed">({formatRoleLabel(u.openstack_role)})</Text>
+                    </PersonBadge>
                 ))}
             </Group>
         </div>
