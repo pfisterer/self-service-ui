@@ -3,7 +3,7 @@ import { useLocation, useRoute } from 'wouter';
 import { formatError } from '/helper/api-error.js';
 import { useQuery } from '@tanstack/react-query';
 import { useZonesApi } from '/dyndns/api-zones.jsx';
-import { usePolicyRulesQuery } from '/dyndns/use-policy.jsx';
+import { useDnsPolicyStatus, usePolicyRulesQuery } from '/dyndns/use-policy.jsx';
 import { ZoneEventsAdminPanel } from '/dyndns/zone-events-admin.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
 import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
@@ -46,6 +46,7 @@ export function DnsPolicy() {
     const rules = useMemo(() => policyQuery.data?.rules ?? [], [policyQuery.data]);
     const isEditAllowed = !!policyQuery.data?.edit_allowed;
     const isSuperAdmin = !!policyQuery.data?.is_super_admin;
+    const { adminEvents } = useDnsPolicyStatus();
 
     const adminTabs = ['delegations', 'orphaned', 'zone-events'];
     const activeTab = (requestedTab === 'rules' || (isSuperAdmin && adminTabs.includes(requestedTab)))
@@ -78,7 +79,12 @@ export function DnsPolicy() {
                         <Tabs.Tab value="rules">{t('dyndns.policy.tabRules')}</Tabs.Tab>
                         {isSuperAdmin && <Tabs.Tab value="delegations">{t('dyndns.policy.tabDelegations')}</Tabs.Tab>}
                         {isSuperAdmin && <Tabs.Tab value="orphaned">{t('dyndns.policy.tabOrphaned')}</Tabs.Tab>}
-                        {isSuperAdmin && <Tabs.Tab value="zone-events">{t('dyndns.policy.tabEvents')}</Tabs.Tab>}
+                        {isSuperAdmin && (
+                            <Tabs.Tab value="zone-events"
+                                rightSection={adminEvents > 0 ? <Badge size="xs" color="orange" circle>{adminEvents}</Badge> : null}>
+                                {t('dyndns.policy.tabEvents')}
+                            </Tabs.Tab>
+                        )}
                     </Tabs.List>
 
                     <Tabs.Panel value="rules" pt="md">

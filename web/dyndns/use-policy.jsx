@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '/providers/auth.jsx';
 import { useZonesApi } from '/dyndns/api-zones.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
+import { useZoneEventsQuery } from '/dyndns/zones/zone-events-banner.jsx';
 
 // The policy rules, asked for in one place. Two callers share it — the DNS
 // Policy page renders them, the header decides from the same response whether
@@ -36,10 +37,21 @@ export function usePolicyRulesQuery() {
 // page's own error state rather than on a menu that pretends it is gone.
 export function useDnsPolicyStatus() {
     const query = usePolicyRulesQuery();
+    const isSuperAdmin = !!query.data?.is_super_admin;
+    // Active zone events, for the dot in the navigation. The same query the
+    // zone list and the admin tab read, so the dot and what they show agree.
+    // The server scopes it: a super-admin gets every zone's events, everyone
+    // else those of their own zones.
+    const events = useZoneEventsQuery().data ?? [];
 
     return {
         hasPolicy: query.data
             ? (query.data.rules.length > 0 || !!query.data.edit_allowed)
             : query.isError,
+        isSuperAdmin,
+        // Where a problem is shown: on the admin's Zone Events tab, or in the
+        // user's own zone list.
+        adminEvents: isSuperAdmin ? events.length : 0,
+        ownEvents: isSuperAdmin ? 0 : events.length,
     };
 }

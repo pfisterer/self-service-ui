@@ -36,7 +36,7 @@ export function useNav() {
     const [currentPath] = useLocation();
     const { t } = useTranslation();
     const { isRoot, pending, hasBudgets } = useCloudStatus();
-    const { hasPolicy } = useDnsPolicyStatus();
+    const { hasPolicy, adminEvents, ownEvents } = useDnsPolicyStatus();
     const llm = useLlmMe();
 
 
@@ -63,14 +63,17 @@ export function useNav() {
             id: 'dyndns',
             label: t('nav.dnsZones'),
             base: '/dyndns',
+            // Like the projects' pending requests: a dot, not a count, wherever
+            // a zone problem is waiting to be looked at.
+            dot: adminEvents > 0 || ownEvents > 0,
             items: [
-                { label: t('nav.zoneManagement'), href: '/dyndns/zones' },
+                { label: t('nav.zoneManagement'), href: '/dyndns/zones', dot: ownEvents > 0 },
                 // Read-only for most users, and worth reading only if a rule
                 // actually applies to them; empty for a student. Named for
                 // what the page became: policy rules are one tab among the
                 // administrative ones (delegations, orphaned zones, zone
                 // events). Old /policy links redirect (see dyndns-routes).
-                hasPolicy && { label: t('nav.administration'), href: '/dyndns/administration' },
+                hasPolicy && { label: t('nav.administration'), href: '/dyndns/administration', dot: adminEvents > 0 },
                 { label: t('nav.apiDocumentation'), href: '/dyndns/api-doc' },
             ].filter(Boolean),
         },
