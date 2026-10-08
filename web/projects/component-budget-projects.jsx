@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Check, Eye, FolderInput, Gift, MoreHorizontal, Pencil, Rocket, Search, Trash2, X } from 'lucide-react';
 import { ActionIcon, Badge, Group, Loader, Menu, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
-import { useDebouncedValue } from '@mantine/hooks';
+import { useDebouncedValue, useLocalStorage } from '@mantine/hooks';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
@@ -12,6 +12,7 @@ import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, 
 import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
+import { formatDate } from '../format-date.js';
 import { ProjectResources } from './component-project-resources.jsx';
 
 // Rows per page. A table, unlike the tree it replaces for projects, pages
@@ -46,7 +47,14 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
     const [page, setPage] = useState(1);
     // Projects of the sub-budgets too: a budget that only structures its
     // sub-budgets has no projects of its own and would show an empty table.
-    const [deep, setDeep] = useState(false);
+    // Remembered per browser: whoever looks below their budgets once wants to
+    // keep doing so, and re-ticking it on every visit was the complaint.
+    // Read synchronously, so the first query already asks the right question.
+    const [deep, setDeep] = useLocalStorage({
+        key: 'self-service.budget-projects.deep',
+        defaultValue: false,
+        getInitialValueInEffect: false,
+    });
     const [q] = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS);
 
     // Every filter change starts over at the first page: page 7 of the old
@@ -197,7 +205,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                                     <SortHeader label={t('projects.budgetProjects.colName')} sortKey="name" sort={sort} onSort={toggleSort} />
                                     <SortHeader label={t('projects.budgetProjects.colOwner')} sortKey="owner" sort={sort} onSort={toggleSort} />
                                     <SortHeader label={t('projects.budgetProjects.colStatus')} sortKey="status" sort={sort} onSort={toggleSort} />
-                                    <Table.Th>{t('projects.budgetProjects.colResources')}</Table.Th>
+                                    <Table.Th miw={220}>{t('projects.budgetProjects.colResources')}</Table.Th>
                                     <SortHeader label={t('projects.budgetProjects.colValidUntil')} sortKey="termination_date" sort={sort} onSort={toggleSort} />
                                     <Table.Th w={1}><VisuallyHidden>{t('projects.budgetProjects.colActions')}</VisuallyHidden></Table.Th>
                                 </Table.Tr>
@@ -236,7 +244,8 @@ function SortHeader({ label, sortKey, sort, onSort }) {
     const active = sort.key === sortKey;
     const Icon = !active ? ArrowUpDown : sort.order === 'asc' ? ArrowUp : ArrowDown;
     return (
-        <Table.Th aria-sort={active ? (sort.order === 'asc' ? 'ascending' : 'descending') : undefined}>
+        <Table.Th aria-sort={active ? (sort.order === 'asc' ? 'ascending' : 'descending') : undefined}
+            style={{ whiteSpace: 'nowrap' }}>
             <UnstyledButton onClick={() => onSort(sortKey)}>
                 <Group gap="4" wrap="nowrap">
                     <Text size="sm" fw={600}>{label}</Text>
@@ -286,14 +295,20 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
                     : <NodeStatusBadge status={node.status} size="xs" full />}
             </Table.Td>
             <Table.Td>
-                <ProjectResources node={node} resources={resources}
+                <ProjectResources node={node} resources={resources} compact
                     quota={effectiveLimit(node, node.pending?.limit || node.limit)} />
             </Table.Td>
             <Table.Td>
-                {/* A given-up project has no end date that means anything. */}
-                <Text size="xs" c={node.termination_date && !isRetired(node) ? expiryTone(node.termination_date) : 'dimmed'}>
-                    {(!isRetired(node) && expiryValue(t, node.termination_date)) || '—'}
-                </Text>
+                {/* A given-up project has no end date that means anything. The
+                    date alone keeps the column narrow; how far off it is, is on
+                    hover — the colour already says whether it is close. */}
+                {node.termination_date && !isRetired(node) ? (
+                    <Tooltip label={expiryValue(t, node.termination_date)} openDelay={300}>
+                        <Text size="xs" c={expiryTone(node.termination_date)} style={{ whiteSpace: 'nowrap' }}>
+                            {formatDate(node.termination_date)}
+                        </Text>
+                    </Tooltip>
+                ) : <Text size="xs" c="dimmed">—</Text>}
             </Table.Td>
             <Table.Td>
                 <Group gap="2" wrap="nowrap" justify="flex-end">

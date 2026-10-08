@@ -517,17 +517,22 @@ export function resourceSummaryText(resources, quota) {
 // measured — it is shown as granted only, never as zero in use.
 // Availabilities read as their name, as in resourceSummaryText.
 export function resourceUsageText(resources, quota, inUse) {
-    if (!resources || !quota) return '';
+    return resourceUsageItems(resources, quota, inUse, ' / ').join(' · ');
+}
+
+// resourceUsageItems is the same as a list, one entry per resource, for places
+// that lay the entries out themselves; `sep` goes between used and granted.
+export function resourceUsageItems(resources, quota, inUse, sep = '/') {
+    if (!resources || !quota) return [];
     return resources
         .filter(r => (quota[r.id] ?? 0) !== 0)
         .map(r => {
             if (isAvailability(r)) return r.name;
             const limit = quota[r.id] === UNLIMITED_QUOTA ? '∞' : quota[r.id];
             const used = inUse?.[r.id];
-            const v = used === undefined ? limit : `${used} / ${limit}`;
+            const v = used === undefined ? limit : `${used}${sep}${limit}`;
             return r.unit ? `${v} ${r.unit} ${r.name}` : `${v} ${r.name}`;
-        })
-        .join(' · ');
+        });
 }
 
 // The resources a project is CHARGED for beyond what it declared, i.e. where
