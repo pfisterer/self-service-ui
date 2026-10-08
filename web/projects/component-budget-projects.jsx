@@ -301,15 +301,18 @@ function resourceColumns(t, resources, items) {
 const VMS = '__vms';
 
 // ResourceCells are a project's figures, one cell per column: what it was
-// granted on the first line, what is in use on the second. The second line
-// exists once the reconciler has measured the project; a resource OpenStack
-// does not measure stays empty there, never 0.
+// granted on the first line, what is in use on the second. Every row has both
+// lines and every cell a value, so the rows read alike: a figure where there is
+// one, a dimmed dash where there is none — nothing granted, nothing to grant
+// (VMs), or nothing measured (an import, a project not synced yet, a resource
+// OpenStack does not count). A dash is never a zero.
 function ResourceCells({ node, columns }) {
     const { t } = useTranslation();
     const quota = effectiveLimit(node, node.pending?.limit || node.limit) || {};
     const inUse = node.os_in_use;
-    const measured = !!inUse;
-    const line = (v) => <Text size="xs" lh={1.6} style={{ whiteSpace: 'nowrap' }}>{v ?? '\u00a0'}</Text>;
+    const line = (v) => (v === null || v === undefined)
+        ? <Text size="xs" lh={1.6} c="dimmed">–</Text>
+        : <Text size="xs" lh={1.6} style={{ whiteSpace: 'nowrap' }}>{v}</Text>;
     const marker = (Icon, label) => (
         <Tooltip label={label} openDelay={300}>
             <Box h={19} style={{ display: 'flex', alignItems: 'center', color: 'var(--mantine-color-gray-6)' }}>
@@ -321,16 +324,16 @@ function ResourceCells({ node, columns }) {
         <>
             <Table.Td px={0}>
                 {marker(Package, t('projects.resources.reserved'))}
-                {measured && marker(Activity, t('projects.resources.inUse'))}
+                {marker(Activity, t('projects.resources.inUse'))}
             </Table.Td>
             {columns.map(c => {
-                const reserved = c.id === VMS ? null
-                    : (quota[c.id] ?? 0) === 0 ? '–' : quota[c.id] === UNLIMITED_QUOTA ? '∞' : quota[c.id];
+                const reserved = c.id === VMS || (quota[c.id] ?? 0) === 0 ? null
+                    : quota[c.id] === UNLIMITED_QUOTA ? '∞' : quota[c.id];
                 const used = c.id === VMS ? node.os_servers : inUse?.[c.id];
                 return (
                     <Table.Td key={c.id} ta="right" px={6}>
                         {line(reserved)}
-                        {measured && line(used)}
+                        {line(used)}
                     </Table.Td>
                 );
             })}
