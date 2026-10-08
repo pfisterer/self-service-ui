@@ -563,7 +563,6 @@
         "colResources": "Resources",
         "colValidUntil": "Valid until",
         "colActions": "Actions",
-        "moreActions": "More actions",
         "noMatches": "No project matches these filters.",
         "none": "No projects are paid from this budget yet.",
         "projectTitle": "Project",

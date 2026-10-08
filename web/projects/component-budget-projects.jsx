@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Activity, ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Check, Eye, FolderInput, Gift, MoreHorizontal, Package, Pencil, Rocket, Search, Trash2, X } from 'lucide-react';
-import { ActionIcon, Badge, Box, Group, Loader, Menu, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
+import { Activity, ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Check, Eye, FolderInput, Gift, LogOut, Package, Pencil, Rocket, Search, Trash2, X } from 'lucide-react';
+import { ActionIcon, Badge, Box, Group, Loader, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { useDebouncedValue, useLocalStorage } from '@mantine/hooks';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -408,24 +408,13 @@ function ProjectRow({ node, resources, columns, onAction, onOpen, showBudget = f
                     {can.approve && <RowAction label={t('projects.actions.approve')} color={COLOR.positive} onClick={act('approve')}><Check size="14" /></RowAction>}
                     {can.reject && <RowAction label={t('projects.actions.reject')} color={COLOR.negative} onClick={act('reject')}><X size="14" /></RowAction>}
                     {can.adopt && <RowAction label={t('projects.actions.adopt')} color={COLOR.outside} onClick={act('adopt')}><Rocket size="14" /></RowAction>}
-                    {(can.transfer || can.move || can.release || can.allocate || can.deleteForGood) && (
-                        <Menu position="bottom-end" withinPortal>
-                            <Menu.Target>
-                                <ActionIcon variant="subtle" color="gray" size="sm"
-                                    aria-label={t('projects.budgetProjects.moreActions')}
-                                    onClick={(e) => e.stopPropagation()}>
-                                    <MoreHorizontal size="14" />
-                                </ActionIcon>
-                            </Menu.Target>
-                            <Menu.Dropdown onClick={(e) => e.stopPropagation()}>
-                                {can.allocate && <Menu.Item leftSection={<Gift size="13" />} onClick={act('allocate')}>{t('projects.actions.allocate')}</Menu.Item>}
-                                {can.transfer && <Menu.Item leftSection={<ArrowRightLeft size="13" />} onClick={act('transfer')}>{t('projects.actions.ownerAction')}</Menu.Item>}
-                                {can.move && <Menu.Item leftSection={<FolderInput size="13" />} onClick={act('move')}>{t('projects.actions.move')}</Menu.Item>}
-                                {can.release && <Menu.Item color={COLOR.negative} onClick={act('release')}>{t('projects.actions.release')}</Menu.Item>}
-                                {can.deleteForGood && <Menu.Item color={COLOR.negative} leftSection={<Trash2 size="13" />} onClick={act('delete-for-good')}>{t('projects.actions.deleteForGood')}</Menu.Item>}
-                            </Menu.Dropdown>
-                        </Menu>
-                    )}
+                    {/* Every action as its own icon, none behind a menu: a row may
+                        grow a line taller, but nothing has to be looked for. */}
+                    {can.allocate && <RowAction label={t('projects.actions.allocate')} onClick={act('allocate')}><Gift size="14" /></RowAction>}
+                    {can.transfer && <RowAction label={t('projects.actions.ownerAction')} onClick={act('transfer')}><ArrowRightLeft size="14" /></RowAction>}
+                    {can.move && <RowAction label={t('projects.actions.move')} onClick={act('move')}><FolderInput size="14" /></RowAction>}
+                    {can.release && <RowAction label={t('projects.actions.release')} color={COLOR.negative} onClick={act('release')}><LogOut size="14" /></RowAction>}
+                    {can.deleteForGood && <RowAction label={t('projects.actions.deleteForGood')} color={COLOR.negative} onClick={act('delete-for-good')}><Trash2 size="14" /></RowAction>}
                 </Group>
             </Table.Td>
         </Table.Tr>
