@@ -754,6 +754,9 @@
         "usedOfGranted": "in use / granted, as of the last sync",
         "servers_one": "{{count}} VM",
         "servers_other": "{{count}} VMs",
-        "noServers": "no VM"
+        "noServers": "no VM",
+        "reserved": "Reserved (granted)",
+        "inUse": "In use, as of the last sync",
+        "vms": "VMs"
     }
 }

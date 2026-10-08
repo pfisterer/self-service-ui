@@ -754,6 +754,9 @@
         "usedOfGranted": "belegt / zugeteilt, Stand des letzten Abgleichs",
         "servers_one": "{{count}} VM",
         "servers_other": "{{count}} VMs",
-        "noServers": "keine VM"
+        "noServers": "keine VM",
+        "reserved": "Reserviert (zugeteilt)",
+        "inUse": "Belegt, Stand des letzten Abgleichs",
+        "vms": "VMs"
     }
 }
