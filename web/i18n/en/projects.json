@@ -660,6 +660,7 @@
             "level1": "Level 1 below the root",
             "level2": "Level 2 below the root"
         },
+        "path": "Path",
         "groupByExample": "{{label}} (e.g. {{names}})",
         "csvHint": "Download the table shown as a CSV file",
         "valueEur": "Value",

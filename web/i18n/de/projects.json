@@ -660,6 +660,7 @@
             "level1": "Ebene 1 unter der Wurzel",
             "level2": "Ebene 2 unter der Wurzel"
         },
+        "path": "Pfad",
         "groupByExample": "{{label}} (z. B. {{names}})",
         "csvHint": "Die angezeigte Tabelle als CSV-Datei herunterladen",
         "valueEur": "Gegenwert",

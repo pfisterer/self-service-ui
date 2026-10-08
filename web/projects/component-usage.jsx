@@ -7,7 +7,7 @@ import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { COLOR, isBudget } from './util-project.jsx';
-import { averageIPv4, averageStorage, GROUPINGS, groupingExamples, groupProjects, idleProject, percent, PERIODS, periodRange, toCSV } from './util-usage.js';
+import { averageIPv4, averageStorage, GROUPINGS, groupingExamples, groupPath, groupProjects, idleProject, percent, PERIODS, periodRange, toCSV } from './util-usage.js';
 
 // What projects actually used, from the rows the reconciler collects once a
 // day: per project and for everything below a budget (UsagePanel), and the
@@ -197,6 +197,7 @@ export function UsageReportPanel() {
 
     const columns = [
         { label: t(`projects.consumption.groupBy.${by}`), value: r => r.name },
+        { label: t('projects.consumption.path'), value: r => groupPath(r), csvOnly: true },
         { label: t('projects.consumption.projects'), value: r => r.projects },
         { label: t('projects.consumption.serverHours'), value: r => r.server_hours },
         { label: t('projects.consumption.vcpuHours'), value: r => r.vcpu_hours },
@@ -252,13 +253,20 @@ export function UsageReportPanel() {
                                         <Table striped fz="xs">
                                             <Table.Thead>
                                                 <Table.Tr>
-                                                    {columns.map((c, i) => <Table.Th key={c.label} ta={i ? 'right' : undefined}>{c.label}</Table.Th>)}
+                                                    {columns.filter(c => !c.csvOnly).map((c, i) => <Table.Th key={c.label} ta={i ? 'right' : undefined}>{c.label}</Table.Th>)}
                                                 </Table.Tr>
                                             </Table.Thead>
                                             <Table.Tbody>
                                                 {rows.map(r => (
                                                     <Table.Tr key={r.id || '—'}>
-                                                        <Table.Td>{r.name || '—'}</Table.Td>
+                                                        <Table.Td>
+                                                            {r.name || '—'}
+                                                            {/* Where it sits: two budgets of the same name
+                                                                under different parents look alike otherwise. */}
+                                                            {r.above?.length ? (
+                                                                <Text size="xs" c="dimmed">{r.above.join(' › ')}</Text>
+                                                            ) : null}
+                                                        </Table.Td>
                                                         <Table.Td ta="right">{r.projects}</Table.Td>
                                                         <Table.Td ta="right">{num(r.server_hours)}</Table.Td>
                                                         <Table.Td ta="right">{num(r.vcpu_hours)}</Table.Td>

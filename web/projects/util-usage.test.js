@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupingExamples, groupProjects, idleProject, periodRange, toCSV } from './util-usage.js';
+import { groupingExamples, groupPath, groupProjects, idleProject, periodRange, toCSV } from './util-usage.js';
 
 describe('periodRange', () => {
     const now = new Date('2026-10-07T12:00:00Z');
@@ -35,6 +35,14 @@ describe('groupProjects', () => {
     });
     it('groups by the project\'s own budget', () => {
         expect(groupProjects(projects, 'budget').map(x => x.id)).toEqual(['faculty', 'course', 's']);
+    });
+    it('keeps the budgets above a group, top down and without the root', () => {
+        const byBudget = Object.fromEntries(groupProjects(projects, 'budget').map(g => [g.id, g]));
+        expect(byBudget.course.above).toEqual(['MA', 'FACULTY']);
+        expect(byBudget.faculty.above).toEqual(['MA']);
+        expect(groupProjects(projects, 'level1').find(g => g.id === 'ma').above).toEqual([]);
+        expect(groupProjects(projects, 'project').find(g => g.id === 'p1').above).toEqual(['MA', 'FACULTY', 'COURSE']);
+        expect(groupPath(byBudget.course)).toBe('MA / FACULTY / COURSE');
     });
     it('names examples of a level from the data, sorted', () => {
         expect(groupingExamples(projects, 'level1')).toEqual(['MA', 'S']);

@@ -47,19 +47,28 @@ export function idleProject(report, node) {
 // level 1 is a budget directly below it (a location), level 2 the next one.
 export const GROUPINGS = ['project', 'budget', 'level1', 'level2'];
 
+// groupKey names the group a project falls into, with the budgets above it
+// (`above`, top down, without the root): two budgets called "Vorlesung" under
+// different parents are told apart by that, not by their name.
 function groupKey(p, by) {
-    if (by === 'project') return { id: p.node_id, name: p.project_name || p.node_id };
     const path = p.budget_path || [];
-    if (by === 'budget') {
-        const b = path[0];
-        return b ? { id: b.id, name: b.name || b.id } : { id: '', name: '' };
+    // Entries from index `from` up to the root's child, top down.
+    const above = (from) => path.slice(from, Math.max(path.length - 1, from)).reverse().map(b => b.name || b.id);
+    if (by === 'project') return { id: p.node_id, name: p.project_name || p.node_id, above: above(0) };
+    let idx = 0;
+    if (by !== 'budget') {
+        const level = by === 'level1' ? 1 : 2;
+        // path[length-1] is the root; level n is n steps below it. A project
+        // whose path is shorter is grouped under the deepest budget it has.
+        idx = Math.max(path.length - 1 - level, 0);
     }
-    const level = by === 'level1' ? 1 : 2;
-    // path[length-1] is the root; level n is n steps below it. A project whose
-    // path is shorter is grouped under the deepest budget it has.
-    const idx = Math.max(path.length - 1 - level, 0);
     const b = path[idx];
-    return b ? { id: b.id, name: b.name || b.id } : { id: '', name: '' };
+    return b ? { id: b.id, name: b.name || b.id, above: above(idx + 1) } : { id: '', name: '', above: [] };
+}
+
+// groupPath writes a group's place in the tree as one line, for the CSV.
+export function groupPath(g, sep = ' / ') {
+    return [...(g.above || []), g.name].filter(Boolean).join(sep);
 }
 
 const SUMMED = ['server_hours', 'vcpu_hours', 'ram_gb_hours', 'storage_gb_days', 'sampled_days',
@@ -72,10 +81,10 @@ const SUMMED = ['server_hours', 'vcpu_hours', 'ram_gb_hours', 'storage_gb_days',
 export function groupProjects(projects, by) {
     const groups = new Map();
     for (const p of projects || []) {
-        const { id, name } = groupKey(p, by);
+        const { id, name, above } = groupKey(p, by);
         let g = groups.get(id);
         if (!g) {
-            g = { id, name, projects: 0, value_eur: null };
+            g = { id, name, above, projects: 0, value_eur: null };
             for (const k of SUMMED) g[k] = 0;
             groups.set(id, g);
         }
