@@ -746,5 +746,11 @@
         "openstackNone": "To no project.",
         "openstackManaged": "To {{count}} project(s) of this portal:",
         "openstackUnmanaged": "Also to {{count}} other project(s) not managed by this portal (left as they are):"
+    },
+    "resources": {
+        "usedOfGranted": "in use / granted, as of the last sync",
+        "servers_one": "{{count}} VM",
+        "servers_other": "{{count}} VMs",
+        "noServers": "no VM"
     }
 }

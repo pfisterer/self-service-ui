@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
 import { formatDate } from '../format-date.js';
 import { BudgetPath } from './component-budget-path.jsx';
+import { ProjectResources } from './component-project-resources.jsx';
 
 // ProjectCard renders one project leaf. It is purely presentational: every
 // button reports an action to the owning view via onAction(actionId, node),
@@ -142,7 +143,10 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                     )}
 
                     {resourceSummary && (
-                        <FactRow label={t('projects.fact.resources')}>{resourceSummary}</FactRow>
+                        <FactRow label={t('projects.fact.resources')}>
+                            <ProjectResources node={node} resources={resources}
+                                quota={effectiveLimit(node, summaryQuota)} size="sm" />
+                        </FactRow>
                     )}
 
                     {/* With allocations, which budget pays for what: the own

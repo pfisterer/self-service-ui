@@ -4,7 +4,7 @@ import i18n from '/i18n/index.js';
 // The real English resources, so a renamed key fails here rather than showing
 // the key itself on the screen.
 const t = i18n.getFixedT('en');
-import {
+import { resourceUsageText,
     UNLIMITED_QUOTA,
     deletesOnRequest,
     deletionRequested,
@@ -719,5 +719,20 @@ describe('retirement', () => {
         expect(projectActions(archived, { canDelete: false }).deleteForGood).toBe(false);
         expect(projectActions(deleting, { canDelete: true }).deleteForGood).toBe(false);
         expect(projectActions({ status: 'approved' }, { canDelete: true }).deleteForGood).toBe(false);
+    });
+});
+
+describe('resourceUsageText', () => {
+    const res = [
+        { id: 'cores', name: 'Cores' },
+        { id: 'ram', name: 'RAM', unit: 'GB' },
+        { id: 'net', name: 'DHBW IPv4', kind: 'bool' },
+    ];
+    it('puts what is in use before what was granted', () => {
+        expect(resourceUsageText(res, { cores: 80, ram: 320, net: 1 }, { cores: 72, ram: 288 }))
+            .toBe('72 / 80 Cores · 288 / 320 GB RAM · DHBW IPv4');
+    });
+    it('shows an unmeasured resource as granted only, never as zero', () => {
+        expect(resourceUsageText(res, { cores: 4, ram: 8 }, { cores: 0 })).toBe('0 / 4 Cores · 8 GB RAM');
     });
 });

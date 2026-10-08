@@ -12,6 +12,7 @@ import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, 
 import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
+import { ProjectResources } from './component-project-resources.jsx';
 
 // Rows per page. A table, unlike the tree it replaces for projects, pages
 // instead of growing: a budget for all students of a location holds hundreds.
@@ -285,7 +286,8 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
                     : <NodeStatusBadge status={node.status} size="xs" full />}
             </Table.Td>
             <Table.Td>
-                <Text size="xs">{resourceSummaryText(resources, effectiveLimit(node, node.pending?.limit || node.limit))}</Text>
+                <ProjectResources node={node} resources={resources}
+                    quota={effectiveLimit(node, node.pending?.limit || node.limit)} />
             </Table.Td>
             <Table.Td>
                 {/* A given-up project has no end date that means anything. */}
