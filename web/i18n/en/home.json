@@ -10,7 +10,7 @@
             "a": "Small requests are often approved instantly",
             "b": "Add others to work on it together",
             "c": "Runs until the end date you choose, and can be extended",
-            "open": "Request a project"
+            "open": "Manage projects"
         },
         "dns": {
             "title": "DNS names & certificates",
