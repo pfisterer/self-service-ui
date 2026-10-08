@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@dhbw-cloud/dynamic-zones-client": "^0.8.4",
-    "@dhbw-cloud/os-mgt-client": "^0.8.27-test.6",
+    "@dhbw-cloud/os-mgt-client": "^0.8.27-test.9",
     "@mantine/charts": "^9.5.2",
     "@mantine/core": "^9.4.1",
     "@mantine/dates": "^9.4.1",

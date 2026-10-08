@@ -414,7 +414,19 @@
         "cliTitle": "Verwaltete Projekte auf der Kommandozeile",
         "cliText": "Jedes verwaltete Projekt trägt den Tag <1>{{tag}}</1> und dazu Zustand, Enddatum und Kontakt als Tags. Dieser Befehl liest sie direkt aus OpenStack, mit den eigenen Zugangsdaten, und gibt sie als JSON aus. Abgelaufene Projekte z. B. mit <1>jq 'map(select(.tags.termination // empty | . < (now | todate)))'</1>.",
         "preseedTitle": "Einige Zugriffe konnten in OpenStack nicht vorbereitet werden",
-        "preseedText": "Diese Personen haben ihre Rolle nicht bekommen. Ihr OpenStack-Konto ist nicht eindeutig — meist weicht der OIDC-Benutzername von der E-Mail-Adresse ab. Abhilfe: die Rolle von Hand am richtigen Konto vergeben oder den Benutzernamen korrigieren; der nächste Abgleich versucht es erneut."
+        "preseedText": "Diese Personen haben ihre Rolle nicht bekommen. Ihr OpenStack-Konto ist nicht eindeutig — meist weicht der OIDC-Benutzername von der E-Mail-Adresse ab. Abhilfe: die Rolle von Hand am richtigen Konto vergeben oder den Benutzernamen korrigieren; der nächste Abgleich versucht es erneut.",
+        "problemsTitle": "Probleme der letzten Läufe",
+        "problemsNone": "In den letzten {{count}} Läufen gab es keine Warnungen oder Fehler.",
+        "problemsText": "Warnungen und Fehler aus den letzten {{count}} Läufen. Der Abgleich läuft trotz dieser Probleme weiter, was hier steht, ist in OpenStack aber nicht so umgesetzt wie im Portal. Tritt etwas in jedem Lauf auf, behebt es sich nicht von selbst.",
+        "problemsNoRuns": "Seit dem Start ist noch kein Lauf abgeschlossen.",
+        "problemLastSeen": "Zuletzt",
+        "problemRuns": "Läufe",
+        "problemRunsHelp": "In wie vielen der letzten {{count}} Läufe das Problem auftrat",
+        "problemMessage": "Meldung",
+        "problemProject": "Projekt",
+        "problemError": "Fehler",
+        "problemLevel_warn": "Warnung",
+        "problemLevel_error": "Fehler"
     },
     "shell": {
         "renderErrorTitle": "Diese Ansicht ließ sich nicht darstellen",

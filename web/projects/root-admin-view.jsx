@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
-import { Alert, Badge, Button, Group, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Alert, Badge, Button, Group, Paper, SimpleGrid, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
 import { CodeBlock } from '/helper/codeblock.jsx';
 import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useNodesApi } from './api-nodes.jsx';
@@ -122,11 +122,11 @@ function ReconcilerPanel() {
                     </Stack>
                     <Stack gap="2">
                         <Text size="xs" c="dimmed">{t('projects.rootAdmin.osOnlyImported')}</Text>
-                        <Text size="sm" fw={500}>{status?.os_only_imported ?? 0}</Text>
+                        <Text size="sm" fw={500}>{status?.imported_leaves ?? 0}</Text>
                     </Stack>
                     <Stack gap="2">
                         <Text size="xs" c="dimmed">{t('projects.rootAdmin.osOnlyRemoved')}</Text>
-                        <Text size="sm" fw={500}>{status?.os_only_removed ?? 0}</Text>
+                        <Text size="sm" fw={500}>{status?.imported_removed ?? 0}</Text>
                     </Stack>
                     <Stack gap="2">
                         <Text size="xs" c="dimmed">{t('projects.rootAdmin.orphanedUsersRemoved')}</Text>
@@ -140,6 +140,8 @@ function ReconcilerPanel() {
                     </Stack>
                 </SimpleGrid>
             </Paper>
+
+            <ProblemsTable runs={status?.recent_runs ?? []} problems={status?.problems ?? []} />
 
             {status?.managed_tag ? (
                 <Paper withBorder p="md" radius="sm">
@@ -173,5 +175,87 @@ function ReconcilerPanel() {
                 </Alert>
             ) : null}
         </Stack>
+    );
+}
+
+// ProblemsTable: what the recent runs logged as warnings and errors. The
+// reconciler carries on past a failed grant or quota, so without this a
+// mismatch between portal and OpenStack only shows up in the pod log.
+function ProblemsTable({ runs, problems }) {
+    const { t } = useTranslation();
+    if (!runs.length) {
+        return <Text size="sm" c="dimmed">{t('projects.rootAdmin.problemsNoRuns')}</Text>;
+    }
+    if (!problems.length) {
+        return (
+            <Text size="sm" c="dimmed">{t('projects.rootAdmin.problemsNone', { count: runs.length })}</Text>
+        );
+    }
+    return (
+        <Paper withBorder p="md" radius="sm">
+            <Stack gap="xs">
+                <Title order={5}>{t('projects.rootAdmin.problemsTitle')}</Title>
+                <Text size="sm" c="dimmed">{t('projects.rootAdmin.problemsText', { count: runs.length })}</Text>
+                <Table.ScrollContainer minWidth={720}>
+                    <Table striped fz="xs" verticalSpacing="xs">
+                        <Table.Thead>
+                            <Table.Tr>
+                                <Table.Th>{t('projects.rootAdmin.problemLastSeen')}</Table.Th>
+                                <Table.Th>
+                                    <Tooltip label={t('projects.rootAdmin.problemRunsHelp', { count: runs.length })}>
+                                        <span>{t('projects.rootAdmin.problemRuns')}</span>
+                                    </Tooltip>
+                                </Table.Th>
+                                <Table.Th>{t('projects.rootAdmin.problemMessage')}</Table.Th>
+                                <Table.Th>{t('projects.rootAdmin.problemProject')}</Table.Th>
+                                <Table.Th>{t('projects.rootAdmin.problemError')}</Table.Th>
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {problems.map((p, i) => (
+                                <ProblemRow key={i} problem={p} total={runs.length} />
+                            ))}
+                        </Table.Tbody>
+                    </Table>
+                </Table.ScrollContainer>
+            </Stack>
+        </Paper>
+    );
+}
+
+function ProblemRow({ problem: p, total }) {
+    const { t } = useTranslation();
+    // Every run means it will not go away by itself.
+    const persistent = p.runs >= total;
+    const fields = Object.entries(p.fields ?? {}).sort(([a], [b]) => a.localeCompare(b));
+    return (
+        <Table.Tr>
+            <Table.Td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(p.last_seen)}</Table.Td>
+            <Table.Td>
+                <Badge size="sm" variant="light" color={persistent ? COLOR.negative : COLOR.attention}>
+                    {p.runs}/{total}
+                </Badge>
+            </Table.Td>
+            <Table.Td>
+                <Group gap={6} wrap="nowrap" align="flex-start">
+                    <Badge size="xs" variant="outline" color={p.level === 'error' ? COLOR.negative : COLOR.attention}>
+                        {t(`projects.rootAdmin.problemLevel_${p.level === 'error' ? 'error' : 'warn'}`)}
+                    </Badge>
+                    <Text size="xs">{p.message}</Text>
+                </Group>
+                {fields.length ? (
+                    <Text size="xs" c="dimmed" ff="monospace">
+                        {fields.map(([k, v]) => `${k}=${v}`).join(' ')}
+                    </Text>
+                ) : null}
+            </Table.Td>
+            <Table.Td>
+                {p.node_id ? <Text size="xs" ff="monospace">{p.node_id}</Text> : null}
+                {p.os_project_id ? <Text size="xs" ff="monospace" c="dimmed">{p.os_project_id}</Text> : null}
+            </Table.Td>
+            <Table.Td>
+                <Text size="xs" c="red" style={{ wordBreak: 'break-word' }}>{p.error}</Text>
+            </Table.Td>
+        </Table.Tr>
     );
 }

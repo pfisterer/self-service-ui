@@ -414,7 +414,19 @@
         "cliTitle": "Managed projects, from the command line",
         "cliText": "Every managed project carries the tag <1>{{tag}}</1>, plus its state, termination date and contact as tags. This command reads them straight from OpenStack, with your own credentials sourced, and prints them as JSON. Overdue ones e.g. with <1>jq 'map(select(.tags.termination // empty | . < (now | todate)))'</1>.",
         "preseedTitle": "Some users could not be prepared in OpenStack",
-        "preseedText": "These people did not get their role. Their OpenStack account is ambiguous — most often the OIDC username differs from the email address. Assign the role to the correct account by hand, or correct the username; the next sync retries."
+        "preseedText": "These people did not get their role. Their OpenStack account is ambiguous — most often the OIDC username differs from the email address. Assign the role to the correct account by hand, or correct the username; the next sync retries.",
+        "problemsTitle": "Problems in recent runs",
+        "problemsNone": "No warnings or errors in the last {{count}} runs.",
+        "problemsText": "Warnings and errors from the last {{count}} runs. The sync carries on despite them, but what is listed here is not in effect in OpenStack the way the portal shows it. Something that occurs in every run will not fix itself.",
+        "problemsNoRuns": "No run has finished since the start.",
+        "problemLastSeen": "Last seen",
+        "problemRuns": "Runs",
+        "problemRunsHelp": "In how many of the last {{count}} runs the problem occurred",
+        "problemMessage": "Message",
+        "problemProject": "Project",
+        "problemError": "Error",
+        "problemLevel_warn": "Warning",
+        "problemLevel_error": "Error"
     },
     "shell": {
         "renderErrorTitle": "This view failed to render",
