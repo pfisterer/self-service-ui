@@ -6,7 +6,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
-import { InfoPopover, StatusIcon } from './component-common.jsx';
+import { InfoPopover, NodeStatusBadge } from './component-common.jsx';
 import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
 import { COLOR, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
@@ -388,7 +388,7 @@ function ProjectRow({ node, resources, columns, onAction, onOpen, showBudget = f
                 fifth of the table. Being deleted says more than released. */}
             <Table.Td style={{ whiteSpace: 'nowrap' }}>
                 <Group gap={6} wrap="nowrap">
-                    <StatusIcon status={node.status} deleting={deletionRequested(node)} purge={node.purge} />
+                    <NodeStatusBadge icon status={node.status} deleting={deletionRequested(node)} purge={node.purge} />
                     {/* A given-up project has no end date that means anything.
                         The colour says whether it is close; how far, on hover. */}
                     {node.termination_date && !isRetired(node) ? (
