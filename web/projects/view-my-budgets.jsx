@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Inbox, Search, X } from 'lucide-react';
-import { ActionIcon, Alert, Badge, Button, Checkbox, Grid, Modal, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, useTree } from '@mantine/core';
+import { ChevronsDownUp, ChevronsUpDown, Inbox, Search, X } from 'lucide-react';
+import { ActionIcon, Alert, Badge, Button, Checkbox, Grid, Modal, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, Tooltip, useTree } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useDebouncedValue } from '@mantine/hooks';
+import { useDebouncedValue, useLocalStorage } from '@mantine/hooks';
 import { PAGE_SIZE, useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { BudgetCard } from './card-budget.jsx';
@@ -342,6 +342,39 @@ export function MyBudgetsView() {
         [t, rootBudgets, requestableOnly, childrenMap],
     );
 
+    // "Expand everything", remembered per browser. The tree loads a branch when
+    // it is opened, so everything cannot be opened at once: each pass opens the
+    // budgets that are loaded and still closed, their children arrive, and the
+    // next pass opens those — level by level until nothing closed is left.
+    const [expandAll, setExpandAll] = useLocalStorage({
+        key: 'self-service.budget-tree.expand-all',
+        defaultValue: false,
+        getInitialValueInEffect: false,
+    });
+    useEffect(() => {
+        if (!expandAll) return;
+        const closed = [];
+        const walk = (rows) => rows.forEach(row => {
+            if (row.hasChildren && !tree.expandedState[row.value]) closed.push(row.value);
+            if (row.children) walk(row.children);
+        });
+        walk(treeData);
+        if (closed.length) {
+            tree.setExpandedState({ ...tree.expandedState, ...Object.fromEntries(closed.map(id => [id, true])) });
+        }
+        // `tree` is read to see what is open; listing it would re-run this on
+        // every toggle, which is the point only while expandAll is on anyway.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [expandAll, treeData]);
+    // Switching it off goes back to the default: the first level open.
+    const toggleExpandAll = () => {
+        if (expandAll) {
+            tree.setExpandedState(Object.fromEntries(
+                rootBudgets.filter(b => budgetChildCount(b) > 0).map(b => [b.id, true])));
+        }
+        setExpandAll(!expandAll);
+    };
+
     // Widening the scope only changes the inbox, not the tree. The scope is part
     // of that list's query key, so switching it IS the reload — no separate
     // fetch, and the previous scope stays cached for switching back.
@@ -546,6 +579,15 @@ export function MyBudgetsView() {
                                         </ActionIcon>
                                     ) : null}
                                 />
+                                {!searching && !filtering && (
+                                    <Tooltip label={t(expandAll ? 'projects.budgets.collapseAll' : 'projects.budgets.expandAll')}>
+                                        <ActionIcon size="sm" variant={expandAll ? 'light' : 'subtle'} color="gray"
+                                            aria-label={t(expandAll ? 'projects.budgets.collapseAll' : 'projects.budgets.expandAll')}
+                                            aria-pressed={expandAll} onClick={toggleExpandAll}>
+                                            {expandAll ? <ChevronsDownUp size="14" /> : <ChevronsUpDown size="14" />}
+                                        </ActionIcon>
+                                    </Tooltip>
+                                )}
                             </Group>
 
                             {/* Searching and filtering each replace the tree with a

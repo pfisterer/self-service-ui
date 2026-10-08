@@ -198,15 +198,27 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                 {query.isError ? (
                     <LoadError query={query} title={t('projects.budgetProjects.loadError')} />
                 ) : (
-                    <Table.ScrollContainer minWidth={720}>
+                    <Table.ScrollContainer minWidth={560}>
                         <Table highlightOnHover verticalSpacing="xs" fz="sm">
                             <Table.Thead>
                                 <Table.Tr>
-                                    <SortHeader label={t('projects.budgetProjects.colName')} sortKey="name" sort={sort} onSort={toggleSort} />
-                                    <SortHeader label={t('projects.budgetProjects.colOwner')} sortKey="owner" sort={sort} onSort={toggleSort} />
-                                    <SortHeader label={t('projects.budgetProjects.colStatus')} sortKey="status" sort={sort} onSort={toggleSort} />
-                                    <Table.Th miw={220}>{t('projects.budgetProjects.colResources')}</Table.Th>
-                                    <SortHeader label={t('projects.budgetProjects.colValidUntil')} sortKey="termination_date" sort={sort} onSort={toggleSort} />
+                                    {/* Four columns, two of them stacked: owner and
+                                        place under the name, the end date under the
+                                        status. Six side by side did not fit the
+                                        detail panel and scrolled sideways. */}
+                                    <Table.Th>
+                                        <Group gap="md" wrap="nowrap">
+                                            <SortButton label={t('projects.budgetProjects.colName')} sortKey="name" sort={sort} onSort={toggleSort} />
+                                            <SortButton label={t('projects.budgetProjects.colOwner')} sortKey="owner" sort={sort} onSort={toggleSort} dimmed />
+                                        </Group>
+                                    </Table.Th>
+                                    <Table.Th>
+                                        <Group gap="md" wrap="nowrap">
+                                            <SortButton label={t('projects.budgetProjects.colStatus')} sortKey="status" sort={sort} onSort={toggleSort} />
+                                            <SortButton label={t('projects.budgetProjects.colValidUntil')} sortKey="termination_date" sort={sort} onSort={toggleSort} dimmed />
+                                        </Group>
+                                    </Table.Th>
+                                    <Table.Th>{t('projects.budgetProjects.colResources')}</Table.Th>
                                     <Table.Th w={1}><VisuallyHidden>{t('projects.budgetProjects.colActions')}</VisuallyHidden></Table.Th>
                                 </Table.Tr>
                             </Table.Thead>
@@ -218,7 +230,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                                 ))}
                                 {items.length === 0 && !query.isPending && (
                                     <Table.Tr>
-                                        <Table.Td colSpan={6}>
+                                        <Table.Td colSpan={4}>
                                             <Text size="sm" c="dimmed" ta="center" py="md">
                                                 {filtered ? t('projects.budgetProjects.noMatches') : t('projects.budgetProjects.none')}
                                             </Text>
@@ -240,19 +252,21 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
     );
 }
 
-function SortHeader({ label, sortKey, sort, onSort }) {
+// SortButton is one sortable label in a header cell; a cell may hold two when
+// the column shows two values stacked. `dimmed` marks the second one, the value
+// on the quieter line below.
+function SortButton({ label, sortKey, sort, onSort, dimmed = false }) {
     const active = sort.key === sortKey;
     const Icon = !active ? ArrowUpDown : sort.order === 'asc' ? ArrowUp : ArrowDown;
     return (
-        <Table.Th aria-sort={active ? (sort.order === 'asc' ? 'ascending' : 'descending') : undefined}
-            style={{ whiteSpace: 'nowrap' }}>
-            <UnstyledButton onClick={() => onSort(sortKey)}>
-                <Group gap="4" wrap="nowrap">
-                    <Text size="sm" fw={600}>{label}</Text>
-                    <Icon size="12" color={active ? undefined : 'var(--mantine-color-gray-5)'} />
-                </Group>
-            </UnstyledButton>
-        </Table.Th>
+        <UnstyledButton onClick={() => onSort(sortKey)}
+            aria-sort={active ? (sort.order === 'asc' ? 'ascending' : 'descending') : undefined}>
+            <Group gap="4" wrap="nowrap">
+                <Text size="sm" fw={dimmed ? 500 : 600} c={dimmed && !active ? 'dimmed' : undefined}
+                    style={{ whiteSpace: 'nowrap' }}>{label}</Text>
+                <Icon size="12" color={active ? undefined : 'var(--mantine-color-gray-5)'} />
+            </Group>
+        </UnstyledButton>
     );
 }
 
@@ -265,7 +279,7 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
 
     return (
         <Table.Tr style={{ cursor: 'pointer' }} onClick={() => onOpen(node)}>
-            <Table.Td maw={260}>
+            <Table.Td maw={320}>
                 <Group gap={6} wrap="nowrap">
                     <Text size="sm" fw={500} truncate>{nodeTitle(node)}</Text>
                     {hasAllocations(node) && (
@@ -278,37 +292,40 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
                         </Tooltip>
                     )}
                 </Group>
-                {/* Listed from a budget further up, the row says where it lives. */}
-                {showBudget && node.parent_name && (
-                    <Text size="xs" c="dimmed" truncate>{t('projects.budgetProjects.inBudget', { name: budgetPathText(node.parent_path, node.parent_name) })}</Text>
+                {/* Whose it is, and — listed from a budget further up — where it
+                    lives. */}
+                {(ownerEmail(node) || (showBudget && node.parent_name)) && (
+                    <Text size="xs" c="dimmed" truncate>
+                        {[
+                            ownerEmail(node),
+                            showBudget && node.parent_name
+                                ? t('projects.budgetProjects.inBudget', { name: budgetPathText(node.parent_path, node.parent_name) })
+                                : null,
+                        ].filter(Boolean).join(' · ')}
+                    </Text>
                 )}
             </Table.Td>
-            <Table.Td maw={240}>
-                <Text size="xs" truncate>{ownerEmail(node)}</Text>
-            </Table.Td>
             {/* The status is the one cell that must never be cut: "Change
-                requested" and "Awaiting approval" are what a manager scans for. */}
+                requested" and "Awaiting approval" are what a manager scans for.
+                The end date sits under it: both answer "how is it doing". */}
             <Table.Td style={{ whiteSpace: 'nowrap' }}>
                 {/* Being deleted says more than released or archived. */}
                 {deletionRequested(node)
                     ? <DeletingBadge size="xs" purge={node.purge} />
                     : <NodeStatusBadge status={node.status} size="xs" full />}
+                {/* A given-up project has no end date that means anything. The
+                    colour says whether it is close; how far off, is on hover. */}
+                {node.termination_date && !isRetired(node) && (
+                    <Tooltip label={expiryValue(t, node.termination_date)} openDelay={300}>
+                        <Text size="xs" mt={2} c={expiryTone(node.termination_date)}>
+                            {t('projects.budgetProjects.until', { date: formatDate(node.termination_date) })}
+                        </Text>
+                    </Tooltip>
+                )}
             </Table.Td>
             <Table.Td>
                 <ProjectResources node={node} resources={resources} compact
                     quota={effectiveLimit(node, node.pending?.limit || node.limit)} />
-            </Table.Td>
-            <Table.Td>
-                {/* A given-up project has no end date that means anything. The
-                    date alone keeps the column narrow; how far off it is, is on
-                    hover — the colour already says whether it is close. */}
-                {node.termination_date && !isRetired(node) ? (
-                    <Tooltip label={expiryValue(t, node.termination_date)} openDelay={300}>
-                        <Text size="xs" c={expiryTone(node.termination_date)} style={{ whiteSpace: 'nowrap' }}>
-                            {formatDate(node.termination_date)}
-                        </Text>
-                    </Tooltip>
-                ) : <Text size="xs" c="dimmed">—</Text>}
             </Table.Td>
             <Table.Td>
                 <Group gap="2" wrap="nowrap" justify="flex-end">

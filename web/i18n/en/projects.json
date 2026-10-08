@@ -130,7 +130,9 @@
         "searching": "Searching…",
         "noMatches": "No matches.",
         "nothingWaiting": "Nothing is waiting for your decision.",
-        "selectHint": "Select a budget in the tree to see its details and projects."
+        "selectHint": "Select a budget in the tree to see its details and projects.",
+        "expandAll": "Expand all budgets",
+        "collapseAll": "Collapse to the first level"
     },
     "changes": {
         "proposed": "Proposed changes",
@@ -571,7 +573,8 @@
         "deep": "Also show projects in sub-budgets",
         "titleDeep": "Projects in this budget and below ({{count}})",
         "deepHelp": "Also lists the projects of every budget below this one, at any depth. Each project then shows which budget pays for it. Cannot be combined with \"Only projects with an allocation\", which searches the whole subtree anyway.",
-        "allocatedOnlyHelp": "Instead of this budget's own projects, lists every project below it, at any depth, that received an allocation from this budget: resources on top of what its own budget gives it. They count for this budget and the ones above, not for the budgets in between."
+        "allocatedOnlyHelp": "Instead of this budget's own projects, lists every project below it, at any depth, that received an allocation from this budget: resources on top of what its own budget gives it. They count for this budget and the ones above, not for the budgets in between.",
+        "until": "until {{date}}"
     },
     "allocation": {
         "title": "Allocation: {{name}}",
