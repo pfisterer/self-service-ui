@@ -288,7 +288,7 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
         <Table.Tr style={{ cursor: 'pointer' }} onClick={() => onOpen(node)}>
             <Table.Td>
                 <Group gap={6} wrap="nowrap">
-                    <Text size="sm" fw={500} truncate>{nodeTitle(node)}</Text>
+                    <Text size="sm" fw={500} style={{ overflowWrap: 'anywhere' }}>{nodeTitle(node)}</Text>
                     {hasAllocations(node) && (
                         <Tooltip label={node.allocations.map(a =>
                             `${a.budget_name || a.budget_id}: ${resourceSummaryText(resources, a.limit)}`).join(' · ')}>
@@ -301,14 +301,14 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
                 </Group>
                 {/* Whose it is, and — listed from a budget further up — where it
                     lives. */}
-                {(ownerEmail(node) || (showBudget && node.parent_name)) && (
-                    <Text size="xs" c="dimmed" truncate>
-                        {[
-                            ownerEmail(node),
-                            showBudget && node.parent_name
-                                ? t('projects.budgetProjects.inBudget', { name: budgetPathText(node.parent_path, node.parent_name) })
-                                : null,
-                        ].filter(Boolean).join(' · ')}
+                {/* Wrapped rather than cut off: the path is what tells two
+                    budgets of the same name apart, an ellipsis hid exactly that. */}
+                {ownerEmail(node) && (
+                    <Text size="xs" c="dimmed" style={{ overflowWrap: 'anywhere' }}>{ownerEmail(node)}</Text>
+                )}
+                {showBudget && node.parent_name && (
+                    <Text size="xs" c="dimmed">
+                        {t('projects.budgetProjects.inBudget', { name: budgetPathText(node.parent_path, node.parent_name) })}
                     </Text>
                 )}
             </Table.Td>
