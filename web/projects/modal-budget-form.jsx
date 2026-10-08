@@ -12,6 +12,7 @@ import { FormModal, FormTabs } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
 import { COLOR, formatError, freeAmount, isAvailability, isPoolAutoApprove, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
+import { budgetLabel } from './component-budget-path.jsx';
 
 // Same three-step split as the project dialog: what it is → how much → who.
 const TAB_DETAILS = 'details';
@@ -297,7 +298,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     description={t('projects.budgetForm.requestFromHint')}
                     required
                     searchable
-                    data={eligibleBudgets.map(b => ({ value: b.id, label: b.name || b.id }))}
+                    data={eligibleBudgets.map(b => ({ value: b.id, label: budgetLabel(b) }))}
                     {...form.getInputProps('parentId')}
                     onChange={(id) => {
                         form.setFieldValue('parentId', id);

@@ -15,6 +15,7 @@ import { TokenRoleEditor } from './component-token-role-editor.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
 import { canonicalToken } from './util-principal-import.js';
 import { autoApproveHeadroom, changeOutcome, COLOR, defaultsWithin, effectiveLimit, hasAllocations, hasAutoApprove, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
+import { budgetLabel } from './component-budget-path.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
 
@@ -36,10 +37,10 @@ function BudgetSelect({ myBudgets, eligibleBudgets, value, onChange, error }) {
 
     const data = useMemo(() => {
         const managedIds = new Set((myBudgets || []).map(b => b.id));
-        const managed = (myBudgets || []).map(b => ({ value: b.id, label: b.name || b.id }));
+        const managed = (myBudgets || []).map(b => ({ value: b.id, label: budgetLabel(b) }));
         const eligible = (eligibleBudgets || [])
             .filter(b => !managedIds.has(b.id))
-            .map(b => ({ value: b.id, label: b.name || b.id }));
+            .map(b => ({ value: b.id, label: budgetLabel(b) }));
 
         const groups = [];
         if (managed.length) groups.push({ group: t('projects.projectForm.budgetsManaged'), items: managed });

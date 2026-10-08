@@ -11,6 +11,7 @@ import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
 import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
+import { budgetPathText } from './component-budget-path.jsx';
 
 // Rows per page. A table, unlike the tree it replaces for projects, pages
 // instead of growing: a budget for all students of a location holds hundreds.
@@ -269,7 +270,7 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
                 </Group>
                 {/* Listed from a budget further up, the row says where it lives. */}
                 {showBudget && node.parent_name && (
-                    <Text size="xs" c="dimmed" truncate>{t('projects.budgetProjects.inBudget', { name: node.parent_name })}</Text>
+                    <Text size="xs" c="dimmed" truncate>{t('projects.budgetProjects.inBudget', { name: budgetPathText(node.parent_path, node.parent_name) })}</Text>
                 )}
             </Table.Td>
             <Table.Td maw={240}>

@@ -12,6 +12,7 @@ import { formatError } from '/helper/api-error.js';
 import { formatDate } from '../format-date.js';
 import { availabilityElsewhere, COLOR, freeAmount, getAuthUserEmail, isAvailability, nodeTitle, ownerEmail, resourceSummaryText, visibleResources } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
+import { budgetLabel } from './component-budget-path.jsx';
 
 // AllocationModal grants, changes or gives back what a project draws from a
 // budget above its own — the exception path: a GPU or a network for one
@@ -147,7 +148,7 @@ export function AllocationModal({ opened, onClose, onDone, node, resources }) {
                     <Select
                         label={t('projects.allocation.from')}
                         description={t('projects.allocation.fromHint')}
-                        data={sources.map(s => ({ value: s.id, label: s.name || s.id }))}
+                        data={sources.map(s => ({ value: s.id, label: budgetLabel(s) }))}
                         value={sourceId}
                         allowDeselect={false}
                         leftSection={<Gift size="14" />}

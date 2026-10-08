@@ -6,6 +6,7 @@ import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
 import { formatDate } from '../format-date.js';
+import { BudgetPath } from './component-budget-path.jsx';
 
 // ProjectCard renders one project leaf. It is purely presentational: every
 // button reports an action to the owning view via onAction(actionId, node),
@@ -43,7 +44,8 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     const { user } = useAuth();
     const me = getAuthUserEmail(user).toLowerCase();
     const shared = !isManager && !!owner && owner.toLowerCase() !== me;
-    const showOwner = owner && (isManager || shared);
+    // Always, also on one's own project: every card then reads the same way.
+    const showOwner = !!owner;
     const admins = node.admin_scope || [];
     // A few members by name say more than a count: "Owner + 1" read as if the
     // owner were one of two people, whoever the one was.
@@ -149,13 +151,13 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         <FactRow label={t('projects.fact.paidFrom')}>
                             <Stack gap={2}>
                                 <Text size="xs">
-                                    <b>{parentName || t('projects.allocation.ownBudget')}</b>
+                                    <b>{parentName ? <BudgetPath path={node.parent_path} name={parentName} inherit /> : t('projects.allocation.ownBudget')}</b>
                                     {' · '}{resourceSummaryText(resources, summaryQuota) || '—'}
                                 </Text>
                                 {node.allocations.map(a => (
                                     <Text size="xs" key={a.budget_id}>
                                         <Gift size="11" style={{ verticalAlign: '-1px', marginRight: 4, color: `var(--mantine-color-${COLOR.info}-7)` }} />
-                                        <b>{a.budget_name || a.budget_id}</b>
+                                        <b><BudgetPath path={a.budget_path} name={a.budget_name || a.budget_id} inherit /></b>
                                         {' · '}{resourceSummaryText(resources, a.limit)}
                                         <Text span size="xs" c="dimmed">{' '}({t('projects.allocation.badge')})</Text>
                                     </Text>
@@ -163,7 +165,9 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             </Stack>
                         </FactRow>
                     ) : parentName && (
-                        <FactRow label={t('projects.fact.paidFrom')}>{parentName}</FactRow>
+                        <FactRow label={t('projects.fact.paidFrom')}>
+                            <BudgetPath path={node.parent_path} name={parentName} />
+                        </FactRow>
                     )}
 
                     {/* Only the resources that exceed their limit, so the row

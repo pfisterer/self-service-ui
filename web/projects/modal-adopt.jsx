@@ -12,6 +12,7 @@ import { useApiMutation } from '/helper/query-state.jsx';
 import { formatError } from '/helper/api-error.js';
 import { formatDate } from '../format-date.js';
 import { COLOR, latestProjectEnd, nodeTitle } from './util-project.jsx';
+import { budgetLabel } from './component-budget-path.jsx';
 
 const DEFAULT_TERM_DAYS = 180;
 
@@ -63,9 +64,9 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
     });
     const targetData = useMemo(() => {
         const ownerBudgets = ownerBudgetsQuery.data ?? [];
-        const mine = (myBudgets || []).map(b => ({ value: b.id, label: b.name || b.id }));
+        const mine = (myBudgets || []).map(b => ({ value: b.id, label: budgetLabel(b) }));
         const mineIds = new Set(mine.map(m => m.value));
-        const owners = ownerBudgets.filter(b => !mineIds.has(b.id)).map(b => ({ value: b.id, label: b.name || b.id }));
+        const owners = ownerBudgets.filter(b => !mineIds.has(b.id)).map(b => ({ value: b.id, label: budgetLabel(b) }));
         const groups = [];
         if (mine.length) groups.push({ group: t('projects.adopt.budgetsYouManage'), items: mine });
         if (owners.length) groups.push({ group: t('projects.adopt.budgetsOwnerCanRequest'), items: owners });

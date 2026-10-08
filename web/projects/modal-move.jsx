@@ -7,6 +7,7 @@ import { FormModal } from './component-form-modal.jsx';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { formatError } from '/helper/api-error.js';
 import { isBudget, nodeTitle } from './util-project.jsx';
+import { budgetLabel } from './component-budget-path.jsx';
 
 // MoveModal reparents a node under another budget. The server checks that the
 // mover manages BOTH sides and that the target has capacity.
@@ -57,7 +58,7 @@ export function MoveModal({ opened, onClose, onDone, node, targetBudgets }) {
                 label={t('projects.move.target')}
                 required
                 searchable
-                data={targets.map(b => ({ value: b.id, label: b.name || b.id }))}
+                data={targets.map(b => ({ value: b.id, label: budgetLabel(b) }))}
                 placeholder={t('projects.move.targetPlaceholder')}
                 {...form.getInputProps('targetId')}
             />

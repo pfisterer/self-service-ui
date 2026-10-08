@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ChevronDown, ChevronRight, CloudDownload, CornerLeftUp, Eye, FileText, Folder, Zap } from 'lucide-react';
 import { Box, Group, Loader, Text, Tooltip, Tree, UnstyledButton } from '@mantine/core';
 import { COLOR, isBudget, isImported, nodeTitle, statusDescription, statusLabel, statusStyle } from './util-project.jsx';
+import { budgetPathText } from './component-budget-path.jsx';
 
 // BudgetTree is the navigation side of the "My Budgets" master-detail view: a
 // lazily loaded tree of budgets (inner nodes) and projects (leaves).
@@ -294,7 +295,7 @@ export function NodeResultList({ nodes, selectedId, onSelect, total, onMore, emp
                         <Box style={{ flex: 1, minWidth: 0 }}>
                             <Text size="sm" truncate fw={isSelected ? 600 : 400}>{nodeTitle(node)}</Text>
                             {node.parent_name && (
-                                <Text size="xs" c="dimmed" truncate>{t('projects.tree.inBudget', { name: node.parent_name })}</Text>
+                                <Text size="xs" c="dimmed" truncate>{t('projects.tree.inBudget', { name: budgetPathText(node.parent_path, node.parent_name) })}</Text>
                             )}
                         </Box>
                         <NodeMarkers node={node} />
