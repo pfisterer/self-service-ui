@@ -1,50 +1,33 @@
 {
     "hero": {
         "title": "Willkommen beim dhbwCloud-Self-Service",
-        "introBoth": "Hier lassen sich <1>eigene Cloud-Projekte</1> beantragen — ein eigener Bereich in der DHBW-Cloud mit den nötigen Ressourcen. Die dort betriebenen Dienste bekommen <2>eigene Hostnamen</2> und <3>TLS-Zertifikate</3>.",
-        "introProjects": "Hier lassen sich <1>eigene Cloud-Projekte</1> beantragen — ein eigener Bereich in der DHBW-Cloud mit der nötigen CPU, dem RAM und dem Speicher.",
-        "introDns": "Hier werden <1>eigene DNS-Zonen</1> verwaltet. Eine Zone liefert <2>eigene Hostnamen</2> — die Grundlage dafür, Dienste über ihren Namen zu erreichen und <3>TLS-Zertifikate</3> für sie zu bekommen.",
-        "requestProject": "Projekt beantragen",
-        "manageZones": "DNS-Zonen verwalten"
+        "intro": "Die Dienste der dhbwCloud zur Selbstbedienung: Ressourcen beantragen, eigene Namen und Zertifikate vergeben und Sprachmodelle nutzen — ohne Ticket."
     },
-    "steps": {
-        "heading": "In drei Schritten loslegen",
-        "project": {
-            "title": "1 · Projekt beantragen",
-            "own": "Ein Projekt ist ein eigener Bereich in der DHBW-Cloud, mit der angeforderten CPU, dem RAM und dem Speicher",
-            "instant": "Kleine Anfragen werden oft sofort genehmigt",
-            "together": "Weitere Personen lassen sich hinzufügen, um gemeinsam daran zu arbeiten"
+    "services": {
+        "projects": {
+            "title": "Cloud-Projekte",
+            "lead": "Ein eigener Bereich in der DHBW-Cloud mit CPU, RAM und Speicher.",
+            "a": "Kleine Anfragen werden oft sofort genehmigt",
+            "b": "Weitere Personen lassen sich zum gemeinsamen Arbeiten hinzufügen",
+            "c": "Läuft bis zum gewählten Enddatum, verlängerbar",
+            "open": "Projekt beantragen"
         },
-        "zone": {
-            "title": "2 · Einen DNS-Namen geben",
-            "activate": "Die persönliche Zone unter „Zonen“ aktivieren",
-            "hostnames": "Eigene Hostnamen, z. B. myapp.you.users.dhbw.cloud",
-            "point": "Damit auf die eigenen Maschinen zeigen (A / AAAA / CNAME); jede Zone hat einen TSIG-Schlüssel für ddclient, nsupdate oder external-dns"
+        "dns": {
+            "title": "DNS-Namen & Zertifikate",
+            "lead": "Eigene Hostnamen für die eigenen Dienste, mit TLS-Zertifikaten.",
+            "a": "Persönliche Zone aktivieren, z. B. myapp.you.users.dhbw.cloud",
+            "b": "Einträge von Hand oder automatisch per ddclient, nsupdate oder external-dns",
+            "c": "Fertige cert-manager-Manifeste im Tab „TLS-Zertifikate“",
+            "open": "DNS-Zonen verwalten"
         },
-        "tls": {
-            "title": "3 · TLS-Zertifikate holen",
-            "issue": "Zertifikate mit cert-manager ausstellen, sobald der Hostname auflöst",
-            "manifests": "Fertige Manifeste zum Kopieren im Tab „TLS-Zertifikate“",
-            "acme": "Nutzt den ACME-Server der DHBW (siehe unten)"
-        },
-        "zoneOnly": {
-            "title": "1 · Eine Zone aktivieren",
-            "basis": "Das ist die Grundlage für Einträge und Zertifikate"
-        },
-        "records": {
-            "title": "2 · DNS-Einträge anlegen",
-            "point": "Mit einem Hostnamen auf den eigenen Dienst zeigen (A / AAAA / CNAME)",
-            "tsig": "Jede Zone bringt ihren eigenen TSIG-Schlüssel mit",
-            "automate": "Updates automatisieren mit ddclient, nsupdate oder external-dns"
+        "llm": {
+            "title": "Sprachmodelle",
+            "lead": "Private Sprachmodelle auf Hardware der DHBW — im Browser und per API.",
+            "a": "Der DHBW-Chat direkt im Browser",
+            "b": "OpenAI-kompatibler Endpunkt für VS Code und eigene Programme",
+            "c": "Keine Speicherung der Anfragen, keine Weitergabe nach außen",
+            "open": "Zum LLM-Dienst"
         }
     },
-    "acme": {
-        "title": "TLS-Zertifikate: nur über den ACME-Server der DHBW",
-        "body": "Für die hier angelegten Zonen <1>müssen</1> TLS-Zertifikate von der ACME-Zertifizierungsstelle der DHBW unter <2>{{host}}</2> kommen. Diese Zonen erlauben (über CAA-Einträge) nur die DHBW-CA, öffentliche CAs wie <3>Let's Encrypt funktionieren dafür nicht</3>. Der DHBW-Server ist kostenlos, hat keine öffentlichen Rate-Limits und stellt auch Zertifikate für Dienste aus, die nur <4>aus dem DHBW-Netz / VPN</4> erreichbar sind. Der Tab <5>TLS-Zertifikate</5> jeder Zone erzeugt cert-manager-Manifeste, die genau auf diesen Server vorausgefüllt sind."
-    },
-    "llm": {
-        "title": "Sprachmodelle (LLM)",
-        "body": "Der DHBW-Chat im Browser und ein OpenAI-kompatibler Endpunkt für VS Code und eigene Programme — mit eigenem API Key und Kontingent.",
-        "open": "Zum LLM-Dienst"
-    }
+    "acme": "Zertifikate für die hier vergebenen Namen kommen <1>nur vom ACME-Server der DHBW</1> (<2>{{host}}</2>), öffentliche CAs wie Let's Encrypt funktionieren dafür nicht. Der Server ist kostenlos, hat keine Rate-Limits und stellt auch Zertifikate für Dienste aus, die nur im DHBW-Netz erreichbar sind."
 }

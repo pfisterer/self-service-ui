@@ -1,9 +1,10 @@
 {
     "overview": {
-        "title": "Sprachmodelle der DHBW — im Browser und per API",
+        "title": "Private Sprachmodelle, betrieben auf Hardware der DHBW — im Browser und per API",
         "serviceOf": "Ein Service von <1>dhbw.cloud</1>",
         "intro": "Dieser Dienst bündelt LLM-Ressourcen der DHBW zu einem gemeinsamen, <1>OpenAI-kompatiblen Endpunkt</1> — nutzbar mit jedem Werkzeug, das eine Basis-URL und einen API Key zulässt.",
         "introChat": "Zum Chatten braucht es keinen Key: der DHBW-Chat läuft direkt im Browser.",
+        "promise": "Anfragen werden nicht gespeichert und verlassen die DHBW nicht, es gibt keine Weitergabe an kommerzielle Anbieter. Gestaffelte Kontingente je Person sorgen für eine faire Verteilung.",
         "openChat": "Zum DHBW-Chat",
         "createKey": "API Key erstellen",
         "steps": {
@@ -26,24 +27,15 @@
                 "c": "Ausfälle fängt der Verbund selbst ab"
             }
         },
-        "access": {
-            "title": "Zugang in zwei Zeilen",
-            "hint": "Basis-URL und API Key genügen — mehr braucht kein Client."
-        },
         "models": {
             "title": "Welche Modellnamen stabil sind",
             "stable": "Empfohlen sind die neutralen Namen <1>{{names}}</1>. Sie bleiben dauerhaft gültig und zeigen jeweils auf das, was gerade am besten verfügbar ist.",
             "concrete": "In der Modellliste stehen zusätzlich die konkreten Modellnamen der beteiligten Maschinen. Diese <1>können jederzeit verschwinden</1> — etwa wenn eine GPU für eine Lehrveranstaltung gebraucht oder ein anderes Modell geladen wird. Für alles, was länger als eine Sitzung leben soll, gehören deshalb die neutralen Namen in die Konfiguration."
         },
-        "promises": {
-            "title": "Was der Dienst zusichert",
-            "logging": "<1>Keine Prompt-Protokollierung.</1> Anfrageinhalte werden weder zentral noch an den Standorten gespeichert.",
-            "fair": "<1>Faire Verteilung.</1> Gestaffelte Kontingente je Person, kurzfristig und monatlich.",
-            "local": "<1>Kein Datenabfluss.</1> Die Anfragen verlassen die DHBW nicht — keine Weitergabe an kommerzielle Anbieter."
-        },
         "tools": {
             "title": "Womit sich das nutzen lässt",
-            "hint": "Jedes Werkzeug, das einen OpenAI-kompatiblen Endpunkt zulässt. Dort werden die Basis-URL von oben und der eigene API Key eingetragen. Die verlinkten Anleitungen stammen von den Projekten selbst.",
+            "hint": "Jedes Werkzeug, das einen OpenAI-kompatiblen Endpunkt zulässt. Dort werden die Basis-URL und der eigene API Key eingetragen. Die verlinkten Anleitungen stammen von den Projekten selbst.",
+            "baseUrl": "Basis-URL:",
             "tool": "Werkzeug",
             "kind": "Einsatz",
             "description": "Beschreibung",

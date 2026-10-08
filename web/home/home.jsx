@@ -1,192 +1,98 @@
 import { Link } from 'wouter';
-import { Container, Stack, Group, Title, Text, Paper, Button, ThemeIcon, SimpleGrid, List, Alert } from '@mantine/core';
-import { Globe, ListPlus, ShieldCheck, ArrowRight, ServerCog, FolderKanban, Sparkles } from 'lucide-react';
+import { Container, Stack, Title, Text, Paper, Button, ThemeIcon, SimpleGrid, List, Group } from '@mantine/core';
+import { Globe, ShieldCheck, ArrowRight, FolderKanban, Sparkles } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 
-// First-run friendly landing page: explain what this portal is for and give a
-// short, scannable path through it. Most users arrive here on their first login
-// and don't yet know what to do.
+// First-run friendly landing page: what this portal offers, one card per
+// service, each with the one button that gets someone started there. Most
+// users arrive here on their first login and do not yet know what to do.
 //
-// The path follows what a student actually does: request a project to run
-// something in, give it hostnames, then secure those hostnames with TLS. The
-// budget/delegation side of Cloud Projects is deliberately absent — it concerns
-// the handful of people who hand out resources, not the people arriving here.
-
+// The budget/delegation side of Cloud Projects is deliberately absent — it
+// concerns the handful of people who hand out resources, not the people
+// arriving here.
+//
 // Which sections exist comes from /features.js — the same statement the header
-// and the router read. This file used to re-derive the projects flag from
-// window.appconfig itself, which was a third copy of one fact.
-//
-// It matters here beyond the wording: a button pointing at a section whose route
-// is not registered lands on the 404 page.
-
-// The steps take the caller's `t`: the texts are translated, so a step cannot
-// be a module-level constant any more — it is built when the page renders, in
-// the language it renders in.
-const projectStep = (t) => ({
-    icon: FolderKanban,
-    color: 'blue',
-    title: t('home.steps.project.title'),
-    points: [
-        t('home.steps.project.own'),
-        t('home.steps.project.instant'),
-        t('home.steps.project.together'),
-    ],
-});
-
-const zoneStep = (t) => ({
-    icon: Globe,
-    color: 'teal',
-    title: t('home.steps.zone.title'),
-    points: [
-        t('home.steps.zone.activate'),
-        t('home.steps.zone.hostnames'),
-        t('home.steps.zone.point'),
-    ],
-});
-
-const tlsStep = (t) => ({
-    icon: ShieldCheck,
-    color: 'indigo',
-    title: t('home.steps.tls.title'),
-    points: [
-        t('home.steps.tls.issue'),
-        t('home.steps.tls.manifests'),
-        t('home.steps.tls.acme'),
-    ],
-});
-
-// Without Cloud Projects the portal starts at the zone, so the DNS steps are
-// spelled out separately instead of being condensed into one.
-const dnsOnlySteps = (t) => [
-    {
-        ...zoneStep(t),
-        title: t('home.steps.zoneOnly.title'),
-        points: [
-            t('home.steps.zone.activate'),
-            t('home.steps.zone.hostnames'),
-            t('home.steps.zoneOnly.basis'),
-        ],
-    },
-    {
-        icon: ListPlus,
-        color: 'teal',
-        title: t('home.steps.records.title'),
-        points: [
-            t('home.steps.records.point'),
-            t('home.steps.records.tsig'),
-            t('home.steps.records.automate'),
-        ],
-    },
-    tlsStep(t),
-];
+// and the router read — and, for the language models, from whether the LLM
+// service lets this person in (use-llm-me.jsx). A card for a section that is not
+// there would send its button to the 404 page.
 
 export function Home() {
     const { t } = useTranslation();
     const acmeServer = window.appconfig?.acmeServer || 'https://certificates.dhbw.cloud';
     const acmeHost = acmeServer.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const withProjects = cloudProjectsEnabled;
-    const withDns = dnsZonesEnabled;
-    // Offered only to someone the LLM service lets in — see use-llm-me.jsx.
     const { hasAccess: withLlm } = useLlmMe();
 
-    // Every step below the first one is about zones and certificates, so a
-    // deployment without the DNS API keeps only the project step rather than
-    // walking someone through a section that is not there.
-    const steps = withDns
-        ? (withProjects ? [projectStep(t), zoneStep(t), tlsStep(t)] : dnsOnlySteps(t))
-        : [projectStep(t)];
+    const services = [
+        cloudProjectsEnabled && {
+            key: 'projects',
+            icon: FolderKanban,
+            color: 'blue',
+            to: '/projects',
+        },
+        dnsZonesEnabled && {
+            key: 'dns',
+            icon: Globe,
+            color: 'teal',
+            to: '/dyndns/zones',
+        },
+        withLlm && {
+            key: 'llm',
+            icon: Sparkles,
+            color: 'grape',
+            to: '/llm/overview',
+        },
+    ].filter(Boolean);
 
     return (
         <Container size="lg" py="xl">
             <Stack gap="xl">
-                {/* Hero */}
-                <Paper p="xl" shadow="sm" radius="md" withBorder>
-                    <Stack gap="sm">
-                        <Title order={1}>{t('home.hero.title')}</Title>
-                        <Text size="lg" c="dimmed">
-                            <Trans i18nKey={introKey(withProjects, withDns)}
-                                components={{ 1: <b />, 2: <b />, 3: <b /> }} />
-                        </Text>
-                        <Group mt="sm">
-                            {/* Same target as the header's Cloud Projects link: /projects
-                                redirects to My Projects, where "New project" lives. */}
-                            {withProjects && (
-                                <Button component={Link} to="/projects" size="md" rightSection={<ArrowRight size="18" />}>
-                                    {t('home.hero.requestProject')}
-                                </Button>
-                            )}
-                            {withDns && (
-                                <Button component={Link} to="/dyndns/zones" size="md"
-                                    variant={withProjects ? 'light' : 'filled'}
-                                    rightSection={withProjects ? null : <ArrowRight size="18" />}>
-                                    {t('home.hero.manageZones')}
-                                </Button>
-                            )}
-                        </Group>
-                    </Stack>
-                </Paper>
+                <Stack gap="xs">
+                    <Title order={1}>{t('home.hero.title')}</Title>
+                    <Text size="lg" c="dimmed" maw={760}>{t('home.hero.intro')}</Text>
+                </Stack>
 
-                {/* Get started */}
-                <div>
-                    <Title order={3} mb="md">{t('home.steps.heading')}</Title>
-                    <SimpleGrid cols={{ base: 1, md: 3 }} spacing="md">
-                        {steps.map(({ icon: Icon, color, title, points }) => (
-                            <Paper key={title} p="lg" shadow="xs" radius="md" withBorder>
-                                <Stack gap="sm">
-                                    <ThemeIcon size={44} radius="md" variant="light" color={color}>
-                                        <Icon size="24" />
+                <SimpleGrid cols={{ base: 1, md: services.length > 2 ? 3 : services.length }} spacing="md">
+                    {services.map(({ key, icon: Icon, color, to }) => (
+                        <Paper key={key} p="lg" shadow="xs" radius="md" withBorder
+                            style={{ display: 'flex', flexDirection: 'column' }}>
+                            <Stack gap="sm" style={{ flex: 1 }}>
+                                <Group gap="sm" wrap="nowrap">
+                                    <ThemeIcon size={40} radius="md" variant="light" color={color}>
+                                        <Icon size="22" />
                                     </ThemeIcon>
-                                    <Text fw={600}>{title}</Text>
-                                    <List size="sm" spacing={6} c="dimmed">
-                                        {points.map(p => <List.Item key={p}>{p}</List.Item>)}
-                                    </List>
-                                </Stack>
-                            </Paper>
-                        ))}
-                    </SimpleGrid>
-                </div>
-
-                {withLlm && (
-                    <Paper p="lg" shadow="xs" radius="md" withBorder>
-                        <Group justify="space-between" wrap="wrap" gap="md">
-                            <Group gap="md" wrap="nowrap" style={{ flex: '1 1 420px' }}>
-                                <ThemeIcon size={44} radius="md" variant="light" color="grape">
-                                    <Sparkles size="24" />
-                                </ThemeIcon>
-                                <div>
-                                    <Text fw={600}>{t('home.llm.title')}</Text>
-                                    <Text size="sm" c="dimmed">{t('home.llm.body')}</Text>
-                                </div>
-                            </Group>
-                            <Button component={Link} to="/llm/overview" variant="light" rightSection={<ArrowRight size="18" />}>
-                                {t('home.llm.open')}
+                                    <Text fw={600} size="lg">{t(`home.services.${key}.title`)}</Text>
+                                </Group>
+                                <Text size="sm">{t(`home.services.${key}.lead`)}</Text>
+                                <List size="sm" spacing={6} c="dimmed">
+                                    {['a', 'b', 'c'].map(p => (
+                                        <List.Item key={p}>{t(`home.services.${key}.${p}`)}</List.Item>
+                                    ))}
+                                </List>
+                            </Stack>
+                            <Button component={Link} to={to} variant="light" mt="md" fullWidth
+                                rightSection={<ArrowRight size="16" />}>
+                                {t(`home.services.${key}.open`)}
                             </Button>
-                        </Group>
-                    </Paper>
-                )}
+                        </Paper>
+                    ))}
+                </SimpleGrid>
 
-                {/* DHBW ACME callout — about the zones this portal hands out, so
-                    it goes with them. */}
-                {withDns && (
-                <Alert icon={<ServerCog size="20" />} color="blue" variant="light" radius="md"
-                    title={t('home.acme.title')}>
-                    <Text size="sm">
-                        <Trans i18nKey="home.acme.body" values={{ host: acmeHost }}
-                            components={{ 1: <b />, 2: <b />, 3: <b />, 4: <b />, 5: <b /> }} />
-                    </Text>
-                </Alert>
+                {/* The one rule that surprises people: the names handed out here
+                    take certificates only from the DHBW's own CA. */}
+                {dnsZonesEnabled && (
+                    <Group gap="sm" wrap="nowrap" align="flex-start">
+                        <ThemeIcon size={28} radius="md" variant="light" color="blue">
+                            <ShieldCheck size="16" />
+                        </ThemeIcon>
+                        <Text size="sm" c="dimmed">
+                            <Trans i18nKey="home.acme" values={{ host: acmeHost }}
+                                components={{ 1: <b />, 2: <b /> }} />
+                        </Text>
+                    </Group>
                 )}
             </Stack>
         </Container>
     );
-}
-
-// Which of the three opening sentences this deployment gets. One key per case,
-// because the sentences differ in more than a clause — a German reader would
-// not recognise them as one sentence with parts switched off.
-function introKey(withProjects, withDns) {
-    if (withProjects && withDns) return 'home.hero.introBoth';
-    return withProjects ? 'home.hero.introProjects' : 'home.hero.introDns';
 }

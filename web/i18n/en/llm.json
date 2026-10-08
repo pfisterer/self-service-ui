@@ -1,9 +1,10 @@
 {
     "overview": {
-        "title": "DHBW language models — in the browser and via API",
+        "title": "Private language models, run on DHBW hardware — in the browser and via API",
         "serviceOf": "A service of <1>dhbw.cloud</1>",
         "intro": "This service pools DHBW's LLM resources behind one shared, <1>OpenAI-compatible endpoint</1> — usable with any tool that accepts a base URL and an API key.",
         "introChat": "Chatting needs no key: the DHBW chat runs right in the browser.",
+        "promise": "Requests are not stored and never leave DHBW; nothing is passed to commercial providers. Tiered quotas per person keep the sharing fair.",
         "openChat": "Open the DHBW chat",
         "createKey": "Create an API key",
         "steps": {
@@ -26,24 +27,15 @@
                 "c": "The pool absorbs failures by itself"
             }
         },
-        "access": {
-            "title": "Access in two lines",
-            "hint": "Base URL and API key are all any client needs."
-        },
         "models": {
             "title": "Which model names are stable",
             "stable": "Use the neutral names <1>{{names}}</1>. They stay valid and always point to whatever is best available right now.",
             "concrete": "The model list also contains the concrete model names of the participating machines. These <1>can disappear at any time</1> — when a GPU is needed for a course or a different model is loaded. Anything meant to outlive a session should therefore use the neutral names."
         },
-        "promises": {
-            "title": "What the service guarantees",
-            "logging": "<1>No prompt logging.</1> Request contents are stored neither centrally nor at the sites.",
-            "fair": "<1>Fair sharing.</1> Tiered quotas per person, short-term and monthly.",
-            "local": "<1>No data leaves.</1> Requests stay within DHBW — nothing is passed to commercial providers."
-        },
         "tools": {
             "title": "What it works with",
-            "hint": "Any tool that accepts an OpenAI-compatible endpoint. Enter the base URL from above and an API key there. The linked guides come from the projects themselves.",
+            "hint": "Any tool that accepts an OpenAI-compatible endpoint. Enter the base URL and your API key there. The linked guides come from the projects themselves.",
+            "baseUrl": "Base URL:",
             "tool": "Tool",
             "kind": "Use",
             "description": "Description",

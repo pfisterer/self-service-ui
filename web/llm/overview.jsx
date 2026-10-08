@@ -1,8 +1,7 @@
 import { Link } from 'wouter';
 import { Trans, useTranslation } from 'react-i18next';
-import { Alert, Button, Container, Group, List, Paper, SimpleGrid, Stack, Table, Text, ThemeIcon, Title } from '@mantine/core';
-import { ArrowRight, KeyRound, LogIn, MessageSquare, Rocket } from 'lucide-react';
-import { CodeBlock } from '/helper/codeblock.jsx';
+import { Alert, Button, Code, Container, Group, List, Paper, SimpleGrid, Stack, Table, Text, ThemeIcon, Title } from '@mantine/core';
+import { ArrowRight, KeyRound, LogIn, MessageSquare, Rocket, ShieldCheck } from 'lucide-react';
 import { ExternalLink } from '/helper/external-link.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { LITELLM_CLIENT_DOCS, STABLE_MODELS, TOOLS } from '/llm/tools.js';
@@ -33,6 +32,12 @@ export function LlmOverview() {
                             <Trans i18nKey="llm.overview.intro" components={{ 1: <b /> }} />
                             {chatUrl && <> {t('llm.overview.introChat')}</>}
                         </Text>
+                        {/* What the service promises, said once and up front: it is
+                            the reason to use it rather than a commercial one. */}
+                        <Group gap="xs" wrap="nowrap" align="flex-start" maw={780}>
+                            <ShieldCheck size={18} style={{ flexShrink: 0, marginTop: 2, color: 'var(--mantine-color-teal-7)' }} />
+                            <Text size="sm">{t('llm.overview.promise')}</Text>
+                        </Group>
                         <Group mt="sm">
                             {chatUrl && (
                                 <Button component="a" href={chatUrl} target="_blank" size="md" leftSection={<MessageSquare size={18} />}>
@@ -61,14 +66,6 @@ export function LlmOverview() {
                     ))}
                 </SimpleGrid>
 
-                {apiUrl && (
-                    <Paper p="lg" radius="md" withBorder>
-                        <Title order={4}>{t('llm.overview.access.title')}</Title>
-                        <Text size="sm" c="dimmed" mb="sm">{t('llm.overview.access.hint')}</Text>
-                        <CodeBlock language="bash" code={`OPENAI_BASE_URL=${apiUrl}\nOPENAI_API_KEY=<API Key>`} />
-                    </Paper>
-                )}
-
                 <Alert variant="light" color="blue" title={t('llm.overview.models.title')}>
                     <Text size="sm">
                         <Trans i18nKey="llm.overview.models.stable" values={{ names: STABLE_MODELS.join(', ') }}
@@ -80,19 +77,11 @@ export function LlmOverview() {
                 </Alert>
 
                 <Paper p="lg" radius="md" withBorder>
-                    <Title order={4} mb="sm">{t('llm.overview.promises.title')}</Title>
-                    <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
-                        {['logging', 'fair', 'local'].map(k => (
-                            <Text key={k} size="sm">
-                                <Trans i18nKey={`llm.overview.promises.${k}`} components={{ 1: <b /> }} />
-                            </Text>
-                        ))}
-                    </SimpleGrid>
-                </Paper>
-
-                <Paper p="lg" radius="md" withBorder>
                     <Title order={4}>{t('llm.overview.tools.title')}</Title>
-                    <Text size="sm" c="dimmed">{t('llm.overview.tools.hint')}</Text>
+                    <Text size="sm" c="dimmed">
+                        {t('llm.overview.tools.hint')}
+                        {apiUrl && <> {t('llm.overview.tools.baseUrl')} <Code>{apiUrl}</Code></>}
+                    </Text>
                     <Table striped highlightOnHover mt="sm" verticalSpacing={6}>
                         <Table.Thead>
                             <Table.Tr>
