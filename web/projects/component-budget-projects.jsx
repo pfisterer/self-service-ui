@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Activity, ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Check, Eye, FolderInput, Gift, LogOut, Package, Pencil, Rocket, Search, Trash2, X } from 'lucide-react';
 import { ActionIcon, Badge, Box, Group, Loader, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
-import { useDebouncedValue, useLocalStorage } from '@mantine/hooks';
+import { useDebouncedValue, useElementSize, useLocalStorage } from '@mantine/hooks';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
@@ -76,6 +76,11 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
 
     const items = query.data?.items ?? [];
     const columns = resourceColumns(t, resources, items);
+    // Too narrow for a column per resource, each row shows an (i) with them
+    // instead. Measured, not guessed from the screen: the panel's width depends
+    // on the layout around it as much as on the window.
+    const { ref: tableBoxRef, width: tableWidth } = useElementSize();
+    const compact = tableWidth > 0 && tableWidth < 440 + 58 * columns.length;
     const total = query.data?.total ?? 0;
     const pages = Math.max(1, Math.ceil(total / TABLE_PAGE_SIZE));
     const filtered = q || statuses.length > 0 || group;
@@ -204,6 +209,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                     // share, every resource a column of its own — one heading for
                     // all rows, so the figures line up from row to row. Only a
                     // phone-narrow panel still scrolls.
+                    <div ref={tableBoxRef}>
                     <Table.ScrollContainer minWidth={480}>
                         <Table highlightOnHover verticalSpacing="xs" fz="sm" layout="fixed">
                             <Table.Thead>
@@ -226,8 +232,12 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                                     </Table.Th>
                                     {/* The row markers: reserved on the first line of
                                         a row, in use on the second. */}
-                                    <Table.Th w={22} px={0}><VisuallyHidden>{t('projects.budgetProjects.colResources')}</VisuallyHidden></Table.Th>
-                                    {columns.map(c => (
+                                    {compact ? (
+                                        <Table.Th w={40}><VisuallyHidden>{t('projects.budgetProjects.colResources')}</VisuallyHidden></Table.Th>
+                                    ) : (
+                                        <Table.Th w={22} px={0}><VisuallyHidden>{t('projects.budgetProjects.colResources')}</VisuallyHidden></Table.Th>
+                                    )}
+                                    {!compact && columns.map(c => (
                                         <Table.Th key={c.id} ta="right" px={6}>
                                             <Text size="xs" fw={600} lh={1.2}>{c.label}</Text>
                                             {c.unit && <Text size="10px" c="dimmed" lh={1.2}>{c.unit}</Text>}
@@ -238,13 +248,13 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                             </Table.Thead>
                             <Table.Tbody>
                                 {items.map(node => (
-                                    <ProjectRow key={node.id} node={node} resources={resources} columns={columns}
+                                    <ProjectRow key={node.id} node={node} resources={resources} columns={columns} compact={compact}
                                         showBudget={allocatedOnly || (deep && node.parent_id !== budget.id)}
                                         onAction={onAction} onOpen={onOpen} />
                                 ))}
                                 {items.length === 0 && !query.isPending && (
                                     <Table.Tr>
-                                        <Table.Td colSpan={4 + columns.length}>
+                                        <Table.Td colSpan={compact ? 4 : 4 + columns.length}>
                                             <Text size="sm" c="dimmed" ta="center" py="md">
                                                 {filtered ? t('projects.budgetProjects.noMatches') : t('projects.budgetProjects.none')}
                                             </Text>
@@ -254,6 +264,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                             </Table.Tbody>
                         </Table>
                     </Table.ScrollContainer>
+                    </div>
                 )}
 
                 {pages > 1 && (
@@ -306,34 +317,44 @@ const VMS = '__vms';
 // one, a dimmed dash where there is none — nothing granted, nothing to grant
 // (VMs), or nothing measured (an import, a project not synced yet, a resource
 // OpenStack does not count). A dash is never a zero.
-function ResourceCells({ node, columns }) {
-    const { t } = useTranslation();
+function resourceFigures(node, c) {
     const quota = effectiveLimit(node, node.pending?.limit || node.limit) || {};
-    const inUse = node.os_in_use;
-    const line = (v) => (v === null || v === undefined)
+    const reserved = c.id === VMS || (quota[c.id] ?? 0) === 0 ? null
+        : quota[c.id] === UNLIMITED_QUOTA ? '∞' : quota[c.id];
+    const used = c.id === VMS ? node.os_servers : node.os_in_use?.[c.id];
+    return { reserved, used };
+}
+
+function figure(v) {
+    return (v === null || v === undefined)
         ? <Text size="xs" lh={1.6} c="dimmed">–</Text>
         : <Text size="xs" lh={1.6} style={{ whiteSpace: 'nowrap' }}>{v}</Text>;
-    const marker = (Icon, label) => (
+}
+
+function RowMarker({ icon: Icon, label }) {
+    return (
         <Tooltip label={label} openDelay={300}>
             <Box h={19} style={{ display: 'flex', alignItems: 'center', color: 'var(--mantine-color-gray-6)' }}>
                 <Icon size={12} aria-label={label} />
             </Box>
         </Tooltip>
     );
+}
+
+function ResourceCells({ node, columns }) {
+    const { t } = useTranslation();
     return (
         <>
             <Table.Td px={0}>
-                {marker(Package, t('projects.resources.reserved'))}
-                {marker(Activity, t('projects.resources.inUse'))}
+                <RowMarker icon={Package} label={t('projects.resources.reserved')} />
+                <RowMarker icon={Activity} label={t('projects.resources.inUse')} />
             </Table.Td>
             {columns.map(c => {
-                const reserved = c.id === VMS || (quota[c.id] ?? 0) === 0 ? null
-                    : quota[c.id] === UNLIMITED_QUOTA ? '∞' : quota[c.id];
-                const used = c.id === VMS ? node.os_servers : inUse?.[c.id];
+                const { reserved, used } = resourceFigures(node, c);
                 return (
                     <Table.Td key={c.id} ta="right" px={6}>
-                        {line(reserved)}
-                        {line(used)}
+                        {figure(reserved)}
+                        {figure(used)}
                     </Table.Td>
                 );
             })}
@@ -341,7 +362,41 @@ function ResourceCells({ node, columns }) {
     );
 }
 
-function ProjectRow({ node, resources, columns, onAction, onOpen, showBudget = false }) {
+// ResourceTable is the same as a small table of its own, for the (i) a row
+// shows instead when the table is too narrow for one column per resource.
+function ResourceTable({ node, columns }) {
+    const { t } = useTranslation();
+    return (
+        <Table withRowBorders={false} verticalSpacing={0} horizontalSpacing={8} fz="xs">
+            <Table.Thead>
+                <Table.Tr>
+                    <Table.Th />
+                    {columns.map(c => (
+                        <Table.Th key={c.id} ta="right">
+                            <Text size="xs" fw={600} lh={1.2}>{c.label}</Text>
+                            {c.unit && <Text size="10px" c="dimmed" lh={1.2}>{c.unit}</Text>}
+                        </Table.Th>
+                    ))}
+                </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+                {['reserved', 'used'].map(kind => (
+                    <Table.Tr key={kind}>
+                        <Table.Td>
+                            <RowMarker icon={kind === 'reserved' ? Package : Activity}
+                                label={t(kind === 'reserved' ? 'projects.resources.reserved' : 'projects.resources.inUse')} />
+                        </Table.Td>
+                        {columns.map(c => (
+                            <Table.Td key={c.id} ta="right">{figure(resourceFigures(node, c)[kind])}</Table.Td>
+                        ))}
+                    </Table.Tr>
+                ))}
+            </Table.Tbody>
+        </Table>
+    );
+}
+
+function ProjectRow({ node, resources, columns, compact = false, onAction, onOpen, showBudget = false }) {
     const { t } = useTranslation();
     const config = useProjectConfig();
     const can = projectActions(node, { manager: true, canDelete: deletesOnRequest(config?.retirement) });
@@ -400,7 +455,14 @@ function ProjectRow({ node, resources, columns, onAction, onOpen, showBudget = f
                     ) : <Text size="xs" c="dimmed">—</Text>}
                 </Group>
             </Table.Td>
-            <ResourceCells node={node} columns={columns} />
+            {compact ? (
+                // Stop the click here: opening the (i) must not open the row.
+                <Table.Td onClick={(e) => e.stopPropagation()}>
+                    <InfoPopover plain width="auto" label={t('projects.budgetProjects.colResources')}>
+                        <ResourceTable node={node} columns={columns} />
+                    </InfoPopover>
+                </Table.Td>
+            ) : <ResourceCells node={node} columns={columns} />}
             <Table.Td>
                 <Group gap="2" wrap="wrap" justify="flex-end">
                     <RowAction label={t('projects.actions.details')} onClick={act('details')}><Eye size="14" /></RowAction>

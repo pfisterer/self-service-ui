@@ -17,7 +17,9 @@ dayjs.extend(relativeTime);
 // hovering shows the longer explanation, so the label stays one line. A tap
 // opens it too — a touch screen has no hover — and a tap elsewhere closes it.
 // The click only opens: as a toggle it would close what hovering just opened.
-export function InfoPopover({ label, children, width = 300 }) {
+// `plain` hands the content over as it is, for content that is not a sentence
+// (a small table, say) and must not sit inside a paragraph.
+export function InfoPopover({ label, children, width = 300, plain = false }) {
     const [opened, setOpened] = useState(false);
     return (
         <Popover width={width} position="bottom-start" withArrow shadow="md"
@@ -30,7 +32,7 @@ export function InfoPopover({ label, children, width = 300 }) {
                 </ActionIcon>
             </Popover.Target>
             <Popover.Dropdown>
-                <Text size="xs">{children}</Text>
+                {plain ? children : <Text size="xs">{children}</Text>}
             </Popover.Dropdown>
         </Popover>
     );
