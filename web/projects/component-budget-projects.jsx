@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Check, Eye, FolderInput, Gift, MoreHorizontal, Pencil, Rocket, Search, Trash2, X } from 'lucide-react';
-import { ActionIcon, Badge, Group, Loader, Menu, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
+import { Activity, ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Check, Eye, FolderInput, Gift, MoreHorizontal, Package, Pencil, Rocket, Search, Trash2, X } from 'lucide-react';
+import { ActionIcon, Badge, Box, Group, Loader, Menu, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { useDebouncedValue, useLocalStorage } from '@mantine/hooks';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -8,12 +8,11 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { DeletingBadge, InfoPopover, NodeStatusBadge } from './component-common.jsx';
 import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
-import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
 import { formatDate } from '../format-date.js';
-import { ProjectResources } from './component-project-resources.jsx';
 
 // Rows per page. A table, unlike the tree it replaces for projects, pages
 // instead of growing: a budget for all students of a location holds hundreds.
@@ -76,6 +75,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
     });
 
     const items = query.data?.items ?? [];
+    const columns = resourceColumns(t, resources, items);
     const total = query.data?.total ?? 0;
     const pages = Math.max(1, Math.ceil(total / TABLE_PAGE_SIZE));
     const filtered = q || statuses.length > 0 || group;
@@ -199,12 +199,11 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                     <LoadError query={query} title={t('projects.budgetProjects.loadError')} />
                 ) : (
                     // Fixed layout with set shares, not "as wide as the content": the
-                    // content of a row — a long name, a status badge, resources that
-                    // must not break inside an entry — always added up to more than
-                    // the detail panel has, and the table scrolled sideways. Now
-                    // each column gets its share, names cut off with an ellipsis and
-                    // resources wrap between entries. Only a phone-narrow panel
-                    // still scrolls.
+                    // content of a row always added up to more than the detail panel
+                    // has, and the table scrolled sideways. Name and status get a
+                    // share, every resource a column of its own — one heading for
+                    // all rows, so the figures line up from row to row. Only a
+                    // phone-narrow panel still scrolls.
                     <Table.ScrollContainer minWidth={480}>
                         <Table highlightOnHover verticalSpacing="xs" fz="sm" layout="fixed">
                             <Table.Thead>
@@ -213,31 +212,39 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                                         place under the name, the end date under the
                                         status. Six side by side did not fit the
                                         detail panel and scrolled sideways. */}
-                                    <Table.Th w="36%">
+                                    <Table.Th w="30%">
                                         <Group gap="md" rowGap={0} wrap="wrap">
                                             <SortButton label={t('projects.budgetProjects.colName')} sortKey="name" sort={sort} onSort={toggleSort} />
                                             <SortButton label={t('projects.budgetProjects.colOwner')} sortKey="owner" sort={sort} onSort={toggleSort} dimmed />
                                         </Group>
                                     </Table.Th>
-                                    <Table.Th w="25%">
+                                    <Table.Th w="20%">
                                         <Group gap="md" rowGap={0} wrap="wrap">
                                             <SortButton label={t('projects.budgetProjects.colStatus')} sortKey="status" sort={sort} onSort={toggleSort} />
                                             <SortButton label={t('projects.budgetProjects.colValidUntil')} sortKey="termination_date" sort={sort} onSort={toggleSort} dimmed />
                                         </Group>
                                     </Table.Th>
-                                    <Table.Th>{t('projects.budgetProjects.colResources')}</Table.Th>
+                                    {/* The row markers: reserved on the first line of
+                                        a row, in use on the second. */}
+                                    <Table.Th w={22} px={0}><VisuallyHidden>{t('projects.budgetProjects.colResources')}</VisuallyHidden></Table.Th>
+                                    {columns.map(c => (
+                                        <Table.Th key={c.id} ta="right" px={6}>
+                                            <Text size="xs" fw={600} lh={1.2}>{c.label}</Text>
+                                            {c.unit && <Text size="10px" c="dimmed" lh={1.2}>{c.unit}</Text>}
+                                        </Table.Th>
+                                    ))}
                                     <Table.Th w={84}><VisuallyHidden>{t('projects.budgetProjects.colActions')}</VisuallyHidden></Table.Th>
                                 </Table.Tr>
                             </Table.Thead>
                             <Table.Tbody>
                                 {items.map(node => (
-                                    <ProjectRow key={node.id} node={node} resources={resources}
+                                    <ProjectRow key={node.id} node={node} resources={resources} columns={columns}
                                         showBudget={allocatedOnly || (deep && node.parent_id !== budget.id)}
                                         onAction={onAction} onOpen={onOpen} />
                                 ))}
                                 {items.length === 0 && !query.isPending && (
                                     <Table.Tr>
-                                        <Table.Td colSpan={4}>
+                                        <Table.Td colSpan={4 + columns.length}>
                                             <Text size="sm" c="dimmed" ta="center" py="md">
                                                 {filtered ? t('projects.budgetProjects.noMatches') : t('projects.budgetProjects.none')}
                                             </Text>
@@ -277,7 +284,61 @@ function SortButton({ label, sortKey, sort, onSort, dimmed = false }) {
     );
 }
 
-function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
+// resourceColumns are the quantities shown as columns: those any listed project
+// holds, in catalogue order, plus the VM count once anything has been measured.
+// Availabilities have no amount and go under the project's name instead.
+function resourceColumns(t, resources, items) {
+    const quotaOf = (n) => effectiveLimit(n, n.pending?.limit || n.limit) || {};
+    const cols = (resources || [])
+        .filter(r => !isAvailability(r) && items.some(n => (quotaOf(n)[r.id] ?? 0) !== 0))
+        .map(r => ({ id: r.id, label: r.name, unit: r.unit }));
+    if (items.some(n => n.os_servers !== undefined && n.os_servers !== null)) {
+        cols.push({ id: VMS, label: t('projects.resources.vms') });
+    }
+    return cols;
+}
+
+const VMS = '__vms';
+
+// ResourceCells are a project's figures, one cell per column: what it was
+// granted on the first line, what is in use on the second. The second line
+// exists once the reconciler has measured the project; a resource OpenStack
+// does not measure stays empty there, never 0.
+function ResourceCells({ node, columns }) {
+    const { t } = useTranslation();
+    const quota = effectiveLimit(node, node.pending?.limit || node.limit) || {};
+    const inUse = node.os_in_use;
+    const measured = !!inUse;
+    const line = (v) => <Text size="xs" lh={1.6} style={{ whiteSpace: 'nowrap' }}>{v ?? '\u00a0'}</Text>;
+    const marker = (Icon, label) => (
+        <Tooltip label={label} openDelay={300}>
+            <Box h={19} style={{ display: 'flex', alignItems: 'center', color: 'var(--mantine-color-gray-6)' }}>
+                <Icon size={12} aria-label={label} />
+            </Box>
+        </Tooltip>
+    );
+    return (
+        <>
+            <Table.Td px={0}>
+                {marker(Package, t('projects.resources.reserved'))}
+                {measured && marker(Activity, t('projects.resources.inUse'))}
+            </Table.Td>
+            {columns.map(c => {
+                const reserved = c.id === VMS ? null
+                    : (quota[c.id] ?? 0) === 0 ? '–' : quota[c.id] === UNLIMITED_QUOTA ? '∞' : quota[c.id];
+                const used = c.id === VMS ? node.os_servers : inUse?.[c.id];
+                return (
+                    <Table.Td key={c.id} ta="right" px={6}>
+                        {line(reserved)}
+                        {measured && line(used)}
+                    </Table.Td>
+                );
+            })}
+        </>
+    );
+}
+
+function ProjectRow({ node, resources, columns, onAction, onOpen, showBudget = false }) {
     const { t } = useTranslation();
     const config = useProjectConfig();
     const can = projectActions(node, { manager: true, canDelete: deletesOnRequest(config?.retirement) });
@@ -311,6 +372,10 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
                         {t('projects.budgetProjects.inBudget', { name: budgetPathText(node.parent_path, node.parent_name) })}
                     </Text>
                 )}
+                {/* Availabilities have no amount, so they get no column. */}
+                {availabilityNames(resources, node) && (
+                    <Text size="xs" c="dimmed">{availabilityNames(resources, node)}</Text>
+                )}
             </Table.Td>
             {/* The status is the one cell that must never be cut: "Change
                 requested" and "Awaiting approval" are what a manager scans for.
@@ -330,10 +395,7 @@ function ProjectRow({ node, resources, onAction, onOpen, showBudget = false }) {
                     </Tooltip>
                 )}
             </Table.Td>
-            <Table.Td>
-                <ProjectResources node={node} resources={resources} compact
-                    quota={effectiveLimit(node, node.pending?.limit || node.limit)} />
-            </Table.Td>
+            <ResourceCells node={node} columns={columns} />
             <Table.Td>
                 <Group gap="2" wrap="wrap" justify="flex-end">
                     <RowAction label={t('projects.actions.details')} onClick={act('details')}><Eye size="14" /></RowAction>
@@ -373,4 +435,9 @@ function RowAction({ label, color = 'gray', onClick, children }) {
             </ActionIcon>
         </Tooltip>
     );
+}
+
+function availabilityNames(resources, node) {
+    const quota = effectiveLimit(node, node.pending?.limit || node.limit) || {};
+    return (resources || []).filter(r => isAvailability(r) && quota[r.id] === 1).map(r => r.name).join(' · ');
 }
