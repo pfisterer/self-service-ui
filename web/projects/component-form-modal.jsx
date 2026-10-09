@@ -68,6 +68,7 @@ export function FormTabs({ value, onChange, tabs }) {
 export function FormModal({
     opened, onClose, title, size = 'lg',
     onSubmit, submitting, submitError, submitLabel, submitColor, submitDisabled = false,
+    secondary = null,
     children,
 }) {
     const { t } = useTranslation();
@@ -87,6 +88,12 @@ export function FormModal({
 
                     <Group justify="flex-end" mt="md">
                         <Button variant="default" type="button" onClick={onClose}>{t('projects.actions.cancel')}</Button>
+                        {/* A second way to finish, e.g. reject next to approve:
+                            { label, color, onClick, loading, disabled }. */}
+                        {secondary && (
+                            <Button type="button" variant="light" color={secondary.color} loading={secondary.loading}
+                                disabled={secondary.disabled} onClick={secondary.onClick}>{secondary.label}</Button>
+                        )}
                         <Button type="submit" color={submitColor} loading={submitting} disabled={submitDisabled}>{submitLabel}</Button>
                     </Group>
                 </Stack>

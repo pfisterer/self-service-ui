@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Gift, Pencil, Rocket, Trash2, Users, X } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, ExternalLink, Eye, FolderInput, Gift, Pencil, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { CopyLinkButton, DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
 import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion } from './util-project.jsx';
@@ -281,11 +281,10 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                     {/* Manager actions */}
                     {can.approve && (
                         <>
-                            <Button color={COLOR.positive} variant="light" size="xs" onClick={() => act('approve')}>
-                                <Check size="13" style={{ marginRight: 4 }} />{t('projects.actions.approve')}
-                            </Button>
-                            <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('reject')}>
-                                <X size="13" style={{ marginRight: 4 }} />{t('projects.actions.reject')}
+                            {/* One dialog for both answers: approve or reject,
+                                knowing the same facts. */}
+                            <Button color={COLOR.attention} variant="light" size="xs" onClick={() => act('decide')}>
+                                <Scale size="13" style={{ marginRight: 4 }} />{t('projects.actions.decide')}
                             </Button>
                         </>
                     )}

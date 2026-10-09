@@ -20,7 +20,8 @@
         "allocate": "Allocation",
         "deleteForGood": "Delete for good",
         "copyLink": "Copy link",
-        "linkCopied": "Link copied"
+        "linkCopied": "Link copied",
+        "decide": "Decide"
     },
     "adopt": {
         "title": "Adopt project: {{name}}",
@@ -33,8 +34,6 @@
         "reasonDefault": "Adopted OpenStack project “{{name}}”"
     },
     "approve": {
-        "title": "Approve: {{name}}",
-        "titleChange": "Approve change: {{name}}",
         "requestedByLabel": "Requested by:",
         "purposeLabel": "Purpose:",
         "budgetNote": "This approves a <1>budget</1>: its managers can then approve requests and delegate further within the granted cap.",
@@ -365,12 +364,7 @@
         "range": "Enter a value between {{min}} and {{max}}"
     },
     "reject": {
-        "title": "Reject request",
-        "titleChange": "Reject change request",
-        "submitChange": "Reject change",
-        "requestedBy": "Requested by: {{email}}",
         "changeNote": "Only the proposed change is discarded — the project keeps running with its current resources.",
-        "reason": "Reason",
         "reasonPlaceholder": "Explain the decision…",
         "reasonRequired": "Please give a reason (at least 5 characters) — the requester will see it."
     },
@@ -790,5 +784,12 @@
         "remove": "Remove group",
         "removeTitle": "Remove the group “{{name}}”?",
         "removeMessage": "The group loses its access to the project in OpenStack with the next synchronisation. This takes effect at once, without approval, and cannot be undone here."
+    },
+    "decide": {
+        "title": "Decide on request: {{name}}",
+        "titleChange": "Decide on change: {{name}}",
+        "reason": "Reason",
+        "reasonHint": "Required when rejecting; it is shown to whoever asked.",
+        "current": "Currently"
     }
 }

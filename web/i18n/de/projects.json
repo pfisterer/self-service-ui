@@ -20,7 +20,8 @@
         "allocate": "Sonderzuteilung",
         "deleteForGood": "Endgültig löschen",
         "copyLink": "Link kopieren",
-        "linkCopied": "Link kopiert"
+        "linkCopied": "Link kopiert",
+        "decide": "Entscheiden"
     },
     "adopt": {
         "title": "Projekt übernehmen: {{name}}",
@@ -33,8 +34,6 @@
         "reasonDefault": "Übernommenes OpenStack-Projekt „{{name}}“"
     },
     "approve": {
-        "title": "Genehmigen: {{name}}",
-        "titleChange": "Änderung genehmigen: {{name}}",
         "requestedByLabel": "Angefragt von:",
         "purposeLabel": "Zweck:",
         "budgetNote": "Damit wird ein <1>Budget</1> genehmigt: Wer es verwaltet, kann dann selbst Anfragen genehmigen und innerhalb der gewährten Obergrenze weitergeben.",
@@ -365,12 +364,7 @@
         "range": "Erlaubt ist ein Wert zwischen {{min}} und {{max}}"
     },
     "reject": {
-        "title": "Anfrage ablehnen",
-        "titleChange": "Änderungsanfrage ablehnen",
-        "submitChange": "Änderung ablehnen",
-        "requestedBy": "Angefragt von: {{email}}",
         "changeNote": "Nur die vorgeschlagene Änderung wird verworfen — das Projekt läuft mit seinen jetzigen Ressourcen weiter.",
-        "reason": "Begründung",
         "reasonPlaceholder": "Begründung der Entscheidung…",
         "reasonRequired": "Bitte eine Begründung angeben (mindestens 5 Zeichen) — die anfragende Person sieht sie."
     },
@@ -790,5 +784,12 @@
         "remove": "Gruppe entfernen",
         "removeTitle": "Gruppe „{{name}}“ entfernen?",
         "removeMessage": "Die Gruppe verliert beim nächsten Abgleich den Zugang zum Projekt in OpenStack. Das wirkt sofort, ohne Genehmigung, und lässt sich hier nicht rückgängig machen."
+    },
+    "decide": {
+        "title": "Anfrage entscheiden: {{name}}",
+        "titleChange": "Änderung entscheiden: {{name}}",
+        "reason": "Begründung",
+        "reasonHint": "Beim Ablehnen Pflicht; sie wird der anfragenden Person angezeigt.",
+        "current": "Bisher"
     }
 }

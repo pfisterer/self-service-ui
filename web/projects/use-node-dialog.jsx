@@ -6,7 +6,7 @@ import { useState } from 'react';
 //
 //   const dlg = useNodeDialog();
 //   <ProjectCard onAction={dlg.open} … />
-//   <RejectModal key={dlg.key} opened={dlg.is('reject')} node={dlg.node} onClose={dlg.close} … />
+//   <DecisionModal key={dlg.key} opened={dlg.is('decide')} node={dlg.node} onClose={dlg.close} … />
 //
 // `key` is what resets a dialog's fields. Every one of these modals used to
 // carry an effect that cleared its state on open — a setState in an effect

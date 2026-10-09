@@ -1,4 +1,4 @@
-import { Check, Eye, FolderInput, FolderOpen, Gift, Pencil, Plus, Trash2, X, Zap } from 'lucide-react';
+import { Eye, FolderInput, FolderOpen, Gift, Pencil, Plus, Scale, Trash2, Zap } from 'lucide-react';
 import { Anchor, Badge, Button, Card, Divider, Group, Stack, Text } from '@mantine/core';
 import { CopyLinkButton, FactRow, formatTerm, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
 import { useTranslation } from 'react-i18next';
@@ -176,11 +176,10 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                     )}
                     {manageable && (isPending || isChangePending) && (
                         <>
-                            <Button color={COLOR.positive} variant="light" size="xs" onClick={() => act('approve')}>
-                                <Check size="13" style={{ marginRight: 4 }} />{t('projects.actions.approve')}
-                            </Button>
-                            <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('reject')}>
-                                <X size="13" style={{ marginRight: 4 }} />{t('projects.actions.reject')}
+                            {/* One dialog for both answers: approve or reject,
+                                knowing the same facts. */}
+                            <Button color={COLOR.attention} variant="light" size="xs" onClick={() => act('decide')}>
+                                <Scale size="13" style={{ marginRight: 4 }} />{t('projects.actions.decide')}
                             </Button>
                         </>
                     )}

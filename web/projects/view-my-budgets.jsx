@@ -15,12 +15,11 @@ import { BudgetTree, MORE_SUFFIX, NodeResultList, budgetsToTreeData, budgetChild
 import { BudgetProjectsTable } from './component-budget-projects.jsx';
 import { AllocationModal } from './modal-allocation.jsx';
 import { RetireModal } from './modal-retire.jsx';
-import { ApproveModal } from './modal-approve.jsx';
+import { DecisionModal } from './modal-decide.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
 import { NodeInspectModal } from './modal-inspect.jsx';
 import { MoveModal } from './modal-move.jsx';
-import { RejectModal } from './modal-reject.jsx';
 import { TransferOwnerModal } from './modal-transfer-owner.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
@@ -749,9 +748,8 @@ export function MyBudgetsView({ params }) {
                 eligibleBudgets={budgetRequestTargets}
                 currentUserEmail={userEmail}
             />
-            <ApproveModal key={`approvemodal:${dlg.key}`} opened={dlg.is('approve')} onClose={dlg.close} onDone={refresh}
+            <DecisionModal key={`decidemodal:${dlg.key}`} opened={dlg.is('decide')} onClose={dlg.close} onDone={refresh}
                 resources={resources} node={dlg.node} />
-            <RejectModal key={`rejectmodal:${dlg.key}`} opened={dlg.is('reject')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
             <MoveModal key={`movemodal:${dlg.key}`} opened={dlg.is('move')} onClose={dlg.close} onDone={refresh}
                 node={dlg.node} targetBudgets={moveTargets} />
             <TransferOwnerModal key={`transferownermodal:${dlg.key}`} opened={dlg.is('transfer')} onClose={dlg.close} onDone={refresh} node={dlg.node} />

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Check, Eye, FolderInput, Gift, LogOut, Package, Pencil, Rocket, Search, Trash2, X } from 'lucide-react';
+import { Activity, ArrowDown, ArrowRightLeft, ArrowUp, ArrowUpDown, Eye, FolderInput, Gift, LogOut, Package, Pencil, Rocket, Scale, Search, Trash2, X } from 'lucide-react';
 import { ActionIcon, Badge, Box, Group, Loader, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { useDebouncedValue, useElementSize, useLocalStorage } from '@mantine/hooks';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
@@ -516,8 +516,7 @@ function ProjectRow({ node, resources, columns, compact = false, onAction, onOpe
                     {can.change
                         ? <RowAction label={t('projects.actions.edit')} onClick={act('change')}><Pencil size="14" /></RowAction>
                         : <RowAction label={t('projects.actions.details')} onClick={act('details')}><Eye size="14" /></RowAction>}
-                    {can.approve && <RowAction label={t('projects.actions.approve')} color={COLOR.positive} onClick={act('approve')}><Check size="14" /></RowAction>}
-                    {can.reject && <RowAction label={t('projects.actions.reject')} color={COLOR.negative} onClick={act('reject')}><X size="14" /></RowAction>}
+                    {can.approve && <RowAction label={t('projects.actions.decide')} color={COLOR.attention} onClick={act('decide')}><Scale size="14" /></RowAction>}
                     {can.adopt && <RowAction label={t('projects.actions.adopt')} color={COLOR.outside} onClick={act('adopt')}><Rocket size="14" /></RowAction>}
                     {/* Every action as its own icon, none behind a menu: a row may
                         grow a line taller, but nothing has to be looked for. */}
