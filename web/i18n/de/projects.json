@@ -18,7 +18,9 @@
         "adopt": "Übernehmen",
         "ownerAction": "Verantwortlich",
         "allocate": "Sonderzuteilung",
-        "deleteForGood": "Endgültig löschen"
+        "deleteForGood": "Endgültig löschen",
+        "copyLink": "Link kopieren",
+        "linkCopied": "Link kopiert"
     },
     "adopt": {
         "title": "Projekt übernehmen: {{name}}",
@@ -131,7 +133,8 @@
         "nothingWaiting": "Nichts wartet auf eine Entscheidung.",
         "selectHint": "Ein Budget im Baum auswählen, um Details und Projekte zu sehen.",
         "expandAll": "Alle Budgets aufklappen",
-        "collapseAll": "Auf die erste Ebene zuklappen"
+        "collapseAll": "Auf die erste Ebene zuklappen",
+        "linkMissing": "Der verlinkte Eintrag existiert nicht oder ist mit den eigenen Rechten nicht sichtbar. Angezeigt wird stattdessen der Anfang des Baums."
     },
     "changes": {
         "proposed": "Vorgeschlagene Änderungen",

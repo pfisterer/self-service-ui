@@ -1,6 +1,6 @@
 import { AlertTriangle, ArrowRightLeft, Check, ExternalLink, Eye, FolderInput, Gift, Pencil, Rocket, Trash2, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
-import { DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
+import { CopyLinkButton, DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
 import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +20,9 @@ import { ProjectResources } from './component-project-resources.jsx';
 // How many members a card names before it counts the rest.
 const MEMBERS_SHOWN = 5;
 
-export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction }) {
+//
+// link: when set, a button next to the date copies this link to the project.
+export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction, link }) {
     const { t } = useTranslation();
     const act = (action) => onAction?.(action, node);
     const config = useProjectConfig();
@@ -99,7 +101,10 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             </Tooltip>
                         )}
                     </Group>
-                    <Text size="xs" c="dimmed">{createdDate}</Text>
+                    <Group gap={4} wrap="nowrap">
+                        <Text size="xs" c="dimmed">{createdDate}</Text>
+                        {link && <CopyLinkButton link={link} />}
+                    </Group>
                 </Group>
 
                 {/* Emptying before the deletion takes passes; this is how far it got. */}

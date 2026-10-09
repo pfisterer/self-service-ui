@@ -39,7 +39,7 @@ export function CloudProjectManagement() {
     // Which section is showing — used to key the error boundary, so a crash in
     // one section resets when the user navigates to another.
     const [matchProjects] = useRoute('/projects');
-    const [matchBudgets] = useRoute('/budgets');
+    const [matchBudgets] = useRoute('/budgets/:id?');
     const [matchAdmin] = useRoute('/admin/:page?');
     const [matchApiDoc] = useRoute('/api-doc');
 
@@ -90,7 +90,7 @@ export function CloudProjectManagement() {
                     <Suspense fallback={<div style={{ padding: '2rem' }}>{t('projects.actions.loading')}</div>}>
                         <Switch>
                             <Route path="/projects" component={MyProjectsView} />
-                            <Route path="/budgets" component={MyBudgetsView} />
+                            <Route path="/budgets/:id?" component={MyBudgetsView} />
                             {isRoot ? <Route path="/admin/:page?" component={RootAdminView} /> : null}
                             {/* The admin page used to be one page under this name. */}
                             <Route path="/admin-sync">

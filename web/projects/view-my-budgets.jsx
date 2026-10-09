@@ -26,6 +26,7 @@ import { TransferOwnerModal } from './modal-transfer-owner.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useRouter } from 'wouter';
 import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, requestTypes, requestType } from './util-project.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
@@ -57,7 +58,11 @@ const CHILDREN_STALE_MS = 30_000;
 // matches would be slower and harder to read than naming their budget.
 const EMPTY_PAGE = { items: [], total: 0 };
 
-export function MyBudgetsView() {
+// The selected node is in the URL (/budgets/<id>), so a link to a budget or a
+// project can be sent: opening it selects the node and opens the tree down to
+// it. A node that does not exist, or that the viewer may not see, falls back to
+// the first budget with a note saying so.
+export function MyBudgetsView({ params }) {
     const { t } = useTranslation();
     const api = useNodesApi();
     const queryClient = useQueryClient();
@@ -95,6 +100,9 @@ export function MyBudgetsView() {
     // instead of a pile of pages the view would have to stitch together.
     const [limits, setLimits] = useState({});
     const [selectedNode, setSelectedNode] = useState(null);
+    const [, navigate] = useLocation();
+    const router = useRouter();
+    const linkedId = params?.id ?? null;
     const [search, setSearch] = useState('');
     const [extraResults, setExtraResults] = useState([]);
     // '' = the whole tree; 'waiting' = everything that needs a decision; the
@@ -155,11 +163,28 @@ export function MyBudgetsView() {
             .map(b => ({ ...b, child_count: 0, request_only: true }));
     }, [myBudgets, eligibleQuery.data]);
 
+    // The node a link names, fetched only when it is not the one in hand —
+    // after a click in the tree the URL already matches the selection.
+    const linkedQuery = useQuery({
+        queryKey: projectKeys.node(linkedId),
+        queryFn: () => api.getNode(linkedId),
+        enabled: !!api && !!linkedId && selectedNode?.id !== linkedId,
+        retry: false,
+    });
+    const linked = linkedId && selectedNode?.id !== linkedId ? linkedQuery.data : null;
+    // A missing node (404) and one the viewer may not see (403) both end here.
+    const linkMissing = !!linkedId && selectedNode?.id !== linkedId && !linkedQuery.isPending && !linkedQuery.data;
+
     // Nothing picked yet falls back to the first root, so the detail panel is
     // never empty for someone who manages something. Derived rather than written
     // into state when the roots arrive: an effect that "selects the first one"
-    // also has to decide what to do when the list changes under it.
-    const selected = selectedNode ?? rootBudgets[0] ?? requestableOnly[0] ?? null;
+    // also has to decide what to do when the list changes under it. While a
+    // linked node is loading nothing is shown, so the first root does not
+    // flash up before it.
+    const linkLoading = !!linkedId && selectedNode?.id !== linkedId && linkedQuery.isPending;
+    const selected = linkLoading ? null
+        : (linked ?? selectedNode ?? rootBudgets[0] ?? requestableOnly[0] ?? null);
+    const linkTo = (node) => `${window.location.origin}${router.base}/budgets/${encodeURIComponent(node.id)}`;
 
     const childLimit = (nodeId) => limits[nodeId] ?? PAGE_SIZE;
     const childQuery = (nodeId) => ({
@@ -259,7 +284,9 @@ export function MyBudgetsView() {
             // Refresh the selected node too; drop the selection if it vanished
             // (deleted, released, moved out of sight).
             if (selectedNode) {
-                setSelectedNode(await api.getNode(selectedNode.id).catch(() => null));
+                const current = await api.getNode(selectedNode.id).catch(() => null);
+                setSelectedNode(current);
+                if (!current) navigate('/budgets', { replace: true });
             }
         } catch (e) {
             showError(formatError(e));
@@ -292,6 +319,25 @@ export function MyBudgetsView() {
         // would re-run this on every expand and fight the user's own collapsing.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [rootIds]);
+
+    // A linked node is opened in the tree: every budget on its way down from the
+    // first one the viewer manages. What lies above that is not in their tree.
+    // parent_path leaves out the root, which is open anyway where it is shown.
+    useEffect(() => {
+        if (!linked) return;
+        const shown = new Set(rootBudgets.map(b => b.id));
+        const path = (linked.parent_path || []).map(p => p.id);
+        let from = path.findIndex(id => shown.has(id));
+        if (from < 0 && shown.has('root')) from = 0;
+        if (from < 0) return;
+        tree.setExpandedState({
+            ...tree.expandedState,
+            ...Object.fromEntries(path.slice(from).map(id => [id, true])),
+        });
+        // `tree` is read to keep what is open; listing it would re-run this on
+        // every toggle and re-open what the user just closed.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [linked?.id, rootIds]);
 
     // ── Search ──────────────────────────────────────────────────────────────
     // Server-side: the tree holds only the pages that were opened, so there is
@@ -391,9 +437,14 @@ export function MyBudgetsView() {
         ? waiting.items
         : waiting.items.filter(n => requestType(n) === filter);
 
-    // Clicking a row selects it. Expanding is handled by the tree itself
-    // (expandOnClick), which also triggers onLoadChildren on first open.
-    const select = (node) => setSelectedNode(node);
+    // Clicking a row selects it and puts it in the URL — replacing the entry, so
+    // clicking through the tree does not fill the browser's history. Expanding
+    // is handled by the tree itself (expandOnClick), which also triggers
+    // onLoadChildren on first open.
+    const select = (node) => {
+        setSelectedNode(node);
+        navigate(`/budgets/${encodeURIComponent(node.id)}`, { replace: true });
+    };
 
     const handleDelete = async (node) => {
         const ok = await confirm({
@@ -629,7 +680,13 @@ export function MyBudgetsView() {
 
                     {/* ── Detail panel: the selected node ────────────────── */}
                     <Box w="100%" style={{ flex: 1, minWidth: 0 }}>
-                        {!selected && (
+                        {linkMissing && (
+                            <Alert color={COLOR.attention} variant="light" mb="md">
+                                {t('projects.budgets.linkMissing')}
+                            </Alert>
+                        )}
+                        {linkLoading && <Loader size="sm" />}
+                        {!selected && !linkLoading && (
                             <Alert color={COLOR.info} variant="light">
                                 {t('projects.budgets.selectHint')}
                             </Alert>
@@ -637,6 +694,7 @@ export function MyBudgetsView() {
                         {selected && (isBudget(selected) ? (
                             <Stack>
                                 <BudgetCard node={selected} resources={resources}
+                                    link={linkTo(selected)}
                                     onAction={handleAction}
                                     manageable={!selected.request_only} />
                                 {/* Listing a budget's projects is a manager's view;
@@ -652,7 +710,7 @@ export function MyBudgetsView() {
                             </Stack>
                         ) : (
                             <ProjectCard node={selected} resources={resources} parentName={selected.parent_name}
-                                perspective="manager" onAction={handleAction} />
+                                link={linkTo(selected)} perspective="manager" onAction={handleAction} />
                         ))}
                     </Box>
                 </Flex>
@@ -662,6 +720,7 @@ export function MyBudgetsView() {
                 title={t('projects.budgetProjects.projectTitle')}>
                 {openProject && (
                     <ProjectCard node={openProject} resources={resources} parentName={openProject.parent_name ?? selected?.name}
+                        link={linkTo(openProject)}
                         perspective="manager" onAction={handleAction} />
                 )}
             </Modal>

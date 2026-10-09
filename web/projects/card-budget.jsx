@@ -1,6 +1,6 @@
 import { Check, Eye, FolderInput, FolderOpen, Gift, Pencil, Plus, Trash2, X, Zap } from 'lucide-react';
 import { Anchor, Badge, Button, Card, Divider, Group, Stack, Text } from '@mantine/core';
-import { FactRow, formatTerm, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
+import { CopyLinkButton, FactRow, formatTerm, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
 import { useTranslation } from 'react-i18next';
 import { autoApproveFacts, COLOR, expiryTone, expiryValue, hasAutoApprove, resourceSummaryText } from './util-project.jsx';
 
@@ -11,7 +11,8 @@ import { autoApproveFacts, COLOR, expiryTone, expiryValue, hasAutoApprove, resou
 // Props:
 //   onOpen          when set, an "Open" button drills into the budget's children
 //   manageable      the viewer manages this budget → edit/delegate/delete actions
-export function BudgetCard({ node, resources, onOpen, onAction, manageable = false }) {
+//   link            when set, a button copies this link to the budget
+export function BudgetCard({ node, resources, onOpen, onAction, manageable = false, link }) {
     const { t } = useTranslation();
     const act = (action) => onAction?.(action, node);
 
@@ -29,7 +30,10 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
 
             {/* ── Header: name + status ──────────────────────────────────── */}
             <Group justify="space-between" mb="xs" wrap="nowrap">
-                <Text fw={700} size="md" truncate>{node.name || node.id}</Text>
+                <Group gap={4} wrap="nowrap" style={{ minWidth: 0 }}>
+                    <Text fw={700} size="md" truncate>{node.name || node.id}</Text>
+                    {link && <CopyLinkButton link={link} />}
+                </Group>
                 <Group gap="xs" wrap="nowrap">
                     {!isApproved && <NodeStatusBadge status={node.status} />}
                     {/* Scan marker only — the amount is spelled out below. */}

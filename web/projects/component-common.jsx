@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Archive, Calendar, CircleCheck, CircleHelp, CirclePlus, CircleX, Clock, CloudDownload, Info, LogOut, Trash2, User, Users } from 'lucide-react';
+import { Archive, Calendar, Check, CircleCheck, CircleHelp, CirclePlus, CircleX, Clock, CloudDownload, Info, Link2, LogOut, Trash2, User, Users } from 'lucide-react';
+import { useClipboard } from '@mantine/hooks';
 import { DatePickerInput } from '@mantine/dates';
 import { ActionIcon, Anchor, Badge, Box, Button, Checkbox, Group, NumberInput, Popover, Progress, Select, Stack, Table, Text, Tooltip } from '@mantine/core';
 import dayjs from 'dayjs';
@@ -46,6 +47,21 @@ export function InfoPopover({ label, children, width = 300, plain = false }) {
 //
 // `hint` is a second, smaller line under the value: the place for the sentence
 // that explains what the value means to someone seeing it for the first time.
+// CopyLinkButton copies a link to a node — something to send someone, who then
+// lands on that node in their own tree.
+export function CopyLinkButton({ link }) {
+    const { t } = useTranslation();
+    const clipboard = useClipboard({ timeout: 1500 });
+    const label = clipboard.copied ? t('projects.actions.linkCopied') : t('projects.actions.copyLink');
+    return (
+        <Tooltip label={label} withArrow>
+            <ActionIcon variant="subtle" color="gray" size="sm" aria-label={label} onClick={() => clipboard.copy(link)}>
+                {clipboard.copied ? <Check size="14" /> : <Link2 size="14" />}
+            </ActionIcon>
+        </Tooltip>
+    );
+}
+
 export function FactRow({ label, hint, children }) {
     return (
         <Group gap="xs" wrap="nowrap" align="flex-start">

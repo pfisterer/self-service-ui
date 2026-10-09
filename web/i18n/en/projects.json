@@ -18,7 +18,9 @@
         "adopt": "Adopt",
         "ownerAction": "Owner",
         "allocate": "Allocation",
-        "deleteForGood": "Delete for good"
+        "deleteForGood": "Delete for good",
+        "copyLink": "Copy link",
+        "linkCopied": "Link copied"
     },
     "adopt": {
         "title": "Adopt project: {{name}}",
@@ -131,7 +133,8 @@
         "nothingWaiting": "Nothing is waiting for your decision.",
         "selectHint": "Select a budget in the tree to see its details and projects.",
         "expandAll": "Expand all budgets",
-        "collapseAll": "Collapse to the first level"
+        "collapseAll": "Collapse to the first level",
+        "linkMissing": "The linked entry does not exist or is not visible with your rights. The top of the tree is shown instead."
     },
     "changes": {
         "proposed": "Proposed changes",
