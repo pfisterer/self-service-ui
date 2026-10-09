@@ -754,19 +754,14 @@ export function projectActions(node, { manager = false, canDelete = false } = {}
     const approved = node?.status === 'approved';
     const pending = node?.status === 'pending';
     const decidable = pending || node?.status === 'change_pending';
+    // Moving, handing over and allocations are fields and sections of the
+    // project's one dialog (change), not actions of their own.
     return {
-        // A manager may be one further up who grants from their budget; the
-        // holder may give an allocation back. Which budgets a viewer may
-        // allocate from, the dialog asks the API.
-        allocate: (manager && (approved || decidable)) || (hasAllocations(node) && (approved || decidable)),
         details: true,
         change: approved || pending,
         release: approved,
         deleteForGood: canDelete && isRetired(node) && !deletionRequested(node),
-        approve: manager && decidable,
-        reject: manager && decidable,
+        decide: manager && decidable,
         adopt: manager && isImported(node) && !(node.flags || []).includes('promote_on_reconcile'),
-        transfer: manager && approved,
-        move: manager && approved,
     };
 }

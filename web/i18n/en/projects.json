@@ -7,7 +7,6 @@
         "reject": "Reject",
         "subBudget": "Sub-budget",
         "edit": "Edit",
-        "move": "Move",
         "delete": "Delete",
         "release": "Release",
         "newProject": "New project",
@@ -16,8 +15,6 @@
         "showMore": "Show more",
         "loading": "Loading…",
         "adopt": "Adopt",
-        "ownerAction": "Owner",
-        "allocate": "Allocation",
         "deleteForGood": "Delete for good",
         "copyLink": "Copy link",
         "linkCopied": "Link copied",
@@ -99,7 +96,9 @@
         "inheritsLimit": "Use the limit of the budget above",
         "inheritsLimitHint": "For budgets that only structure the tree: the limit of the budget above applies, also when it changes later. Everything below shares that limit with the rest of the budget above. Managers, requests and automatic approval remain settings of their own.",
         "inheritsLimitFrom": "The limit of “{{name}}” applies.",
-        "inheritsLimitFromAbove": "The limit of the budget above applies."
+        "inheritsLimitFromAbove": "The limit of the budget above applies.",
+        "parent": "Parent budget",
+        "moveHint": "The budget this one belongs to. Moving takes effect when saved and needs management rights on both sides."
     },
     "budgets": {
         "deleteTitle": "Delete budget “{{name}}”?",
@@ -262,15 +261,6 @@
         "empty": "No authorized users",
         "openstackRole": "OpenStack role"
     },
-    "move": {
-        "title": "Move: {{name}}",
-        "budgetScope": "This budget and everything under it will be funded by the destination budget from then on.",
-        "projectScope": "This project will be funded by the destination budget from then on.",
-        "requirement": "You must manage both the current and the new location, and the destination needs enough free capacity.",
-        "target": "Move to",
-        "targetPlaceholder": "Choose the destination budget",
-        "targetRequired": "Please choose the destination budget"
-    },
     "myProjects": {
         "loadError": "Could not load your projects",
         "intro": "A project is your own space in the DHBW cloud with the resources you request.",
@@ -351,7 +341,9 @@
         "accessHint": "Who gets into the project in OpenStack, and with which role.",
         "adminsEmpty": "Nobody besides the owner.",
         "inheritingBudget": "This budget only structures the tree and uses the limit of “{{name}}”. A project here draws directly from the budget above — it usually belongs in a sub-budget below.",
-        "inheritingBudgetAbove": "This budget only structures the tree and uses the limit of the budget above. A project here draws directly from the budget above — it usually belongs in a sub-budget below."
+        "inheritingBudgetAbove": "This budget only structures the tree and uses the limit of the budget above. A project here draws directly from the budget above — it usually belongs in a sub-budget below.",
+        "ownerHint": "Who answers for the project. A change takes effect when saved, without a request.",
+        "moveHint": "The budget the project is paid from. Moving takes effect when saved; the target needs free capacity."
     },
     "quotaInputs": {
         "filter": "Filter resources",
@@ -461,12 +453,7 @@
         "empty": "Nobody added yet."
     },
     "transferOwner": {
-        "title": "Transfer ownership: {{name}}",
-        "submit": "Transfer",
-        "explain": "The owner is the person responsible for a project — they can edit it, request changes and release it.",
-        "currentOwner": "Current owner: <1>{{email}}</1>",
         "newOwner": "New owner",
-        "newOwnerHint": "Email address of the person taking over.",
         "newOwnerPlaceholder": "someone@dhbw.de",
         "newOwnerRequired": "Please enter the new owner’s email address"
     },
@@ -555,7 +542,6 @@
         "colActions": "Actions",
         "noMatches": "No project matches these filters.",
         "none": "No projects are paid from this budget yet.",
-        "projectTitle": "Project",
         "titleAllocated": "Allocations from this budget ({{count}})",
         "allocatedOnly": "Only projects with an allocation from this budget",
         "inBudget": "in {{name}}",
@@ -566,15 +552,12 @@
         "until": "until {{date}}"
     },
     "allocation": {
-        "title": "Allocation: {{name}}",
         "explain": "An allocation gives a single project resources from a budget further up, without the budgets in between having to hold them. It counts only against that budget and the ones above it.",
         "from": "Allocate from",
         "fromHint": "Budgets above the project’s own budget that you manage.",
         "reason": "Reason",
         "reasonHint": "Visible to everyone who sees the project, the budgets in between included.",
         "reasonRequired": "Please give a reason (at least 5 characters).",
-        "save": "Save allocation",
-        "remove": "Remove allocation",
         "giveBack": "Give back",
         "grantedBy": "Allocated by {{who}} on {{date}}",
         "noSources": "No budget above this project can allocate here. Allocations are granted by the managers of a budget further up.",
@@ -583,7 +566,10 @@
         "ownShareOnly": "This changes only the project’s own share. On top of it come by allocation: {{list}}.",
         "fact": "Allocations",
         "factValue_one": "{{count}} project · {{summary}}",
-        "factValue_other": "{{count}} projects · {{summary}}"
+        "factValue_other": "{{count}} projects · {{summary}}",
+        "sectionTitle": "Allocations",
+        "giveBackTitle": "Give back the allocation from “{{name}}”?",
+        "giveBackText": "The project loses {{summary}}. Only the budget's managers can allocate it again."
     },
     "retire": {
         "releaseTitle": "Release project “{{name}}”?",

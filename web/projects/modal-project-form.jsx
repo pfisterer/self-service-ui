@@ -16,7 +16,9 @@ import { BudgetSelect } from './component-budget-select.jsx';
 import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
 import { PersonInput, personEmail } from './principal-search.jsx';
-import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
+import { AllocationSection, useAllocationDraft } from './component-allocation-section.jsx';
+import { withCurrentParent } from './component-budget-select.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
@@ -95,14 +97,18 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy }) {
 // initialBudgetId preselects the budget of a new project — set when the dialog
 // is opened from a budget's own card.
 //
-// canEditAttributes: opened by a manager of the project's budget, who alone
-// sets its attributes (who pays for it) — shown as a tab of its own.
+// asManager: opened by a manager of the project's budget. They alone set its
+// attributes (who pays for it, a tab of its own), and on an approved project
+// they move it to another budget and hand it to another owner — fields of the
+// Details tab that act at once, like the name. `moveTargets` are the budgets it
+// may move to. Allocations from budgets further up are part of the Resources
+// tab, for the managers who may grant them and the holders who may give one back.
 //
 // adopt: `node` is an imported OpenStack project a root admin brings under
 // management — the same tabs as any project, prefilled from OpenStack, plus who
 // answers for it and which budget pays. Its members can be corrected before it
 // goes through approval, instead of the adoption failing on one of them.
-export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null, canEditAttributes = false, adopt = false }) {
+export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null, asManager = false, moveTargets = [], adopt = false }) {
     const { t } = useTranslation();
     const api = useNodesApi();
     const isAdopt = adopt && !!node;
@@ -123,7 +129,15 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         retry: false,
     });
     const requestable = isAdopt ? (ownerBudgetsQuery.data ?? []) : eligibleBudgets;
-    const withAttributes = isChange && canEditAttributes;
+    const withAttributes = isChange && asManager;
+    // Moving and handing over: a manager's, on an approved project.
+    const restructure = isChange && asManager && node.status === 'approved';
+    const [newParent, setNewParent] = useState(node?.parent_id ?? null);
+    const [newOwner, setNewOwner] = useState(() => nodeOwnerEmail(node) || '');
+    const [newOwnerError, setNewOwnerError] = useState(null);
+    const ownerChanged = restructure && personEmail(newOwner).toLowerCase() !== (nodeOwnerEmail(node) || '').toLowerCase();
+    const parentChanged = restructure && newParent && newParent !== node.parent_id;
+    const alloc = useAllocationDraft({ node: isChange ? node : null, resources, manager: isChange && asManager, opened });
     const attrs = useAttributesTab(node);
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
@@ -362,6 +376,10 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             if (Object.keys(direct).length > 0) {
                 result = await api.updateNode(node.id, direct);
             }
+            // Handing over and moving act at once too, before a change request
+            // so that one is decided where the project now is.
+            if (ownerChanged) result = await api.transferOwner(node.id, personEmail(newOwner));
+            if (parentChanged) result = await api.move(node.id, newParent);
             // Everything with resource consequences still needs a decision —
             // but only when it actually differs, so renaming alone does not
             // manufacture a change request out of unchanged numbers.
@@ -375,6 +393,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             }
             const attributes = withAttributes && attrs.changed();
             if (attributes) result = await api.setAttributes(node.id, attributes);
+            if (alloc.changed) result = await api.setAllocation(node.id, alloc.payload());
             return result;
         },
     });
@@ -472,6 +491,28 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 error={form.errors.terminationDate}
                 onChange={(d) => { form.setFieldValue('terminationDate', d); form.clearFieldError('terminationDate'); }}
             />
+
+            {/* A manager's: they act at once when saved, not as a request. */}
+            {restructure && (
+                <>
+                    <PersonInput
+                        label={t('projects.fact.owner')}
+                        description={t('projects.projectForm.ownerHint')}
+                        placeholder={t('projects.transferOwner.newOwnerPlaceholder')}
+                        required
+                        value={newOwner}
+                        error={newOwnerError}
+                        onChange={(v) => { setNewOwner(v); setNewOwnerError(null); }}
+                    />
+                    <BudgetSelect
+                        label={t('projects.projectForm.budget')}
+                        description={t('projects.projectForm.moveHint')}
+                        budgets={withCurrentParent(node, moveTargets)}
+                        value={newParent}
+                        onChange={setNewParent}
+                    />
+                </>
+            )}
         </Stack>
     );
 
@@ -541,6 +582,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     form.clearFieldError(`quota.${id}`);
                 }}
             />
+            {isChange && <AllocationSection node={node} resources={resources} draft={alloc} />}
         </Stack>
     );
 
@@ -591,6 +633,11 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     const problem = isEmail(t('projects.adopt.ownerRequired'))(ownerEmail);
                     if (problem) { setOwnerError(problem); return setActiveTab(TAB_DETAILS); }
                 }
+                if (ownerChanged && isEmail(t('projects.transferOwner.newOwnerRequired'))(personEmail(newOwner))) {
+                    setNewOwnerError(t('projects.transferOwner.newOwnerRequired'));
+                    return setActiveTab(TAB_DETAILS);
+                }
+                if (isChange && !alloc.validate()) return setActiveTab(TAB_RESOURCES);
                 if (withAttributes && !attrs.validate()) return setActiveTab(TAB_ATTRIBUTES);
                 save.mutate(values);
             }, handleInvalid)}
@@ -607,8 +654,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 value={activeTab}
                 onChange={setActiveTab}
                 tabs={[
-                    { value: TAB_DETAILS, label: t('projects.actions.details'), hasError: tabHasError(TAB_DETAILS), content: detailsTab },
-                    { value: TAB_RESOURCES, label: t('projects.fact.resources'), hasError: tabHasError(TAB_RESOURCES), content: resourcesTab },
+                    { value: TAB_DETAILS, label: t('projects.actions.details'), hasError: tabHasError(TAB_DETAILS) || !!newOwnerError, content: detailsTab },
+                    { value: TAB_RESOURCES, label: t('projects.fact.resources'), hasError: tabHasError(TAB_RESOURCES) || !!alloc.error, content: resourcesTab },
                     { value: TAB_MEMBERS, label: t('projects.fact.members'), content: membersTab },
                     // Set by the budget's managers; its owner and admins see them.
                     ...(withAttributes ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'), hasError: !!attrs.error,

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronsDownUp, ChevronsUpDown, Inbox, Search, X } from 'lucide-react';
-import { ActionIcon, Alert, Badge, Box, Button, Checkbox, Flex, Modal, Group, Loader, Paper, SegmentedControl, Stack, Text, TextInput, Tooltip, useTree } from '@mantine/core';
+import { ActionIcon, Alert, Badge, Box, Button, Checkbox, Flex, Group, Loader, Paper, SegmentedControl, Stack, Text, TextInput, Tooltip, useTree } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -13,19 +13,16 @@ import { BudgetCard } from './card-budget.jsx';
 import { ProjectCard } from './card-project.jsx';
 import { BudgetTree, MORE_SUFFIX, NodeResultList, budgetsToTreeData, budgetChildCount } from './component-budget-tree.jsx';
 import { BudgetProjectsTable } from './component-budget-projects.jsx';
-import { AllocationModal } from './modal-allocation.jsx';
 import { RetireModal } from './modal-retire.jsx';
 import { DecisionModal } from './modal-decide.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
 import { NodeInspectModal } from './modal-inspect.jsx';
-import { MoveModal } from './modal-move.jsx';
-import { TransferOwnerModal } from './modal-transfer-owner.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useRouter } from 'wouter';
-import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, requestTypes, requestType } from './util-project.jsx';
+import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, projectActions, requestTypes, requestType } from './util-project.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
 // How long typing pauses before a search is sent.
@@ -113,9 +110,6 @@ export function MyBudgetsView({ params }) {
     // see the whole organization).
     const dlg = useNodeDialog();
     const [budgetForm, setBudgetForm] = useState(null); // { mode, parent?, node? } | null
-    // The project a table row was opened for, shown as its full card in a
-    // dialog so the table stays where it was.
-    const [openProject, setOpenProject] = useState(null);
     // Whether the selected budget's table lists the projects it allocated to
     // further down instead of its own; kept per budget, so choosing another
     // budget starts with its own projects.
@@ -461,11 +455,8 @@ export function MyBudgetsView({ params }) {
         }
     };
 
-    // Central action dispatch for both node kinds. An action started from the
-    // project dialog closes it: the dialog it opens is the next thing to look at, and
-    // the card behind it would show the state before the change.
+    // Central action dispatch for both node kinds.
     const handleAction = (action, node) => {
-        setOpenProject(null);
         if (action === 'sub-budget') return setBudgetForm({ mode: 'create', parent: node });
         // From a read-only budget: request under it — `parent` preselects it.
         if (action === 'request-here') return setBudgetForm({ mode: 'request', parent: node });
@@ -706,7 +697,10 @@ export function MyBudgetsView({ params }) {
                                     when another budget is picked. */}
                                 {!selected.request_only && (
                                     <BudgetProjectsTable key={selected.id} budget={selected} resources={resources}
-                                        onAction={handleAction} onOpen={setOpenProject}
+                                        onAction={handleAction}
+                                        // A row opens the project's one dialog, as its
+                                        // Edit or Details button does.
+                                        onOpen={(node) => handleAction(projectActions(node, { manager: true }).change ? 'change' : 'details', node)}
                                         allocatedOnly={allocatedFor === selected.id}
                                         onAllocatedOnlyChange={(on) => setAllocatedFor(on ? selected.id : null)} />
                                 )}
@@ -719,14 +713,6 @@ export function MyBudgetsView({ params }) {
                 </Flex>
             )}
 
-            <Modal opened={!!openProject} onClose={() => setOpenProject(null)} size="lg" centered
-                title={t('projects.budgetProjects.projectTitle')}>
-                {openProject && (
-                    <ProjectCard node={openProject} resources={resources} parentName={openProject.parent_name ?? selected?.name}
-                        link={linkTo(openProject)}
-                        perspective="manager" onAction={handleAction} />
-                )}
-            </Modal>
 
             {/* ── Dialogs (one instance per view) ────────────────────────── */}
             {/* Keyed like every other dialog here, and for a sharper reason: this
@@ -747,14 +733,10 @@ export function MyBudgetsView({ params }) {
                 node={budgetForm?.node}
                 eligibleBudgets={budgetRequestTargets}
                 currentUserEmail={userEmail}
+                moveTargets={moveTargets}
             />
             <DecisionModal key={`decidemodal:${dlg.key}`} opened={dlg.is('decide')} onClose={dlg.close} onDone={refresh}
                 resources={resources} node={dlg.node} />
-            <MoveModal key={`movemodal:${dlg.key}`} opened={dlg.is('move')} onClose={dlg.close} onDone={refresh}
-                node={dlg.node} targetBudgets={moveTargets} />
-            <TransferOwnerModal key={`transferownermodal:${dlg.key}`} opened={dlg.is('transfer')} onClose={dlg.close} onDone={refresh} node={dlg.node} />
-            <AllocationModal key={`allocationmodal:${dlg.key}`} opened={dlg.is('allocate')} onClose={dlg.close} onDone={refresh}
-                node={dlg.node} resources={resources} />
             <RetireModal key={`retiremodal:${dlg.key}`} opened={dlg.is('release') || dlg.is('delete-for-good')}
                 mode={dlg.is('delete-for-good') ? 'delete' : 'release'} onClose={dlg.close} onDone={refresh} node={dlg.node} />
             {/* Adopting an import is the project dialog with an owner and a
@@ -787,8 +769,9 @@ export function MyBudgetsView({ params }) {
                 // managed through an ancestor is not among myBudgets.
                 myBudgets={selected ? [selected, ...myBudgets.items] : myBudgets.items}
                 // Opened from a budget's projects: a manager of it, who says
-                // who pays — the owner does not.
-                canEditAttributes
+                // who pays, moves it and hands it over — the owner does not.
+                asManager
+                moveTargets={moveTargets}
             />
             {/* History is a tab in here, not a button of its own outside. */}
             <NodeInspectModal key={`nodeinspectmodal:${dlg.key}`} opened={dlg.is('details')}

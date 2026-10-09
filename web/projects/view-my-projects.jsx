@@ -11,7 +11,6 @@ import { BudgetOffers } from './component-budget-offers.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
 import { NodeInspectModal } from './modal-inspect.jsx';
-import { AllocationModal } from './modal-allocation.jsx';
 import { RetireModal } from './modal-retire.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
@@ -169,9 +168,6 @@ export function MyProjectsView() {
             />
             {/* History is a tab in here, not a button of its own outside. */}
             <NodeInspectModal key={`inspect:${dlg.key}`} opened={dlg.is('details')}
-                onClose={dlg.close} node={dlg.node} resources={resources} />
-            {/* Here only to give an allocation back. */}
-            <AllocationModal key={`allocate:${dlg.key}`} opened={dlg.is('allocate')}
                 onClose={dlg.close} node={dlg.node} resources={resources} />
             <RetireModal key={`retire:${dlg.key}`} opened={dlg.is('release') || dlg.is('delete-for-good')}
                 mode={dlg.is('delete-for-good') ? 'delete' : 'release'} onClose={dlg.close} node={dlg.node} />

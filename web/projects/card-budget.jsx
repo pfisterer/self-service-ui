@@ -1,4 +1,4 @@
-import { Eye, FolderInput, FolderOpen, Gift, Pencil, Plus, Scale, Trash2, Zap } from 'lucide-react';
+import { Eye, FolderOpen, Gift, Pencil, Plus, Scale, Trash2, Zap } from 'lucide-react';
 import { Anchor, Badge, Button, Card, Divider, Group, Stack, Text } from '@mantine/core';
 import { CopyLinkButton, FactRow, formatTerm, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
 import { useTranslation } from 'react-i18next';
@@ -187,9 +187,6 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                         <>
                             <Button variant="light" size="xs" onClick={() => act('sub-budget')}>
                                 <Plus size="13" style={{ marginRight: 4 }} />{t('projects.actions.subBudget')}
-                            </Button>
-                            <Button variant="light" size="xs" onClick={() => act('move')}>
-                                <FolderInput size="13" style={{ marginRight: 4 }} />{t('projects.actions.move')}
                             </Button>
                             <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('delete')}>
                                 <Trash2 size="13" style={{ marginRight: 4 }} />{t('projects.actions.delete')}

@@ -11,7 +11,7 @@ import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inpu
 import { TokenListEditor } from './component-token-list-editor.jsx';
 import { formatError } from '/helper/api-error.js';
 import { COLOR, freeAmount, isAvailability, isPoolAutoApprove, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
-import { BudgetSelect } from './component-budget-select.jsx';
+import { BudgetSelect, withCurrentParent } from './component-budget-select.jsx';
 import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
 import { AttributesEditor, useAttributesTab } from './component-node-attributes.jsx';
@@ -35,10 +35,17 @@ const TAB_ATTRIBUTES = 'attributes';
 //                   Only fields that actually changed are sent, because
 //                   raising the budget's own cap needs a parent-chain manager
 //                   while policy fields only need a manager of the budget.
-export function BudgetFormModal({ opened, onClose, onDone, resources, mode, parent = null, node = null, eligibleBudgets = [], currentUserEmail = '' }) {
+//
+// moveTargets: in edit mode, the budgets it may be moved under — a field of the
+// Details tab that acts at once when saved, like in a project's dialog.
+export function BudgetFormModal({ opened, onClose, onDone, resources, mode, parent = null, node = null, eligibleBudgets = [], currentUserEmail = '', moveTargets = [] }) {
     const { t } = useTranslation();
     const api = useNodesApi();
     const isEdit = mode === 'edit';
+    const [newParent, setNewParent] = useState(node?.parent_id ?? null);
+    // The root has no parent to change.
+    const canMove = isEdit && !!node?.parent_id;
+    const parentChanged = canMove && newParent && newParent !== node.parent_id;
     const isRequest = mode === 'request';
 
     // A budget can only hold what the budget above it holds, so the parent is
@@ -258,6 +265,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
             if (isEdit) {
                 const body = buildEditBody(values);
                 let result = Object.keys(body).length ? await api.updateNode(node.id, body) : node;
+                if (parentChanged) result = await api.move(node.id, newParent);
                 const attributes = attrs.changed();
                 if (attributes) result = await api.setAttributes(node.id, attributes);
                 return result;
@@ -296,6 +304,15 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
 
     const detailsTab = (
         <Stack>
+            {canMove && (
+                <BudgetSelect
+                    label={t('projects.budgetForm.parent')}
+                    description={t('projects.budgetForm.moveHint')}
+                    budgets={withCurrentParent(node, moveTargets)}
+                    value={newParent}
+                    onChange={setNewParent}
+                />
+            )}
             {isRequest && (
                 <BudgetSelect
                     label={t('projects.budgetForm.requestFrom')}

@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRightLeft, ExternalLink, Eye, FolderInput, Gift, Pencil, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Eye, Gift, Pencil, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Stack, Text, Tooltip } from '@mantine/core';
 import { CopyLinkButton, DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
 import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion } from './util-project.jsx';
@@ -279,7 +279,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                     )}
 
                     {/* Manager actions */}
-                    {can.approve && (
+                    {can.decide && (
                         <>
                             {/* One dialog for both answers: approve or reject,
                                 knowing the same facts. */}
@@ -288,25 +288,10 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             </Button>
                         </>
                     )}
-                    {can.allocate && (
-                        <Button variant="light" size="xs" onClick={() => act('allocate')}>
-                            <Gift size="13" style={{ marginRight: 4 }} />{t('projects.actions.allocate')}
-                        </Button>
-                    )}
                     {can.adopt && (
                         <Button color={COLOR.outside} variant="light" size="xs" onClick={() => act('adopt')}>
                             <Rocket size="13" style={{ marginRight: 4 }} />{t('projects.actions.adopt')}
                         </Button>
-                    )}
-                    {can.transfer && (
-                        <>
-                            <Button variant="light" size="xs" onClick={() => act('transfer')}>
-                                <ArrowRightLeft size="13" style={{ marginRight: 4 }} />{t('projects.actions.ownerAction')}
-                            </Button>
-                            <Button variant="light" size="xs" onClick={() => act('move')}>
-                                <FolderInput size="13" style={{ marginRight: 4 }} />{t('projects.actions.move')}
-                            </Button>
-                        </>
                     )}
                 </Group>
             </Card.Section>

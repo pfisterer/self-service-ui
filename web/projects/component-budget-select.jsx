@@ -61,3 +61,13 @@ export function BudgetSelect({
         />
     );
 }
+
+// withCurrentParent is the list a move is chosen from: the given budgets, minus
+// the node itself, with the budget it hangs under now — so the field shows
+// where it is even when that budget is not among the ones loaded.
+export function withCurrentParent(node, budgets) {
+    const list = (budgets || []).filter(b => b.id !== node?.id);
+    if (!node?.parent_id || list.some(b => b.id === node.parent_id)) return list;
+    const path = node.parent_path || [];
+    return [{ id: node.parent_id, name: node.parent_name || node.parent_id, parent_path: path.slice(0, -1) }, ...list];
+}

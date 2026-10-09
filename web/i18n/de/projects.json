@@ -7,7 +7,6 @@
         "reject": "Ablehnen",
         "subBudget": "Teilbudget",
         "edit": "Bearbeiten",
-        "move": "Verschieben",
         "delete": "Löschen",
         "release": "Freigeben",
         "newProject": "Neues Projekt",
@@ -16,8 +15,6 @@
         "showMore": "Mehr anzeigen",
         "loading": "Lädt…",
         "adopt": "Übernehmen",
-        "ownerAction": "Verantwortlich",
-        "allocate": "Sonderzuteilung",
         "deleteForGood": "Endgültig löschen",
         "copyLink": "Link kopieren",
         "linkCopied": "Link kopiert",
@@ -99,7 +96,9 @@
         "inheritsLimit": "Limit des übergeordneten Budgets übernehmen",
         "inheritsLimitHint": "Für Budgets, die nur der Gliederung dienen: Es gilt das Limit des Budgets darüber, auch wenn es sich später ändert. Alles darunter teilt sich dieses Limit mit den anderen Teilen des übergeordneten Budgets. Verwaltung, Anfragen und automatische Genehmigung bleiben eigene Einstellungen.",
         "inheritsLimitFrom": "Es gilt das Limit von „{{name}}“.",
-        "inheritsLimitFromAbove": "Es gilt das Limit des Budgets darüber."
+        "inheritsLimitFromAbove": "Es gilt das Limit des Budgets darüber.",
+        "parent": "Übergeordnetes Budget",
+        "moveHint": "Unter welchem Budget dieses steht. Verschieben wirkt sofort beim Speichern und braucht Verwaltungsrechte auf beiden Seiten."
     },
     "budgets": {
         "deleteTitle": "Budget „{{name}}“ löschen?",
@@ -262,15 +261,6 @@
         "empty": "Niemand hat zusätzlichen Zugriff",
         "openstackRole": "OpenStack-Rolle"
     },
-    "move": {
-        "title": "Verschieben: {{name}}",
-        "budgetScope": "Dieses Budget und alles darunter wird ab dann aus dem Zielbudget bezahlt.",
-        "projectScope": "Dieses Projekt wird ab dann aus dem Zielbudget bezahlt.",
-        "requirement": "Nötig sind Verwaltungsrechte auf beiden Seiten — am jetzigen und am neuen Ort — und im Zielbudget muss genug frei sein.",
-        "target": "Verschieben nach",
-        "targetPlaceholder": "Zielbudget wählen",
-        "targetRequired": "Bitte das Zielbudget wählen"
-    },
     "myProjects": {
         "loadError": "Die Projekte konnten nicht geladen werden",
         "intro": "Ein Projekt ist ein eigener Bereich in der DHBW-Cloud, mit den angefragten Ressourcen.",
@@ -351,7 +341,9 @@
         "accessHint": "Wer in OpenStack Zugang zum Projekt erhält, und mit welcher Rolle.",
         "adminsEmpty": "Niemand außer dem Owner.",
         "inheritingBudget": "Dieses Budget dient nur der Gliederung und übernimmt das Limit von „{{name}}“. Ein Projekt hier wird direkt aus dem übergeordneten Budget versorgt — meist gehört es in ein Teilbudget darunter.",
-        "inheritingBudgetAbove": "Dieses Budget dient nur der Gliederung und übernimmt das Limit des Budgets darüber. Ein Projekt hier wird direkt aus dem übergeordneten Budget versorgt — meist gehört es in ein Teilbudget darunter."
+        "inheritingBudgetAbove": "Dieses Budget dient nur der Gliederung und übernimmt das Limit des Budgets darüber. Ein Projekt hier wird direkt aus dem übergeordneten Budget versorgt — meist gehört es in ein Teilbudget darunter.",
+        "ownerHint": "Wer für das Projekt verantwortlich ist. Eine Änderung wirkt sofort beim Speichern, ohne Antrag.",
+        "moveHint": "Aus welchem Budget das Projekt bezahlt wird. Verschieben wirkt sofort beim Speichern; das Ziel braucht freie Kapazität."
     },
     "quotaInputs": {
         "filter": "Ressourcen filtern",
@@ -461,12 +453,7 @@
         "empty": "Noch niemand eingetragen."
     },
     "transferOwner": {
-        "title": "Verantwortung übertragen: {{name}}",
-        "submit": "Übertragen",
-        "explain": "Die verantwortliche Person kümmert sich um ein Projekt — sie kann es bearbeiten, Änderungen anfragen und es freigeben.",
-        "currentOwner": "Bisher verantwortlich: <1>{{email}}</1>",
         "newOwner": "Neu verantwortlich",
-        "newOwnerHint": "E-Mail-Adresse der Person, die übernimmt.",
         "newOwnerPlaceholder": "name@dhbw.de",
         "newOwnerRequired": "Bitte die E-Mail-Adresse der neuen verantwortlichen Person eingeben"
     },
@@ -555,7 +542,6 @@
         "colActions": "Aktionen",
         "noMatches": "Kein Projekt passt zu diesen Filtern.",
         "none": "Aus diesem Budget wird noch kein Projekt bezahlt.",
-        "projectTitle": "Projekt",
         "titleAllocated": "Sonderzuteilungen aus diesem Budget ({{count}})",
         "allocatedOnly": "Nur Projekte mit Sonderzuteilung aus diesem Budget",
         "inBudget": "in {{name}}",
@@ -566,15 +552,12 @@
         "until": "bis {{date}}"
     },
     "allocation": {
-        "title": "Sonderzuteilung: {{name}}",
         "explain": "Eine Sonderzuteilung gibt einem einzelnen Projekt Ressourcen aus einem Budget weiter oben, ohne dass die Budgets dazwischen sie haben müssen. Sie zählt nur bei diesem Budget und darüber.",
         "from": "Zuteilen aus",
         "fromHint": "Budgets oberhalb des Projekt-Budgets, die Sie verwalten.",
         "reason": "Begründung",
         "reasonHint": "Sichtbar für alle, die das Projekt sehen, auch für die Budgets dazwischen.",
         "reasonRequired": "Bitte eine Begründung angeben (mindestens 5 Zeichen).",
-        "save": "Sonderzuteilung speichern",
-        "remove": "Sonderzuteilung entfernen",
         "giveBack": "Zurückgeben",
         "grantedBy": "Zugeteilt von {{who}} am {{date}}",
         "noSources": "Aus keinem Budget oberhalb dieses Projekts kann hier zugeteilt werden. Sonderzuteilungen vergeben die Verwaltenden eines höheren Budgets.",
@@ -583,7 +566,10 @@
         "ownShareOnly": "Hier wird nur der eigene Anteil des Projekts geändert. Dazu kommen per Sonderzuteilung: {{list}}.",
         "fact": "Sonderzuteilungen",
         "factValue_one": "{{count}} Projekt · {{summary}}",
-        "factValue_other": "{{count}} Projekte · {{summary}}"
+        "factValue_other": "{{count}} Projekte · {{summary}}",
+        "sectionTitle": "Sonderzuteilungen",
+        "giveBackTitle": "Sonderzuteilung aus „{{name}}“ zurückgeben?",
+        "giveBackText": "Das Projekt verliert {{summary}}. Wieder zuteilen kann nur, wer das Budget verwaltet."
     },
     "retire": {
         "releaseTitle": "Projekt „{{name}}“ freigeben?",

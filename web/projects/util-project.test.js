@@ -645,15 +645,9 @@ describe('projectActions', () => {
         expect(on(projectActions({ status: 'pending' }))).toEqual(['change', 'details']);
     });
 
-    it('lets a manager decide what waits and restructure what runs', () => {
-        expect(on(projectActions({ status: 'change_pending' }, { manager: true }))).toEqual(['allocate', 'approve', 'details', 'reject']);
-        expect(on(projectActions({ status: 'approved' }, { manager: true })))
-            .toEqual(['allocate', 'change', 'details', 'move', 'release', 'transfer']);
-    });
-
-    it('lets an owner open the allocations only to give one back', () => {
-        expect(projectActions({ status: 'approved' }).allocate).toBe(false);
-        expect(projectActions({ status: 'approved', allocations: [{ budget_id: 'b', limit: { gpu: 1 } }] }).allocate).toBe(true);
+    it('lets a manager decide what waits', () => {
+        expect(on(projectActions({ status: 'change_pending' }, { manager: true }))).toEqual(['decide', 'details']);
+        expect(on(projectActions({ status: 'approved' }, { manager: true }))).toEqual(['change', 'details', 'release']);
     });
 
     it('offers adopting an imported project unless it is already on its way', () => {
