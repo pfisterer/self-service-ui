@@ -26,7 +26,9 @@ const SEARCH_THRESHOLD = 12;
 // The caller decides WHICH resources to pass. Filtering to what is in scope at a
 // node is visibleResources' job, not this component's — the same form is used
 // where there is no node at all.
-export function QuotaInputs({ resources, value, onChange, errors = {}, disabled = false, allowUnlimited = false, headroom = null }) {
+// `extra` is for an amount on top of something else — an allocation: smaller
+// fields, 0 allowed whatever the resource's minimum, no range text.
+export function QuotaInputs({ resources, value, onChange, errors = {}, disabled = false, allowUnlimited = false, headroom = null, extra = false }) {
     const { t } = useTranslation();
     const [query, setQuery] = useState('');
 
@@ -78,6 +80,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                                         disabled={disabled}
                                         allowUnlimited={allowUnlimited}
                                         free={headroom?.[r.id]}
+                                        extra={extra}
                                     />}
                             </Grid.Col>
                         ))}
@@ -109,21 +112,22 @@ function AvailabilityField({ resource, value, onChange, disabled, error }) {
     );
 }
 
-function QuantityField({ resource: r, value: current, onChange, error, disabled, allowUnlimited, free }) {
+function QuantityField({ resource: r, value: current, onChange, error, disabled, allowUnlimited, free, extra }) {
     const { t } = useTranslation();
     const isUnlimited = current === UNLIMITED_QUOTA;
     return (
         <Stack gap="4">
             <NumberInput
                 label={r.unit ? `${r.name} (${r.unit})` : r.name}
-                min={allowUnlimited ? 0 : r.min}
+                size={extra ? 'xs' : undefined}
+                min={allowUnlimited || extra ? 0 : r.min}
                 max={r.max}
                 disabled={disabled || isUnlimited}
                 value={isUnlimited ? '' : current}
-                placeholder={isUnlimited ? t('projects.quotaInputs.noCap') : undefined}
+                placeholder={isUnlimited ? t('projects.quotaInputs.noCap') : (extra ? '0' : undefined)}
                 onChange={v => onChange(r.id, v)}
                 error={error}
-                description={isUnlimited ? t('projects.quotaInputs.noCapHint') : r.message}
+                description={isUnlimited ? t('projects.quotaInputs.noCapHint') : (extra ? undefined : r.message)}
             />
             <HeadroomShare free={free} value={isUnlimited ? UNLIMITED_QUOTA : current} />
             {allowUnlimited && (

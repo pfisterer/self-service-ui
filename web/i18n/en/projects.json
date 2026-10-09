@@ -560,7 +560,6 @@
         "reasonRequired": "Please give a reason (at least 5 characters).",
         "giveBack": "Give back",
         "grantedBy": "Allocated by {{who}} on {{date}}",
-        "noSources": "No budget above this project can allocate here. Allocations are granted by the managers of a budget further up.",
         "badge": "Allocation",
         "ownBudget": "Own budget",
         "ownShareOnly": "This changes only the project’s own share. On top of it come by allocation: {{list}}.",
@@ -569,7 +568,13 @@
         "factValue_other": "{{count}} projects · {{summary}}",
         "sectionTitle": "Allocations",
         "giveBackTitle": "Give back the allocation from “{{name}}”?",
-        "giveBackText": "The project loses {{summary}}. Only the budget's managers can allocate it again."
+        "giveBackText": "The project loses {{summary}}. Only the budget's managers can allocate it again.",
+        "add": "Grant an allocation",
+        "change": "Change",
+        "discard": "Discard",
+        "formTitleNew": "New allocation",
+        "formTitleChange": "Change the allocation from “{{name}}”",
+        "willRemove": "Without amounts the allocation is removed when saved."
     },
     "retire": {
         "releaseTitle": "Release project “{{name}}”?",

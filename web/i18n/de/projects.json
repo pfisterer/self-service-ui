@@ -560,7 +560,6 @@
         "reasonRequired": "Bitte eine Begründung angeben (mindestens 5 Zeichen).",
         "giveBack": "Zurückgeben",
         "grantedBy": "Zugeteilt von {{who}} am {{date}}",
-        "noSources": "Aus keinem Budget oberhalb dieses Projekts kann hier zugeteilt werden. Sonderzuteilungen vergeben die Verwaltenden eines höheren Budgets.",
         "badge": "Sonderzuteilung",
         "ownBudget": "Eigenes Budget",
         "ownShareOnly": "Hier wird nur der eigene Anteil des Projekts geändert. Dazu kommen per Sonderzuteilung: {{list}}.",
@@ -569,7 +568,13 @@
         "factValue_other": "{{count}} Projekte · {{summary}}",
         "sectionTitle": "Sonderzuteilungen",
         "giveBackTitle": "Sonderzuteilung aus „{{name}}“ zurückgeben?",
-        "giveBackText": "Das Projekt verliert {{summary}}. Wieder zuteilen kann nur, wer das Budget verwaltet."
+        "giveBackText": "Das Projekt verliert {{summary}}. Wieder zuteilen kann nur, wer das Budget verwaltet.",
+        "add": "Sonderzuteilung vergeben",
+        "change": "Ändern",
+        "discard": "Verwerfen",
+        "formTitleNew": "Neue Sonderzuteilung",
+        "formTitleChange": "Sonderzuteilung aus „{{name}}“ ändern",
+        "willRemove": "Ohne Mengen wird die Sonderzuteilung beim Speichern entfernt."
     },
     "retire": {
         "releaseTitle": "Projekt „{{name}}“ freigeben?",

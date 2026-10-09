@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Group, Loader, Paper, Stack, Text } from '@mantine/core';
-import { Gift, Info } from 'lucide-react';
+import { Button, Divider, Group, Paper, Stack, Text } from '@mantine/core';
+import { Gift } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { QuotaInputs } from './component-quota-inputs.jsx';
 import { BudgetSelect } from './component-budget-select.jsx';
-import { EditorHeading } from './component-token-list-editor.jsx';
 import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -20,6 +19,9 @@ import { availabilityElsewhere, COLOR, freeAmount, getAuthUserEmail, isAvailabil
 // exception path: a GPU or a network for one student project, more cores than
 // its own budget gives, without handing the same to that budget and everyone in
 // it. They are part of the project's dialog, in its Resources tab.
+//
+// Shown only where it applies: the project has an allocation, or the viewer
+// manages a budget above the project's own (the API names those as sources).
 //
 // Two audiences. A manager further up may grant from the budgets the API names
 // (allocation sources): that draft is saved with the dialog. The project's
@@ -51,6 +53,9 @@ export function useAllocationDraft({ node, resources, manager, opened }) {
     const [drafts, setDrafts] = useState({});
     const [reasons, setReasons] = useState({});
     const [checked, setChecked] = useState(false);
+    // The form is closed until someone grants or changes one: open, it would
+    // read as a second set of the project's own resources.
+    const [open, setOpen] = useState(false);
     const value = drafts[sourceId] ?? { ...(existing?.limit || {}) };
     const reason = reasons[sourceId] ?? existing?.reason ?? '';
 
@@ -68,13 +73,18 @@ export function useAllocationDraft({ node, resources, manager, opened }) {
 
     const cleaned = Object.fromEntries(Object.entries(value).filter(([, v]) => (v ?? 0) > 0));
     const nothingAsked = Object.keys(cleaned).length === 0;
-    const changed = !!source && JSON.stringify(sortKeys(cleaned)) !== JSON.stringify(sortKeys(existing?.limit || {}));
+    const changed = open && !!source && JSON.stringify(sortKeys(cleaned)) !== JSON.stringify(sortKeys(existing?.limit || {}));
     // A reason is asked for whatever is granted; removing needs none.
     const problem = changed && !nothingAsked
         ? reasonError(reason, t('projects.allocation.reasonRequired')) : null;
 
     return {
         sources, loading: sourcesQuery.isLoading, manager, source, sourceId, setSourceId: setPickedId,
+        open,
+        // Opens the form, on a given budget's allocation or the preselected one.
+        start: (budgetId) => { if (budgetId) setPickedId(budgetId); setOpen(true); },
+        // Closes it and forgets what was typed.
+        discard: () => { setOpen(false); setDrafts({}); setReasons({}); setChecked(false); },
         offered, headroom, value, reason, existing,
         setValue: (id, v) => setDrafts(d => ({ ...d, [sourceId]: { ...value, [id]: v } })),
         setReason: (v) => setReasons(r => ({ ...r, [sourceId]: v })),
@@ -117,45 +127,70 @@ export function AllocationSection({ node, resources, draft }) {
         if (ok) giveBack.mutate(a.budget_id);
     };
 
-    if (allocations.length === 0 && !draft.manager) return null;
+    // A special case, shown only where it applies: the project has an
+    // allocation, or the viewer manages a budget above its own and may grant
+    // one. A manager of the project's own budget alone has nothing to do here.
+    const canGrant = draft.manager && draft.sources.length > 0;
+    if (allocations.length === 0 && !canGrant) return null;
+    const sourceOf = (a) => draft.sources.find(sr => sr.id === a.budget_id);
 
     return (
-        <Paper withBorder radius="md" p="md">
-            <Stack gap="sm">
-                <EditorHeading label={t('projects.allocation.sectionTitle')} description={t('projects.allocation.explain')} />
+        <Stack gap="sm">
+            {/* Apart from the project's own share above, and saying why. */}
+            <Divider mt="sm" label={t('projects.allocation.sectionTitle')} labelPosition="left" />
+            <Text size="xs" c="dimmed">{t('projects.allocation.explain')}</Text>
 
-                {allocations.map(a => (
-                    <Paper key={a.budget_id} withBorder p="xs" radius="sm">
-                        <Group justify="space-between" wrap="nowrap" align="flex-start">
-                            <div>
-                                <Text size="sm" fw={600}>{a.budget_name || a.budget_id}</Text>
-                                <Text size="xs">{resourceSummaryText(resources, a.limit)}</Text>
-                                <Text size="xs" c="dimmed">
-                                    {t('projects.allocation.grantedBy', { who: a.granted_by, date: formatDate(a.granted_at) })}
-                                    {a.reason ? ` — ${a.reason}` : ''}
-                                </Text>
-                            </div>
-                            {/* A manager changes or removes it in the form below. */}
-                            {holder && !draft.sources.some(s => s.id === a.budget_id) && (
-                                <Button size="compact-xs" variant="light" color={COLOR.negative}
-                                    loading={giveBack.isPending && giveBack.variables === a.budget_id}
-                                    onClick={() => askGiveBack(a)}>
-                                    {t('projects.allocation.giveBack')}
-                                </Button>
-                            )}
+            {allocations.map(a => (
+                <Group key={a.budget_id} justify="space-between" wrap="nowrap" align="flex-start">
+                    <Group gap="xs" wrap="nowrap" align="flex-start" style={{ minWidth: 0 }}>
+                        <Gift size="14" style={{ marginTop: 3, flexShrink: 0, color: `var(--mantine-color-${COLOR.info}-7)` }} />
+                        <div style={{ minWidth: 0 }}>
+                            <Text size="sm"><b>{a.budget_name || a.budget_id}</b>{' · '}{resourceSummaryText(resources, a.limit)}</Text>
+                            <Text size="xs" c="dimmed">
+                                {t('projects.allocation.grantedBy', { who: a.granted_by, date: formatDate(a.granted_at) })}
+                                {a.reason ? ` — ${a.reason}` : ''}
+                            </Text>
+                        </div>
+                    </Group>
+                    {/* A manager of the allocating budget changes it; its holders
+                        may give it back. */}
+                    {sourceOf(a) ? (
+                        <Button size="compact-xs" variant="subtle" disabled={draft.open}
+                            onClick={() => draft.start(a.budget_id)}>
+                            {t('projects.allocation.change')}
+                        </Button>
+                    ) : holder && (
+                        <Button size="compact-xs" variant="light" color={COLOR.negative}
+                            loading={giveBack.isPending && giveBack.variables === a.budget_id}
+                            onClick={() => askGiveBack(a)}>
+                            {t('projects.allocation.giveBack')}
+                        </Button>
+                    )}
+                </Group>
+            ))}
+            {giveBack.error && <Text c="red" size="xs">{formatError(giveBack.error)}</Text>}
+
+            {canGrant && !draft.open && (
+                <Group>
+                    <Button size="xs" variant="light" leftSection={<Gift size="14" />} onClick={() => draft.start()}>
+                        {t('projects.allocation.add')}
+                    </Button>
+                </Group>
+            )}
+
+            {draft.open && draft.source && (
+                <Paper withBorder radius="md" p="md" bg="var(--mantine-color-default-hover)">
+                    <Stack gap="sm">
+                        <Group justify="space-between" wrap="nowrap">
+                            <Text size="sm" fw={600}>
+                                {draft.existing
+                                    ? t('projects.allocation.formTitleChange', { name: draft.source.name || draft.source.id })
+                                    : t('projects.allocation.formTitleNew')}
+                            </Text>
+                            <Button size="compact-xs" variant="subtle" color="gray" onClick={draft.discard}>
+                                {t('projects.allocation.discard')}
+                            </Button>
                         </Group>
-                    </Paper>
-                ))}
-                {giveBack.error && <Text c="red" size="xs">{formatError(giveBack.error)}</Text>}
-
-                {draft.manager && draft.loading && <Loader size="sm" />}
-                {draft.manager && !draft.loading && draft.sources.length === 0 && (
-                    <Alert variant="light" color={COLOR.info} icon={<Info size="16" />} p="xs">
-                        <Text size="xs">{t('projects.allocation.noSources')}</Text>
-                    </Alert>
-                )}
-                {draft.source && (
-                    <>
                         <BudgetSelect
                             label={t('projects.allocation.from')}
                             description={t('projects.allocation.fromHint')}
@@ -165,8 +200,11 @@ export function AllocationSection({ node, resources, draft }) {
                             leftSection={<Gift size="14" />}
                             onChange={draft.setSourceId}
                         />
-                        <QuotaInputs resources={draft.offered} value={draft.value} headroom={draft.headroom}
+                        <QuotaInputs extra resources={draft.offered} value={draft.value} headroom={draft.headroom}
                             onChange={draft.setValue} />
+                        {draft.existing && Object.values(draft.value).every(v => !v) && (
+                            <Text size="xs" c={COLOR.negative}>{t('projects.allocation.willRemove')}</Text>
+                        )}
                         <ReasonField
                             label={t('projects.allocation.reason')}
                             description={t('projects.allocation.reasonHint')}
@@ -174,9 +212,9 @@ export function AllocationSection({ node, resources, draft }) {
                             error={draft.error}
                             onChange={(e) => draft.setReason(e.currentTarget.value)}
                         />
-                    </>
-                )}
-            </Stack>
-        </Paper>
+                    </Stack>
+                </Paper>
+            )}
+        </Stack>
     );
 }
