@@ -155,7 +155,14 @@ function EntryModal({ entry, groups, onClose }) {
         type: entry?.grant?.type ?? 'network',
         target: entry?.grant?.target ?? '',
     });
-    const set = (k) => (v) => setForm(f => ({ ...f, [k]: v?.currentTarget ? v.currentTarget.value : v }));
+    // The value is read here, not in the updater: React runs the updater later,
+    // when the event's currentTarget is already null, and the event itself
+    // then ended up in the form — "name.trim is not a function" on the first
+    // keystroke.
+    const set = (k) => (v) => {
+        const value = v?.currentTarget ? v.currentTarget.value : v;
+        setForm(f => ({ ...f, [k]: value }));
+    };
 
     const save = useApiMutation({
         mutationFn: () => {
