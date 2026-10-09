@@ -80,7 +80,8 @@
             "title": "Wirklich fortfahren?",
             "message": "Das lässt sich nicht rückgängig machen.",
             "cancel": "Abbrechen",
-            "confirm": "Löschen"
+            "confirm": "Löschen",
+            "typeName": "Zur Bestätigung den Namen eingeben: <1>{{name}}</1>"
         },
         "errorModal": {
             "title": "Fehler",

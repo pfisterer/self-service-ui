@@ -10,6 +10,7 @@ import { formatError } from '/helper/api-error.js';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { FormModal } from './component-form-modal.jsx';
+import { ConfirmModal, useConfirm } from '/providers/confirm.jsx';
 import { COLOR } from './util-project.jsx';
 import { formatDateTime } from '../format-date.js';
 
@@ -30,6 +31,7 @@ const STATE_COLOR = { active: COLOR.positive, withdrawn: COLOR.attention };
 export function CatalogPanel() {
     const { t } = useTranslation();
     const api = useNodesApi();
+    const confirm = useConfirm();
     const [dialog, setDialog] = useState(null); // { kind, entry }
 
     const list = useQuery({
@@ -112,7 +114,14 @@ export function CatalogPanel() {
                                                     <>
                                                         <Button size="compact-xs" variant="subtle"
                                                             loading={restore.isPending && restore.variables === e.id}
-                                                            onClick={() => restore.mutate(e.id)}>
+                                                            onClick={async () => {
+                                                                if (await confirm({
+                                                                    title: t('projects.catalog.restoreTitle', { name: e.name }),
+                                                                    message: t('projects.catalog.restoreText'),
+                                                                    severity: 'neutral',
+                                                                    confirmLabel: t('projects.catalog.restore'),
+                                                                })) restore.mutate(e.id);
+                                                            }}>
                                                             {t('projects.catalog.restore')}
                                                         </Button>
                                                         <Button size="compact-xs" variant="light" color={COLOR.negative}
@@ -239,19 +248,18 @@ function ChangeModal({ kind, entry, onClose }) {
     const blocked = kind === 'remove' && (holders.length > 0 || managed.length > 0 || !!st?.openstack?.error);
 
     return (
-        <FormModal
+        <ConfirmModal
             opened
-            onClose={onClose}
-            size="lg"
+            onCancel={onClose}
+            onConfirm={() => { if (!blocked) run.mutate(); }}
             title={t(`projects.catalog.${kind}Title`, { name: entry.name })}
-            onSubmit={(e) => { e.preventDefault(); if (!blocked) run.mutate(); }}
-            submitting={run.isPending}
-            submitError={run.error && formatError(run.error)}
-            submitLabel={t(`projects.catalog.${kind}`)}
-            submitColor={kind === 'remove' ? COLOR.negative : COLOR.attention}
-            submitDisabled={status.isPending || blocked}
+            message={t(`projects.catalog.${kind}Text`)}
+            severity={kind === 'remove' ? 'danger' : 'warning'}
+            confirmLabel={t(`projects.catalog.${kind}`)}
+            busy={run.isPending}
+            error={run.error && formatError(run.error)}
+            confirmDisabled={status.isPending || blocked}
         >
-            <Text size="sm">{t(`projects.catalog.${kind}Text`)}</Text>
             {status.isPending ? <Loading size="sm" /> : status.isError ? (
                 <LoadError query={status} title={t('projects.catalog.loadError')} />
             ) : (
@@ -261,7 +269,7 @@ function ChangeModal({ kind, entry, onClose }) {
                     {blocked && <Alert color={COLOR.attention}>{t('projects.catalog.removeBlocked')}</Alert>}
                 </>
             )}
-        </FormModal>
+        </ConfirmModal>
     );
 }
 

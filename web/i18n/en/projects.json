@@ -749,7 +749,9 @@
         "openstackTitle": "Granted in OpenStack",
         "openstackNone": "To no project.",
         "openstackManaged": "To {{count}} project(s) of this portal:",
-        "openstackUnmanaged": "Also to {{count}} other project(s) not managed by this portal (left as they are):"
+        "openstackUnmanaged": "Also to {{count}} other project(s) not managed by this portal (left as they are):",
+        "restoreTitle": "Restore “{{name}}”?",
+        "restoreText": "It can be granted again afterwards. Where it was withdrawn it stays withdrawn until it is granted anew."
     },
     "resources": {
         "usedOfGranted": "in use / granted, as of the last sync",

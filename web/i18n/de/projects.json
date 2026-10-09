@@ -749,7 +749,9 @@
         "openstackTitle": "In OpenStack freigegeben",
         "openstackNone": "Für kein Projekt.",
         "openstackManaged": "Für {{count}} Projekt(e) dieses Portals:",
-        "openstackUnmanaged": "Außerdem für {{count}} weitere Projekt(e), die nicht von diesem Portal verwaltet werden (bleiben unverändert):"
+        "openstackUnmanaged": "Außerdem für {{count}} weitere Projekt(e), die nicht von diesem Portal verwaltet werden (bleiben unverändert):",
+        "restoreTitle": "„{{name}}“ wiederherstellen?",
+        "restoreText": "Die Verfügbarkeit kann danach wieder vergeben werden. Wo sie entzogen wurde, bleibt sie entzogen, bis sie neu vergeben wird."
     },
     "resources": {
         "usedOfGranted": "belegt / zugeteilt, Stand des letzten Abgleichs",

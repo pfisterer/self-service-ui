@@ -80,7 +80,8 @@
             "title": "Are you sure?",
             "message": "This action cannot be undone.",
             "cancel": "Cancel",
-            "confirm": "Delete"
+            "confirm": "Delete",
+            "typeName": "Type the name to confirm: <1>{{name}}</1>"
         },
         "errorModal": {
             "title": "Error",

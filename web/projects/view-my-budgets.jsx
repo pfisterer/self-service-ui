@@ -446,9 +446,12 @@ export function MyBudgetsView({ params }) {
     };
 
     const handleDelete = async (node) => {
+        // Like deleting a project for good: it cannot be undone, so the name
+        // has to be typed.
         const ok = await confirm({
             title: t('projects.budgets.deleteTitle', { name: node.name || node.id }),
             message: t('projects.budgets.deleteMessage'),
+            typeToConfirm: node.name || node.id,
         });
         if (!ok) return;
         try {

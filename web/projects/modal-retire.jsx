@@ -1,37 +1,34 @@
 import { useState } from 'react';
-import { Checkbox, List, Text, TextInput } from '@mantine/core';
-import { Trans, useTranslation } from 'react-i18next';
+import { Checkbox, Text } from '@mantine/core';
+import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
-import { projectKeys } from './query-keys.js';
-import { FormModal } from './component-form-modal.jsx';
-import { useApiMutation } from '/helper/query-state.jsx';
 import { formatError } from '/helper/api-error.js';
+import { ConfirmModal } from '/providers/confirm.jsx';
 import { useProjectConfig } from './projects.jsx';
-import { COLOR, deletesOnRequest, nodeTitle } from './util-project.jsx';
+import { deletesOnRequest, nodeTitle } from './util-project.jsx';
+import { useNodeMutation } from './use-node-mutation.jsx';
 
 // RetireModal gives a project up (mode 'release') or deletes a released one for
 // good (mode 'delete'). What follows depends on the deployment — archived or
 // not, deleted when, still charged or not — so the dialog says exactly that,
 // from the config, instead of one sentence that is wrong somewhere.
 //
-// Deleting cannot be undone and takes everything in the project with it, so it
-// asks for the project's name, the way the agent tools do.
+// It is the app's confirmation dialog (ConfirmModal) with one option inside;
+// deleting cannot be undone and takes everything in the project with it, so it
+// asks for the project's name, like every deletion here.
 export function RetireModal({ opened, onClose, onDone, node, mode = 'release' }) {
     const { t } = useTranslation();
     const api = useNodesApi();
     const config = useProjectConfig();
     const retirement = config?.retirement ?? {};
     const [deleteNow, setDeleteNow] = useState(false);
-    const [typed, setTyped] = useState('');
 
-    const run = useApiMutation({
+    const run = useNodeMutation({
+        onDone,
+        onClose,
         mutationFn: () => mode === 'delete'
             ? api.requestDeletion(node.id)
             : api.release(node.id, { deleteNow }),
-        invalidates: [projectKeys.tree()],
-        reportErrors: 'inline',
-        onSuccess: (result) => { onDone?.(result); onClose(); },
-        onConflict: () => { onDone?.(); onClose(); },
     });
 
     if (!node) return null;
@@ -39,36 +36,25 @@ export function RetireModal({ opened, onClose, onDone, node, mode = 'release' })
     const immediately = retirement.delete === 'immediately';
     const offerDelete = mode === 'release' && deletesOnRequest(retirement) && !immediately;
     const deleting = mode === 'delete' || deleteNow || immediately;
-    const name = node.name || node.id;
-    const confirmed = !deleting || typed.trim() === name;
 
-    const consequences = mode === 'delete' || deleteNow || immediately
+    const consequences = deleting
         ? [t('projects.retire.deleteWhat'), t('projects.retire.deleteAfter')]
         : releaseConsequences(t, retirement);
 
-    const submit = (e) => {
-        e.preventDefault();
-        if (confirmed) run.mutate();
-    };
-
     return (
-        <FormModal
+        <ConfirmModal
             opened={opened}
-            onClose={onClose}
-            size="md"
+            onCancel={onClose}
+            onConfirm={() => run.mutate()}
             title={t(mode === 'delete' ? 'projects.retire.deleteTitle' : 'projects.retire.releaseTitle', { name: nodeTitle(node) })}
-            onSubmit={submit}
-            submitting={run.isPending}
-            submitError={run.error && formatError(run.error)}
-            submitLabel={t(deleting ? 'projects.actions.deleteForGood' : 'projects.actions.release')}
-            submitColor={COLOR.negative}
-            submitDisabled={!confirmed}
+            message={<Text size="sm" fw={600}>{t('projects.retire.irreversible')}</Text>}
+            consequences={consequences}
+            severity="danger"
+            typeToConfirm={deleting ? (node.name || node.id) : undefined}
+            confirmLabel={t(deleting ? 'projects.actions.deleteForGood' : 'projects.actions.release')}
+            busy={run.isPending}
+            error={run.error && formatError(run.error)}
         >
-            <List size="sm" spacing={4}>
-                {consequences.map(c => <List.Item key={c}>{c}</List.Item>)}
-            </List>
-            <Text size="sm" fw={600}>{t('projects.retire.irreversible')}</Text>
-
             {offerDelete && (
                 <Checkbox
                     label={t('projects.retire.deleteNow')}
@@ -77,18 +63,7 @@ export function RetireModal({ opened, onClose, onDone, node, mode = 'release' })
                     onChange={(e) => setDeleteNow(e.currentTarget.checked)}
                 />
             )}
-
-            {deleting && (
-                <TextInput
-                    label={<Trans i18nKey="projects.retire.confirmName" values={{ name }}
-                        components={{ 1: <Text span ff="monospace" fw={700} size="sm" /> }} />}
-                    value={typed}
-                    autoComplete="off"
-                    data-autofocus
-                    onChange={(e) => setTyped(e.currentTarget.value)}
-                />
-            )}
-        </FormModal>
+        </ConfirmModal>
     );
 }
 
