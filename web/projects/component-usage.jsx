@@ -7,7 +7,7 @@ import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { COLOR, isBudget } from './util-project.jsx';
-import { averageIPv4, averageStorage, GROUPINGS, groupingExamples, groupPath, groupProjects, idleProject, percent, PERIODS, periodRange, toCSV } from './util-usage.js';
+import { averageIPv4, averageStorage, GROUPINGS, groupAttributes, groupingExamples, groupPath, groupProjects, idleProject, percent, PERIODS, periodRange, toCSV } from './util-usage.js';
 
 // What projects actually used, from the rows the reconciler collects once a
 // day: per project and for everything below a budget (UsagePanel), and the
@@ -196,8 +196,10 @@ export function UsageReportPanel() {
     const withValue = !!report?.prices;
 
     const columns = [
-        { label: t(`projects.consumption.groupBy.${by}`), value: r => r.name },
+        { label: t(`projects.consumption.groupBy.${by}`), value: r => r.name || (by === 'attributes' ? t('projects.consumption.noAttributes') : '') },
         { label: t('projects.consumption.path'), value: r => groupPath(r), csvOnly: true },
+        // As JSON, for whoever bills: the platform does not interpret it.
+        { label: t('projects.consumption.attributes'), value: r => groupAttributes(r), csvOnly: true },
         { label: t('projects.consumption.projects'), value: r => r.projects },
         { label: t('projects.consumption.serverHours'), value: r => r.server_hours },
         { label: t('projects.consumption.vcpuHours'), value: r => r.vcpu_hours },
@@ -205,6 +207,10 @@ export function UsageReportPanel() {
         { label: t('projects.consumption.storageGbDays'), value: r => r.storage_gb_days },
         { label: t('projects.consumption.ipv4Days'), value: r => r.public_ipv4_days },
         { label: t('projects.consumption.coresUsed'), value: r => percent(r.utilization.cores) },
+        // What was held back, next to what was used: billing may go by either.
+        { label: t('projects.consumption.reservedCoreHours'), value: r => r.reserved_core_hours, csvOnly: true },
+        { label: t('projects.consumption.reservedRamGbHours'), value: r => r.reserved_ram_gb_hours, csvOnly: true },
+        { label: t('projects.consumption.reservedStorageGbDays'), value: r => r.reserved_storage_gb_days, csvOnly: true },
         ...(withValue ? [{ label: t('projects.consumption.valueEur'), value: r => r.value_eur }] : []),
     ];
 

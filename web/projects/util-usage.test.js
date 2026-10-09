@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupingExamples, groupPath, groupProjects, idleProject, periodRange, toCSV } from './util-usage.js';
+import { attributesKey, attributesLabel, groupAttributes, groupingExamples, groupPath, groupProjects, idleProject, periodRange, toCSV } from './util-usage.js';
 
 describe('periodRange', () => {
     const now = new Date('2026-10-07T12:00:00Z');
@@ -76,5 +76,40 @@ describe('toCSV', () => {
         const csv = toCSV([{ label: 'Name', value: r => r.n }, { label: 'h', value: r => r.h }],
             [{ n: 'Lab, "KI"', h: 1.23456 }, { n: 'x', h: null }]);
         expect(csv).toBe('Name,h\n"Lab, ""KI""",1.23\nx,\n');
+    });
+});
+
+describe('groupProjects by attributes', () => {
+    const a = { billing: { cost_center: '1' } };
+    const b = { billing: { cost_center: '2' } };
+    const projects = [
+        { node_id: 'p1', project_name: 'P1', attributes: a, vcpu_hours: 20 },
+        { node_id: 'p1', project_name: 'P1', attributes: b, vcpu_hours: 5 },
+        { node_id: 'p2', project_name: 'P2', attributes: { billing: { cost_center: '1' } }, vcpu_hours: 1 },
+        { node_id: 'p3', project_name: 'P3', vcpu_hours: 2 },
+    ];
+
+    it('keeps the parts of a project whose attributes changed apart', () => {
+        const g = groupProjects(projects, 'project');
+        expect(g.filter(x => x.name === 'P1').map(x => x.vcpu_hours)).toEqual([20, 5]);
+        expect(groupAttributes(g.find(x => x.vcpu_hours === 5))).toBe('{"billing":{"cost_center":"2"}}');
+    });
+
+    it('sums by attribute set', () => {
+        const g = groupProjects(projects, 'attributes');
+        expect(g.map(x => [x.name, x.vcpu_hours])).toEqual([
+            ['billing.cost_center=1', 21], ['billing.cost_center=2', 5], ['', 2],
+        ]);
+    });
+
+    it('leaves the attributes of a mixed group empty', () => {
+        const g = groupProjects([...projects.map(p => ({ ...p, budget_path: [{ id: 's' }, { id: 'root' }] }))], 'budget');
+        expect(groupAttributes(g[0])).toBe('');
+    });
+
+    it('writes attributes canonically', () => {
+        expect(attributesKey({ z: { b: '1', a: '2' }, a: {} })).toBe('{"a":{},"z":{"a":"2","b":"1"}}');
+        expect(attributesKey({})).toBe('');
+        expect(attributesLabel({ billing: { wbs: 'D', cost_center: '4' } })).toBe('billing.cost_center=4, billing.wbs=D');
     });
 });

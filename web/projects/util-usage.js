@@ -45,7 +45,18 @@ export function idleProject(report, node) {
 // The grouping levels of the root admins' evaluation. A budget path runs from
 // the project's own budget up to the root; levels count down from the root, so
 // level 1 is a budget directly below it (a location), level 2 the next one.
-export const GROUPINGS = ['project', 'budget', 'level1', 'level2'];
+//
+// 'attributes' groups by the attribute groups that applied — a cost centre, a
+// project number — which is what billing sums by.
+export const GROUPINGS = ['project', 'budget', 'level1', 'level2', 'attributes'];
+
+// attributesKey is one attribute set as a canonical string: keys sorted at both
+// levels, so the same set always reads the same. '' for none.
+export function attributesKey(attrs) {
+    if (!attrs || Object.keys(attrs).length === 0) return '';
+    const sorted = (o) => Object.fromEntries(Object.keys(o).sort().map(k => [k, o[k]]));
+    return JSON.stringify(Object.fromEntries(Object.keys(attrs).sort().map(g => [g, sorted(attrs[g] || {})])));
+}
 
 // groupKey names the group a project falls into, with the budgets above it
 // (`above`, top down, without the root): two budgets called "Vorlesung" under
@@ -54,7 +65,16 @@ function groupKey(p, by) {
     const path = p.budget_path || [];
     // Entries from index `from` up to the root's child, top down.
     const above = (from) => path.slice(from, Math.max(path.length - 1, from)).reverse().map(b => b.name || b.id);
-    if (by === 'project') return { id: p.node_id, name: p.project_name || p.node_id, above: above(0) };
+    // A project whose attributes changed within the period comes as one entry
+    // per set; they stay apart, each is billed on its own.
+    if (by === 'project') {
+        const attrs = attributesKey(p.attributes);
+        return { id: attrs ? `${p.node_id}|${attrs}` : p.node_id, name: p.project_name || p.node_id, above: above(0) };
+    }
+    if (by === 'attributes') {
+        const attrs = attributesKey(p.attributes);
+        return { id: attrs, name: attributesLabel(p.attributes), above: [] };
+    }
     let idx = 0;
     if (by !== 'budget') {
         const level = by === 'level1' ? 1 : 2;
@@ -64,6 +84,20 @@ function groupKey(p, by) {
     }
     const b = path[idx];
     return b ? { id: b.id, name: b.name || b.id, above: above(idx + 1) } : { id: '', name: '', above: [] };
+}
+
+// attributesLabel writes an attribute set on one line for people:
+// "billing.cost_center=4711, billing.wbs=D-1".
+export function attributesLabel(attrs) {
+    if (!attrs) return '';
+    return Object.keys(attrs).sort().flatMap(g =>
+        Object.keys(attrs[g] || {}).sort().map(k => `${g}.${k}=${attrs[g][k]}`)).join(', ');
+}
+
+// groupAttributes is a group's attribute set as JSON for the CSV: empty where
+// it has none, and where its projects have different ones.
+export function groupAttributes(g) {
+    return g.attributes ? attributesKey(g.attributes) : '';
 }
 
 // groupPath writes a group's place in the tree as one line, for the CSV.
@@ -84,9 +118,12 @@ export function groupProjects(projects, by) {
         const { id, name, above } = groupKey(p, by);
         let g = groups.get(id);
         if (!g) {
-            g = { id, name, above, projects: 0, value_eur: null };
+            g = { id, name, above, projects: 0, value_eur: null, attributes: p.attributes || null };
             for (const k of SUMMED) g[k] = 0;
             groups.set(id, g);
+        } else if (g.attributes !== undefined && attributesKey(g.attributes) !== attributesKey(p.attributes)) {
+            // Projects billed differently: the group has no one set of them.
+            g.attributes = undefined;
         }
         g.projects += 1;
         for (const k of SUMMED) g[k] += p[k] || 0;
