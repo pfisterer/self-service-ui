@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronsDownUp, ChevronsUpDown, Inbox, Search, X } from 'lucide-react';
-import { ActionIcon, Alert, Badge, Box, Button, Checkbox, Flex, Modal, Group, Loader, Paper, ScrollArea, SegmentedControl, Stack, Text, TextInput, Tooltip, useTree } from '@mantine/core';
+import { ActionIcon, Alert, Badge, Box, Button, Checkbox, Flex, Modal, Group, Loader, Paper, SegmentedControl, Stack, Text, TextInput, Tooltip, useTree } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -647,7 +647,9 @@ export function MyBudgetsView({ params }) {
 
                             {/* Searching and filtering each replace the tree with a
                                 flat list — see the note on this component. */}
-                            <ScrollArea.Autosize mah="70vh">
+                            {/* No height of its own: a long tree scrolls with the
+                                page instead of in a box with a second scrollbar. */}
+                            <div>
                                 {searching ? (
                                     <NodeResultList
                                         nodes={results?.items}
@@ -673,7 +675,7 @@ export function MyBudgetsView({ params }) {
                                         onLoadMore={loadMoreChildren}
                                     />
                                 )}
-                            </ScrollArea.Autosize>
+                            </div>
                         </Paper>
                     </Box>
 
