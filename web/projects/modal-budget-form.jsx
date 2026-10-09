@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import { Info } from 'lucide-react';
-import { Alert, Box, Checkbox, Fieldset, Select, Stack, Switch, Text, Textarea, TextInput } from '@mantine/core';
+import { Alert, Box, Checkbox, Fieldset, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { Trans, useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
-import { projectKeys } from './query-keys.js';
-import { useApiMutation } from '/helper/query-state.jsx';
 import { useForm } from '@mantine/form';
 import { MaxTermInput, TerminationDatePicker } from './component-common.jsx';
 import { formatDate } from '../format-date.js';
-import { FormModal, FormTabs } from './component-form-modal.jsx';
+import { FormModal, FormTabs, tabHasError as tabFlag, tabWithError } from './component-form-modal.jsx';
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
-import { COLOR, formatError, freeAmount, isAvailability, isPoolAutoApprove, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
-import { budgetLabel } from './component-budget-path.jsx';
+import { formatError } from '/helper/api-error.js';
+import { COLOR, freeAmount, isAvailability, isPoolAutoApprove, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
+import { BudgetSelect } from './component-budget-select.jsx';
+import { ReasonField, reasonError } from './component-reason-field.jsx';
+import { useNodeMutation } from './use-node-mutation.jsx';
 import { AttributesEditor, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 
@@ -128,8 +129,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         validate: (values) => ({
             name: (values.name || '').trim().length < 3
                 ? t('projects.budgetForm.nameRequired') : null,
-            reason: (!isEdit && (values.reason || '').trim().length < 5)
-                ? t('projects.budgetForm.purposeRequired') : null,
+            reason: isEdit ? null : reasonError(values.reason, t('projects.budgetForm.purposeRequired')),
             parentId: (isRequest && !values.parentId)
                 ? t('projects.budgetForm.requestFromRequired') : null,
             terminationDate: (() => {
@@ -190,14 +190,13 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     };
 
     // Which tab to flag: a field the user cannot see must not fail silently.
-    const errorsInTab = (tab, errs) => {
-        if (tab === TAB_DETAILS) return ['name', 'reason', 'parentId', 'terminationDate'].some(k => errs[k]);
-        if (tab === TAB_RESOURCES) return (resources || []).some(r => errs[`quota.${r.id}`]);
-        if (tab === TAB_ACCESS) return !!errs.adminScope;
-        if (tab === TAB_AUTO_APPROVE) return Object.keys(errs).some(k => k.startsWith('autoApproveQuota.'));
-        return false;
+    const fieldsByTab = {
+        [TAB_DETAILS]: (k) => ['name', 'reason', 'parentId', 'terminationDate', 'maxTermDays'].includes(k),
+        [TAB_RESOURCES]: (k) => k.startsWith('quota.'),
+        [TAB_ACCESS]: (k) => k === 'adminScope' || k === 'eligibleRequesters',
+        [TAB_AUTO_APPROVE]: (k) => k.startsWith('autoApproveQuota.'),
     };
-    const tabHasError = (tab) => errorsInTab(tab, form.errors);
+    const tabHasError = (tab) => tabFlag(fieldsByTab, tab, form.errors);
 
     // Ending earlier — or at all, where the budget had no end — carries down to
     // whatever below it runs longer, so say so before it happens.
@@ -252,7 +251,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         return body;
     };
 
-    const save = useApiMutation({
+    const save = useNodeMutation({
+        onDone,
+        onClose,
         mutationFn: async (values) => {
             if (isEdit) {
                 const body = buildEditBody(values);
@@ -278,19 +279,12 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 termination_date: values.terminationDate ? values.terminationDate.toISOString() : null,
             });
         },
-        invalidates: [projectKeys.tree()],
-        reportErrors: 'inline',
-        onSuccess: (result) => { onDone?.(result); onClose(); },
-        // A 409 means this dialog was acting on a node that has moved on; there
-        // is nothing here to correct, so close it and let the refreshed view speak.
-        onConflict: () => { onDone?.(); onClose(); },
     });
 
     // Jump to the problem instead of leaving the button looking broken: the
     // offending field is usually on a tab the user is not looking at.
     const handleInvalid = (errs) => {
-        const bad = [TAB_DETAILS, TAB_RESOURCES, TAB_ACCESS, TAB_AUTO_APPROVE]
-            .find(t => errorsInTab(t, errs));
+        const bad = tabWithError(fieldsByTab, errs);
         if (bad) setActiveTab(bad);
     };
 
@@ -303,13 +297,12 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const detailsTab = (
         <Stack>
             {isRequest && (
-                <Select
+                <BudgetSelect
                     label={t('projects.budgetForm.requestFrom')}
                     description={t('projects.budgetForm.requestFromHint')}
-                    required
-                    searchable
-                    data={eligibleBudgets.map(b => ({ value: b.id, label: budgetLabel(b) }))}
-                    {...form.getInputProps('parentId')}
+                    budgets={eligibleBudgets}
+                    value={form.values.parentId}
+                    error={form.errors.parentId}
                     onChange={(id) => {
                         form.setFieldValue('parentId', id);
                         form.clearFieldError('parentId');
@@ -337,18 +330,17 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 {...form.getInputProps('name')}
             />
 
-            {!isEdit && (
-                <Textarea
-                    label={t('projects.budgetForm.purpose')}
-                    description={t('projects.budgetForm.purposeHint')}
-                    required
-                    rows={2}
-                    {...form.getInputProps('reason')}
-                />
-            )}
+            {/* The purpose is the request's; an existing budget shows it but
+                keeps it (the API changes no reason in place). */}
+            <ReasonField
+                label={t('projects.budgetForm.purpose')}
+                description={isEdit ? undefined : t('projects.budgetForm.purposeHint')}
+                required={!isEdit}
+                disabled={isEdit}
+                {...form.getInputProps('reason')}
+            />
 
             <TerminationDatePicker
-                label={t('projects.fact.validUntil')}
                 optional
                 maxDate={endOf(form.values.parentId)}
                 {...form.getInputProps('terminationDate')}

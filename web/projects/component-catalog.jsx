@@ -175,6 +175,8 @@ function EntryModal({ entry, groups, onClose }) {
         invalidates: INVALIDATES,
         reportErrors: 'inline',
         onSuccess: onClose,
+        // The entry moved on meanwhile: close, the refreshed list speaks.
+        onConflict: onClose,
     });
 
     const complete = form.name.trim() && (editing || (form.id.trim() && form.target.trim()));
@@ -227,6 +229,8 @@ function ChangeModal({ kind, entry, onClose }) {
         invalidates: [...INVALIDATES, projectKeys.catalogEntry(entry.id)],
         reportErrors: 'inline',
         onSuccess: onClose,
+        // The entry moved on meanwhile: close, the refreshed list speaks.
+        onConflict: onClose,
     });
 
     const st = status.data;

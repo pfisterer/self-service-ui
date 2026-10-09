@@ -515,7 +515,7 @@ export function pickedDate(value) {
 // `maxHint` says why; without it the reason is a budget's end.
 const DEFAULT_DURATION_DAYS = 90;
 
-export function TerminationDatePicker({ value, onChange, error, readOnly = false, label, optional = false, optionalHint, maxDate = null, maxHint }) {
+export function TerminationDatePicker({ value, onChange, error, label, optional = false, optionalHint, maxDate = null, maxHint }) {
     const { t } = useTranslation();
     const heading = label ?? t('projects.endDate.label');
     const currentDate = value;
@@ -529,18 +529,6 @@ export function TerminationDatePicker({ value, onChange, error, readOnly = false
         const date = new Date(Date.now() + days * DAY_MS);
         return latest && date > latest ? latest : date;
     };
-
-    if (readOnly) {
-        if (!currentDate) return null;
-        return (
-            <>
-                <Text mt="xs" mb="xs" size="xs" fw={600}>{heading}</Text>
-                <Badge variant="outline" color="gray" leftSection={<Calendar size="12" />}>
-                    {t('projects.endDate.ends', { date: formatDate(currentDate), relative: dayjs(currentDate).fromNow() })}
-                </Badge>
-            </>
-        );
-    }
 
     const hasEndDate = !optional || !!latest || !!currentDate;
 

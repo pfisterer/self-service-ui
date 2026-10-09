@@ -40,7 +40,7 @@
         "budgetNote": "Damit wird ein <1>Budget</1> genehmigt: Wer es verwaltet, kann dann selbst Anfragen genehmigen und innerhalb der gewährten Obergrenze weitergeben.",
         "requestedAmount": "Angefragte Menge",
         "adjust": "Andere Menge gewähren",
-        "adjustHint": "Mit einer angepassten Zuteilung genehmigen statt mit der angefragten.",
+        "adjustHint": "Eine andere Menge genehmigen als die angefragte.",
         "impact": "Auswirkung auf Budget „{{name}}“"
     },
     "autoApprove": {
@@ -337,7 +337,6 @@
         "belowInUseTitle": "Weniger, als das Projekt schon nutzt",
         "belowInUse": "OpenStack lässt die vorhandenen Server weiterlaufen und lehnt nur neue ab. Dadurch wird nichts frei — das Projekt liegt über seiner Quota, bis die Ressourcen wirklich freigegeben werden.",
         "requested": "Angefragt",
-        "proposedChanges": "Vorgeschlagene Änderungen",
         "outcomeBlocked": "Dieses Budget gewährt nicht mehr als den persönlichen Anteil und nimmt darüber hinaus keine Anfragen an. Entweder weniger anfragen oder eine verwaltende Person um einen höheren Anteil bitten.",
         "outcomeRefused": "Mehr, als dieses Budget frei hat — das Projekt wird nicht angelegt. Entweder die Menge verringern oder zuerst das Budget erhöhen.",
         "outcomeDirect": "Dieses Budget ist in eigener Verwaltung — das Projekt wird sofort angelegt.",
@@ -580,8 +579,8 @@
         "reason": "Begründung",
         "reasonHint": "Sichtbar für alle, die das Projekt sehen, auch für die Budgets dazwischen.",
         "reasonRequired": "Bitte eine Begründung angeben (mindestens 5 Zeichen).",
-        "save": "Zuteilung speichern",
-        "remove": "Zuteilung entfernen",
+        "save": "Sonderzuteilung speichern",
+        "remove": "Sonderzuteilung entfernen",
         "giveBack": "Zurückgeben",
         "grantedBy": "Zugeteilt von {{who}} am {{date}}",
         "noSources": "Aus keinem Budget oberhalb dieses Projekts kann hier zugeteilt werden. Sonderzuteilungen vergeben die Verwaltenden eines höheren Budgets.",

@@ -1,22 +1,22 @@
 import { useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Badge, Group, Paper, Select, Stack, Table, Text, Textarea, TextInput } from '@mantine/core';
+import { Alert, Group, Paper, Stack, Table, Text, TextInput } from '@mantine/core';
 import { Clock, Gift, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
-import { useApiMutation } from '/helper/query-state.jsx';
 import { formatError } from '/helper/api-error.js';
 import { isEmail, useForm } from '@mantine/form';
 import { formatTerm, NodeChangesDiff, TerminationDatePicker, TokenBadgeList } from './component-common.jsx';
 import { formatDate } from '../format-date.js';
-import { FormModal, FormTabs } from './component-form-modal.jsx';
+import { FormModal, FormTabs, tabHasError as tabFlag, tabWithError } from './component-form-modal.jsx';
 import { QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
-import { TokenRoleEditor } from './component-token-role-editor.jsx';
-import { TokenListEditor } from './component-token-list-editor.jsx';
-import { canonicalToken } from './util-principal-import.js';
-import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, defaultsWithin, effectiveLimit, hasAllocations, hasAutoApprove, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
-import { budgetLabel } from './component-budget-path.jsx';
+import { MemberRoleEditor, TokenListEditor } from './component-token-list-editor.jsx';
+import { BudgetSelect } from './component-budget-select.jsx';
+import { ReasonField, reasonError } from './component-reason-field.jsx';
+import { useNodeMutation } from './use-node-mutation.jsx';
+import { PersonInput, personEmail } from './principal-search.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
@@ -27,67 +27,6 @@ const TAB_DETAILS = 'details';
 const TAB_RESOURCES = 'resources';
 const TAB_MEMBERS = 'members';
 const TAB_ATTRIBUTES = 'attributes';
-
-// BudgetSelect groups the budgets a user can place a project under:
-//   - budgets they manage → the project is created active immediately
-//   - budgets they may request under → the project awaits approval
-//     (or is approved instantly when the budget's auto-approve covers it)
-function BudgetSelect({ myBudgets, eligibleBudgets, value, onChange, error, requestableLabel }) {
-    const { t } = useTranslation();
-    // Which budgets grant on the spot — shown as a badge beside the name
-    // instead of a clause appended to it.
-    const instantIds = useMemo(
-        () => new Set((eligibleBudgets || []).filter(hasAutoApprove).map(b => b.id)),
-        [eligibleBudgets]);
-
-    const data = useMemo(() => {
-        const managedIds = new Set((myBudgets || []).map(b => b.id));
-        const managed = (myBudgets || []).map(b => ({ value: b.id, label: budgetLabel(b) }));
-        const eligible = (eligibleBudgets || [])
-            .filter(b => !managedIds.has(b.id))
-            .map(b => ({ value: b.id, label: budgetLabel(b) }));
-
-        const groups = [];
-        if (managed.length) groups.push({ group: t('projects.projectForm.budgetsManaged'), items: managed });
-        // Not "needs approval": with auto-approve many of these grant on the
-        // spot, and the note under the form says which way it goes.
-        if (eligible.length) groups.push({ group: requestableLabel || t('projects.projectForm.budgetsRequestable'), items: eligible });
-        return groups;
-    }, [myBudgets, eligibleBudgets, requestableLabel, t]);
-
-    if (!data.length) {
-        return (
-            <Select label={t('projects.projectForm.budget')} required data={[]} value={null} disabled error={error}
-                description={t('projects.projectForm.budgetNone')} />
-        );
-    }
-
-    // What choosing a budget means for this request — instant, waiting, or
-    // refused for lack of room — is said under the form (see OutcomeNote).
-    return (
-        <Select
-            label={t('projects.projectForm.budget')}
-            description={t('projects.projectForm.budgetHint')}
-            required
-            searchable
-            data={data}
-            value={value}
-            onChange={onChange}
-            error={error}
-            placeholder={t('projects.projectForm.budgetPlaceholder')}
-            renderOption={({ option }) => (
-                <Group gap="xs" wrap="nowrap" style={{ flex: 1 }}>
-                    <Text size="sm" truncate>{option.label}</Text>
-                    {instantIds.has(option.value) && (
-                        <Badge size="xs" variant="light" color={COLOR.positive} leftSection={<Zap size="10" />}>
-                            {t('projects.projectForm.instantBadge')}
-                        </Badge>
-                    )}
-                </Group>
-            )}
-        />
-    );
-}
 
 // OutcomeNote says, while the form is being filled in, what pressing the button
 // will do — the one thing a requester cannot otherwise tell before it happened.
@@ -174,7 +113,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // unnoticed and made a student the owner of a course project.
     const [owner, setOwner] = useState('');
     const [ownerError, setOwnerError] = useState(null);
-    const ownerEmail = owner.trim();
+    const ownerEmail = personEmail(owner);
     // The budgets that owner may request under, offered next to the admin's
     // own (a root-only endpoint; a failure leaves the admin's budgets).
     const ownerBudgetsQuery = useQuery({
@@ -189,9 +128,6 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
 
-    // Group token search for the members editor.
-    const [tokenSearchResults, setTokenSearchResults] = useState([]);
-    const [isSearchingTokens, setIsSearchingTokens] = useState(false);
 
     // Auto-approve only ever applies to budgets you REQUEST under. On a budget
     // you manage the project is created approved outright, so its headroom is
@@ -308,8 +244,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             // An import keeps its OpenStack name.
             name: !isAdopt && (values.name || '').trim().length < 3
                 ? t('projects.projectForm.nameRequired') : null,
-            reason: (values.reason || '').trim().length < 5
-                ? t('projects.projectForm.purposeRequired') : null,
+            reason: reasonError(values.reason, t('projects.projectForm.purposeRequired')),
             parentId: (!isChange && !values.parentId) ? t('projects.projectForm.budgetRequired') : null,
             terminationDate: (() => {
                 const latest = latestEndOf(isChange ? node.parent_id : values.parentId);
@@ -382,40 +317,15 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             || values.reason.trim() !== (node.reason || '').trim();
     };
 
-    const errorsInTab = (tab, errs) => {
-        if (tab === TAB_DETAILS) return ['name', 'reason', 'parentId', 'terminationDate'].some(k => errs[k]);
-        if (tab === TAB_RESOURCES) return (resources || []).some(r => errs[`quota.${r.id}`]);
-        return false;
+    const fieldsByTab = {
+        [TAB_DETAILS]: (k) => ['name', 'reason', 'parentId', 'terminationDate'].includes(k),
+        [TAB_RESOURCES]: (k) => k.startsWith('quota.'),
     };
-    const tabHasError = (tab) => errorsInTab(tab, form.errors);
+    const tabHasError = (tab) => tabFlag(fieldsByTab, tab, form.errors);
 
-    const handleSearchTokens = async (query) => {
-        if (!query) { setTokenSearchResults([]); return; }
-        // A typed address is offerable as-is, ahead of the search: the
-        // directory only knows enumerable people (staff) and existing
-        // participants, while a pattern member (student) or an address new to
-        // the platform is still a valid user: token. Same normalization as
-        // TokenListEditor — and kept even when the directory is unreachable.
-        const typed = query.trim().replace(/^user:/i, '');
-        const typedToken = (typed.includes('@') && !typed.includes(':') && !/\s/.test(typed))
-            ? canonicalToken(typed) : null;
-        setIsSearchingTokens(true);
-        try {
-            // No second filter on the query here: the API already matched, and a
-            // group found through its DESCRIPTION has a token that does not
-            // contain the search text — filtering again would drop exactly those.
-            const tokens = await api.searchPrincipals(query);
-            if (typedToken && !tokens.includes(typedToken)) tokens.unshift(typedToken);
-            setTokenSearchResults(tokens.filter(t =>
-                !authorizedUsers.some(au => au.token === t)));
-        } catch {
-            setTokenSearchResults(typedToken ? [typedToken] : []);
-        } finally {
-            setIsSearchingTokens(false);
-        }
-    };
-
-    const save = useApiMutation({
+    const save = useNodeMutation({
+        onDone,
+        onClose,
         mutationFn: async (values) => {
             // No end only where nothing bounds the project (see latestEndOf).
             const iso = values.terminationDate ? values.terminationDate.toISOString() : null;
@@ -467,18 +377,12 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             if (attributes) result = await api.setAttributes(node.id, attributes);
             return result;
         },
-        invalidates: [projectKeys.tree()],
-        reportErrors: 'inline',
-        onSuccess: (result) => { if (result) onDone?.(result); onClose(); },
-        // A 409 means this dialog was acting on a node that has moved on; there
-        // is nothing here to correct, so close it and let the refreshed view speak.
-        onConflict: () => { onDone?.(); onClose(); },
     });
 
     // Jump to the problem instead of leaving the button looking broken: the
     // offending field is usually on a tab the user is not looking at.
     const handleInvalid = (errs) => {
-        const bad = [TAB_DETAILS, TAB_RESOURCES, TAB_MEMBERS].find(t => errorsInTab(t, errs));
+        const bad = tabWithError(fieldsByTab, errs);
         if (bad) setActiveTab(bad);
     };
 
@@ -487,25 +391,37 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             {isAdopt && (
                 <>
                     <Alert color={COLOR.outside} variant="light" p="xs">{t('projects.adopt.note')}</Alert>
-                    <TextInput
+                    <PersonInput
                         label={t('projects.adopt.owner')}
                         description={t('projects.adopt.ownerHint')}
                         placeholder={t('projects.adopt.ownerPlaceholder')}
                         required
                         value={owner}
                         error={ownerError}
-                        onChange={(e) => { setOwner(e.currentTarget.value); setOwnerError(null); }}
+                        onChange={(v) => { setOwner(v); setOwnerError(null); }}
                     />
                 </>
             )}
             {!isChange && (
+                // Budgets they manage → the project is created active at once;
+                // budgets they may request under → it awaits approval, or is
+                // approved on the spot where auto-approve covers it.
                 <BudgetSelect
-                    myBudgets={myBudgets}
-                    eligibleBudgets={requestable}
+                    label={t('projects.projectForm.budget')}
+                    description={t('projects.projectForm.budgetHint')}
+                    placeholder={t('projects.projectForm.budgetPlaceholder')}
+                    emptyDescription={t('projects.projectForm.budgetNone')}
+                    groups={[
+                        { label: t('projects.projectForm.budgetsManaged'), budgets: myBudgets || [] },
+                        {
+                            label: isAdopt ? t('projects.adopt.budgetsOwnerCanRequest') : t('projects.projectForm.budgetsRequestable'),
+                            budgets: (requestable || []).filter(b => !managedIds.has(b.id)),
+                        },
+                    ]}
+                    markInstant
                     value={parentId}
                     onChange={selectBudget}
                     error={form.errors.parentId}
-                    requestableLabel={isAdopt ? t('projects.adopt.budgetsOwnerCanRequest') : undefined}
                 />
             )}
 
@@ -537,12 +453,11 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 {...form.getInputProps('name')}
             />
 
-            <Textarea
+            <ReasonField
                 label={t('projects.projectForm.purpose')}
                 description={t('projects.projectForm.purposeHint')}
                 placeholder={t('projects.projectForm.purposePlaceholder')}
                 required
-                rows={2}
                 {...form.getInputProps('reason')}
             />
 
@@ -635,21 +550,12 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const membersTab = (
         <Stack gap="md">
             <Paper withBorder radius="md" p="md">
-                <TokenRoleEditor
+                <MemberRoleEditor
                     label={t('projects.projectForm.access')}
                     description={t('projects.projectForm.accessHint')}
-                    authorizedUsers={authorizedUsers}
-                    onAddToken={(raw, role) => {
-                        const token = canonicalToken(raw);
-                        form.setFieldValue('authorizedUsers', u => u.some(x => x.token === token) ? u : [...u, { token, openstack_role: role }]);
-                    }}
-                    onRemoveToken={(token) => form.setFieldValue('authorizedUsers', u => u.filter(x => x.token !== token))}
-                    onOpenstackRoleChange={(token, role) => form.setFieldValue('authorizedUsers', u => u.map(x => x.token === token ? { ...x, openstack_role: role || 'member' } : x))}
-                    searchResults={tokenSearchResults}
-                    isSearching={isSearchingTokens}
-                    onSearch={handleSearchTokens}
+                    members={authorizedUsers}
+                    onChange={(members) => form.setFieldValue('authorizedUsers', members)}
                     roles={openstackRoles || []}
-                    defaultOpenstackRole="member"
                     emptyMessage={t('projects.projectForm.membersEmpty')}
                 />
             </Paper>
@@ -678,7 +584,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             onClose={onClose}
             title={isAdopt ? t('projects.adopt.title', { name: nodeTitle(node) })
                 : isChange
-                ? (node?.status === 'pending' ? t('projects.projectForm.titleEdit') : t('projects.inspect.titleProject', { name: node.name || node.id }))
+                ? t('projects.inspect.titleProject', { name: nodeTitle(node) })
                 : t('projects.projectForm.titleNew')}
             onSubmit={form.onSubmit(values => {
                 if (isAdopt) {
@@ -723,7 +629,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     dateTo={terminationDate}
                     usersFrom={node.authorized_users}
                     usersTo={authorizedUsers}
-                    label={t('projects.projectForm.proposedChanges')}
+                    label={t('projects.changes.proposed')}
                 />
             )}
 

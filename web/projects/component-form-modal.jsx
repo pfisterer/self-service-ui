@@ -18,6 +18,19 @@ export function TabLabel({ label, hasError }) {
     );
 }
 
+// tabWithError names the first tab that holds a failed field, so a submit can
+// jump there. `fieldsByTab` maps a tab to a test of a field key: the tabs are
+// tried in the order given.
+export function tabWithError(fieldsByTab, errors) {
+    return Object.keys(fieldsByTab).find(tab => Object.keys(errors || {}).some(fieldsByTab[tab])) ?? null;
+}
+
+// tabHasError says whether one tab holds a failed field.
+export function tabHasError(fieldsByTab, tab, errors) {
+    const test = fieldsByTab[tab];
+    return !!test && Object.keys(errors || {}).some(test);
+}
+
 /**
  * FormTabs renders the tab strip plus its panels.
  *

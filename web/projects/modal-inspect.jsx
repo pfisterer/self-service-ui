@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AlertCircle, Archive, ArrowRight, ArrowRightLeft, CalendarMinus, Check, FileText, FolderInput, Gift, LogOut, Pencil, Rocket, Tags, Trash2, Users, X } from 'lucide-react';
-import { Badge, Button, Group, Modal, Paper, Stack, Table, Tabs, Text, Timeline } from '@mantine/core';
+import { Badge, Button, Group, Modal, Paper, Stack, Table, Text, Timeline } from '@mantine/core';
+import { FormTabs } from './component-form-modal.jsx';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -321,12 +322,9 @@ export function NodeInspectModal({ opened, onClose, node, resources, initialTab 
         <Modal opened={opened} onClose={onClose} size="xl"
             title={t(budget ? 'projects.inspect.titleBudget' : 'projects.inspect.titleProject', { name: nodeTitle(node) })}>
             <Stack>
-                <Tabs value={tab} onChange={setTab}>
-                    <Tabs.List mb="md">
-                        {tabs.map(x => <Tabs.Tab key={x.value} value={x.value}>{x.label}</Tabs.Tab>)}
-                    </Tabs.List>
-                    {tabs.map(x => <Tabs.Panel key={x.value} value={x.value}>{x.content}</Tabs.Panel>)}
-                </Tabs>
+                {/* The same tab strip as the edit dialogs, so the two forms of
+                    the one dialog cannot drift apart. */}
+                <FormTabs value={tab} onChange={setTab} tabs={tabs} />
 
                 <Group justify="flex-end">
                     <Button variant="default" onClick={onClose}>{t('projects.actions.close')}</Button>

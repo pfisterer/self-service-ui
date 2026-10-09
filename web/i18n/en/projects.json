@@ -40,7 +40,7 @@
         "budgetNote": "This approves a <1>budget</1>: its managers can then approve requests and delegate further within the granted cap.",
         "requestedAmount": "Requested amount",
         "adjust": "Grant a different amount",
-        "adjustHint": "Approve with an adjusted allocation instead of what was requested.",
+        "adjustHint": "Approve a different amount than the one requested.",
         "impact": "Impact on budget “{{name}}”"
     },
     "autoApprove": {
@@ -314,7 +314,7 @@
         "submitChangeRequest": "Submit change request",
         "budget": "Budget",
         "budgetHint": "Every project lives under a budget that provides its resources.",
-        "budgetPlaceholder": "Choose where to request this project",
+        "budgetPlaceholder": "Choose the budget for this project",
         "budgetNone": "You cannot request a project right now — ask your lecturer or administrator to add you to a budget.",
         "budgetsManaged": "Budgets you manage (created immediately)",
         "budgetsRequestable": "Budgets you can request from",
@@ -337,7 +337,6 @@
         "belowInUseTitle": "Below what the project already uses",
         "belowInUse": "OpenStack keeps the existing servers running and only refuses new ones, so this does not free anything up — the project stays over its quota until the resources are actually released.",
         "requested": "Requested",
-        "proposedChanges": "Your proposed changes",
         "outcomeBlocked": "This budget grants no more than your share, and it takes no requests beyond that. Ask for less, or ask one of its managers to raise your share.",
         "outcomeRefused": "More than this budget has free — creating the project will be refused. Lower the amount, or raise the budget first.",
         "outcomeDirect": "You manage this budget — the project is created right away.",
@@ -367,8 +366,8 @@
     },
     "reject": {
         "title": "Reject request",
-        "titleChange": "Decline change request",
-        "submitChange": "Decline change",
+        "titleChange": "Reject change request",
+        "submitChange": "Reject change",
         "requestedBy": "Requested by: {{email}}",
         "changeNote": "Only the proposed change is discarded — the project keeps running with its current resources.",
         "reason": "Reason",

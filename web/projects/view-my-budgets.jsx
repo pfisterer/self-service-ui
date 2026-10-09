@@ -508,7 +508,7 @@ export function MyBudgetsView({ params }) {
                 {budgetRequestTargets.length > 0 && (
                     <Button size="xs" variant="light" leftSection={<Inbox size="14" />}
                         onClick={() => setBudgetForm({ mode: 'request' })}>
-                        Request budget
+                        {t('projects.actions.requestBudget')}
                     </Button>
                 )}
             </Group>
