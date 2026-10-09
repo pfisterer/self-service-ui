@@ -151,9 +151,17 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                             <FolderOpen size="13" style={{ marginRight: 4 }} />{t('projects.actions.open')}
                         </Button>
                     )}
-                    <Button variant="light" size="xs" onClick={() => act('details')}>
-                        <Eye size="13" style={{ marginRight: 4 }} />{t('projects.actions.details')}
-                    </Button>
+                    {/* One dialog per budget: its managers get it editable, with
+                        history and usage as tabs; everyone else reads it. */}
+                    {manageable && isApproved ? (
+                        <Button variant="light" size="xs" onClick={() => act('edit')}>
+                            <Pencil size="13" style={{ marginRight: 4 }} />{t('projects.actions.edit')}
+                        </Button>
+                    ) : (
+                        <Button variant="light" size="xs" onClick={() => act('details')}>
+                            <Eye size="13" style={{ marginRight: 4 }} />{t('projects.actions.details')}
+                        </Button>
+                    )}
                     {/* On a budget shown read-only, requesting is the one thing
                         the viewer CAN do here — offered only when the budget
                         takes sub-budget requests at all. */}
@@ -176,9 +184,6 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                         <>
                             <Button variant="light" size="xs" onClick={() => act('sub-budget')}>
                                 <Plus size="13" style={{ marginRight: 4 }} />{t('projects.actions.subBudget')}
-                            </Button>
-                            <Button variant="light" size="xs" onClick={() => act('edit')}>
-                                <Pencil size="13" style={{ marginRight: 4 }} />{t('projects.actions.edit')}
                             </Button>
                             <Button variant="light" size="xs" onClick={() => act('move')}>
                                 <FolderInput size="13" style={{ marginRight: 4 }} />{t('projects.actions.move')}

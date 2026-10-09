@@ -13,12 +13,15 @@ import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inpu
 import { TokenListEditor } from './component-token-list-editor.jsx';
 import { COLOR, formatError, freeAmount, isAvailability, isPoolAutoApprove, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
 import { budgetLabel } from './component-budget-path.jsx';
+import { AttributesEditor, useAttributesTab } from './component-node-attributes.jsx';
+import { nodeExtraTabs } from './modal-inspect.jsx';
 
 // Same three-step split as the project dialog: what it is → how much → who.
 const TAB_DETAILS = 'details';
 const TAB_RESOURCES = 'resources';
 const TAB_ACCESS = 'access';
 const TAB_AUTO_APPROVE = 'auto-approve';
+const TAB_ATTRIBUTES = 'attributes';
 
 // BudgetFormModal covers the three ways a budget comes to life or changes:
 //
@@ -65,6 +68,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const termOf = (parentId) => boundFor(parentId)?.max_project_term_days ?? null;
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
+    // Only when editing: a budget being created or requested has none yet.
+    const attrs = useAttributesTab(node);
 
     // Initialised here rather than by an effect writing a dozen setStates on
     // open: the dialog is remounted per (mode, node, parent) — see the `key` at
@@ -251,7 +256,10 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         mutationFn: async (values) => {
             if (isEdit) {
                 const body = buildEditBody(values);
-                return Object.keys(body).length ? api.updateNode(node.id, body) : node;
+                let result = Object.keys(body).length ? await api.updateNode(node.id, body) : node;
+                const attributes = attrs.changed();
+                if (attributes) result = await api.setAttributes(node.id, attributes);
+                return result;
             }
             return api.createNode({
                 parent_id: values.parentId,
@@ -286,7 +294,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         if (bad) setActiveTab(bad);
     };
 
-    const title = isEdit ? t('projects.budgetForm.titleEdit', { name: node?.name || node?.id })
+    // Editing is also where a manager looks at the budget: it carries the
+    // history and usage tabs of the read-only dialog.
+    const title = isEdit ? t('projects.inspect.titleBudget', { name: node?.name || node?.id })
         : isRequest ? t('projects.budgetForm.titleRequest')
             : t('projects.budgetForm.titleNew', { name: parent?.name || parent?.id });
 
@@ -530,11 +540,16 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     return (
         <FormModal
             opened={opened}
+            // Wider when it holds history and usage too, so the tabs fit on one line.
+            size={isEdit ? 'xl' : 'lg'}
             onClose={onClose}
             title={title}
-            onSubmit={form.onSubmit(values => save.mutate(values), handleInvalid)}
+            onSubmit={form.onSubmit(values => {
+                if (isEdit && !attrs.validate()) return setActiveTab(TAB_ATTRIBUTES);
+                save.mutate(values);
+            }, handleInvalid)}
             submitting={save.isPending}
-            submitError={save.error && formatError(save.error)}
+            submitError={attrs.error || (save.error && formatError(save.error))}
             submitLabel={isEdit ? t('projects.forms.saveChanges')
                 : isRequest ? t('projects.forms.submitRequest')
                     : t('projects.budgetForm.submitCreate')}
@@ -547,6 +562,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     { value: TAB_RESOURCES, label: t('projects.fact.resources'), hasError: tabHasError(TAB_RESOURCES), content: resourcesTab },
                     { value: TAB_ACCESS, label: t('projects.budgetForm.tabAccess'), hasError: tabHasError(TAB_ACCESS), content: accessTab },
                     { value: TAB_AUTO_APPROVE, label: t('projects.budgetForm.tabAutoApprove'), hasError: tabHasError(TAB_AUTO_APPROVE), content: autoApproveTab },
+                    ...(isEdit ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'), hasError: !!attrs.error,
+                        content: <AttributesEditor node={node} groups={attrs.groups} onChange={attrs.onChange} /> }] : []),
+                    ...(isEdit ? nodeExtraTabs(t, node, resources, activeTab) : []),
                 ]}
             />
         </FormModal>

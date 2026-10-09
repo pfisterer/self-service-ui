@@ -64,7 +64,6 @@
         "inheritsLimitFromAbove": "übernommen vom Budget darüber"
     },
     "budgetForm": {
-        "titleEdit": "Budget bearbeiten: {{name}}",
         "titleRequest": "Budget anfragen",
         "titleNew": "Neues Teilbudget unter „{{name}}“",
         "submitCreate": "Budget anlegen",
@@ -251,8 +250,11 @@
             "allocation_set": "Sonderzuteilung geändert",
             "allocation_removed": "Sonderzuteilung entfernt",
             "archived": "Archiviert",
-            "deletion_requested": "Endgültiges Löschen angefordert"
-        }
+            "deletion_requested": "Endgültiges Löschen angefordert",
+            "attributes_changed": "Merkmale geändert"
+        },
+        "name": "Name",
+        "noAutoApprove": "Keine automatische Genehmigung: Über jede Anfrage entscheidet eine verwaltende Person."
     },
     "itemSelector": {
         "placeholder": "Suchen und hinzufügen…",
@@ -311,7 +313,6 @@
     "projectForm": {
         "titleNew": "Neues Projekt",
         "titleEdit": "Anfrage bearbeiten",
-        "titleChange": "Projekt ändern",
         "submitNew": "Projekt anlegen",
         "submitUpdateRequest": "Anfrage aktualisieren",
         "submitChangeRequest": "Änderung anfragen",
@@ -655,7 +656,8 @@
             "project": "Projekt",
             "budget": "Budget",
             "level1": "Ebene 1 unter der Wurzel",
-            "level2": "Ebene 2 unter der Wurzel"
+            "level2": "Ebene 2 unter der Wurzel",
+            "attributes": "Merkmale"
         },
         "path": "Pfad",
         "groupByExample": "{{label}} (z. B. {{names}})",
@@ -664,7 +666,12 @@
         "valueHint": "zu Listenpreisen einer Public Cloud",
         "ipv4Avg": "Öffentliche IPv4 im Mittel",
         "noIpv4Sample": "Für diesen Zeitraum nicht gezählt",
-        "ipv4Days": "IPv4-Tage"
+        "ipv4Days": "IPv4-Tage",
+        "attributes": "Merkmale (JSON)",
+        "noAttributes": "Ohne Merkmale",
+        "reservedCoreHours": "Reservierte Kern-Stunden",
+        "reservedRamGbHours": "Reservierte RAM-GB-Stunden",
+        "reservedStorageGbDays": "Reservierte Speicher-GB-Tage"
     },
     "purge": {
         "progress": "Schritt {{index}} von {{steps}}: {{step}}",
@@ -759,5 +766,25 @@
         "vms": "VMs",
         "sortReserved": "Nach reserviertem {{name}} sortieren",
         "sortInUse": "Nach belegtem {{name}} sortieren"
+    },
+    "attributes": {
+        "tab": "Merkmale",
+        "explain": "Freie Angaben wie Kostenstelle oder Projektnummer, in Gruppen. Darunterliegende Budgets und Projekte erben jede Gruppe vollständig vom nächsten Knoten darüber, der sie setzt. Eine hier gesetzte Gruppe ersetzt die geerbte. Die Angaben stehen in der Verbrauchsauswertung und im CSV-Export für die Abrechnung.",
+        "explainView": "Diese Angaben setzen die Verwaltenden der Budgets darüber. Sie stehen in der Verbrauchsauswertung für die Abrechnung.",
+        "inheritedFrom": "geerbt von {{name}}",
+        "override": "Hier überschreiben",
+        "group": "Gruppe",
+        "key": "Schlüssel",
+        "value": "Wert",
+        "addGroup": "Gruppe hinzufügen",
+        "addKey": "Schlüssel hinzufügen",
+        "removeGroup": "Gruppe entfernen",
+        "removeKey": "Schlüssel entfernen",
+        "emptyGroup": "Ohne Schlüssel unterbricht die Gruppe die Vererbung: Hier und darunter gilt sie nicht.",
+        "error": {
+            "name": "„{{name}}“: nur Kleinbuchstaben, Ziffern, - und _ (mit Buchstabe oder Ziffer beginnend)",
+            "duplicateGroup": "Die Gruppe „{{name}}“ ist doppelt.",
+            "duplicateKey": "Der Schlüssel „{{name}}“ ist doppelt."
+        }
     }
 }

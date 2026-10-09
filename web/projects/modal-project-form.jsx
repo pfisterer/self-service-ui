@@ -16,12 +16,15 @@ import { TokenListEditor } from './component-token-list-editor.jsx';
 import { canonicalToken } from './util-principal-import.js';
 import { autoApproveHeadroom, changeOutcome, COLOR, defaultsWithin, effectiveLimit, hasAllocations, hasAutoApprove, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
 import { budgetLabel } from './component-budget-path.jsx';
+import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
+import { nodeExtraTabs } from './modal-inspect.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
 
 const TAB_DETAILS = 'details';
 const TAB_RESOURCES = 'resources';
 const TAB_MEMBERS = 'members';
+const TAB_ATTRIBUTES = 'attributes';
 
 // BudgetSelect groups the budgets a user can place a project under:
 //   - budgets they manage → the project is created active immediately
@@ -150,10 +153,15 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy }) {
 //
 // initialBudgetId preselects the budget of a new project — set when the dialog
 // is opened from a budget's own card.
-export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null }) {
+//
+// canEditAttributes: opened by a manager of the project's budget, who alone
+// sets its attributes (who pays for it) — shown as a tab of its own.
+export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null, canEditAttributes = false }) {
     const { t } = useTranslation();
     const api = useNodesApi();
     const isChange = !!node;
+    const withAttributes = isChange && canEditAttributes;
+    const attrs = useAttributesTab(node);
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
 
@@ -407,6 +415,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     reason: values.reason,
                 });
             }
+            const attributes = withAttributes && attrs.changed();
+            if (attributes) result = await api.setAttributes(node.id, attributes);
             return result;
         },
         invalidates: [projectKeys.tree()],
@@ -595,14 +605,19 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     return (
         <FormModal
             opened={opened}
+            // Wider when it holds history and usage too, so the tabs fit on one line.
+            size={isChange ? 'xl' : 'lg'}
             onClose={onClose}
             title={isChange
-                ? t(node?.status === 'pending' ? 'projects.projectForm.titleEdit' : 'projects.projectForm.titleChange')
+                ? (node?.status === 'pending' ? t('projects.projectForm.titleEdit') : t('projects.inspect.titleProject', { name: node.name || node.id }))
                 : t('projects.projectForm.titleNew')}
-            onSubmit={form.onSubmit(values => save.mutate(values), handleInvalid)}
+            onSubmit={form.onSubmit(values => {
+                if (withAttributes && !attrs.validate()) return setActiveTab(TAB_ATTRIBUTES);
+                save.mutate(values);
+            }, handleInvalid)}
             submitting={save.isPending}
             submitDisabled={outcome === 'blocked'}
-            submitError={save.error && formatError(save.error)}
+            submitError={attrs.error || (save.error && formatError(save.error))}
             submitLabel={isChange
                 ? (node?.status === 'pending' ? t('projects.projectForm.submitUpdateRequest')
                     : outcome === 'instant' ? t('projects.forms.saveChanges') : t('projects.projectForm.submitChangeRequest'))
@@ -615,6 +630,12 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     { value: TAB_DETAILS, label: t('projects.actions.details'), hasError: tabHasError(TAB_DETAILS), content: detailsTab },
                     { value: TAB_RESOURCES, label: t('projects.fact.resources'), hasError: tabHasError(TAB_RESOURCES), content: resourcesTab },
                     { value: TAB_MEMBERS, label: t('projects.fact.members'), content: membersTab },
+                    // Set by the budget's managers; its owner and admins see them.
+                    ...(withAttributes ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'), hasError: !!attrs.error,
+                        content: <AttributesEditor node={node} groups={attrs.groups} onChange={attrs.onChange} /> }]
+                        : isChange && hasAttributes(node) ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'),
+                            content: <AttributesView node={node} /> }] : []),
+                    ...(isChange ? nodeExtraTabs(t, node, resources, activeTab) : []),
                 ]}
             />
 

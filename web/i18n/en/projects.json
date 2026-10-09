@@ -64,7 +64,6 @@
         "inheritsLimitFromAbove": "taken from the budget above"
     },
     "budgetForm": {
-        "titleEdit": "Edit budget: {{name}}",
         "titleRequest": "Request a budget",
         "titleNew": "New sub-budget under “{{name}}”",
         "submitCreate": "Create budget",
@@ -251,8 +250,11 @@
             "allocation_set": "Allocation changed",
             "allocation_removed": "Allocation removed",
             "archived": "Archived",
-            "deletion_requested": "Deletion for good requested"
-        }
+            "deletion_requested": "Deletion for good requested",
+            "attributes_changed": "Attributes changed"
+        },
+        "name": "Name",
+        "noAutoApprove": "No auto-approval: a manager decides on every request."
     },
     "itemSelector": {
         "placeholder": "Search and add…",
@@ -311,7 +313,6 @@
     "projectForm": {
         "titleNew": "New project",
         "titleEdit": "Edit request",
-        "titleChange": "Change project",
         "submitNew": "Create project",
         "submitUpdateRequest": "Update request",
         "submitChangeRequest": "Submit change request",
@@ -655,7 +656,8 @@
             "project": "Project",
             "budget": "Budget",
             "level1": "Level 1 below the root",
-            "level2": "Level 2 below the root"
+            "level2": "Level 2 below the root",
+            "attributes": "Attributes"
         },
         "path": "Path",
         "groupByExample": "{{label}} (e.g. {{names}})",
@@ -664,7 +666,12 @@
         "valueHint": "at a public cloud's list prices",
         "ipv4Avg": "Average public IPv4",
         "noIpv4Sample": "Not counted for this period",
-        "ipv4Days": "IPv4 days"
+        "ipv4Days": "IPv4 days",
+        "attributes": "Attributes (JSON)",
+        "noAttributes": "No attributes",
+        "reservedCoreHours": "Reserved core hours",
+        "reservedRamGbHours": "Reserved RAM GB hours",
+        "reservedStorageGbDays": "Reserved storage GB days"
     },
     "purge": {
         "progress": "Step {{index}} of {{steps}}: {{step}}",
@@ -759,5 +766,25 @@
         "vms": "VMs",
         "sortReserved": "Sort by reserved {{name}}",
         "sortInUse": "Sort by {{name}} in use"
+    },
+    "attributes": {
+        "tab": "Attributes",
+        "explain": "Free-form facts such as a cost centre or a project number, in groups. Budgets and projects below inherit each group whole from the nearest node above that sets it. A group set here replaces the inherited one. They appear in the usage evaluation and in the CSV export for billing.",
+        "explainView": "These are set by the managers of the budgets above. They appear in the usage evaluation for billing.",
+        "inheritedFrom": "inherited from {{name}}",
+        "override": "Override here",
+        "group": "Group",
+        "key": "Key",
+        "value": "Value",
+        "addGroup": "Add group",
+        "addKey": "Add key",
+        "removeGroup": "Remove group",
+        "removeKey": "Remove key",
+        "emptyGroup": "Without keys the group stops the inheritance: it does not apply here or below.",
+        "error": {
+            "name": "“{{name}}”: lower-case letters, digits, - and _ only (starting with a letter or digit)",
+            "duplicateGroup": "The group “{{name}}” appears twice.",
+            "duplicateKey": "The key “{{name}}” appears twice."
+        }
     }
 }

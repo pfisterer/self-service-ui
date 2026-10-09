@@ -11,7 +11,7 @@ import {
     listAllocationSources, listCatalog, listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
     listMyNodes, listNodeChildren, listNodesToManage, listTokens, promoteNode,
     rejectNode, releaseNode, removeCatalogEntry, reparentNode, restoreCatalogEntry, requestNodeChange, requestNodeDeletion, searchNodes,
-    searchPrincipals, setNodeAllocation, setRoleSwitch, transferNodeOwner,
+    searchPrincipals, setNodeAllocation, setNodeAttributes, setRoleSwitch, transferNodeOwner,
     triggerAdminReconcile, updateCatalogEntry, updateNode, withdrawCatalogEntry,
 } from '@dhbw-cloud/os-mgt-client';
 import { normalizeObjectResponse } from './util-project.jsx';
@@ -163,6 +163,11 @@ export function useNodesApi() {
             setAllocation: async (id, { budgetId, limit, reason }) =>
                 unwrapObject(await setNodeAllocation({
                     client, path: { id }, body: { budget_id: budgetId, limit, reason }, headers: JSON_HEADERS,
+                })),
+            // Replaces the node's own attribute groups as a whole.
+            setAttributes: async (id, attributes) =>
+                unwrapObject(await setNodeAttributes({
+                    client, path: { id }, body: { attributes }, headers: JSON_HEADERS,
                 })),
             listAllocationSources: async (id) =>
                 unwrapArray(await listAllocationSources({ client, path: { id } })),

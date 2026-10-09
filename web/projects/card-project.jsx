@@ -241,21 +241,21 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
             {/* ── Actions ────────────────────────────────────────────────── */}
             <Card.Section withBorder inheritPadding py="xs" mt="auto">
                 <Group grow>
-                    {/* Details carries the history with it, as a tab. Two buttons
-                        for one dialog only made the row longer. */}
-                    <Button variant="light" size="xs" onClick={() => act('details')}>
-                        <Eye size="13" style={{ marginRight: 4 }} />{t('projects.actions.details')}
-                    </Button>
-
-                    {/* Editing is not an owner privilege: a manager of the funding
-                        chain may change a project too, and on a request that is
-                        still pending their edit amends it in place — which is how
-                        you trim an over-sized request instead of rejecting it.
-                        On an approved project the same edit becomes a proposal
-                        they then approve, for owners and managers alike. */}
-                    {can.change && (
+                    {/* One dialog per project, with history and usage as tabs:
+                        editable where it may be changed, read-only otherwise.
+                        Editing is not an owner privilege: a manager of the
+                        funding chain may change a project too, and on a request
+                        that is still pending their edit amends it in place —
+                        which is how you trim an over-sized request instead of
+                        rejecting it. On an approved project the same edit
+                        becomes a proposal they then approve. */}
+                    {can.change ? (
                         <Button variant="light" size="xs" onClick={() => act('change')}>
                             <Pencil size="13" style={{ marginRight: 4 }} />{t('projects.actions.edit')}
+                        </Button>
+                    ) : (
+                        <Button variant="light" size="xs" onClick={() => act('details')}>
+                            <Eye size="13" style={{ marginRight: 4 }} />{t('projects.actions.details')}
                         </Button>
                     )}
                     {/* Also a manager's to do: they carry the budget it is paid

@@ -232,8 +232,8 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                                             <SortButton label={t('projects.budgetProjects.colValidUntil')} sortKey="termination_date" sort={sort} onSort={toggleSort} dimmed />
                                         </Group>
                                     </Table.Th>
-                                    {/* The row markers: reserved on the first line of
-                                        a row, in use on the second. */}
+                                    {/* The row markers: in use on the first line of
+                                        a row, granted on the second. */}
                                     {compact ? (
                                         <Table.Th w={104}>
                                             <Text size="sm" fw={600} style={{ whiteSpace: 'nowrap' }}>{t('projects.budgetProjects.colResources')}</Text>
@@ -245,16 +245,16 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                                         <Table.Th key={c.id} ta="right" px={6}>
                                             <Text size="xs" fw={600} lh={1.2}>{c.label}</Text>
                                             {c.unit && <Text size="10px" c="dimmed" lh={1.2}>{c.unit}</Text>}
-                                            {/* One sort per line of the cells below: what was
-                                                granted, what is in use — the same marks as
-                                                in front of the rows. VMs have only the second. */}
+                                            {/* One sort per line of the cells below: what is
+                                                in use, what was granted — the same marks as
+                                                in front of the rows. VMs have only the first. */}
                                             <Group gap={2} justify="flex-end" wrap="nowrap" mt={2}>
+                                                <ResourceSort icon={Activity} label={t('projects.resources.sortInUse', { name: c.label })}
+                                                    sortKey={c.id === VMS ? 'servers' : `used:${c.id}`} sort={sort} onSort={toggleSort} />
                                                 {c.id !== VMS && (
                                                     <ResourceSort icon={Package} label={t('projects.resources.sortReserved', { name: c.label })}
                                                         sortKey={`reserved:${c.id}`} sort={sort} onSort={toggleSort} />
                                                 )}
-                                                <ResourceSort icon={Activity} label={t('projects.resources.sortInUse', { name: c.label })}
-                                                    sortKey={c.id === VMS ? 'servers' : `used:${c.id}`} sort={sort} onSort={toggleSort} />
                                             </Group>
                                         </Table.Th>
                                     ))}
@@ -344,8 +344,8 @@ function resourceColumns(t, resources, items) {
 
 const VMS = '__vms';
 
-// ResourceCells are a project's figures, one cell per column: what it was
-// granted on the first line, what is in use on the second. Every row has both
+// ResourceCells are a project's figures, one cell per column: what is in use on
+// the first line, what it was granted on the second. Every row has both
 // lines and every cell a value, so the rows read alike: a figure where there is
 // one, a dimmed dash where there is none — nothing granted, nothing to grant
 // (VMs), or nothing measured (an import, a project not synced yet, a resource
@@ -379,15 +379,15 @@ function ResourceCells({ node, columns }) {
     return (
         <>
             <Table.Td px={0}>
-                <RowMarker icon={Package} label={t('projects.resources.reserved')} />
                 <RowMarker icon={Activity} label={t('projects.resources.inUse')} />
+                <RowMarker icon={Package} label={t('projects.resources.reserved')} />
             </Table.Td>
             {columns.map(c => {
                 const { reserved, used } = resourceFigures(node, c);
                 return (
                     <Table.Td key={c.id} ta="right" px={6}>
-                        {figure(reserved)}
                         {figure(used)}
+                        {figure(reserved)}
                     </Table.Td>
                 );
             })}
@@ -413,7 +413,7 @@ function ResourceTable({ node, columns }) {
                 </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-                {['reserved', 'used'].map(kind => (
+                {['used', 'reserved'].map(kind => (
                     <Table.Tr key={kind}>
                         <Table.Td>
                             <RowMarker icon={kind === 'reserved' ? Package : Activity}
@@ -498,8 +498,10 @@ function ProjectRow({ node, resources, columns, compact = false, onAction, onOpe
             ) : <ResourceCells node={node} columns={columns} />}
             <Table.Td>
                 <Group gap="2" wrap="wrap" justify="flex-end">
-                    <RowAction label={t('projects.actions.details')} onClick={act('details')}><Eye size="14" /></RowAction>
-                    {can.change && <RowAction label={t('projects.actions.edit')} onClick={act('change')}><Pencil size="14" /></RowAction>}
+                    {/* One dialog per project: editable where it may be changed. */}
+                    {can.change
+                        ? <RowAction label={t('projects.actions.edit')} onClick={act('change')}><Pencil size="14" /></RowAction>
+                        : <RowAction label={t('projects.actions.details')} onClick={act('details')}><Eye size="14" /></RowAction>}
                     {can.approve && <RowAction label={t('projects.actions.approve')} color={COLOR.positive} onClick={act('approve')}><Check size="14" /></RowAction>}
                     {can.reject && <RowAction label={t('projects.actions.reject')} color={COLOR.negative} onClick={act('reject')}><X size="14" /></RowAction>}
                     {can.adopt && <RowAction label={t('projects.actions.adopt')} color={COLOR.outside} onClick={act('adopt')}><Rocket size="14" /></RowAction>}

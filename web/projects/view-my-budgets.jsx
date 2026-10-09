@@ -714,6 +714,9 @@ export function MyBudgetsView() {
                 // maximum project term bound the new end date. A sub-budget
                 // managed through an ancestor is not among myBudgets.
                 myBudgets={selected ? [selected, ...myBudgets.items] : myBudgets.items}
+                // Opened from a budget's projects: a manager of it, who says
+                // who pays — the owner does not.
+                canEditAttributes
             />
             {/* History is a tab in here, not a button of its own outside. */}
             <NodeInspectModal key={`nodeinspectmodal:${dlg.key}`} opened={dlg.is('details')}
