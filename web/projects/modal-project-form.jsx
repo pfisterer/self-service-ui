@@ -673,8 +673,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     return (
         <FormModal
             opened={opened}
-            // Wider when it holds history and usage too, so the tabs fit on one line.
-            size={isChange ? 'xl' : 'lg'}
+            // Wide wherever members come with roles or history and usage are
+            // tabs: narrower, a member's row breaks around its role picker.
+            size={isChange || isAdopt ? 'xl' : 'lg'}
             onClose={onClose}
             title={isAdopt ? t('projects.adopt.title', { name: nodeTitle(node) })
                 : isChange
