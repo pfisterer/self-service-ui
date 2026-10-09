@@ -54,6 +54,26 @@ export function FormTabs({ value, onChange, tabs }) {
     );
 }
 
+// DialogFooter is a dialog's button row, kept in view: it sticks to the bottom
+// of the scrolling dialog, so Save and Cancel never have to be scrolled to.
+// It spans the dialog's width over the content that scrolls behind it.
+export function DialogFooter({ children, error }) {
+    return (
+        <div style={{
+            position: 'sticky',
+            bottom: 0,
+            margin: '0 calc(-1 * var(--mb-padding, var(--mantine-spacing-md))) calc(-1 * var(--mb-padding, var(--mantine-spacing-md)))',
+            padding: 'var(--mantine-spacing-sm) var(--mb-padding, var(--mantine-spacing-md))',
+            background: 'var(--mantine-color-body)',
+            borderTop: '1px solid var(--mantine-color-default-border)',
+            zIndex: 2,
+        }}>
+            {error && <Text c="red" size="sm" mb="xs">{error}</Text>}
+            <Group justify="flex-end">{children}</Group>
+        </div>
+    );
+}
+
 /**
  * FormModal is the modal + form frame for EVERY dialog in this section — the
  * two big tabbed forms and the small single-purpose ones (approve, reject,
@@ -84,9 +104,7 @@ export function FormModal({
                 <Stack>
                     {children}
 
-                    {submitError && <Text c="red" size="sm">{submitError}</Text>}
-
-                    <Group justify="flex-end" mt="md">
+                    <DialogFooter error={submitError}>
                         <Button variant="default" type="button" onClick={onClose}>{t('projects.actions.cancel')}</Button>
                         {/* A second way to finish, e.g. reject next to approve:
                             { label, color, onClick, loading, disabled }. */}
@@ -95,7 +113,7 @@ export function FormModal({
                                 disabled={secondary.disabled} onClick={secondary.onClick}>{secondary.label}</Button>
                         )}
                         <Button type="submit" color={submitColor} loading={submitting} disabled={submitDisabled}>{submitLabel}</Button>
-                    </Group>
+                    </DialogFooter>
                 </Stack>
             </form>
         </Modal>

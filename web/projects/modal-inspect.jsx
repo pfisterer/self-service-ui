@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AlertCircle, Archive, ArrowRight, ArrowRightLeft, CalendarMinus, Check, FileText, FolderInput, Gift, LogOut, Pencil, Rocket, Tags, Trash2, Users, X } from 'lucide-react';
 import { Badge, Button, Group, Modal, Paper, Stack, Table, Text, Timeline } from '@mantine/core';
-import { FormTabs } from './component-form-modal.jsx';
+import { DialogFooter, FormTabs } from './component-form-modal.jsx';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -327,9 +327,9 @@ export function NodeInspectModal({ opened, onClose, node, resources, initialTab 
                     the one dialog cannot drift apart. */}
                 <FormTabs value={tab} onChange={setTab} tabs={tabs} />
 
-                <Group justify="flex-end">
+                <DialogFooter>
                     <Button variant="default" onClick={onClose}>{t('projects.actions.close')}</Button>
-                </Group>
+                </DialogFooter>
             </Stack>
         </Modal>
     );
