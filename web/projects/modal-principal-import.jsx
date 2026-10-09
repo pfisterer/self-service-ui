@@ -4,6 +4,7 @@ import { Dropzone } from '@mantine/dropzone';
 import { FileSpreadsheet, Trash2, Upload, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { COLOR, formatRoleLabel } from './util-project.jsx';
+import { DIALOG_STYLES, DialogFooter } from './component-form-modal.jsx';
 import {
     IMPORT_MAX_BYTES, IMPORT_MAX_ROWS, buildImportRows, decodeImportFile, detectHeader,
     guessColumns, isTruncated, parseImportText,
@@ -379,26 +380,25 @@ export function PrincipalImportModal({ onClose, onImport, existing = [], roles =
             onClose={onClose}
             size="xl"
             zIndex={300}
+            styles={DIALOG_STYLES}
             title={<Text fw={600}>{t('projects.principalImport.title')}</Text>}
         >
             <Stack>
                 {step === 'input' ? inputStep : previewStep}
 
-                <Group justify="space-between" mt="sm">
-                    {step === 'preview'
-                        ? <Button variant="subtle" onClick={() => setStep('input')}>{t('projects.principalImport.back')}</Button>
-                        : <span />}
-                    <Group gap="sm">
-                        <Button variant="default" onClick={onClose}>{t('projects.actions.cancel')}</Button>
-                        {step === 'input'
-                            ? <Button onClick={() => preview(text)} disabled={!text.trim()}>{t('projects.principalImport.toPreview')}</Button>
-                            : (
-                                <Button onClick={submit} disabled={!canImport}>
-                                    {t('projects.principalImport.submit', { count: fresh.length })}
-                                </Button>
-                            )}
-                    </Group>
-                </Group>
+                <DialogFooter>
+                    {step === 'preview' && (
+                        <Button variant="subtle" mr="auto" onClick={() => setStep('input')}>{t('projects.principalImport.back')}</Button>
+                    )}
+                    <Button variant="default" onClick={onClose}>{t('projects.actions.cancel')}</Button>
+                    {step === 'input'
+                        ? <Button onClick={() => preview(text)} disabled={!text.trim()}>{t('projects.principalImport.toPreview')}</Button>
+                        : (
+                            <Button onClick={submit} disabled={!canImport}>
+                                {t('projects.principalImport.submit', { count: fresh.length })}
+                            </Button>
+                        )}
+                </DialogFooter>
             </Stack>
         </Modal>
     );
