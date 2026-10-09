@@ -39,7 +39,9 @@ export function tabHasError(fieldsByTab, tab, errors) {
 export function FormTabs({ value, onChange, tabs }) {
     return (
         <Tabs value={value} onChange={onChange}>
-            <Tabs.List mb="md">
+            {/* Kept in view under the dialog's header while the content
+                scrolls, spanning the dialog's width over what passes behind. */}
+            <Tabs.List mb="md" style={STICKY_TABS}>
                 {tabs.map(t => (
                     <Tabs.Tab key={t.value} value={t.value}>
                         <TabLabel label={t.label} hasError={!!t.hasError} />
@@ -53,6 +55,25 @@ export function FormTabs({ value, onChange, tabs }) {
         </Tabs>
     );
 }
+
+// The dialog header (Mantine keeps it at the top) is one line high when its
+// title does not wrap — DIALOG_STYLES sees to that — and the tab strip stays
+// right below it.
+const HEADER_HEIGHT = 60;
+const STICKY_TABS = {
+    position: 'sticky',
+    top: HEADER_HEIGHT,
+    zIndex: 3,
+    background: 'var(--mantine-color-body)',
+    margin: '0 calc(-1 * var(--mb-padding, var(--mantine-spacing-md)))',
+    paddingInline: 'var(--mb-padding, var(--mantine-spacing-md))',
+};
+
+// DIALOG_STYLES keeps a dialog's title on one line, cut with an ellipsis, so the
+// header has the height the sticky tabs expect.
+export const DIALOG_STYLES = {
+    title: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 },
+};
 
 // DialogFooter is a dialog's button row, kept in view: it sticks to the bottom
 // of the scrolling dialog, so Save and Cancel never have to be scrolled to.
@@ -93,7 +114,7 @@ export function FormModal({
 }) {
     const { t } = useTranslation();
     return (
-        <Modal opened={opened} onClose={onClose} size={size} title={title}>
+        <Modal opened={opened} onClose={onClose} size={size} title={title} styles={DIALOG_STYLES}>
             {/* noValidate: these forms live in tabs, so a `required` field on an
                 inactive tab is display:none. The browser then refuses to submit
                 AND cannot focus the offender to say why ("An invalid form control

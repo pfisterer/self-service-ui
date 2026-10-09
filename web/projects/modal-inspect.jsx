@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AlertCircle, Archive, ArrowRight, ArrowRightLeft, CalendarMinus, Check, FileText, FolderInput, Gift, LogOut, Pencil, Rocket, Tags, Trash2, Users, X } from 'lucide-react';
 import { Badge, Button, Group, Modal, Paper, Stack, Table, Text, Timeline } from '@mantine/core';
-import { DialogFooter, FormTabs } from './component-form-modal.jsx';
+import { DIALOG_STYLES, DialogFooter, FormTabs } from './component-form-modal.jsx';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -320,7 +320,7 @@ export function NodeInspectModal({ opened, onClose, node, resources, initialTab 
     ];
 
     return (
-        <Modal opened={opened} onClose={onClose} size="xl"
+        <Modal opened={opened} onClose={onClose} size="xl" styles={DIALOG_STYLES}
             title={t(budget ? 'projects.inspect.titleBudget' : 'projects.inspect.titleProject', { name: nodeTitle(node) })}>
             <Stack>
                 {/* The same tab strip as the edit dialogs, so the two forms of
