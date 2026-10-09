@@ -27,17 +27,21 @@ and its history at any time.
 
 ## What it does
 
-Two areas and the credentials for both, behind one login:
+Up to three areas and the credentials for them, behind one login. The home page has one card per area the person can use, each with the button that gets them started there.
 
-**Cloud Projects** — resources are handed out along a *budget tree*. A budget is a delegated pool of capacity; passing capacity on means creating a sub-budget with someone else as its manager. A project is a leaf: a concrete allocation with one owner, which the platform turns into a real OpenStack project. The owner can share its administration with *project admins* — people or groups who may rename it, request changes and release it, and who find it on their *My Projects* page too. Requests, the approval of them, adjusted approvals, changes, moves, owner transfers and release all live here, and each node keeps its own history; every project status explains itself on hover, because "Released" asks for deletion rather than performing it.
+**Cloud Projects** — resources are handed out along a *budget tree*. A budget is a delegated pool of capacity; passing capacity on means creating a sub-budget with someone else as its manager. A project is a leaf: a concrete allocation with one owner, which the platform turns into a real OpenStack project. The owner can share its administration with *project admins* — people or groups who may rename it, request changes and release it, and who find it on their *My Projects* page too. Requests, the approval of them, adjusted approvals, changes, moves, owner transfers and release all live here, and each node keeps its own history; every project status explains itself on hover, because "Released" asks for deletion rather than performing it. What release leads to depends on the deployment — the project is archived (shut down, its data kept) or marked for deletion — and where the deployment deletes on request, a released or archived project can be deleted for good once its name is typed in.
 
-A budget with auto-approval grants requests on the spot — as a pool until the budget is used up, or with individual limits per person — and later changes to a project that stay within it take effect at once too; giving resources back, ending sooner and changing members never wait. A budget can also refuse whatever its auto-approve does not cover, so nothing waits for a manager and its share becomes a hard limit. It can leave extensions to its managers while still granting new projects on the spot. A budget may limit how long its projects run at a time — six months for a student budget, say: a project then ends at most that long after it is requested or extended and never after the budget itself, lowering the limit shortens the projects below, and where nothing limits a project it may run without an end. Exceptions do not need a new budget: a manager further up can give a single project an *allocation* from their budget — a GPU, a network, more cores than its own budget grants — which counts only against that budget and above; the project card shows which budget pays for what, the table marks such projects, and the allocating budget lists them however deep they lie. The project's owner can give an allocation back. Every end date and duration is entered the same way, as a date or a span with shortcuts for three, six and twelve months. While a form is filled in it says what the button will do: create the project right away, or send it to the budget's managers, who are named. The budgets someone may draw from appear as cards on *My Projects*, below their projects, each saying how much is theirs right away — or, when nothing is, whether their own projects hold their share or the budget is used up; *My Budgets* is shown only to people who manage a budget. The request dialogs show how much of the funding budget is still free and what share the entered values take. Resources are either quantities or *availabilities*, which are only granted or withheld and therefore get a switch instead of a number; each form offers only what the budget above it was delegated. Wherever people or groups are added, a whole list can be imported at once — pasted, or as a CSV or text file dropped onto the dialog — with a preview that has to be free of invalid and duplicate entries before anything is added. Managers can adopt OpenStack projects that exist outside the managed lifecycle. Root admins see the state of the OpenStack reconciliation, and where the API permits it, a role switch shows the section as a given group or person would see it.
+Each budget and each project has one dialog: editable for whoever may change it, read-only with the same tabs for everyone else, with its history and its usage as further tabs. The usage tab shows what was actually used — server, vCPU and RAM hours, storage, public IPv4 — over 30, 90 or 365 days or the whole lifetime, with a daily chart and how much of what was reserved was used; a budget's tab also lists the projects that used most and those that used least of what they reserved, and a project that ran nothing for 30 days says so. Managers can attach *attributes* to a budget or project in a tab of their own: free-form groups of facts such as a cost centre, which the nodes below inherit group by group unless they set the group themselves. The platform does not interpret them; they are there for whoever bills.
 
-**DNS Zones** — self-service DNS. Users create zones they are entitled to by policy, edit records in the browser, and get per-zone TSIG keys so that Kubernetes, `external-dns` or `cert-manager` can keep the records up to date via RFC 2136 without a human in the loop. A zone the platform reports a problem with — a client failing TSIG in a loop, for example — carries a warning in the zone list and a banner on its page. Whoever a policy rule applies to also gets an *Administration* page with the rules and the zones delegated to them; super admins additionally see delegations, orphaned zones and every active zone event, with a pre-filled mail to the zone's owners.
+A budget with auto-approval grants requests on the spot — as a pool until the budget is used up, or with individual limits per person — and later changes to a project that stay within it take effect at once too; giving resources back, ending sooner and changing members never wait. A budget can also refuse whatever its auto-approve does not cover, so nothing waits for a manager and its share becomes a hard limit. It can leave extensions to its managers while still granting new projects on the spot. A budget that only structures the tree can use the limit of the budget above instead of a share of its own. A budget may limit how long its projects run at a time — six months for a student budget, say: a project then ends at most that long after it is requested or extended and never after the budget itself, lowering the limit shortens the projects below, and where nothing limits a project it may run without an end. Exceptions do not need a new budget: a manager further up can give a single project an *allocation* from their budget — a GPU, a network, more cores than its own budget grants — which counts only against that budget and above; the project card shows which budget pays for what, the table marks such projects, and the allocating budget lists them however deep they lie. The project's owner can give an allocation back. Every end date and duration is entered the same way, as a date or a span with shortcuts for three, six and twelve months. While a form is filled in it says what the button will do: create the project right away, or send it to the budget's managers, who are named. The budgets someone may draw from appear as cards on *My Projects*, below their projects, each saying how much is theirs right away — or, when nothing is, whether their own projects hold their share or the budget is used up; *My Budgets* is shown only to people who manage a budget. The request dialogs show how much of the funding budget is still free and what share the entered values take. Resources are either quantities or *availabilities*, which are only granted or withheld and therefore get a switch instead of a number; each form offers only what the budget above it was delegated. Wherever people or groups are added, a whole list can be imported at once — pasted, or as a CSV or text file dropped onto the dialog — with a preview that has to be free of invalid and duplicate entries before anything is added. Managers can adopt OpenStack projects that exist outside the managed lifecycle. Root admins get a page each for the state of the OpenStack reconciliation (including the problems of its recent runs), for the availabilities the catalogue offers, and for an evaluation of what all projects used, grouped by project, budget, the first or second level of the tree or by attributes, and downloadable as CSV with the attributes and what was reserved. Where the API permits it, a role switch shows the section as a given group or person would see it.
+
+**DNS Zones** — self-service DNS. Users create zones they are entitled to by policy, edit records in the browser, and get per-zone TSIG keys so that Kubernetes, `external-dns` or `cert-manager` can keep the records up to date via RFC 2136 without a human in the loop. A zone the platform reports a problem with — a client failing TSIG in a loop, for example — carries a warning in the zone list and a banner on its page, and a dot in the navigation points to it. Whoever a policy rule applies to also gets an *Administration* page with the rules and the zones delegated to them; super admins additionally see delegations, orphaned zones and every active zone event, with a pre-filled mail to the zone's owners.
 
 **API Tokens** — one place for every credential a script, a CI job or an AI assistant uses, with a tab per issuing API (both APIs issue their own, and a credential has to be findable in one place to be revocable in a hurry). A token carries a note, a lifetime of choice (including none) and optionally read-only access, and the list shows when it was last used, which is what makes revoking one safe. Where the deployment configures an API's MCP endpoint, the tab also shows that address and a ready-made MCP server entry to paste into an existing client configuration.
 
-Both areas also include the interactive API documentation of the service behind them.
+**Language Models** — the front end of a separate LLM service (llm-management-api), shown only where the deployment configures it and only to people its access rules let in; the service decides, this app reads the answer. An overview explains the OpenAI-compatible endpoint and the tools that work with it and links the chat; people create and delete their own API keys for the model endpoint (with a ready-made VS Code setup right after creating one) and see their spend against their quota. Fleet admins see the machines that serve the models and download what enrols new ones; admins manage the access rules. These keys belong to the model endpoint and are a different thing from the platform's API tokens.
+
+Every area also includes the interactive API documentation of the service behind it.
 
 **Language** — English and German, switched in the header and remembered in the browser (no account setting, nothing for a deployment to configure). The first visit follows the browser's language. Dates, relative times and the calendar follow the choice: 31.03.2027 in German, 31 Mar 2027 in English. The translation is being moved area by area; anything not translated yet stays English.
 
@@ -61,7 +65,7 @@ Both areas also include the interactive API documentation of the service behind 
 
 ![Importing a list of members](docs/img/16-import-list.webp)
 
-**My Budgets** — the tree resources are paid from, shown to people who manage a budget. The tree holds budgets only, each with the number of projects it pays for; selecting one shows its usage, who manages it and who may request from it, and below that a table of its projects. The table filters by text, status and group — a group either has access to the project or contains its owner, so "the projects of everyone in `group:standort-ma#studierende`" is one filter — sorts by any column and pages on the server, so a budget with hundreds of student projects stays usable. Each row carries the project's actions, the frequent ones as icons and the rest in a menu; clicking a row opens the full project card beside the table. Budgets someone may only request from appear read-only, marked with an eye.
+**My Budgets** — the tree resources are paid from, shown to people who manage a budget. The tree holds budgets only, each with the number of projects it pays for; selecting one shows its usage, who manages it and who may request from it, and below that a table of its projects. The table filters by text, status and group — a group either has access to the project or contains its owner, so "the projects of everyone in `group:standort-ma#studierende`" is one filter — and pages on the server, so a budget with hundreds of student projects stays usable. A switch takes in the projects of the sub-budgets too, and the browser remembers it. Each resource has a column with what is in use above what was granted, plus the number of running VMs; the table sorts by name, owner, status, end date and by either line of every resource column, and where it is too narrow for those columns each row folds them into an (i). Each row carries every action the project allows as an icon of its own; clicking a row opens the full project card in a dialog. Budgets someone may only request from appear read-only, marked with an eye.
 
 ![My Budgets](docs/img/03-budget-tree.webp)
 
@@ -81,7 +85,7 @@ Both areas also include the interactive API documentation of the service behind 
 
 ![Requesting a budget](docs/img/07-request-budget.webp)
 
-**Root Admin** — state of the OpenStack reconciliation, and the shell query for projects past their termination date.
+**Root Admin** — one page each for the reconciliation, the availabilities and the usage evaluation. Shown is the reconciliation: its state, and the shell query for projects past their termination date.
 
 ![Root Admin](docs/img/08-root-admin.webp)
 
@@ -115,9 +119,7 @@ Both areas also include the interactive API documentation of the service behind 
 
 ## How it fits together
 
-This is a static single-page application. It holds no business logic and no
-database of its own: every rule about who may request, approve or delegate
-anything lives in the two APIs behind it, and this app renders their answers.
+This is a static single-page application. It holds no business logic and no database of its own: every rule about who may request, approve or delegate anything lives in the APIs behind it, and this app renders their answers.
 
 ```
       browser
@@ -130,7 +132,7 @@ anything lives in the two APIs behind it, and this app renders their answers.
            ▼
    ┌──────────────────┐
    │ this app (Caddy) │  serves the static files,
-   │                  │  forwards /api/* in-cluster
+   │                  │  forwards /api/*
    └───────┬──────────┘
            │
            ├──────────────▶ openstack-management-api ──▶ OpenStack
@@ -140,8 +142,11 @@ anything lives in the two APIs behind it, and this app renders their answers.
            │                        └──▶ role-provider-service
            │                              group membership
            │
-           └──────────────▶ dynamic-zones-api ────────▶ PowerDNS
-                             zones, records, policy      (authoritative DNS)
+           ├──────────────▶ dynamic-zones-api ────────▶ PowerDNS
+           │                 zones, records, policy      (authoritative DNS)
+           │
+           └──────────────▶ llm-management-api (optional; in a cluster
+                             access rules, keys, fleet    of its own, over TLS)
 ```
 
 - **[openstack-management-api](https://github.com/pfisterer/openstack-management-api)**
@@ -151,9 +156,10 @@ anything lives in the two APIs behind it, and this app renders their answers.
   into a real OpenStack project.
 - **[dynamic-zones](https://github.com/pfisterer/dynamic-zones)** owns zones,
   records, TSIG keys and DNS policy. Everything under *DNS Zones* is its state.
+- **llm-management-api** owns the language-model service: who may use it (access rules), API keys for the model endpoint, quotas and the machines serving the models. Everything under *Language Models* is its state. It runs outside this cluster, so Caddy reaches it over TLS, by an address and a host name configured separately.
 - **[role-provider-service](https://github.com/pfisterer/role-provider-service)** answers which groups a person belongs to. This app never calls it directly — it reaches it through the projects API, which is where group search in the "Managed by" and "Who can request here" fields comes from.
 
-Whether the *Cloud Projects* section exists at all depends on configuration: with no `CLOUD_RESOURCES_BASE_URL` set, the section and its routes are not registered, and the app is a pure DNS self-service. Which sections exist is decided in one place, [`web/features.js`](web/features.js), from the configured URLs rather than from failed requests — a restarting backend must not look like a section that was never installed. *API Tokens* offers a tab only for an API that is configured, and the MCP details only where an MCP URL is set.
+Whether the *Cloud Projects* section exists at all depends on configuration: with no `CLOUD_RESOURCES_BASE_URL` set, the section and its routes are not registered, and the app is a pure DNS self-service. Which sections exist is decided in one place, [`web/features.js`](web/features.js), from the configured URLs rather than from failed requests — a restarting backend must not look like a section that was never installed. The same goes for *Language Models* and `LLM_BASE_URL`; beyond that, the LLM service itself decides who sees the section. *API Tokens* offers a tab only for an API that is configured (the LLM service is not one of them), and the MCP details only where an MCP URL is set.
 
 Two consequences of this split are worth knowing before changing anything:
 
@@ -163,11 +169,7 @@ Two consequences of this split are worth knowing before changing anything:
   The app reads the user's identity from `/oauth2/userinfo`, nothing more. A
   `401` from an API therefore means "the proxy session expired", and the app says
   so instead of navigating away silently.
-- **The API clients are build-time dependencies.** Both APIs publish their
-  generated TypeScript SDK to npm (`@dhbw-cloud/dynamic-zones-client`,
-  `@dhbw-cloud/os-mgt-client`) and this app depends on a version. They used to be
-  fetched from the APIs at startup, which meant a missing operation showed up as a
-  silent no-op in the browser; now it fails the build here.
+- **The API clients are build-time dependencies.** Each API publishes its generated TypeScript SDK to npm (`@dhbw-cloud/dynamic-zones-client`, `@dhbw-cloud/os-mgt-client`, `@dhbw-cloud/llm-client`) and this app depends on a version, importing each operation by name. They used to be fetched from the APIs at startup, which meant a missing operation showed up as a silent no-op in the browser; now it fails the build here.
 
 The navigation is data, defined once in [`web/nav.jsx`](web/nav.jsx): which
 sections exist, which entries a given user gets, which of them the URL is in. The
@@ -200,9 +202,13 @@ OIDC_ISSUER_URL=https://sso.example/realms/x
 CLOUD_RESOURCES_MCP_URL=
 DYNAMIC_ZONE_MCP_URL=
 ACME_SERVER=
+LLM_BASE_URL=
+LLM_DEV_UPSTREAM=
 ```
 
 Mind the naming: the dev server reads `DYNAMIC_ZONE_*`, the container reads `DYN_ZONES_*` (see [Deployment](#deployment)); every other variable has the same name in both.
+
+The LLM API answers no cross-origin requests, so it has to be reached same-origin: with `LLM_DEV_UPSTREAM` naming a local llm-management-api, the dev server proxies `/api/llm/` to it, and `LLM_BASE_URL` then points at that path on the dev server (`http://localhost:8084/api/llm/`). `LLM_DEV_UPSTREAM` exists only in the dev server.
 
 `DUMMY_AUTH=true` **plus a dev build** enables the dev login, where you sign in
 as any address (`?dev_user=<email>` works too) and the APIs accept that identity
@@ -240,11 +246,13 @@ start, so one image works in every environment. Required and optional variables:
 | `OIDC_CLIENT_ID`, `OIDC_ISSUER_URL` | yes | The login itself is done by the proxy in front; the app uses these for sign-out, sending the browser on to the issuer's logout endpoint (Keycloak's `/protocol/openid-connect/logout` path) with this client ID |
 | `ACME_SERVER` | no | ACME endpoint advertised in the certificate instructions |
 | `DUMMY_AUTH` | no | Ignored by production builds (see above) |
+| `LLM_BASE_URL` | no | Base URL of llm-management-api as the browser reaches it (normally this app's `/api/llm/`); empty hides the Language Models section |
+| `LLM_UPSTREAM`, `LLM_HOST` | no | Where Caddy forwards `/api/llm/` to: `host:port` of the ingress in front of the LLM service, always over TLS, and the host name to ask it for, which is also checked against its certificate. Two values because the address to connect to and the name to ask for differ there |
 | `DYN_ZONES_UPSTREAM`, `CLOUD_RESOURCES_UPSTREAM` | no | In-cluster `host:port` Caddy forwards `/api/dyndns/` and `/api/projects/` to. These are Service names owned by *other* releases; leaving them to the image defaults is how a rename over there once turned every DNS Zones call into a 502 |
 
 In BFF mode the app must be reached **through** the proxy, and `/oauth2/*` must be routed to it — the app calls `/oauth2/userinfo` for the identity, `/oauth2/auth` to notice an expired session, `/oauth2/start` to begin a new one, and `/oauth2/sign_out` to end it.
 
-A Helm chart lives in [`helm-chart/`](helm-chart) (`selfServiceUI`, `auth`, `ingress`, `bff`), with a `values.schema.json` that rejects unknown keys. Images are published to `ghcr.io/pfisterer/self-service-ui`; `-test.N` tags are the staging channel, plain semver is production. A version that is already in the registry is never pushed again, so a commit without a version bump cannot change what a running tag contains, and only stable versions get a Git tag and a GitHub release.
+A Helm chart lives in [`helm-chart/`](helm-chart) (`selfServiceUI`, `auth`, `ingress`, `bff`), with a `values.schema.json` that rejects unknown keys. The LLM variables come from `selfServiceUI.llmBaseUrl`, `llmUpstream` and `llmHost`, and the chart refuses an `llmUpstream` without an `llmHost`. Images are published to `ghcr.io/pfisterer/self-service-ui`; `-test.N` tags are the staging channel, plain semver is production. A version that is already in the registry is never pushed again, so a commit without a version bump cannot change what a running tag contains, and only stable versions get a Git tag and a GitHub release.
 
 **The proxy is part of this chart.** `bff.enabled` deploys an `oauth2-proxy` in
 front of the app, with the ingress pointing at it rather than at the app — so
@@ -282,6 +290,8 @@ web/
   providers/           auth, session, API clients, query cache, modals
   projects/            Cloud Projects: budget tree, cards, dialogs, role switch, API facade
   dyndns/              DNS Zones: zones, records, keys, administration, zone events
+  llm/                 Language Models: overview, keys, usage, fleet, access rules
+  home/                landing page, one card per service
   tokens/              API Tokens: one tab per issuing API, MCP config snippets
   swagger/             interactive API documentation for both APIs
   helper/              validation, error formatting, code blocks
@@ -298,6 +308,7 @@ docker-entrypoint.sh   writes config.js at container start
 - [dynamic-zones](https://github.com/pfisterer/dynamic-zones) — the DNS self-service API behind the DNS Zones section
 - [openstack-management-api](https://github.com/pfisterer/openstack-management-api) — the projects and quotas API behind Cloud Projects
 - [role-provider-service](https://github.com/pfisterer/role-provider-service) — groups and authorization, consumed by openstack-management-api
+- llm-management-api — the language-model service behind the Language Models section
 
 ## License
 

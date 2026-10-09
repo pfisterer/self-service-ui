@@ -27,8 +27,8 @@ selfServiceUI:
   # and would answer a bearer token with a login redirect. This has to be the
   # API's own host. Empty -> the UI shows nothing about MCP.
   cloudResourcesMcpUrl: ""
-  # DHBW-internal ACME server (acme2certifier) shown on the "TLS Certificates" tab.
-  acmeServer: https://certificates.dhbw.cloud
+  # The ACME server shown on the "TLS Certificates" tab; set per deployment.
+  acmeServer: https://certificates.example.org
   # In-cluster addresses Caddy forwards the SPA's same-origin /api/<svc>/ calls
   # to. These are Service names of OTHER releases, so this chart cannot derive
   # them — and leaving them as image defaults meant a rename over there broke
@@ -55,9 +55,8 @@ auth:
     # The provider's endpoints, stated rather than discovered. With all three of
     # authorizationUrl, tokenUrl and jwksUrl set, the BFF starts without asking
     # the provider anything — which is what keeps an identity provider that is
-    # down from taking the whole site with it: on 2026-09-25 a Keycloak outage
-    # left oauth2-proxy in CrashLoopBackOff and the self-service answered "no
-    # available server" for as long as it lasted. Leave them empty to discover
+    # down from taking the whole site with it — otherwise oauth2-proxy cannot
+    # start while the provider is unreachable. Leave them empty to discover
     # them from the issuer at startup, as before.
     #   Keycloak: <issuer>/protocol/openid-connect/{auth,token,certs,logout}
     authorizationUrl: ""
