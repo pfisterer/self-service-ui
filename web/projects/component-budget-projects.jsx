@@ -42,7 +42,16 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
     const [group, setGroup] = useState('');
     const [groupDraft, setGroupDraft] = useState('');
     const [groupMode, setGroupMode] = useState('access');
-    const [sort, setSort] = useState({ key: 'name', order: 'asc' });
+    // Remembered per browser, like the sub-budget switch below: whoever sorts
+    // by what is in use wants it that way on the next visit too.
+    const [storedSort, setSort] = useLocalStorage({
+        key: 'self-service.budget-projects.sort',
+        defaultValue: DEFAULT_SORT,
+        getInitialValueInEffect: false,
+    });
+    // Whatever the browser kept is only trusted in the shape it was written.
+    const sort = typeof storedSort?.key === 'string' && (storedSort.order === 'asc' || storedSort.order === 'desc')
+        ? storedSort : DEFAULT_SORT;
     const [page, setPage] = useState(1);
     // Projects of the sub-budgets too: a budget that only structures its
     // sub-budgets has no projects of its own and would show an empty table.
@@ -343,6 +352,8 @@ function resourceColumns(t, resources, items) {
 }
 
 const VMS = '__vms';
+
+const DEFAULT_SORT = { key: 'name', order: 'asc' };
 
 // ResourceCells are a project's figures, one cell per column: what is in use on
 // the first line, what it was granted on the second. Every row has both
