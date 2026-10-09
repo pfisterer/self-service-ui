@@ -119,16 +119,17 @@ function AccessTab({ node }) {
     if (!isBudget(node)) {
         return (
             <Stack>
-                {(node.admin_scope || []).length > 0 && (
-                    <Section label={t('projects.fact.admins')}><TokenBadgeList tokens={node.admin_scope} /></Section>
-                )}
-                <Section label={t('projects.fact.members')}>
+                {/* The order of the edit dialog: access first, then admins. */}
+                <Section label={t('projects.projectForm.access')}>
                     <UserRoleBadgeList users={node.authorized_users} />
                     {(!node.authorized_users || node.authorized_users.length === 0) && (
                         <Text size="xs" c="dimmed">{t('projects.inspect.ownerOnly')}</Text>
                     )}
                 </Section>
                 <ExternalGroups node={node} />
+                {(node.admin_scope || []).length > 0 && (
+                    <Section label={t('projects.projectForm.admins')}><TokenBadgeList tokens={node.admin_scope} /></Section>
+                )}
             </Stack>
         );
     }

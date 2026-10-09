@@ -550,7 +550,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         <FormModal
             opened={opened}
             // Wider when it holds history and usage too, so the tabs fit on one line.
-            size={isEdit ? 'xl' : 'lg'}
+            // Every tabbed form is as wide: the tabs and member rows fit.
+            size="xl"
             onClose={onClose}
             title={title}
             onSubmit={form.onSubmit(values => {
