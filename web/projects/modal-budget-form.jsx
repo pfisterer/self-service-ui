@@ -344,6 +344,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 label={t('projects.budgetForm.name')}
                 description={t('projects.budgetForm.nameHint')}
                 required
+                // A new budget starts with its name; an existing one is looked at.
+                data-autofocus={!isEdit || undefined}
                 {...form.getInputProps('name')}
             />
 

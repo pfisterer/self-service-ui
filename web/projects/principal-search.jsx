@@ -14,10 +14,10 @@ export const personEmail = (value) => (value || '').trim().replace(/^user:/i, ''
 
 // PersonInput names exactly one person — an owner. The same directory search
 // as every member list, keeping the pick in the field.
-export function PersonInput({ label, description, placeholder, value, onChange, error, required = false }) {
+export function PersonInput({ label, description, placeholder, value, onChange, error, required = false, autoFocus = false }) {
     return (
         <Input.Wrapper label={label} description={description} error={error} required={required}>
-            <ProjectsPrincipalAutocomplete single value={value} onChange={onChange} placeholder={placeholder} />
+            <ProjectsPrincipalAutocomplete single value={value} onChange={onChange} placeholder={placeholder} autoFocus={autoFocus} />
         </Input.Wrapper>
     );
 }

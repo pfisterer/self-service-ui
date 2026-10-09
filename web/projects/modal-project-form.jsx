@@ -411,6 +411,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 <>
                     <Alert color={COLOR.outside} variant="light" p="xs">{t('projects.adopt.note')}</Alert>
                     <PersonInput
+                        autoFocus
                         label={t('projects.adopt.owner')}
                         description={t('projects.adopt.ownerHint')}
                         placeholder={t('projects.adopt.ownerPlaceholder')}
@@ -469,6 +470,9 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 placeholder={t('projects.projectForm.namePlaceholder')}
                 required={!isAdopt}
                 disabled={isAdopt}
+                // A new project starts with its name; an existing one is
+                // looked at first, so nothing takes the focus there.
+                data-autofocus={(!isChange && !isAdopt) || undefined}
                 {...form.getInputProps('name')}
             />
 

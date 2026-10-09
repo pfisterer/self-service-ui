@@ -35,9 +35,10 @@ import { useTranslation } from 'react-i18next';
  *   placeholder?: string
  *   label?: string
  *   limit?: number
+ *   autoFocus?: boolean — take the focus when a dialog opens
  */
 export function PrincipalTokenAutocomplete({
-    value, onChange, search: searchFn, searchKey, onSelect, single = false, placeholder, label, limit = 10,
+    value, onChange, search: searchFn, searchKey, onSelect, single = false, placeholder, label, limit = 10, autoFocus = false,
 }) {
     const { t } = useTranslation();
     const [search, setSearch] = useState(single ? '' : (value || ''));
@@ -88,6 +89,7 @@ export function PrincipalTokenAutocomplete({
         <Stack gap="4">
         <Autocomplete
             label={label}
+            data-autofocus={autoFocus || undefined}
             placeholder={placeholder ?? t('helper.principalSearch.placeholder')}
             value={value}
             data={groups.map(g => g.token)}

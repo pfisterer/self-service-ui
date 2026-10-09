@@ -174,6 +174,7 @@ export function DecisionModal({ opened, onClose, onDone, resources, node }) {
                 )}
 
             <ReasonField
+                data-autofocus
                 label={t('projects.decide.reason')}
                 description={t('projects.decide.reasonHint')}
                 placeholder={t('projects.reject.reasonPlaceholder')}
