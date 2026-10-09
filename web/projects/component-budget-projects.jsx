@@ -347,13 +347,16 @@ const VMS = '__vms';
 // ResourceCells are a project's figures, one cell per column: what is in use on
 // the first line, what it was granted on the second. Every row has both
 // lines and every cell a value, so the rows read alike: a figure where there is
-// one, a dimmed dash where there is none — nothing granted, nothing to grant
-// (VMs), or nothing measured (an import, a project not synced yet, a resource
+// one, a dimmed dash where there is none — nothing granted, or nothing
+// measured (an import, a project not synced yet, a resource
 // OpenStack does not count). A dash is never a zero.
 function resourceFigures(node, c) {
     const quota = effectiveLimit(node, node.pending?.limit || node.limit) || {};
-    const reserved = c.id === VMS || (quota[c.id] ?? 0) === 0 ? null
-        : quota[c.id] === UNLIMITED_QUOTA ? '∞' : quota[c.id];
+    // VMs are no catalogue resource: what OpenStack allows is measured with
+    // the count (for a managed project it follows the cores).
+    const reserved = c.id === VMS ? (node.os_server_limit ?? null)
+        : (quota[c.id] ?? 0) === 0 ? null
+            : quota[c.id] === UNLIMITED_QUOTA ? '∞' : quota[c.id];
     const used = c.id === VMS ? node.os_servers : node.os_in_use?.[c.id];
     return { reserved, used };
 }
