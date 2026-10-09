@@ -169,11 +169,10 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const isAdopt = adopt && !!node;
     const isChange = !!node && !isAdopt;
 
-    // Adopting: who will answer for the project. The first person among its
-    // OpenStack members is the best guess.
-    const [owner, setOwner] = useState(() => isAdopt
-        ? ((node.authorized_users || []).find(u => u.token?.startsWith('user:'))?.token.slice(5) ?? '')
-        : '');
+    // Adopting: who will answer for the project. Deliberately not prefilled:
+    // a guess from the OpenStack members (the first of them) went through
+    // unnoticed and made a student the owner of a course project.
+    const [owner, setOwner] = useState('');
     const [ownerError, setOwnerError] = useState(null);
     const ownerEmail = owner.trim();
     // The budgets that owner may request under, offered next to the admin's
