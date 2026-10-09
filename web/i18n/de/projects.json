@@ -38,7 +38,7 @@
         "purposeRequired": "Bitte den Zweck beschreiben (mindestens 5 Zeichen)",
         "reasonDefault": "Übernommenes OpenStack-Projekt „{{name}}“",
         "grantedResources": "Gewährte Ressourcen",
-        "externalGroups": "Diesem Projekt sind OpenStack-Gruppen außerhalb dieses Systems zugewiesen; sie bleiben automatisch erhalten."
+        "externalGroups": "Diesem Projekt sind in OpenStack Gruppen zugewiesen, die hier nicht verwaltet werden: {{groups}}. Sie bleiben erhalten und lassen sich später am Projekt entfernen."
     },
     "approve": {
         "title": "Genehmigen: {{name}}",
@@ -254,7 +254,8 @@
             "allocation_removed": "Sonderzuteilung entfernt",
             "archived": "Archiviert",
             "deletion_requested": "Endgültiges Löschen angefordert",
-            "attributes_changed": "Merkmale geändert"
+            "attributes_changed": "Merkmale geändert",
+            "external_group_removed": "Externe Gruppe entfernt"
         },
         "name": "Name",
         "noAutoApprove": "Keine automatische Genehmigung: Über jede Anfrage entscheidet eine verwaltende Person."
@@ -789,5 +790,12 @@
             "duplicateGroup": "Die Gruppe „{{name}}“ ist doppelt.",
             "duplicateKey": "Der Schlüssel „{{name}}“ ist doppelt."
         }
+    },
+    "externalGroups": {
+        "title": "Außerhalb des Self-Service vergeben",
+        "hint": "Diese Gruppen haben in OpenStack Zugang zum Projekt, ohne hier verwaltet zu werden. Sie bleiben erhalten, bis sie hier entfernt werden.",
+        "remove": "Gruppe entfernen",
+        "removeTitle": "Gruppe „{{name}}“ entfernen?",
+        "removeMessage": "Die Gruppe verliert beim nächsten Abgleich den Zugang zum Projekt in OpenStack. Das wirkt sofort, ohne Genehmigung, und lässt sich hier nicht rückgängig machen."
     }
 }

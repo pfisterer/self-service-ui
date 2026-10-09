@@ -18,6 +18,7 @@ import { autoApproveHeadroom, changeOutcome, COLOR, defaultsWithin, effectiveLim
 import { budgetLabel } from './component-budget-path.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
+import { ExternalGroups } from './component-external-groups.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
 
@@ -589,6 +590,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     emptyMessage={t('projects.projectForm.membersEmpty')}
                 />
             </Paper>
+            {isChange && <ExternalGroups node={node} removable />}
             <Paper withBorder radius="md" p="md">
                 <TokenListEditor
                     label={t('projects.projectForm.admins')}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, Archive, ArrowRight, ArrowRightLeft, CalendarMinus, Check, FileText, FolderInput, Gift, LogOut, Pencil, Rocket, Tags, Trash2, X } from 'lucide-react';
+import { AlertCircle, Archive, ArrowRight, ArrowRightLeft, CalendarMinus, Check, FileText, FolderInput, Gift, LogOut, Pencil, Rocket, Tags, Trash2, Users, X } from 'lucide-react';
 import { Badge, Button, Group, Modal, Paper, Stack, Table, Tabs, Text, Timeline } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
@@ -9,6 +9,7 @@ import { autoApproveFacts, formatRelativeDate, isBudget, nodeTitle, ownerEmail, 
 import { formatDateTime } from '../format-date.js';
 import { UsagePanel } from './component-usage.jsx';
 import { AttributesView, hasAttributes } from './component-node-attributes.jsx';
+import { ExternalGroups } from './component-external-groups.jsx';
 
 dayjs.extend(relativeTime);
 
@@ -45,6 +46,7 @@ const EVENT_ICON = {
     allocation_set: Gift,
     allocation_removed: Gift,
     attributes_changed: Tags,
+    external_group_removed: Users,
     archived: Archive,
     deletion_requested: Trash2,
 };
@@ -125,6 +127,7 @@ function AccessTab({ node }) {
                         <Text size="xs" c="dimmed">{t('projects.inspect.ownerOnly')}</Text>
                     )}
                 </Section>
+                <ExternalGroups node={node} />
             </Stack>
         );
     }

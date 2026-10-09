@@ -163,7 +163,9 @@ export function AdoptModal({ opened, onClose, onDone, resources, node, myBudgets
 
             {(node.external_group_assignments || []).length > 0 && (
                 <Alert color="gray" variant="light" p="xs">
-                    {t('projects.adopt.externalGroups')}
+                    {t('projects.adopt.externalGroups', {
+                        groups: node.external_group_assignments.map(g => g.group_name || g.group_id).join(', '),
+                    })}
                 </Alert>
             )}
         </FormModal>

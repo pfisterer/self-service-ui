@@ -11,7 +11,7 @@ import {
     listAllocationSources, listCatalog, listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
     listMyNodes, listNodeChildren, listNodesToManage, listTokens, promoteNode,
     rejectNode, releaseNode, removeCatalogEntry, reparentNode, restoreCatalogEntry, requestNodeChange, requestNodeDeletion, searchNodes,
-    searchPrincipals, setNodeAllocation, setNodeAttributes, setRoleSwitch, transferNodeOwner,
+    removeNodeExternalGroup, searchPrincipals, setNodeAllocation, setNodeAttributes, setRoleSwitch, transferNodeOwner,
     triggerAdminReconcile, updateCatalogEntry, updateNode, withdrawCatalogEntry,
 } from '@dhbw-cloud/os-mgt-client';
 import { normalizeObjectResponse } from './util-project.jsx';
@@ -164,6 +164,9 @@ export function useNodesApi() {
                 unwrapObject(await setNodeAllocation({
                     client, path: { id }, body: { budget_id: budgetId, limit, reason }, headers: JSON_HEADERS,
                 })),
+            // Takes a group given access in OpenStack off a project.
+            removeExternalGroup: async (id, groupId) =>
+                unwrapObject(await removeNodeExternalGroup({ client, path: { id, groupId } })),
             // Replaces the node's own attribute groups as a whole.
             setAttributes: async (id, attributes) =>
                 unwrapObject(await setNodeAttributes({

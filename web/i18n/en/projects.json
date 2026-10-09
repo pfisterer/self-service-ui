@@ -38,7 +38,7 @@
         "purposeRequired": "Please describe the purpose (at least 5 characters)",
         "reasonDefault": "Adopted OpenStack project “{{name}}”",
         "grantedResources": "Granted resources",
-        "externalGroups": "This project has OpenStack groups assigned outside this system; they are preserved automatically."
+        "externalGroups": "Groups that are not managed here are assigned to this project in OpenStack: {{groups}}. They are kept and can be removed from the project later."
     },
     "approve": {
         "title": "Approve: {{name}}",
@@ -254,7 +254,8 @@
             "allocation_removed": "Allocation removed",
             "archived": "Archived",
             "deletion_requested": "Deletion for good requested",
-            "attributes_changed": "Attributes changed"
+            "attributes_changed": "Attributes changed",
+            "external_group_removed": "External group removed"
         },
         "name": "Name",
         "noAutoApprove": "No auto-approval: a manager decides on every request."
@@ -789,5 +790,12 @@
             "duplicateGroup": "The group “{{name}}” appears twice.",
             "duplicateKey": "The key “{{name}}” appears twice."
         }
+    },
+    "externalGroups": {
+        "title": "Granted outside the self-service",
+        "hint": "These groups have access to the project in OpenStack without being managed here. They keep it until they are removed here.",
+        "remove": "Remove group",
+        "removeTitle": "Remove the group “{{name}}”?",
+        "removeMessage": "The group loses its access to the project in OpenStack with the next synchronisation. This takes effect at once, without approval, and cannot be undone here."
     }
 }
