@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Alert, Badge, Group, Paper, Select, Stack, Table, Text, Textarea, TextInput } from '@mantine/core';
 import { Clock, Gift, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +7,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { useApiMutation } from '/helper/query-state.jsx';
 import { formatError } from '/helper/api-error.js';
-import { useForm } from '@mantine/form';
+import { isEmail, useForm } from '@mantine/form';
 import { formatTerm, NodeChangesDiff, TerminationDatePicker, TokenBadgeList } from './component-common.jsx';
 import { formatDate } from '../format-date.js';
 import { FormModal, FormTabs } from './component-form-modal.jsx';
@@ -14,7 +15,7 @@ import { QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenRoleEditor } from './component-token-role-editor.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
 import { canonicalToken } from './util-principal-import.js';
-import { autoApproveHeadroom, changeOutcome, COLOR, defaultsWithin, effectiveLimit, hasAllocations, hasAutoApprove, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, defaultsWithin, effectiveLimit, hasAllocations, hasAutoApprove, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
 import { budgetLabel } from './component-budget-path.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
@@ -31,7 +32,7 @@ const TAB_ATTRIBUTES = 'attributes';
 //   - budgets they manage → the project is created active immediately
 //   - budgets they may request under → the project awaits approval
 //     (or is approved instantly when the budget's auto-approve covers it)
-function BudgetSelect({ myBudgets, eligibleBudgets, value, onChange, error }) {
+function BudgetSelect({ myBudgets, eligibleBudgets, value, onChange, error, requestableLabel }) {
     const { t } = useTranslation();
     // Which budgets grant on the spot — shown as a badge beside the name
     // instead of a clause appended to it.
@@ -50,9 +51,9 @@ function BudgetSelect({ myBudgets, eligibleBudgets, value, onChange, error }) {
         if (managed.length) groups.push({ group: t('projects.projectForm.budgetsManaged'), items: managed });
         // Not "needs approval": with auto-approve many of these grant on the
         // spot, and the note under the form says which way it goes.
-        if (eligible.length) groups.push({ group: t('projects.projectForm.budgetsRequestable'), items: eligible });
+        if (eligible.length) groups.push({ group: requestableLabel || t('projects.projectForm.budgetsRequestable'), items: eligible });
         return groups;
-    }, [myBudgets, eligibleBudgets, t]);
+    }, [myBudgets, eligibleBudgets, requestableLabel, t]);
 
     if (!data.length) {
         return (
@@ -157,10 +158,33 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy }) {
 //
 // canEditAttributes: opened by a manager of the project's budget, who alone
 // sets its attributes (who pays for it) — shown as a tab of its own.
-export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null, canEditAttributes = false }) {
+//
+// adopt: `node` is an imported OpenStack project a root admin brings under
+// management — the same tabs as any project, prefilled from OpenStack, plus who
+// answers for it and which budget pays. Its members can be corrected before it
+// goes through approval, instead of the adoption failing on one of them.
+export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null, canEditAttributes = false, adopt = false }) {
     const { t } = useTranslation();
     const api = useNodesApi();
-    const isChange = !!node;
+    const isAdopt = adopt && !!node;
+    const isChange = !!node && !isAdopt;
+
+    // Adopting: who will answer for the project. The first person among its
+    // OpenStack members is the best guess.
+    const [owner, setOwner] = useState(() => isAdopt
+        ? ((node.authorized_users || []).find(u => u.token?.startsWith('user:'))?.token.slice(5) ?? '')
+        : '');
+    const [ownerError, setOwnerError] = useState(null);
+    const ownerEmail = owner.trim();
+    // The budgets that owner may request under, offered next to the admin's
+    // own (a root-only endpoint; a failure leaves the admin's budgets).
+    const ownerBudgetsQuery = useQuery({
+        queryKey: projectKeys.eligibleForOwner(`user:${ownerEmail}`),
+        queryFn: () => api.listEligibleForOwner([`user:${ownerEmail}`]).then(page => page.items),
+        enabled: !!api && opened && isAdopt && ownerEmail.includes('@'),
+        retry: false,
+    });
+    const requestable = isAdopt ? (ownerBudgetsQuery.data ?? []) : eligibleBudgets;
     const withAttributes = isChange && canEditAttributes;
     const attrs = useAttributesTab(node);
 
@@ -179,7 +203,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // runs inside useForm, before the render has a chosen budget to look at —
     // and a form that validates a different set from the one it renders will
     // demand a value for a field nobody was shown.
-    const budgetById = (id) => [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === id);
+    const budgetById = (id) => [...(myBudgets || []), ...(requestable || [])].find(b => b.id === id);
     // Nothing outlives the budget it draws from, and no project runs longer at
     // a time than the budget allows (see latestProjectEnd).
     const latestEndOf = (id) => latestProjectEnd(budgetById(id));
@@ -200,7 +224,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const headroomFor = (id) => managedIds.has(id)
         ? null
         : autoApproveHeadroom(
-            [...(myBudgets || []), ...(eligibleBudgets || [])].find(b => b.id === id),
+            [...(myBudgets || []), ...(requestable || [])].find(b => b.id === id),
             resources, myProjects);
 
     // A headroom is only worth PRE-FILLING when every quantity in it is a
@@ -243,9 +267,20 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // A change request cannot take an end away — only move it — so a project
     // that has one keeps needing one.
     const openEndLocked = isChange && !!(node.pending?.termination_date || node.termination_date);
-    const initialParentId = isChange ? null : (initialBudgetId ?? myBudgets[0]?.id ?? eligibleBudgets[0]?.id ?? null);
+    const initialParentId = isChange ? null : (initialBudgetId ?? myBudgets[0]?.id ?? requestable[0]?.id ?? null);
     const form = useForm({
-        initialValues: isChange
+        initialValues: isAdopt
+            ? {
+                parentId: null,
+                name: nodeTitle(node),
+                reason: t('projects.adopt.reasonDefault', { name: node.os_project_name || nodeTitle(node) }),
+                // What OpenStack grants it today, until someone decides otherwise.
+                quota: { ...(node.limit || {}) },
+                terminationDate: defaultEnd,
+                authorizedUsers: node.authorized_users || [],
+                adminScope: [],
+            }
+            : isChange
             ? {
                 parentId: null,
                 name: node.name || '',
@@ -271,7 +306,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 adminScope: [],
             },
         validate: (values) => ({
-            name: (values.name || '').trim().length < 3
+            // An import keeps its OpenStack name.
+            name: !isAdopt && (values.name || '').trim().length < 3
                 ? t('projects.projectForm.nameRequired') : null,
             reason: (values.reason || '').trim().length < 5
                 ? t('projects.projectForm.purposeRequired') : null,
@@ -301,7 +337,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     // What the button will do. An amended pending request stays a request, so
     // it has no outcome worth announcing.
     const outcomeBudget = budgetById(isChange ? node.parent_id : parentId) || null;
-    const outcome = isChange
+    // An adopted project always goes through approval; the note says so.
+    const outcome = isAdopt ? null : isChange
         ? (node.status === 'pending' ? null : changeOutcome({
             node, budget: outcomeBudget, quota, terminationDate, resources, myProjects,
             manages: managedIds.has(node.parent_id),
@@ -319,9 +356,10 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const selectBudget = (id) => {
         form.setFieldValue('parentId', id);
         form.clearFieldError('parentId');
-        const headroom = usableHeadroomFor(id);
+        // An import keeps what OpenStack grants it; the budget only bounds it.
+        const headroom = isAdopt ? null : usableHeadroomFor(id);
         if (headroom) form.setFieldValue('quota', headroom);
-        else if (!quotaTouched.current) form.setFieldValue('quota', initialQuotaFor(id));
+        else if (!isAdopt && !quotaTouched.current) form.setFieldValue('quota', initialQuotaFor(id));
         // A budget that ends sooner pulls the date in with it.
         const date = withinBudget(form.values.terminationDate, id);
         if (date !== form.values.terminationDate) form.setFieldValue('terminationDate', date);
@@ -382,6 +420,16 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         mutationFn: async (values) => {
             // No end only where nothing bounds the project (see latestEndOf).
             const iso = values.terminationDate ? values.terminationDate.toISOString() : null;
+            if (isAdopt) {
+                return api.adopt(node.id, {
+                    new_parent_id: values.parentId,
+                    owner: ownerEmail,
+                    reason: values.reason,
+                    limit: values.quota,
+                    termination_date: iso,
+                    authorized_users: values.authorizedUsers,
+                });
+            }
             if (!isChange) {
                 return api.createNode({
                     parent_id: values.parentId,
@@ -437,13 +485,28 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
 
     const detailsTab = (
         <Stack>
+            {isAdopt && (
+                <>
+                    <Alert color={COLOR.outside} variant="light" p="xs">{t('projects.adopt.note')}</Alert>
+                    <TextInput
+                        label={t('projects.adopt.owner')}
+                        description={t('projects.adopt.ownerHint')}
+                        placeholder={t('projects.adopt.ownerPlaceholder')}
+                        required
+                        value={owner}
+                        error={ownerError}
+                        onChange={(e) => { setOwner(e.currentTarget.value); setOwnerError(null); }}
+                    />
+                </>
+            )}
             {!isChange && (
                 <BudgetSelect
                     myBudgets={myBudgets}
-                    eligibleBudgets={eligibleBudgets}
+                    eligibleBudgets={requestable}
                     value={parentId}
                     onChange={selectBudget}
                     error={form.errors.parentId}
+                    requestableLabel={isAdopt ? t('projects.adopt.budgetsOwnerCanRequest') : undefined}
                 />
             )}
 
@@ -460,7 +523,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             {/* Say why the numbers on the next tab just changed by themselves.
                 What happens beyond them — a manager, or a refusal — and a share
                 that is used up are the note under the form's business. */}
-            {!isChange && !selectedIsPool && usableHeadroomFor(parentId) && (
+            {!isChange && !isAdopt && !selectedIsPool && usableHeadroomFor(parentId) && (
                 <Text size="xs" c={COLOR.positive}>
                     {t('projects.projectForm.prefilled', { amount: resourceSummaryText(resources, selectedHeadroom) })}
                 </Text>
@@ -470,7 +533,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 label={t('projects.projectForm.name')}
                 description={t('projects.projectForm.nameHint')}
                 placeholder={t('projects.projectForm.namePlaceholder')}
-                required
+                required={!isAdopt}
+                disabled={isAdopt}
                 {...form.getInputProps('name')}
             />
 
@@ -590,8 +654,10 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     emptyMessage={t('projects.projectForm.membersEmpty')}
                 />
             </Paper>
-            {isChange && <ExternalGroups node={node} removable />}
-            <Paper withBorder radius="md" p="md">
+            {(isChange || isAdopt) && <ExternalGroups node={node} removable={isChange} />}
+            {/* Adopting names the owner; admins are added afterwards, like
+                for any project. */}
+            {!isAdopt && <Paper withBorder radius="md" p="md">
                 <TokenListEditor
                     label={t('projects.projectForm.admins')}
                     description={t('projects.projectForm.adminsHint')}
@@ -600,7 +666,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     listAs="rows"
                     emptyMessage={t('projects.projectForm.adminsEmpty')}
                 />
-            </Paper>
+            </Paper>}
         </Stack>
     );
 
@@ -610,17 +676,23 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             // Wider when it holds history and usage too, so the tabs fit on one line.
             size={isChange ? 'xl' : 'lg'}
             onClose={onClose}
-            title={isChange
+            title={isAdopt ? t('projects.adopt.title', { name: nodeTitle(node) })
+                : isChange
                 ? (node?.status === 'pending' ? t('projects.projectForm.titleEdit') : t('projects.inspect.titleProject', { name: node.name || node.id }))
                 : t('projects.projectForm.titleNew')}
             onSubmit={form.onSubmit(values => {
+                if (isAdopt) {
+                    const problem = isEmail(t('projects.adopt.ownerRequired'))(ownerEmail);
+                    if (problem) { setOwnerError(problem); return setActiveTab(TAB_DETAILS); }
+                }
                 if (withAttributes && !attrs.validate()) return setActiveTab(TAB_ATTRIBUTES);
                 save.mutate(values);
             }, handleInvalid)}
             submitting={save.isPending}
             submitDisabled={outcome === 'blocked'}
             submitError={attrs.error || (save.error && formatError(save.error))}
-            submitLabel={isChange
+            submitColor={isAdopt ? COLOR.outside : undefined}
+            submitLabel={isAdopt ? t('projects.actions.adopt') : isChange
                 ? (node?.status === 'pending' ? t('projects.projectForm.submitUpdateRequest')
                     : outcome === 'instant' ? t('projects.forms.saveChanges') : t('projects.projectForm.submitChangeRequest'))
                 : (outcome === 'approval' ? t('projects.forms.submitRequest') : t('projects.projectForm.submitNew'))}

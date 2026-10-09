@@ -24,21 +24,13 @@
     },
     "adopt": {
         "title": "Projekt übernehmen: {{name}}",
-        "note": "Dieses OpenStack-Projekt wird hier noch nicht verwaltet. Beim Übernehmen wird es einem Budget zugeordnet; der nächste Abgleich schickt es dann durch den normalen Genehmigungsweg. Die jetzigen Mitglieder bleiben erhalten.",
+        "note": "Dieses OpenStack-Projekt wird hier noch nicht verwaltet. Beim Übernehmen wird es einem Budget zugeordnet; der nächste Abgleich schickt es dann durch den normalen Genehmigungsweg. Die Mitglieder aus OpenStack stehen im Tab „Mitglieder“ und lassen sich dort vorher anpassen.",
         "owner": "Verantwortlich",
         "ownerHint": "Die Person, die für dieses Projekt verantwortlich ist.",
         "ownerPlaceholder": "name@dhbw.de",
         "ownerRequired": "Bitte die E-Mail-Adresse der verantwortlichen Person eingeben",
-        "budget": "Bezahlt aus Budget",
-        "budgetPlaceholder": "Budget wählen, das die Ressourcen bereitstellt",
-        "budgetRequired": "Bitte das zahlende Budget wählen",
-        "budgetsYouManage": "Selbst verwaltete Budgets",
         "budgetsOwnerCanRequest": "Budgets, aus denen die verantwortliche Person anfragen darf",
-        "purpose": "Zweck",
-        "purposeRequired": "Bitte den Zweck beschreiben (mindestens 5 Zeichen)",
-        "reasonDefault": "Übernommenes OpenStack-Projekt „{{name}}“",
-        "grantedResources": "Gewährte Ressourcen",
-        "externalGroups": "Diesem Projekt sind in OpenStack Gruppen zugewiesen, die hier nicht verwaltet werden: {{groups}}. Sie bleiben erhalten und lassen sich später am Projekt entfernen."
+        "reasonDefault": "Übernommenes OpenStack-Projekt „{{name}}“"
     },
     "approve": {
         "title": "Genehmigen: {{name}}",

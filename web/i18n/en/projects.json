@@ -24,21 +24,13 @@
     },
     "adopt": {
         "title": "Adopt project: {{name}}",
-        "note": "This OpenStack project is not managed here yet. Adopting places it under a budget; the next synchronization run then sends it through the normal approval flow. Its current members are kept.",
+        "note": "This OpenStack project is not managed here yet. Adopting it assigns it to a budget; the next synchronisation then sends it through the usual approval. Its members from OpenStack are in the “Members” tab and can be adjusted there first.",
         "owner": "Owner",
         "ownerHint": "The person who will be responsible for this project.",
         "ownerPlaceholder": "someone@dhbw.de",
         "ownerRequired": "Please enter the owner’s email address",
-        "budget": "Fund from budget",
-        "budgetPlaceholder": "Choose the budget that provides the resources",
-        "budgetRequired": "Please choose the funding budget",
-        "budgetsYouManage": "Budgets you manage",
         "budgetsOwnerCanRequest": "Budgets the owner can request under",
-        "purpose": "Purpose",
-        "purposeRequired": "Please describe the purpose (at least 5 characters)",
-        "reasonDefault": "Adopted OpenStack project “{{name}}”",
-        "grantedResources": "Granted resources",
-        "externalGroups": "Groups that are not managed here are assigned to this project in OpenStack: {{groups}}. They are kept and can be removed from the project later."
+        "reasonDefault": "Adopted OpenStack project “{{name}}”"
     },
     "approve": {
         "title": "Approve: {{name}}",

@@ -13,7 +13,6 @@ import { BudgetCard } from './card-budget.jsx';
 import { ProjectCard } from './card-project.jsx';
 import { BudgetTree, MORE_SUFFIX, NodeResultList, budgetsToTreeData, budgetChildCount } from './component-budget-tree.jsx';
 import { BudgetProjectsTable } from './component-budget-projects.jsx';
-import { AdoptModal } from './modal-adopt.jsx';
 import { AllocationModal } from './modal-allocation.jsx';
 import { RetireModal } from './modal-retire.jsx';
 import { ApproveModal } from './modal-approve.jsx';
@@ -755,8 +754,19 @@ export function MyBudgetsView({ params }) {
                 node={dlg.node} resources={resources} />
             <RetireModal key={`retiremodal:${dlg.key}`} opened={dlg.is('release') || dlg.is('delete-for-good')}
                 mode={dlg.is('delete-for-good') ? 'delete' : 'release'} onClose={dlg.close} onDone={refresh} node={dlg.node} />
-            <AdoptModal key={`adoptmodal:${dlg.key}`} opened={dlg.is('adopt')} onClose={dlg.close} onDone={refresh}
-                resources={resources} node={dlg.node} myBudgets={myBudgets.items} />
+            {/* Adopting an import is the project dialog with an owner and a
+                paying budget in front — same tabs, members correctable. */}
+            <ProjectFormModal
+                key={`adopt:${dlg.key}`}
+                adopt
+                opened={dlg.is('adopt')}
+                onClose={dlg.close}
+                onDone={refresh}
+                resources={resources}
+                openstackRoles={config.openstackRoles}
+                node={dlg.node}
+                myBudgets={myBudgets.items}
+            />
             {/* A manager may edit a project of theirs, so the change dialog has to
                 exist on this side too — not only in My Projects. On a pending
                 request it amends in place; on an approved one it files a change
