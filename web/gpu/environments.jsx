@@ -76,7 +76,7 @@ export function GpuEnvironments() {
                     </Group>
 
                     <Group align="flex-end" mt="md" gap="xs" wrap="wrap">
-                        <TextInput label={t('gpu.envs.gitUrl')} placeholder="https://github.com/<besitzer>/<repo>" w={360}
+                        <TextInput label={t('gpu.envs.gitUrl')} placeholder={t('gpu.envs.gitUrlPlaceholder')} w={360}
                             value={gitUrl} onChange={e => setGitUrl(e.currentTarget.value)} />
                         <TextInput label={t('gpu.envs.ref')} placeholder={t('gpu.envs.refPlaceholder')} w={150}
                             value={ref} onChange={e => setRef(e.currentTarget.value)} />

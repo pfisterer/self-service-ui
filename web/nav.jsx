@@ -102,7 +102,9 @@ export function useNav() {
             items: [
                 { label: t('nav.gpuEnvironments'), href: '/gpu/environments' },
                 { label: t('nav.gpuServers'), href: '/gpu/servers' },
-            ],
+                // The access rules are one list for LLM and GPU (same service); admins find them here too.
+                llm.isAdmin && { label: t('nav.llmAccess'), href: '/llm/access' },
+            ].filter(Boolean),
         },
         // Last, and a category of its own with nothing under it: tokens belong
         // to the account rather than to one of the domains above — both APIs

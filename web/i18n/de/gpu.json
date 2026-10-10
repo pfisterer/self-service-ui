@@ -42,7 +42,8 @@
         "close": "Schließen",
         "logTitle": "Build-Log: {{name}}",
         "logNone": "Kein Build-Log vorhanden (die Umgebung war schon gebaut, oder der Build ist älter als ein Tag).",
-        "logEmpty": "Noch keine Ausgabe."
+        "logEmpty": "Noch keine Ausgabe.",
+        "gitUrlPlaceholder": "https://github.com/<besitzer>/<repo>"
     },
     "servers": {
         "title": "Laufende Server",
