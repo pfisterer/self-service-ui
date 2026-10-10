@@ -579,6 +579,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
             <QuotaInputs
                 resources={offered}
                 value={quota}
+                usage={node?.os_in_use ? { inUse: node.os_in_use, grantUse: node.os_grant_use, total: effectiveLimit(node, quota) } : null}
                 errors={Object.fromEntries((resources || []).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
                 onChange={(id, v) => {
                     quotaTouched.current = true;

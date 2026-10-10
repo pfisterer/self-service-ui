@@ -747,7 +747,16 @@
         "inUse": "Belegt, Stand des letzten Abgleichs",
         "vms": "VMs",
         "sortReserved": "Nach reserviertem {{name}} sortieren",
-        "sortInUse": "Nach belegtem {{name}} sortieren"
+        "sortInUse": "Nach belegtem {{name}} sortieren",
+        "usedOf": "{{used}} von {{limit}} belegt",
+        "grantUnused": "Nicht in Verwendung",
+        "grantDevices_one": "Von {{count}} Gerät verwendet (Server, Router oder Load Balancer)",
+        "grantDevices_other": "Von {{count}} Geräten verwendet (Server, Router oder Load Balancer)",
+        "grantServers_one": "Von {{count}} Server verwendet",
+        "grantServers_other": "Von {{count}} Servern verwendet",
+        "grantUsedNotGranted": "Wird verwendet, ist aber nicht freigegeben",
+        "grantOffNetwork": "lässt sich erst entziehen, wenn nichts mehr daran hängt",
+        "grantOffServers": "die Server laufen weiter, lassen sich aber nicht mehr neu aufsetzen oder in der Größe ändern"
     },
     "attributes": {
         "tab": "Merkmale",

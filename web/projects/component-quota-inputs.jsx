@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Checkbox, Grid, Group, NumberInput, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { UNLIMITED_QUOTA, groupResources, isAvailability } from './util-project.jsx';
+import { UsageMeter, grantUseText } from './component-project-resources.jsx';
 
 // Above this many fields the list stops being scannable and gets a filter. The
 // root of the tree sees the whole catalogue — every GPU flavour of every campus,
@@ -28,7 +29,10 @@ const SEARCH_THRESHOLD = 12;
 // where there is no node at all.
 // `extra` is for an amount on top of something else — an allocation: smaller
 // fields, 0 allowed whatever the resource's minimum, no range text.
-export function QuotaInputs({ resources, value, onChange, errors = {}, disabled = false, allowUnlimited = false, headroom = null, extra = false }) {
+// `usage` is what an existing project uses in OpenStack, for a line under each
+// field: { inUse, grantUse, total } — node.os_in_use, node.os_grant_use, and
+// what the project would hold in all (the entered values plus allocations).
+export function QuotaInputs({ resources, value, onChange, errors = {}, disabled = false, allowUnlimited = false, headroom = null, extra = false, usage = null }) {
     const { t } = useTranslation();
     const [query, setQuery] = useState('');
 
@@ -71,7 +75,7 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                         {groupResourcesList.map(r => (
                             <Grid.Col key={r.id} span={{ base: 12, sm: isAvailability(r) ? 6 : 4 }}>
                                 {isAvailability(r)
-                                    ? <AvailabilityField resource={r} value={value?.[r.id]} onChange={onChange} disabled={disabled} error={errors[r.id]} />
+                                    ? <AvailabilityField resource={r} value={value?.[r.id]} onChange={onChange} disabled={disabled} error={errors[r.id]} used={usage?.grantUse?.[r.id]} />
                                     : <QuantityField
                                         resource={r}
                                         value={value?.[r.id]}
@@ -81,6 +85,8 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                                         allowUnlimited={allowUnlimited}
                                         free={headroom?.[r.id]}
                                         extra={extra}
+                                        used={usage?.inUse?.[r.id]}
+                                        total={usage?.total?.[r.id] ?? value?.[r.id]}
                                     />}
                             </Grid.Col>
                         ))}
@@ -97,22 +103,39 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
 //
 // It shows its error like every other field: a tab marked as faulty with no
 // field saying why leaves nothing to fix.
-function AvailabilityField({ resource, value, onChange, disabled, error }) {
+//
+// `used` is how many servers or devices use it (undefined: not measured).
+// Switched off while in use, the line turns into a warning: a network cannot
+// be taken away while anything is attached, and a flavour or image taken away
+// leaves its servers running but unable to be rebuilt or resized.
+function AvailabilityField({ resource, value, onChange, disabled, error, used }) {
+    const { t } = useTranslation();
+    const on = value === 1;
+    const useText = grantUseText(t, resource, used);
+    const losing = !on && used > 0;
     return (
-        <Group gap="xs" align="flex-start" wrap="nowrap">
-            <Switch
-                checked={value === 1}
-                disabled={disabled}
-                onChange={e => onChange(resource.id, e.currentTarget.checked ? 1 : 0)}
-                label={resource.name}
-                description={resource.message}
-                error={error}
-            />
-        </Group>
+        <Stack gap={2}>
+            <Group gap="xs" align="flex-start" wrap="nowrap">
+                <Switch
+                    checked={on}
+                    disabled={disabled}
+                    onChange={e => onChange(resource.id, e.currentTarget.checked ? 1 : 0)}
+                    label={resource.name}
+                    description={resource.message}
+                    error={error}
+                />
+            </Group>
+            {useText && (
+                <Text size="xs" c={losing ? 'red.8' : 'dimmed'} pl={46}>
+                    {useText}
+                    {losing && ` — ${t(resource?.grant_type === 'network' ? 'projects.resources.grantOffNetwork' : 'projects.resources.grantOffServers')}`}
+                </Text>
+            )}
+        </Stack>
     );
 }
 
-function QuantityField({ resource: r, value: current, onChange, error, disabled, allowUnlimited, free, extra }) {
+function QuantityField({ resource: r, value: current, onChange, error, disabled, allowUnlimited, free, extra, used, total }) {
     const { t } = useTranslation();
     const isUnlimited = current === UNLIMITED_QUOTA;
     return (
@@ -130,6 +153,7 @@ function QuantityField({ resource: r, value: current, onChange, error, disabled,
                 description={isUnlimited ? t('projects.quotaInputs.noCapHint') : (extra ? undefined : r.message)}
             />
             <HeadroomShare free={free} value={isUnlimited ? UNLIMITED_QUOTA : current} />
+            <UsageMeter used={used} limit={typeof total === 'number' ? total : undefined} />
             {allowUnlimited && (
                 <Checkbox
                     size="xs"

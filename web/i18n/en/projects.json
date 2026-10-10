@@ -747,7 +747,16 @@
         "inUse": "In use, as of the last sync",
         "vms": "VMs",
         "sortReserved": "Sort by reserved {{name}}",
-        "sortInUse": "Sort by {{name}} in use"
+        "sortInUse": "Sort by {{name}} in use",
+        "usedOf": "{{used}} of {{limit}} in use",
+        "grantUnused": "Not in use",
+        "grantDevices_one": "Used by {{count}} device (server, router or load balancer)",
+        "grantDevices_other": "Used by {{count}} devices (servers, routers or load balancers)",
+        "grantServers_one": "Used by {{count}} server",
+        "grantServers_other": "Used by {{count}} servers",
+        "grantUsedNotGranted": "In use, but not granted",
+        "grantOffNetwork": "it cannot be taken away while anything is attached",
+        "grantOffServers": "the servers keep running but can no longer be rebuilt or resized"
     },
     "attributes": {
         "tab": "Attributes",

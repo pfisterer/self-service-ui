@@ -6,7 +6,8 @@ import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { NodeChangesDiff, NodeStatusBadge, QuotaBadges, TokenBadgeList, UserRoleBadgeList } from './component-common.jsx';
-import { autoApproveFacts, formatRelativeDate, isBudget, nodeTitle, ownerEmail, statusLabel } from './util-project.jsx';
+import { autoApproveFacts, effectiveLimit, formatRelativeDate, isBudget, nodeTitle, ownerEmail, statusLabel } from './util-project.jsx';
+import { ProjectResources } from './component-project-resources.jsx';
 import { formatDateTime } from '../format-date.js';
 import { UsagePanel } from './component-usage.jsx';
 import { AttributesView, hasAttributes } from './component-node-attributes.jsx';
@@ -107,7 +108,9 @@ function ResourcesTab({ node, resources }) {
     const { t } = useTranslation();
     return (
         <Section label={isBudget(node) ? t('projects.inspect.resourceCap') : t('projects.fact.resources')}>
-            <QuotaBadges resources={resources} quota={node.limit} size="xs" />
+            {!isBudget(node) && node.os_in_use
+                ? <ProjectResources node={node} resources={resources} quota={effectiveLimit(node, node.limit)} />
+                : <QuotaBadges resources={resources} quota={node.limit} size="xs" />}
         </Section>
     );
 }
