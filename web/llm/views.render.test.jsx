@@ -35,7 +35,7 @@ const FLEET = {
     package: { file: 'dhbw-llm-1.2.pkg', size: 2097152, sha256: 'abc', uploaded_at: '2026-10-01T10:00:00Z' },
     self_update: { mode: 'alle', canary: [], scripts: { 'dhbw-llm-enroll.sh': '1a2b3c' } },
     peers: [
-        { serial: 'S1', name: 'wimac01', address: '10.90.4.2', profile: 'm4-24', ram_gb: 24, model: 'qwen3:14b', models: ['qwen3:14b'],
+        { serial: 'S1', name: 'wimac01', address: '10.90.4.2', primary_ip: '141.72.16.101', profile: 'm4-24', ram_gb: 24, model: 'qwen3:14b', models: ['qwen3:14b'],
           model_state: 'erfüllt', state: 'aktiv', inference: 'erreichbar', script_state: 'aktuell', last_seen: '2026-10-08T10:00:00Z',
           location: 'DHBW Mannheim', contact: 'it@example.org', os: 'darwin' },
         { serial: 'S2', name: 'wimac02', address: '10.90.4.3', profile: 'm4-16', ram_gb: 16, model: 'qwen3:8b', models: ['gemma3'],
@@ -101,6 +101,8 @@ describe('the LLM views render', () => {
     it('Fleet shows the machines', async () => {
         renderView(<LlmFleet />);
         expect(await screen.findByText('wimac02')).toBeTruthy();
+        // The machine's own address under the tunnel address.
+        expect(screen.getByText('141.72.16.101')).toBeTruthy();
         expectNoRenderFailure();
     });
 

@@ -256,6 +256,7 @@
         "unknownError": "unknown error",
         "noContact": "no technical contact",
         "direct": "direct",
+        "primaryIpTip": "The machine's own address in its local network (interface of the default route), reported at its last enrolment. Behind NAT this is not the address it appears under from outside.",
         "directTip": "Connected without a tunnel. Protection then rests solely on the endpoint's API key, no longer on the network topology.",
         "external": "chosen by the site",
         "externalTip": "This machine runs its own inference service — its model cannot be switched from here. Shown is what it serves.",

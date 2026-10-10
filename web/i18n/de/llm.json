@@ -256,6 +256,7 @@
         "unknownError": "unbekannter Fehler",
         "noContact": "kein technischer Kontakt",
         "direct": "direkt",
+        "primaryIpTip": "Eigene Adresse des Rechners in seinem lokalen Netz (Schnittstelle der Standardroute), gemeldet bei der letzten Anmeldung. Hinter einem NAT ist das nicht die Adresse, unter der er von außen erscheint.",
         "directTip": "Ohne Tunnel angebunden. Der Schutz liegt dann allein beim API-Schlüssel des Endpunkts, nicht mehr bei der Netztopologie.",
         "external": "vom Standort bestimmt",
         "externalTip": "Diese Maschine betreibt ihren Inferenzdienst selbst — ihr Modell lässt sich von hier nicht umschalten. Angezeigt wird, was sie anbietet.",

@@ -334,6 +334,11 @@ function Machines({ f, email }) {
                                             </div>
                                         </Tooltip>
                                     ) : <Text size="sm" ff="monospace">{p.address}</Text>}
+                                    {p.primary_ip && (
+                                        <Tooltip multiline w={300} withArrow label={t('llm.fleet.primaryIpTip')}>
+                                            <Text size="xs" c="dimmed" ff="monospace">{p.primary_ip}</Text>
+                                        </Tooltip>
+                                    )}
                                 </Table.Td>
                                 <Table.Td>{p.profile} <Text span size="xs" c="dimmed">{p.ram_gb} GB</Text></Table.Td>
                                 <Table.Td>
