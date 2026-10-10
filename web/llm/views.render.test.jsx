@@ -44,6 +44,16 @@ const FLEET = {
     ],
 };
 
+const POOL = {
+    enabled: true, url: 'https://inference.example',
+    pods: [
+        { replica: 'gap-gpu-1', pod: 'p1', site: 'gpu-gap-gpu-1', node: 'gpu-1', gpu_class: 'l4-3q', role: 'gap-filler',
+          model: 'Qwen/Qwen2.5-0.5B-Instruct', state: 'bereit', since: '2026-10-10T18:31:00Z' },
+        { replica: 'base-l4-3q-0', pod: 'p2', site: 'gpu-base-l4-3q-0', gpu_class: 'l4-3q', role: 'base-load',
+          model: 'Qwen/Y', state: 'wartet auf GPU', since: '2026-10-10T18:00:00Z' },
+    ],
+};
+
 const RULES = [
     { token: 'user:dennis.pfisterer@dhbw.de', role: 'admin', tier: 'staff', bootstrap: true },
     { id: 7, token: 'group:wwi23seb', role: 'user', tier: 'student', gpu_tier: 'standard', comment: 'Kurs', updated_by: 'a@dhbw.de', updated_at: '2026-10-07T09:00:00Z' },
@@ -60,6 +70,7 @@ beforeEach(() => {
     globalThis.__llmApi = {
         getUsage: async () => USAGE,
         getFleet: async () => FLEET,
+        getFleetInference: async () => POOL,
         listAccessRules: async () => RULES,
         listTiers: async () => ['staff', 'student'],
         listGpuTiers: async () => ['standard'],
@@ -99,10 +110,24 @@ describe('the LLM views render', () => {
     });
 
     it('Fleet shows the machines', async () => {
-        renderView(<LlmFleet />);
+        renderView(<LlmFleet params={{ page: 'machines' }} />);
         expect(await screen.findByText('wimac02')).toBeTruthy();
         // The machine's own address under the tunnel address.
         expect(screen.getByText('141.72.16.101')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('Fleet shows the GPU cluster\'s inference pool', async () => {
+        renderView(<LlmFleet params={{ page: 'gpu' }} />);
+        expect(await screen.findByText('gap-gpu-1')).toBeTruthy();
+        expect(screen.getByText('Qwen/Qwen2.5-0.5B-Instruct')).toBeTruthy();
+        expect(screen.getByText('gpu-base-l4-3q-0')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('Fleet shows the setup with the Linux install command', async () => {
+        renderView(<LlmFleet params={{ page: 'setup' }} />);
+        expect(await screen.findByText(/dhbw-llm-agent\.sh/)).toBeTruthy();
         expectNoRenderFailure();
     });
 

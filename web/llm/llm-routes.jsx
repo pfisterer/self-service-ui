@@ -36,7 +36,7 @@ export function LlmManagement() {
                 <Route path="/overview" component={LlmOverview} />
                 <Route path="/keys" component={LlmKeys} />
                 <Route path="/usage" component={LlmUsage} />
-                {isFleetAdmin && <Route path="/fleet" component={LlmFleet} />}
+                {isFleetAdmin && <Route path="/fleet/:page?" component={LlmFleet} />}
                 {isAdmin && <Route path="/access" component={LlmAccessRules} />}
                 <Route path="/api-doc" component={LlmApiSwagger} />
                 <Route path="/"><Redirect to="/overview" replace /></Route>

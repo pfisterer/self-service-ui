@@ -274,7 +274,48 @@
         "forgetTip": "Delete the entry and free the address. This does NOT keep the machine out — if it checks in again it is enrolled with a new address. To keep it out: block it.",
         "forgetTitle": "Remove machine?",
         "forgetConfirm": "Remove",
-        "forgetMessage": "{{name}} ({{serial}}) is removed from the fleet and its address freed. If the machine checks in again it is enrolled anew — block it instead to keep it out."
+        "forgetMessage": "{{name}} ({{serial}}) is removed from the fleet and its address freed. If the machine checks in again it is enrolled anew — block it instead to keep it out.",
+        "page": {
+            "machines": "Machines",
+            "gpu": "GPU cluster",
+            "setup": "Setup"
+        },
+        "pool": {
+            "title": "Inference pool in the GPU cluster",
+            "hint": "vLLM replicas in the GPU cluster: one gap filler per GPU node with the model of its GPU class, plus the base load. The service registers ready replicas with LiteLLM automatically; an evicted replica disappears there until it restarts.",
+            "disabled": "No inference pool configured (GPU part off or no inference address).",
+            "none": "No replicas. GPU nodes get their gap filler at the next rollout of the inference pool.",
+            "url": "Reachable at <2>{{url}}/{replica}/v1</2> with the pool's API key.",
+            "siteTip": "Name of the site in the discovery job and in LiteLLM.",
+            "col": {
+                "replica": "Replica",
+                "node": "Node",
+                "role": "Role",
+                "model": "Model",
+                "state": "State",
+                "since": "Since"
+            },
+            "role": {
+                "gapFiller": "Gap filler",
+                "baseLoad": "Base load"
+            },
+            "roleTip": {
+                "gapFiller": "Runs only while the GPU is otherwise idle. A job or notebook evicts it; it then waits until the GPU is free again.",
+                "baseLoad": "Not evicted by jobs or notebooks, and evicts gap fillers itself. Preferably on dedicated nodes."
+            },
+            "state": {
+                "ready": "ready",
+                "starting": "starting",
+                "waiting": "waiting for GPU",
+                "terminating": "terminating"
+            },
+            "stateTip": {
+                "ready": "Answers requests and is registered in LiteLLM.",
+                "starting": "Runs on the GPU and loads the model; the discovery job then registers it in LiteLLM.",
+                "waiting": "Kueue holds it back because the GPU is needed for something with higher priority.",
+                "terminating": "Evicted or replaced; frees the GPU within a minute."
+            }
+        }
     },
     "access": {
         "title": "Access rules",

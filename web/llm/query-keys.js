@@ -5,6 +5,7 @@ export const llmKeys = {
     me: () => ['llm', 'me'],
     usage: () => ['llm', 'usage'],
     fleet: () => ['llm', 'fleet'],
+    fleetInference: () => ['llm', 'fleet', 'inference'],
     accessRules: () => ['llm', 'access-rules'],
     tiers: () => ['llm', 'tiers'],
     gpuTiers: () => ['llm', 'gpu-tiers'],

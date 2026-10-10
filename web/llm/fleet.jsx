@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Redirect } from 'wouter';
 import { Trans, useTranslation } from 'react-i18next';
 import { Alert, Anchor, Badge, Button, Code, Container, Group, Paper, Stack, Table, Text, TextInput, Title, Tooltip } from '@mantine/core';
 import { Download, ExternalLink as ExternalIcon } from 'lucide-react';
 import { formatDateTime } from '/format-date.js';
+import { SubNavItem } from '/header.jsx';
+import { SUBNAV_HEIGHT } from '/nav.jsx';
 import { CodeBlock } from '/helper/codeblock.jsx';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -21,6 +24,8 @@ const INFERENCE = {
 };
 const SCRIPTS = { aktuell: ['current', 'teal'], veraltet: ['outdated', 'orange'], 'zurückgehalten': ['heldBack', 'blue'], unbekannt: ['unknown', 'gray'] };
 const UPDATE_MODE = { aus: ['off', 'gray'], alle: ['all', 'teal'], testgeraete: ['canary', 'blue'] };
+const POOL_STATE = { bereit: ['ready', 'teal'], startet: ['starting', 'blue'], 'wartet auf GPU': ['waiting', 'orange'], 'wird beendet': ['terminating', 'gray'] };
+const POOL_ROLE = { 'gap-filler': ['gapFiller', 'gray'], 'base-load': ['baseLoad', 'blue'] };
 
 function StateBadge({ table, value, group, tooltip }) {
     const { t } = useTranslation();
@@ -39,23 +44,123 @@ function duration(seconds, t) {
     return t('llm.fleet.minutes', { count: Math.round(seconds / 60) });
 }
 
-export function LlmFleet() {
-    const api = useLlmApi();
-    const { me, isAdmin } = useLlmMe();
-    const fleet = useQuery({ queryKey: llmKeys.fleet(), queryFn: () => api.getFleet(), refetchInterval: 60_000 });
+// The fleet admins' pages, each a URL of its own (/llm/fleet/<page>) under a third navigation level like the root admins' pages under Cloud Projects: the machines, the GPU cluster's inference pool, and how machines join.
+const FLEET_PAGES = [
+    { id: 'machines', label: 'llm.fleet.page.machines', component: MachinesPage },
+    { id: 'gpu', label: 'llm.fleet.page.gpu', component: InferencePage },
+    { id: 'setup', label: 'llm.fleet.page.setup', component: SetupPage },
+];
 
-    if (fleet.isPending) return <Container size="xl" py="md"><Loading /></Container>;
-    if (fleet.isError) return <Container size="xl" py="md"><LoadError query={fleet} /></Container>;
-    const f = fleet.data ?? {};
-
+export function LlmFleet({ params }) {
+    const { t } = useTranslation();
+    const page = FLEET_PAGES.find(p => p.id === params?.page);
+    if (!page) return <Redirect to={`/fleet/${FLEET_PAGES[0].id}`} replace />;
+    const Page = page.component;
     return (
         <Container size="xl" py="md">
             <Stack gap="lg">
-                {isAdmin && me?.admin_ui_url && <AdminUiCard url={me.admin_ui_url} />}
-                {f.enabled && <Onboarding f={f} email={me?.email} isAdmin={isAdmin} />}
-                <Machines f={f} email={me?.email} />
+                <Group gap="0" wrap="nowrap" h={SUBNAV_HEIGHT}
+                    style={{ borderBottom: '1px solid var(--mantine-color-gray-3)', overflowX: 'auto' }}>
+                    {FLEET_PAGES.map(p => (
+                        <SubNavItem key={p.id} item={{ href: `/fleet/${p.id}`, label: t(p.label) }} active={p.id === page.id} />
+                    ))}
+                </Group>
+                <Page />
             </Stack>
         </Container>
+    );
+}
+
+// One query for the machines and the setup page: switching between them shows the cached answer at once.
+function useFleetQuery() {
+    const api = useLlmApi();
+    return useQuery({ queryKey: llmKeys.fleet(), queryFn: () => api.getFleet(), refetchInterval: 60_000 });
+}
+
+function MachinesPage() {
+    const fleet = useFleetQuery();
+    if (fleet.isPending) return <Loading />;
+    if (fleet.isError) return <LoadError query={fleet} />;
+    return <Machines f={fleet.data ?? {}} />;
+}
+
+function SetupPage() {
+    const fleet = useFleetQuery();
+    const { me, isAdmin } = useLlmMe();
+    if (fleet.isPending) return <Loading />;
+    if (fleet.isError) return <LoadError query={fleet} />;
+    const f = fleet.data ?? {};
+    return (
+        <Stack gap="lg">
+            {f.enabled && <Onboarding f={f} email={me?.email} isAdmin={isAdmin} />}
+            <LinuxInstall f={f} email={me?.email} />
+            {isAdmin && me?.admin_ui_url && <AdminUiCard url={me.admin_ui_url} />}
+        </Stack>
+    );
+}
+
+// The GPU cluster's vLLM replicas: one gap filler per GPU node that gives its GPU to jobs and notebooks, and the base load that keeps it. Polled more often than the fleet, because an eviction or a restart takes about a minute.
+function InferencePage() {
+    const { t } = useTranslation();
+    const api = useLlmApi();
+    const pool = useQuery({ queryKey: llmKeys.fleetInference(), queryFn: () => api.getFleetInference(), refetchInterval: 15_000 });
+    if (pool.isPending) return <Loading />;
+    if (pool.isError) return <LoadError query={pool} />;
+    const p = pool.data ?? {};
+    const pods = p.pods ?? [];
+    const tip = (table, group, value) => {
+        const [key] = table[value] ?? [null];
+        return key ? t(`llm.fleet.pool.${group}Tip.${key}`) : null;
+    };
+
+    return (
+        <Paper p="lg" radius="md" withBorder>
+            <Title order={4}>{t('llm.fleet.pool.title')}</Title>
+            <Text size="xs" c="dimmed">{t('llm.fleet.pool.hint')}</Text>
+            {!p.enabled ? (
+                <Text size="sm" c="dimmed" mt="md">{t('llm.fleet.pool.disabled')}</Text>
+            ) : (
+                <Table.ScrollContainer minWidth={800} mt="md">
+                    <Table striped highlightOnHover>
+                        <Table.Thead>
+                            <Table.Tr>
+                                {['replica', 'node', 'role', 'model', 'state', 'since'].map(c => (
+                                    <Table.Th key={c}>{t(`llm.fleet.pool.col.${c}`)}</Table.Th>
+                                ))}
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {pods.length === 0 && (
+                                <Table.Tr><Table.Td colSpan={6}><Text size="sm" c="dimmed">{t('llm.fleet.pool.none')}</Text></Table.Td></Table.Tr>
+                            )}
+                            {pods.map(r => (
+                                <Table.Tr key={r.pod}>
+                                    <Table.Td>
+                                        <Text size="sm" ff="monospace">{r.replica}</Text>
+                                        <Tooltip multiline w={300} withArrow label={t('llm.fleet.pool.siteTip')}>
+                                            <Text size="xs" c="dimmed" ff="monospace">{r.site}</Text>
+                                        </Tooltip>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text size="sm" ff="monospace">{r.node || '—'}</Text>
+                                        {r.gpu_class && <Text size="xs" c="dimmed">{r.gpu_class}</Text>}
+                                    </Table.Td>
+                                    <Table.Td><StateBadge table={POOL_ROLE} value={r.role} group="pool.role" tooltip={tip(POOL_ROLE, 'role', r.role)} /></Table.Td>
+                                    <Table.Td><Text size="sm" ff="monospace">{r.model || '—'}</Text></Table.Td>
+                                    <Table.Td><StateBadge table={POOL_STATE} value={r.state} group="pool.state" tooltip={tip(POOL_STATE, 'state', r.state)} /></Table.Td>
+                                    <Table.Td>{r.since ? formatDateTime(r.since) : '—'}</Table.Td>
+                                </Table.Tr>
+                            ))}
+                        </Table.Tbody>
+                    </Table>
+                </Table.ScrollContainer>
+            )}
+            {p.url && (
+                <Text size="xs" c="dimmed" mt="sm">
+                    <Trans i18nKey="llm.fleet.pool.url" values={{ url: p.url }} components={{ 2: <Code /> }} />
+                </Text>
+            )}
+        </Paper>
     );
 }
 
@@ -198,21 +303,11 @@ function Onboarding({ f, email, isAdmin }) {
     );
 }
 
-function Machines({ f, email }) {
+function Machines({ f }) {
     const { t } = useTranslation();
     const api = useLlmApi();
     const confirm = useConfirm();
     const peers = f.peers ?? [];
-
-    // Prefilled with what the service already knows: the signed-in person as
-    // contact and the most common location of the fleet. A placeholder address
-    // used to be copied unchanged often enough to end up in the inventory.
-    const [contact, setContact] = useState(email || '');
-    const [location, setLocation] = useState(() => {
-        const n = {};
-        for (const p of peers) if (p.location) n[p.location] = (n[p.location] || 0) + 1;
-        return Object.entries(n).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
-    });
 
     const act = useApiMutation({
         mutationFn: ({ action, serial }) => ({
@@ -239,14 +334,6 @@ function Machines({ f, email }) {
     for (const p of active) {
         for (const m of (p.models?.length ? p.models : [p.model].filter(Boolean))) spread[m] = (spread[m] || 0) + 1;
     }
-
-    const install = f.enroll_host && f.enroll_token
-        ? `curl -fsSL -H "Authorization: Bearer ${f.enroll_token}" \\\n`
-        + `  https://${f.enroll_host}/scripts/dhbw-llm-agent.sh \\\n`
-        + `  | sudo bash -s -- --token "${f.enroll_token}" \\\n`
-        + `      --location ${JSON.stringify(location || 'DHBW Mannheim')} \\\n`
-        + `      --contact ${contact || 'it@example.org'}`
-        : null;
 
     const stateTip = (p) => p.blocked ? t('llm.fleet.stateTip.blocked')
         : p.quiet_seconds ? t('llm.fleet.stateTip.silent', { since: duration(p.quiet_seconds, t) })
@@ -284,22 +371,6 @@ function Machines({ f, email }) {
             <Alert variant="light" color="gray" mt="sm" title={t('llm.fleet.machines.pathsTitle')}>
                 <Text size="xs"><Trans i18nKey="llm.fleet.machines.paths" components={{ 1: <b /> }} /></Text>
             </Alert>
-
-            {install && (
-                <Alert variant="light" color="teal" mt="sm" title={t('llm.fleet.linux.title')}>
-                    <Text size="xs"><Trans i18nKey="llm.fleet.linux.hint" components={{ 1: <b /> }} /></Text>
-                    <Group gap="xs" mt="xs" align="flex-end" wrap="wrap">
-                        <TextInput size="xs" label={t('llm.fleet.profile.location')} placeholder="DHBW Mannheim"
-                            style={{ flex: '1 1 200px' }} value={location} onChange={e => setLocation(e.currentTarget.value)} />
-                        <TextInput size="xs" label={t('llm.fleet.profile.contact')} style={{ flex: '1 1 240px' }}
-                            value={contact} onChange={e => setContact(e.currentTarget.value)}
-                            error={contact && !/^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(contact) ? t('llm.fleet.linux.badContact') : null} />
-                    </Group>
-                    <CodeBlock language="bash" code={install} />
-                    <Text size="xs" c="dimmed" mt="xs"><Trans i18nKey="llm.fleet.linux.options" components={{ 1: <b />, 2: <Code /> }} /></Text>
-                    <Text size="xs" c="orange" mt="xs">{t('llm.fleet.linux.secret')}</Text>
-                </Alert>
-            )}
 
             <Table.ScrollContainer minWidth={1100} mt="md">
                 <Table striped highlightOnHover>
@@ -397,6 +468,46 @@ function Machines({ f, email }) {
                     </Table.Tbody>
                 </Table>
             </Table.ScrollContainer>
+        </Paper>
+    );
+}
+
+// Joining a Linux machine: one command with the enrolment token, location and contact filled in.
+function LinuxInstall({ f, email }) {
+    const { t } = useTranslation();
+    const peers = f.peers ?? [];
+    // Prefilled with what the service already knows: the signed-in person as
+    // contact and the most common location of the fleet. A placeholder address
+    // used to be copied unchanged often enough to end up in the inventory.
+    const [contact, setContact] = useState(email || '');
+    const [location, setLocation] = useState(() => {
+        const n = {};
+        for (const p of peers) if (p.location) n[p.location] = (n[p.location] || 0) + 1;
+        return Object.entries(n).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+    });
+    const install = f.enroll_host && f.enroll_token
+        ? `curl -fsSL -H "Authorization: Bearer ${f.enroll_token}" \\\n`
+        + `  https://${f.enroll_host}/scripts/dhbw-llm-agent.sh \\\n`
+        + `  | sudo bash -s -- --token "${f.enroll_token}" \\\n`
+        + `      --location ${JSON.stringify(location || 'DHBW Mannheim')} \\\n`
+        + `      --contact ${contact || 'it@example.org'}`
+        : null;
+
+    if (!install) return null;
+    return (
+        <Paper p="lg" radius="md" withBorder>
+            <Title order={4}>{t('llm.fleet.linux.title')}</Title>
+            <Text size="xs" mt={4}><Trans i18nKey="llm.fleet.linux.hint" components={{ 1: <b /> }} /></Text>
+            <Group gap="xs" mt="xs" align="flex-end" wrap="wrap">
+                <TextInput size="xs" label={t('llm.fleet.profile.location')} placeholder="DHBW Mannheim"
+                    style={{ flex: '1 1 200px' }} value={location} onChange={e => setLocation(e.currentTarget.value)} />
+                <TextInput size="xs" label={t('llm.fleet.profile.contact')} style={{ flex: '1 1 240px' }}
+                    value={contact} onChange={e => setContact(e.currentTarget.value)}
+                    error={contact && !/^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(contact) ? t('llm.fleet.linux.badContact') : null} />
+            </Group>
+            <CodeBlock language="bash" code={install} />
+            <Text size="xs" c="dimmed" mt="xs"><Trans i18nKey="llm.fleet.linux.options" components={{ 1: <b />, 2: <Code /> }} /></Text>
+            <Text size="xs" c="orange" mt="xs">{t('llm.fleet.linux.secret')}</Text>
         </Paper>
     );
 }

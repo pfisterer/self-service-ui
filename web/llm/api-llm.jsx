@@ -5,7 +5,7 @@ import { useClient } from '/providers/client.jsx';
 // missing from the client fails the build, not the browser.
 import {
     blockMachine, createAccessRule, createKey, deleteAccessRule, deleteFleetPackage,
-    deleteKey, forgetMachine, getFleet, getMe, getUsage, listAccessRules, listGpuTiers, listTiers,
+    deleteKey, forgetMachine, getFleet, getFleetInference, getMe, getUsage, listAccessRules, listGpuTiers, listTiers,
     searchPrincipals, unblockMachine, updateAccessRule,
 } from '@dhbw-cloud/llm-client';
 
@@ -31,6 +31,7 @@ export function useLlmApi() {
             deleteKey: (id) => call(deleteKey, { path: { id } }),
 
             getFleet: () => call(getFleet),
+            getFleetInference: () => call(getFleetInference),
             blockMachine: (serial) => call(blockMachine, { path: { serial } }),
             unblockMachine: (serial) => call(unblockMachine, { path: { serial } }),
             forgetMachine: (serial) => call(forgetMachine, { path: { serial } }),

@@ -274,7 +274,48 @@
         "forgetTip": "Eintrag löschen und Adresse freigeben. Das hält die Maschine NICHT fern — meldet sie sich wieder, wird sie mit neuer Adresse aufgenommen. Zum Fernhalten: sperren.",
         "forgetTitle": "Maschine entfernen?",
         "forgetConfirm": "Entfernen",
-        "forgetMessage": "{{name}} ({{serial}}) wird aus der Flotte entfernt und die Adresse frei. Meldet sich die Maschine erneut, wird sie neu aufgenommen — zum Fernhalten stattdessen sperren."
+        "forgetMessage": "{{name}} ({{serial}}) wird aus der Flotte entfernt und die Adresse frei. Meldet sich die Maschine erneut, wird sie neu aufgenommen — zum Fernhalten stattdessen sperren.",
+        "page": {
+            "machines": "Rechner",
+            "gpu": "GPU-Cluster",
+            "setup": "Einrichtung"
+        },
+        "pool": {
+            "title": "Inferenz-Pool im GPU-Cluster",
+            "hint": "vLLM-Replikate im GPU-Cluster: je GPU-Knoten ein Lückenfüller mit dem Modell seiner GPU-Klasse, dazu die Grundlast. Bereite Replikate meldet der Dienst automatisch an LiteLLM; ein verdrängtes Replikat verschwindet dort bis zu seinem Neustart.",
+            "disabled": "Kein Inferenz-Pool eingerichtet (GPU-Teil aus oder ohne Inferenz-Adresse).",
+            "none": "Keine Replikate. GPU-Knoten bekommen ihren Lückenfüller beim nächsten Ausrollen des Inferenz-Pools.",
+            "url": "Erreichbar unter <2>{{url}}/{Replikat}/v1</2> mit dem API-Schlüssel des Pools.",
+            "siteTip": "Name des Standorts in der Discovery und in LiteLLM.",
+            "col": {
+                "replica": "Replikat",
+                "node": "Knoten",
+                "role": "Rolle",
+                "model": "Modell",
+                "state": "Zustand",
+                "since": "Seit"
+            },
+            "role": {
+                "gapFiller": "Lückenfüller",
+                "baseLoad": "Grundlast"
+            },
+            "roleTip": {
+                "gapFiller": "Läuft nur, solange die GPU sonst frei ist. Ein Job oder Notebook verdrängt es; danach wartet es, bis die GPU wieder frei ist.",
+                "baseLoad": "Wird von Jobs und Notebooks nicht verdrängt und verdrängt selbst Lückenfüller. Bevorzugt auf dedizierten Knoten."
+            },
+            "state": {
+                "ready": "bereit",
+                "starting": "startet",
+                "waiting": "wartet auf GPU",
+                "terminating": "wird beendet"
+            },
+            "stateTip": {
+                "ready": "Beantwortet Anfragen und ist in LiteLLM angemeldet.",
+                "starting": "Läuft auf der GPU und lädt das Modell; danach meldet die Discovery es in LiteLLM an.",
+                "waiting": "Kueue hält es zurück, weil die GPU gerade für etwas mit höherer Priorität gebraucht wird.",
+                "terminating": "Verdrängt oder ersetzt; gibt die GPU innerhalb einer Minute frei."
+            }
+        }
     },
     "access": {
         "title": "Zugriffsregeln",
