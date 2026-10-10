@@ -31,7 +31,7 @@ const USAGE = {
 
 const FLEET = {
     enabled: true, pool: '10.90.4.0/22', capacity: 1022, enroll_host: 'enroll.example', enroll_token: 'tok',
-    listen_port: 51820, endpoint_v6: '2001:db8::1', reenroll_seconds: 3600, package_id: 'de.dhbw.llm', allowed_serials: 0,
+    listen_port: 51820, endpoint_v6: 'wg6.example', endpoint: 'wg4.example', reenroll_seconds: 3600, package_id: 'de.dhbw.llm', allowed_serials: 0,
     package: { file: 'dhbw-llm-1.2.pkg', size: 2097152, sha256: 'abc', uploaded_at: '2026-10-01T10:00:00Z' },
     self_update: { mode: 'alle', canary: [], scripts: { 'dhbw-llm-enroll.sh': '1a2b3c' } },
     peers: [
@@ -128,6 +128,8 @@ describe('the LLM views render', () => {
     it('Fleet shows the setup with the Linux install command', async () => {
         renderView(<LlmFleet params={{ page: 'setup' }} />);
         expect(await screen.findByText(/dhbw-llm-agent\.sh/)).toBeTruthy();
+        // The firewall rule names the endpoint the machines actually dial.
+        expect(screen.getByText(/wg4\.example/)).toBeTruthy();
         expectNoRenderFailure();
     });
 

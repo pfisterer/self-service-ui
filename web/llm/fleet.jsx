@@ -205,7 +205,8 @@ function Onboarding({ f, email, isAdmin }) {
     const policy = t('llm.fleet.package.policy');
     const net = [
         `${t('llm.fleet.net.out')} TCP 443      → ${f.enroll_host}`,
-        `${t('llm.fleet.net.out')} UDP ${String(f.listen_port).padEnd(6)} → ${f.endpoint_v6}`,
+        // endpoint: the name machines dial (IPv4 since the hub moved); endpoint_v6 from services before 0.1.2.
+        `${t('llm.fleet.net.out')} UDP ${String(f.listen_port).padEnd(6)} → ${f.endpoint || f.endpoint_v6}`,
         `${t('llm.fleet.net.in')}               ${t('llm.fleet.net.nothing')}`,
     ].join('\n');
     const check = [
