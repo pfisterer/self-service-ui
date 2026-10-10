@@ -4,7 +4,7 @@ import i18n from '/i18n/index.js';
 // The real English resources, so a renamed key fails here rather than showing
 // the key itself on the screen.
 const t = i18n.getFixedT('en');
-import { resourceUsageText, usageLevel,
+import { resourceUsageText, sortProjects, usageLevel,
     UNLIMITED_QUOTA,
     deletesOnRequest,
     deletionRequested,
@@ -744,5 +744,21 @@ describe('usageLevel', () => {
         expect(usageLevel(5, -1)).toBeNull();
         expect(usageLevel(0, 0)).toBeNull();
         expect(usageLevel(1, 0)).toBe('full');
+    });
+});
+
+describe('sortProjects', () => {
+    const items = [
+        { id: 'p_1', name: 'beta', status: 'approved', created_at: '2026-01-01', termination_date: '2027-01-01' },
+        { id: 'p_2', name: 'Alpha', status: 'archived', created_at: '2026-03-01' },
+        { id: 'p_3', name: 'gamma', status: 'rejected', created_at: '2026-02-01', termination_date: '2026-11-01' },
+    ];
+    const names = (key) => sortProjects(items, key).map(n => n.name);
+
+    it('orders by name, newest, soonest end and status, ties by name', () => {
+        expect(names('name')).toEqual(['Alpha', 'beta', 'gamma']);
+        expect(names('created')).toEqual(['Alpha', 'gamma', 'beta']);
+        expect(names('expiry')).toEqual(['gamma', 'beta', 'Alpha']);
+        expect(names('status')).toEqual(['gamma', 'beta', 'Alpha']);
     });
 });

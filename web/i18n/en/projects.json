@@ -267,7 +267,12 @@
         "shown": "Projects shown: {{shown}}/{{total}}",
         "noneCanRequest": "You don't have any projects yet. Click “New project” to get started — budgets marked “Instant” create it right away.",
         "none": "You don't have any projects yet, and no budget currently accepts requests from you. Ask your lecturer or administrator to add you to a budget.",
-        "heading": "My projects ({{count}})"
+        "heading": "My projects ({{count}})",
+        "sortLabel": "Sort by",
+        "sort_name": "Name",
+        "sort_created": "Newest first",
+        "sort_expiry": "End of term",
+        "sort_status": "Status"
     },
     "offers": {
         "heading": "Budgets for new projects",

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
-import { Alert, Button, Divider, Group, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { ArrowUpDown, Plus } from 'lucide-react';
+import { useLocalStorage } from '@mantine/hooks';
+import { Alert, Button, Divider, Group, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useNodesApi } from './api-nodes.jsx';
@@ -16,7 +17,7 @@ import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 import { useTranslation } from 'react-i18next';
-import { COLOR, getAuthUserEmail, ownerEmail } from './util-project.jsx';
+import { COLOR, PROJECT_SORTS, getAuthUserEmail, ownerEmail, sortProjects } from './util-project.jsx';
 
 // MyProjectsView lists the projects the signed-in user owns and lets them
 // request new ones, propose changes and release finished projects. Above them
@@ -24,6 +25,14 @@ import { COLOR, getAuthUserEmail, ownerEmail } from './util-project.jsx';
 // their own this is the whole cloud section (see nav.jsx).
 export function MyProjectsView() {
     const { t } = useTranslation();
+    // The order the viewer picked last; anything the browser kept that is no
+    // longer an option falls back to the name.
+    const [storedSort, setSort] = useLocalStorage({
+        key: 'self-service.my-projects.sort',
+        defaultValue: PROJECT_SORTS[0],
+        getInitialValueInEffect: false,
+    });
+    const sort = PROJECT_SORTS.includes(storedSort) ? storedSort : PROJECT_SORTS[0];
     const api = useNodesApi();
     const config = useProjectConfig();
     const { user } = useAuth();
@@ -83,7 +92,21 @@ export function MyProjectsView() {
                 Before, the budget cards came first under a small caption and the
                 project cards followed without one, so the two read as one list. */}
             <Stack gap="xs">
-                <Title order={4}>{t('projects.myProjects.heading', { count: projects.total })}</Title>
+                <Group justify="space-between" align="center" wrap="nowrap">
+                    <Title order={4}>{t('projects.myProjects.heading', { count: projects.total })}</Title>
+                    {projects.items.length > 1 && (
+                        <Select
+                            size="xs"
+                            w={190}
+                            aria-label={t('projects.myProjects.sortLabel')}
+                            leftSection={<ArrowUpDown size={14} />}
+                            data={PROJECT_SORTS.map(k => ({ value: k, label: t(`projects.myProjects.sort_${k}`) }))}
+                            value={sort}
+                            onChange={v => v && setSort(v)}
+                            allowDeselect={false}
+                        />
+                    )}
+                </Group>
 
             {/* One person's own projects fit in one request. If that ever stops
                 being true, say it — a missing project is worse than a long list. */}
@@ -107,7 +130,7 @@ export function MyProjectsView() {
 
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 {/* Own projects first, the shared ones after them. */}
-                {[...ownProjects, ...projects.items.filter(n => !ownProjects.includes(n))].map(node => (
+                {[...sortProjects(ownProjects, sort), ...sortProjects(projects.items.filter(n => !ownProjects.includes(n)), sort)].map(node => (
                     <ProjectCard
                         key={node.id}
                         node={node}

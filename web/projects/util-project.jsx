@@ -673,6 +673,29 @@ export function isExpired(d) {
     return !!d && dayjs(d).isBefore(dayjs());
 }
 
+// ── Sorting a list of projects ──────────────────────────────────────────────
+
+// PROJECT_SORTS are the orders My Projects offers; the first is the default.
+// Every one falls back to the name, so equal keys still give a fixed order —
+// the API returns the projects by their (random) ID.
+export const PROJECT_SORTS = ['name', 'created', 'expiry', 'status'];
+
+// What needs the owner's attention first, what is over last.
+const STATUS_RANK = { rejected: 0, change_pending: 1, pending: 2, approved: 3, imported: 4, released: 5, archived: 6 };
+
+export function sortProjects(items, key) {
+    const byName = (a, b) => nodeTitle(a).localeCompare(nodeTitle(b), undefined, { sensitivity: 'base', numeric: true });
+    const time = (d) => (d ? dayjs(d).valueOf() : null);
+    const cmp = {
+        // Newest first.
+        created: (a, b) => (time(b.created_at) ?? 0) - (time(a.created_at) ?? 0),
+        // The one ending soonest first; one without an end last.
+        expiry: (a, b) => (time(a.termination_date) ?? Infinity) - (time(b.termination_date) ?? Infinity),
+        status: (a, b) => (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9),
+    }[key];
+    return [...items].sort((a, b) => (cmp ? cmp(a, b) : 0) || byName(a, b));
+}
+
 // ── Requests waiting for a decision ─────────────────────────────────────────
 
 // The four kinds of thing a manager decides on. Used by the filter in the

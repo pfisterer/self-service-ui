@@ -267,7 +267,12 @@
         "shown": "Gezeigte Projekte: {{shown}}/{{total}}",
         "noneCanRequest": "Noch keine Projekte. Über „Neues Projekt“ geht es los — Budgets mit „Sofort“ legen es direkt an.",
         "none": "Noch keine Projekte, und derzeit nimmt kein Budget Anfragen an. Den Zugang zu einem Budget richtet die Lehrkraft oder die Administration ein.",
-        "heading": "Meine Projekte ({{count}})"
+        "heading": "Meine Projekte ({{count}})",
+        "sortLabel": "Sortieren nach",
+        "sort_name": "Name",
+        "sort_created": "Neueste zuerst",
+        "sort_expiry": "Laufzeitende",
+        "sort_status": "Status"
     },
     "offers": {
         "heading": "Budgets für neue Projekte",
