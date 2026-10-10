@@ -1,6 +1,6 @@
 import { Badge, Group, Progress, Stack, Text, Tooltip } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { COLOR, UNLIMITED_QUOTA, isAvailability, resourceSummaryText } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, USAGE_COLOR, isAvailability, resourceSummaryText, usageLevel } from './util-project.jsx';
 
 // ProjectResources: what a project was granted and, where the reconciler has
 // measured it, how much of that is in use right now — a bar per quantity, the
@@ -48,8 +48,9 @@ export function ProjectResources({ node, resources, quota, size = 'xs' }) {
 
 // UsageMeter is one quantity: what is in use of what is granted, as a bar. An
 // unmeasured value shows the limit alone; no limit (or none known) leaves the
-// bar out. Red from 90 % on, as on a budget — and above the limit, which
-// OpenStack allows after a quota was lowered below what is running.
+// bar out. Coloured by usageLevel, like the table: a hint from 80 %, a warning
+// when everything is in use — or more, which OpenStack allows after a quota
+// was lowered below what is running.
 // Without a label it is the line under an input field.
 export function UsageMeter({ label, used, limit }) {
     const { t } = useTranslation();
@@ -57,6 +58,8 @@ export function UsageMeter({ label, used, limit }) {
     const capped = typeof limit === 'number' && limit !== UNLIMITED_QUOTA && limit >= 0;
     const limitText = capped ? limit : '∞';
     const pct = capped && measured ? (limit > 0 ? (used / limit) * 100 : (used > 0 ? 100 : 0)) : 0;
+    const level = usageLevel(used, capped ? limit : null);
+    const color = level && USAGE_COLOR[level];
     const text = measured
         ? (label ? `${used} / ${limitText}` : t('projects.resources.usedOf', { used, limit: limitText }))
         : (label ? `${limitText}` : null);
@@ -66,10 +69,10 @@ export function UsageMeter({ label, used, limit }) {
         <Stack gap={2}>
             <Group justify="space-between" gap="xs" wrap="nowrap">
                 {label && <Text size="xs">{label}</Text>}
-                {text && <Text size="xs" c={pct > 100 ? 'red.8' : 'dimmed'}>{text}</Text>}
+                {text && <Text size="xs" c={color ? `${color}.8` : 'dimmed'} fw={color ? 600 : undefined}>{text}</Text>}
             </Group>
             {capped && measured && (
-                <Progress size="xs" value={Math.min(pct, 100)} color={pct >= 90 ? COLOR.negative : COLOR.info} />
+                <Progress size="xs" value={Math.min(pct, 100)} color={color || COLOR.info} />
             )}
         </Stack>
     );

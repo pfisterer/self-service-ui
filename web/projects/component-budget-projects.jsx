@@ -8,7 +8,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { InfoPopover, NodeStatusBadge } from './component-common.jsx';
 import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
-import { COLOR, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
@@ -372,10 +372,17 @@ function resourceFigures(node, c) {
     return { reserved, used };
 }
 
-function figure(v) {
+// figure is one value; `level` colours what is in use by how full the project
+// is on it — normal, a hint from 80 %, a warning when all of it is used.
+function figure(v, level = null) {
+    const color = level && USAGE_COLOR[level];
     return (v === null || v === undefined)
         ? <Text size="xs" lh={1.6} c="dimmed">–</Text>
-        : <Text size="xs" lh={1.6} style={{ whiteSpace: 'nowrap' }}>{v}</Text>;
+        : <Text size="xs" lh={1.6} fw={color ? 600 : undefined} c={color ? `${color}.8` : undefined} style={{ whiteSpace: 'nowrap' }}>{v}</Text>;
+}
+
+function figureLevel({ used, reserved }) {
+    return usageLevel(used, typeof reserved === 'number' ? reserved : null);
 }
 
 function RowMarker({ icon: Icon, label }) {
@@ -397,10 +404,11 @@ function ResourceCells({ node, columns }) {
                 <RowMarker icon={Package} label={t('projects.resources.reserved')} />
             </Table.Td>
             {columns.map(c => {
-                const { reserved, used } = resourceFigures(node, c);
+                const figures = resourceFigures(node, c);
+                const { reserved, used } = figures;
                 return (
                     <Table.Td key={c.id} ta="right" px={6}>
-                        {figure(used)}
+                        {figure(used, figureLevel(figures))}
                         {figure(reserved)}
                     </Table.Td>
                 );
@@ -434,7 +442,7 @@ function ResourceTable({ node, columns }) {
                                 label={t(kind === 'reserved' ? 'projects.resources.reserved' : 'projects.resources.inUse')} />
                         </Table.Td>
                         {columns.map(c => (
-                            <Table.Td key={c.id} ta="right">{figure(resourceFigures(node, c)[kind])}</Table.Td>
+                            <Table.Td key={c.id} ta="right">{figure(resourceFigures(node, c)[kind], kind === 'used' ? figureLevel(resourceFigures(node, c)) : null)}</Table.Td>
                         ))}
                     </Table.Tr>
                 ))}

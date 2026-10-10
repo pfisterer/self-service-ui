@@ -4,7 +4,7 @@ import i18n from '/i18n/index.js';
 // The real English resources, so a renamed key fails here rather than showing
 // the key itself on the screen.
 const t = i18n.getFixedT('en');
-import { resourceUsageText,
+import { resourceUsageText, usageLevel,
     UNLIMITED_QUOTA,
     deletesOnRequest,
     deletionRequested,
@@ -728,5 +728,21 @@ describe('resourceUsageText', () => {
     });
     it('shows an unmeasured resource as granted only, never as zero', () => {
         expect(resourceUsageText(res, { cores: 4, ram: 8 }, { cores: 0 })).toBe('0 / 4 Cores · 8 GB RAM');
+    });
+});
+
+describe('usageLevel', () => {
+    it('is normal below 80 %, a hint from 80 %, a warning when all is in use', () => {
+        expect(usageLevel(7, 10)).toBe('ok');
+        expect(usageLevel(8, 10)).toBe('high');
+        expect(usageLevel(10, 10)).toBe('full');
+        expect(usageLevel(12, 10)).toBe('full');
+    });
+    it('has nothing to say without a measurement or a cap', () => {
+        expect(usageLevel(undefined, 10)).toBeNull();
+        expect(usageLevel(5, null)).toBeNull();
+        expect(usageLevel(5, -1)).toBeNull();
+        expect(usageLevel(0, 0)).toBeNull();
+        expect(usageLevel(1, 0)).toBe('full');
     });
 });

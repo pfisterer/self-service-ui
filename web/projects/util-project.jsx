@@ -516,6 +516,22 @@ export function resourceSummaryText(resources, quota) {
 // the quantities OpenStack measures. A resource missing from inUse is not
 // measured — it is shown as granted only, never as zero in use.
 // Availabilities read as their name, as in resourceSummaryText.
+// usageLevel is how full a project is on one resource: 'ok', 'high' from 80 %
+// on, 'full' once everything granted is in use (or more — OpenStack keeps
+// running what a lowered quota no longer covers). null when there is nothing to
+// compare: not measured, nothing granted, or no cap. One rule for the table,
+// the bars on the card and the line under an input field.
+export const USAGE_HIGH = 0.8;
+export function usageLevel(used, limit) {
+    if (typeof used !== 'number' || typeof limit !== 'number' || limit === UNLIMITED_QUOTA || limit < 0) return null;
+    if (limit === 0) return used > 0 ? 'full' : null;
+    const share = used / limit;
+    return share >= 1 ? 'full' : share >= USAGE_HIGH ? 'high' : 'ok';
+}
+
+// USAGE_COLOR is the colour of a level: normal, a hint, a warning.
+export const USAGE_COLOR = { ok: null, high: COLOR.attention, full: COLOR.negative };
+
 export function resourceUsageText(resources, quota, inUse) {
     return resourceUsageItems(resources, quota, inUse, ' / ').join(' · ');
 }
