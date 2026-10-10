@@ -5,7 +5,7 @@ import { useClient } from '/providers/client.jsx';
 // missing from the client fails the build, not the browser.
 import {
     blockMachine, createAccessRule, createKey, deleteAccessRule, deleteFleetPackage,
-    deleteKey, forgetMachine, getFleet, getMe, getUsage, listAccessRules, listTiers,
+    deleteKey, forgetMachine, getFleet, getMe, getUsage, listAccessRules, listGpuTiers, listTiers,
     searchPrincipals, unblockMachine, updateAccessRule,
 } from '@dhbw-cloud/llm-client';
 
@@ -41,6 +41,7 @@ export function useLlmApi() {
             updateAccessRule: (id, rule) => call(updateAccessRule, { path: { id }, body: rule, headers: JSON_HEADERS }),
             deleteAccessRule: (id) => call(deleteAccessRule, { path: { id } }),
             listTiers: async () => (await call(listTiers)) ?? [],
+            listGpuTiers: async () => (await call(listGpuTiers)) ?? [],
             // Same shape as the projects facade's searchPrincipalDetails, for
             // the shared PrincipalTokenAutocomplete: groups first, then people.
             searchPrincipalDetails: async (q, limit = 10) => {

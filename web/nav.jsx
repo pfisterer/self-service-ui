@@ -94,6 +94,16 @@ export function useNav() {
                 { label: t('nav.apiDocumentation'), href: '/llm/api-doc' },
             ].filter(Boolean),
         },
+        // The GPU part of the same service: environments from Git repositories and JupyterHub servers. Visible with a GPU tier from the access rules, independent of the LLM role.
+        llmEnabled && !!llm.me?.gpu_tier && {
+            id: 'gpu',
+            label: t('nav.gpu'),
+            base: '/gpu',
+            items: [
+                { label: t('nav.gpuEnvironments'), href: '/gpu/environments' },
+                { label: t('nav.gpuServers'), href: '/gpu/servers' },
+            ],
+        },
         // Last, and a category of its own with nothing under it: tokens belong
         // to the account rather than to one of the domains above — both APIs
         // issue their own, and a credential has to be findable in one place to

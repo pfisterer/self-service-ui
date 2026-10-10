@@ -302,7 +302,10 @@
         "commentPlaceholder": "e.g. course WWI23SEB",
         "cancel": "Cancel",
         "save": "Save",
-        "tokenInvalid": "Please enter a token of the form user:<email> or group:<id>."
+        "tokenInvalid": "Please enter a token of the form user:<email> or group:<id>.",
+        "gpuTier": "GPU tier",
+        "gpuTierHint": "Access to GPU environments and JupyterHub; the tier sets how many GPUs can be used at the same time.",
+        "gpuTierNone": "no GPU access"
     },
     "roles": {
         "user": "Use",

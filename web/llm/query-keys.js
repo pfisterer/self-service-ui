@@ -7,6 +7,7 @@ export const llmKeys = {
     fleet: () => ['llm', 'fleet'],
     accessRules: () => ['llm', 'access-rules'],
     tiers: () => ['llm', 'tiers'],
+    gpuTiers: () => ['llm', 'gpu-tiers'],
     // Prefix only; the autocomplete appends the search term and limit.
     principals: () => ['llm', 'principals'],
 };

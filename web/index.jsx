@@ -47,6 +47,8 @@ const DynamicDnsManagement = lazy(() =>
 // the main bundle.
 const LlmManagement = lazy(() =>
     import('./llm/llm-routes.jsx').then(m => ({ default: m.LlmManagement })));
+const GpuManagement = lazy(() =>
+    import('./gpu/gpu-routes.jsx').then(m => ({ default: m.GpuManagement })));
 const ApiTokens = lazy(() =>
     import('./tokens/api-tokens.jsx').then(m => ({ default: m.ApiTokens })));
 
@@ -149,6 +151,7 @@ function AppRoutes() {
                     {dnsZonesEnabled && <Route path="/dyndns" component={DynamicDnsManagement} nest />}
                     {cloudProjectsEnabled && <Route path="/projects" component={CloudProjectManagement} nest />}
                     {llmEnabled && <Route path="/llm" component={LlmManagement} nest />}
+                    {llmEnabled && <Route path="/gpu" component={GpuManagement} nest />}
                     {apiTokensEnabled && <Route path="/tokens" component={ApiTokens} nest />}
                     <Route component={NotFound} />
                 </Switch>

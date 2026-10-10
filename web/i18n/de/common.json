@@ -20,7 +20,10 @@
         "llmKeys": "API Keys",
         "llmUsage": "Verbrauch",
         "llmFleet": "Flotte",
-        "llmAccess": "Zugriffsregeln"
+        "llmAccess": "Zugriffsregeln",
+        "gpu": "GPU",
+        "gpuEnvironments": "Umgebungen",
+        "gpuServers": "Laufende Server"
     },
     "account": {
         "signIn": "Anmelden",

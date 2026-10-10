@@ -46,7 +46,7 @@ const FLEET = {
 
 const RULES = [
     { token: 'user:dennis.pfisterer@dhbw.de', role: 'admin', tier: 'staff', bootstrap: true },
-    { id: 7, token: 'group:wwi23seb', role: 'user', tier: 'student', comment: 'Kurs', updated_by: 'a@dhbw.de', updated_at: '2026-10-07T09:00:00Z' },
+    { id: 7, token: 'group:wwi23seb', role: 'user', tier: 'student', gpu_tier: 'standard', comment: 'Kurs', updated_by: 'a@dhbw.de', updated_at: '2026-10-07T09:00:00Z' },
 ];
 
 const { LlmOverview } = await import('/llm/overview.jsx');
@@ -62,6 +62,7 @@ beforeEach(() => {
         getFleet: async () => FLEET,
         listAccessRules: async () => RULES,
         listTiers: async () => ['staff', 'student'],
+        listGpuTiers: async () => ['standard'],
         searchPrincipalDetails: async () => [],
     };
     consoleErrors = [];

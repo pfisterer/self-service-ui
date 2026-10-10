@@ -27,6 +27,9 @@ export function LlmAccessRules() {
 
     const rules = useQuery({ queryKey: llmKeys.accessRules(), queryFn: () => api.listAccessRules() });
     const tiers = useQuery({ queryKey: llmKeys.tiers(), queryFn: () => api.listTiers() });
+    // Empty when the service runs without its GPU part: the column and the field then stay hidden.
+    const gpuTiers = useQuery({ queryKey: llmKeys.gpuTiers(), queryFn: () => api.listGpuTiers() });
+    const hasGpu = (gpuTiers.data ?? []).length > 0;
 
     const remove = useApiMutation({
         mutationFn: (id) => api.deleteAccessRule(id),
@@ -64,6 +67,7 @@ export function LlmAccessRules() {
                                 <Table.Th>{t('llm.access.token')}</Table.Th>
                                 <Table.Th>{t('llm.access.role')}</Table.Th>
                                 <Table.Th>{t('llm.access.tier')}</Table.Th>
+                                {hasGpu && <Table.Th>{t('llm.access.gpuTier')}</Table.Th>}
                                 <Table.Th>{t('llm.access.comment')}</Table.Th>
                                 <Table.Th>{t('llm.access.changed')}</Table.Th>
                                 <Table.Th />
@@ -79,6 +83,7 @@ export function LlmAccessRules() {
                                         </Badge>
                                     </Table.Td>
                                     <Table.Td>{r.tier}</Table.Td>
+                                    {hasGpu && <Table.Td>{r.gpu_tier || <Text size="sm" c="dimmed">—</Text>}</Table.Td>}
                                     <Table.Td><Text size="sm" c="dimmed">{r.comment}</Text></Table.Td>
                                     <Table.Td>
                                         {r.bootstrap ? <Text size="xs" c="dimmed">{t('llm.access.fromConfig')}</Text> : (
@@ -121,18 +126,19 @@ export function LlmAccessRules() {
             </Stack>
 
             {editing && (
-                <RuleEditor rule={editing} tiers={tiers.data ?? []} onClose={() => setEditing(null)} />
+                <RuleEditor rule={editing} tiers={tiers.data ?? []} gpuTiers={gpuTiers.data ?? []} onClose={() => setEditing(null)} />
             )}
         </Container>
     );
 }
 
-function RuleEditor({ rule, tiers, onClose }) {
+function RuleEditor({ rule, tiers, gpuTiers, onClose }) {
     const { t } = useTranslation();
     const api = useLlmApi();
     const [token, setToken] = useState(rule.token ?? '');
     const [role, setRole] = useState(rule.role ?? 'user');
     const [tier, setTier] = useState(rule.tier ?? tiers[0] ?? null);
+    const [gpuTier, setGpuTier] = useState(rule.gpu_tier || null);
     const [comment, setComment] = useState(rule.comment ?? '');
 
     const save = useApiMutation({
@@ -160,13 +166,17 @@ function RuleEditor({ rule, tiers, onClose }) {
                         data={ROLES.map(r => ({ value: r, label: t(`llm.roles.${r}`) }))} />
                     <Select label={t('llm.access.tier')} value={tier} onChange={setTier} allowDeselect={false} data={tiers} />
                 </Group>
+                {gpuTiers.length > 0 && (
+                    <Select label={t('llm.access.gpuTier')} description={t('llm.access.gpuTierHint')} clearable
+                        placeholder={t('llm.access.gpuTierNone')} value={gpuTier} onChange={setGpuTier} data={gpuTiers} />
+                )}
                 <TextInput label={t('llm.access.comment')} placeholder={t('llm.access.commentPlaceholder')} maxLength={200}
                     value={comment} onChange={e => setComment(e.currentTarget.value)} />
                 {save.error && <Alert color="red" variant="light">{save.error.message}</Alert>}
                 <Group justify="flex-end" mt="sm">
                     <Button variant="default" onClick={onClose}>{t('llm.access.cancel')}</Button>
                     <Button loading={save.isPending} disabled={!valid || !tier}
-                        onClick={() => save.mutate({ token: normalized, role, tier, comment })}>
+                        onClick={() => save.mutate({ token: normalized, role, tier, gpu_tier: gpuTier ?? '', comment })}>
                         {t('llm.access.save')}
                     </Button>
                 </Group>

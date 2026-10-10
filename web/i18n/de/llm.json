@@ -302,7 +302,10 @@
         "commentPlaceholder": "z. B. Kurs WWI23SEB",
         "cancel": "Abbrechen",
         "save": "Speichern",
-        "tokenInvalid": "Bitte ein Token der Form user:<E-Mail> oder group:<Kennung> angeben."
+        "tokenInvalid": "Bitte ein Token der Form user:<E-Mail> oder group:<Kennung> angeben.",
+        "gpuTier": "GPU-Klasse",
+        "gpuTierHint": "Zugang zu GPU-Umgebungen und JupyterHub; die Klasse legt fest, wie viele GPUs gleichzeitig möglich sind.",
+        "gpuTierNone": "kein GPU-Zugang"
     },
     "roles": {
         "user": "Nutzung",

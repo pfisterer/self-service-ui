@@ -1,0 +1,72 @@
+{
+    "noAccess": {
+        "title": "No access to GPU environments",
+        "text": "GPU environments and JupyterHub are open to people whose access rule includes a GPU tier. Access is granted by the administrators of the LLM service.",
+        "page": "This page does not exist."
+    },
+    "envs": {
+        "title": "GPU environments",
+        "intro": "An environment is built from a public Git repository: requirements.txt, environment.yml and similar files decide what is installed (repo2docker). Every environment comes with JupyterLab and VS Code. On start, the repository is placed in the own home under ~/projekte.",
+        "openHub": "Open JupyterHub",
+        "gitUrl": "Git repository (https)",
+        "ref": "Branch, tag or commit",
+        "refPlaceholder": "default branch",
+        "name": "Name",
+        "namePlaceholder": "from the repository",
+        "add": "Add",
+        "addHint": "Public repositories on GitHub and GitLab are allowed. If this version already exists as a built environment, it can be started at once; otherwise it is built (usually 2–10 minutes).",
+        "version": "Version",
+        "status": "Status",
+        "none": "No environment yet.",
+        "statuses": {
+            "building": "building",
+            "ready": "ready",
+            "failed": "failed"
+        },
+        "startCpu": "Start",
+        "startCpuHint": "Start a server without GPU (up to 4 CPU cores, 8 GB RAM)",
+        "startGpu": "With GPU",
+        "startGpuHint": "Start a server with a GPU; waits until a GPU is free and counts against the GPU quota",
+        "log": "Build log",
+        "rebuild": "Rebuild",
+        "delete": "Delete",
+        "deleteTitle": "Delete environment?",
+        "deleteConfirm": "Delete",
+        "deleteMessage": "“{{name}}” disappears from the list. Files in the home stay, running servers keep running.",
+        "startFailed": "Cannot start",
+        "startedTitle": "Server starting",
+        "startedCpu": "The server is starting and is usually ready within a minute.",
+        "startedGpu": "The server starts as soon as a GPU is free. If all are busy, it waits in the queue.",
+        "startedHome": "The repository is in the home under <1>~/projekte</1>; own changes are kept at the next start.",
+        "open": "Open",
+        "close": "Close",
+        "logTitle": "Build log: {{name}}",
+        "logNone": "No build log (the environment had been built before, or the build is older than a day).",
+        "logEmpty": "No output yet."
+    },
+    "servers": {
+        "title": "Running servers",
+        "intro": "All own servers in JupyterHub, including those started there directly. Idle servers end by themselves: without GPU after 2 hours, with GPU after 30 minutes.",
+        "name": "Server",
+        "profile": "Kind",
+        "state": "State",
+        "none": "No server is running.",
+        "default": "Default server",
+        "ready": "ready",
+        "starting": "starting",
+        "stopping": "stopping",
+        "open": "Open",
+        "stop": "Stop",
+        "stopTitle": "Stop server?",
+        "stopConfirm": "Stop",
+        "stopMessage": "“{{name}}” is stopped. Files in the home stay, unsaved changes in open notebooks are lost."
+    },
+    "profiles": {
+        "cpu": "CPU",
+        "git-cpu": "Git environment (CPU)",
+        "git-gpu": "Git environment (GPU)",
+        "pytorch": "PyTorch (GPU)",
+        "tensorflow": "TensorFlow (GPU)",
+        "cpu-gpukernel": "CPU + GPU kernel (trial)"
+    }
+}
