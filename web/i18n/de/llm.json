@@ -21,21 +21,35 @@
         "ownCode": "<1>eigener Code</1>"
     },
     "vscode": {
-        "title": "Für VS Code (GitHub Copilot Chat)",
+        "tab": "VS Code",
         "scope": "Eingebaut ab VS Code 1.122, ohne GitHub-Konto und ohne Copilot-Abo. Gilt für Chat und Agent-Modus, nicht für die Vervollständigung beim Tippen.",
         "steps": {
             "palette": "Befehlspalette öffnen (<2>⇧⌘P</2> bzw. <3>Strg+Umschalt+P</3>) und <1>Chat: Manage Language Models</1> wählen.",
             "add": "<1>Add Models</1> → <1>Custom Endpoint</1>. Als Namen <2>DHBW</2> eingeben, den API Key von oben einfügen, als API-Typ <1>Chat Completions</1>.",
             "json": "Auf das Zahnrad neben <1>DHBW</1> klicken — die Datei <2>chatLanguageModels.json</2> öffnet sich. Im Eintrag „DHBW“ den Teil <3>\"models\": [ … ]</3> durch das JSON unten ersetzen; die Zeile mit dem API Key stehen lassen. Speichern.",
-            "select": "Im Chat-Fenster oben das Modell <1>DHBW Code</1> auswählen."
+            "select": "Im Chat-Fenster oben das Modell <1>DHBW Code</1> auswählen, für den Agent-Modus mit langen Aufgaben <1>DHBW Agent</1>."
         },
-        "keepIds": "Den Modellnamen nicht ändern: <2>\"id\"</2> muss genau code, chat-default oder chat-fast lauten.",
+        "keepIds": "Den Modellnamen nicht ändern: <2>\"id\"</2> muss genau code, agent, chat-default oder chat-fast lauten. Die Werte bei maxInputTokens entsprechen dem, was jedes Modell hinter dem Namen verarbeitet; darüber kürzt VS Code den Verlauf selbst.",
         "docs": "Anleitung von VS Code",
         "names": {
             "code": "DHBW Code",
+            "agent": "DHBW Agent",
             "chat": "DHBW Chat",
             "fast": "DHBW Schnell"
         }
+    },
+    "tools": {
+        "title": "Für Coding-Werkzeuge",
+        "intro": "Fertige Einstellungen mit dem neuen API Key, zum Kopieren oder Herunterladen. Agenten nutzen das Modell agent (großer Kontext, Werkzeugaufrufe); die Kontextgrößen stammen aus dem aktuellen Modellkatalog.",
+        "hint": {
+            "opencode": "Als <1>{{path}}</1> speichern, bei vorhandener Datei den Eintrag „dhbw“ unter „provider“ übernehmen. Danach <1>opencode</1> starten; das Modell ist dhbw/agent.",
+            "claude-code": "Als <1>{{path}}</1> speichern, bei vorhandener Datei den Block „env“ übernehmen. Eine Anmeldung bei Anthropic ist nicht nötig; Telemetrie und Fehlerberichte an Anthropic sind abgeschaltet.",
+            "codex": "Als <1>{{path}}</1> speichern. Codex liest den API Key aus der Umgebungsvariablen DHBW_API_KEY und spricht nur die Responses API.",
+            "continue": "Als <1>{{path}}</1> speichern oder die beiden Modelle in die vorhandene Datei übernehmen."
+        },
+        "env": "Den API Key in der Shell setzen, z. B. in ~/.bashrc oder ~/.zshrc:",
+        "docs": "Anleitung des Projekts",
+        "download": "{{file}} herunterladen"
     },
     "keys": {
         "title": "API Keys",

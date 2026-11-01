@@ -13,7 +13,7 @@ import { useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { units } from '/llm/format.js';
-import { VscodeSetup } from '/llm/vscode-setup.jsx';
+import { ToolSetup } from '/llm/tool-setup.jsx';
 import { LlmPoolWarnings } from '/projects/component-llm-limits.jsx';
 
 // Names that contain at least one letter or digit, as the API requires.
@@ -179,7 +179,7 @@ export function LlmKeys() {
                         <Text size="sm" fw={600} mt="lg">{t('llm.keys.shellTitle')}</Text>
                         <Text size="xs" c="dimmed" mb={4}>{t('llm.keys.shellHint')}</Text>
                         <CodeBlock language="bash" code={env} />
-                        <VscodeSetup apiUrl={apiUrl} />
+                        <ToolSetup apiUrl={apiUrl} apiKey={fresh ?? ''} />
                     </>
                 )}
 

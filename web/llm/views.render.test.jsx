@@ -69,6 +69,7 @@ const { LlmOverview } = await import('/llm/overview.jsx');
 const { LlmKeys } = await import('/llm/keys.jsx');
 const { LlmUsage } = await import('/llm/usage.jsx');
 const { LlmFleet } = await import('/llm/fleet.jsx');
+const { ToolSetup } = await import('/llm/tool-setup.jsx');
 
 let consoleErrors = [];
 beforeEach(() => {
@@ -113,6 +114,15 @@ describe('the LLM views render', () => {
         globalThis.__llmApi.getUsage = async () => ({ ...USAGE, projects: [{ slug: 'p1', name: 'Testprojekt', mtokens: 10, rpm: 60, tpm: 100 }] });
         renderView(<LlmOverview />);
         expect(await screen.findByText(/Testprojekt.*(voraussichtlich abgelehnt|likely be rejected)/)).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('The setup after a new key offers VS Code and the agents with the key filled in', async () => {
+        globalThis.__llmApi.getModelAliases = async () => ({ ...ALIASES, aliases: [...ALIASES.aliases, { alias: 'agent', models: [], limit: { max_input_tokens: 57344, max_output_tokens: 8192 } }] });
+        renderView(<ToolSetup apiUrl="https://api.example/v1" apiKey="sk-new" />);
+        for (const name of ['VS Code', 'OpenCode', 'Claude Code', 'Codex', 'Continue']) expect(await screen.findByRole('tab', { name })).toBeTruthy();
+        // VS Code is open first, with the limits the service names for agent.
+        expect(await screen.findByText(/57344/)).toBeTruthy();
         expectNoRenderFailure();
     });
 
