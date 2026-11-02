@@ -23,7 +23,7 @@
         "dns": {
             "title": "DNS-Namen & Zertifikate",
             "lead": "Eigene Hostnamen für die eigenen Dienste, mit TLS-Zertifikaten.",
-            "a": "Persönliche Zone aktivieren, z. B. myapp.you.users.dhbw.cloud",
+            "a": "Persönliche Zone aktivieren, z. B. myapp.you.users.dhbw.site",
             "b": "Einträge von Hand oder automatisch per ddclient, nsupdate oder external-dns",
             "c": "Fertige cert-manager-Manifeste im Tab „TLS-Zertifikate“",
             "open": "DNS-Zonen verwalten"

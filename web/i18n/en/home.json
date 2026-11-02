@@ -23,7 +23,7 @@
         "dns": {
             "title": "DNS names & certificates",
             "lead": "Your own hostnames for your services, with TLS certificates.",
-            "a": "Activate your personal zone, e.g. myapp.you.users.dhbw.cloud",
+            "a": "Activate your personal zone, e.g. myapp.you.users.dhbw.site",
             "b": "Records by hand or automated with ddclient, nsupdate or external-dns",
             "c": "Ready-made cert-manager manifests in the \"TLS Certificates\" tab",
             "open": "Manage DNS zones"
