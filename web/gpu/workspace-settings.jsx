@@ -7,6 +7,7 @@ import { BUILD_COLOUR, BuildLogModal } from '/gpu/build-log.jsx';
 import { GitSource } from '/gpu/git-source.jsx';
 import { ProjectCredentials } from '/gpu/credentials.jsx';
 import { ImageFacts } from '/gpu/image-facts.jsx';
+import { ProjectId } from '/gpu/project-id.jsx';
 import { llmEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
@@ -350,6 +351,7 @@ export function WorkspaceSettingsPanel({ draft }) {
 
     return (
         <Stack gap="md">
+            <ProjectId slug={draft.project?.slug} />
             {locked && <Text size="xs" c="dimmed">{t('gpu.projects.adminOnlyHint')}</Text>}
             <Box title={t('gpu.projects.environments')}>
                 <MultiSelect label={t('gpu.projects.profiles')} description={p.tree_profiles ? t('gpu.projects.profilesFromTree') : t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)} readOnly={locked || !!p.tree_profiles}

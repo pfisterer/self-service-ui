@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useSearch } from 'wouter';
 import { useTranslation } from 'react-i18next';
-import { Alert, Anchor, Button, Code, Container, Group, NumberInput, Paper, SegmentedControl, Select, Stack, Text, Textarea, TextInput, Title } from '@mantine/core';
+import { Alert, Anchor, Button, Container, Group, NumberInput, Paper, SegmentedControl, Select, Stack, Text, Textarea, TextInput, Title } from '@mantine/core';
 import { ArrowLeft, Play } from 'lucide-react';
 import { LoadError, Loading } from '/helper/query-state.jsx';
+import { CodeBlock } from '/helper/codeblock.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
-import { DEFAULT_JOB_MAX_HOURS, jobBody, jobErrors, jobMaxHours, jobProjects } from '/gpu/jobs.js';
+import { DEFAULT_JOB_MAX_HOURS, jobBody, jobCommandLine, jobErrors, jobMaxHours, jobProjects } from '/gpu/jobs.js';
 
 // Submitting a batch job (Workspaces → Batch-Jobs → Job starten): in one of the person's projects that allow jobs (?project=<slug> preselects one), a shell command or a notebook, with a working directory and a run time up to the project's maximum. The AI service checks the job against the project (limits, budget with what running and waiting jobs reserve) and answers a refusal with a message for people, shown above the button.
 export function GpuJobSubmit() {
@@ -64,8 +65,6 @@ export function GpuJobSubmit() {
                     <div>
                         <Title order={3}>{t('gpu.jobs.submit.title')}</Title>
                         <Text size="sm" c="dimmed" mt={4}>{t('gpu.jobs.submit.intro')}</Text>
-                        <Text size="sm" c="dimmed" mt={4}>{t('gpu.jobs.submit.cli')}</Text>
-                        <Code block mt={4}>{`pip install dhbw-cloud\ndhbw-cloud job submit --project ${project?.slug || '<slug>'} -- python train.py`}</Code>
                     </div>
                     {projects.length === 0 ? (
                         <Alert color="gray" variant="light">{t('gpu.jobs.noProject')}</Alert>
@@ -120,6 +119,14 @@ export function GpuJobSubmit() {
                             <Group>
                                 <Button leftSection={<Play size={16} />} loading={submit.isPending} onClick={onSubmit}>{t('gpu.jobs.submitJob')}</Button>
                             </Group>
+
+                            {/* The same job from the command line, following the form as it is filled in. */}
+                            <Paper withBorder radius="md" p="md">
+                                <Text size="sm" fw={700} mb="xs">{t('gpu.jobs.submit.cliTitle')}</Text>
+                                <CodeBlock language="bash" code={jobCommandLine(project.slug, classes.length > 1 ? chosenClass?.id : '', { ...values, maxHours: hours }, maxHours,
+                                    t(values.mode === 'notebook' ? 'gpu.jobs.submit.cliNotebook' : 'gpu.jobs.submit.cliCommand'))} />
+                                <Text size="xs" c="dimmed" mt="xs">{t('gpu.jobs.submit.cliHint')}</Text>
+                            </Paper>
                         </>
                     )}
                 </Stack>

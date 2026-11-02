@@ -9,6 +9,7 @@ import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { isActive, projectHasJobs } from '/gpu/jobs.js';
+import { ProjectId } from '/gpu/project-id.jsx';
 import { formatDateTime } from '/format-date.js';
 import { formatDuration } from '/helper/duration.js';
 
@@ -89,6 +90,7 @@ export function GpuJobs() {
                         data={(projects.data ?? []).map(p => ({ value: p.slug, label: p.name || p.slug }))}
                         onChange={(v) => navigate(v ? `/jobs?project=${encodeURIComponent(v)}` : '/jobs', { replace: true })} />
                     {project && <Text size="xs" c="dimmed" mb={6}>{t(manages ? 'gpu.jobs.allOfProject' : 'gpu.jobs.ownInProject')}</Text>}
+                    {project && <ProjectId slug={project} mb={4} />}
                 </Group>
                 {projects.isSuccess && withJobs.length === 0 && <Alert color="gray" variant="light" mt="md">{t('gpu.jobs.noProject')}</Alert>}
                 {jobs.isPending && <Loading />}

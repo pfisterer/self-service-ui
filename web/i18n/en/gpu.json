@@ -366,6 +366,11 @@
         "left": "{{idle}}, in {{left}} at the latest.",
         "kernel": "GPU kernels: {{text}}"
     },
+    "projectId": {
+        "label": "Project ID",
+        "copy": "Copy project ID",
+        "copied": "Copied"
+    },
     "jobs": {
         "title": "Batch jobs",
         "intro": "GPU jobs without a workspace: a command or a notebook runs in the project's environment, waits in the queue for a GPU and ends by itself. Listed are the own jobs; filtered by project, the project's managers see all of its jobs.",
@@ -419,7 +424,10 @@
         "submit": {
             "title": "Submit job",
             "intro": "The job runs in the project's environment with the own home and ~/project-shared. Its output is also in ~/jobs/<name>/output-<attempt>.log. A preemptible job is ended when a workspace needs the GPU and starts again from the beginning afterwards.",
-            "cli": "The same on the command line:",
+            "cliTitle": "On the command line",
+            "cliHint": "pip install dhbw-cloud, then dhbw-cloud login with an API token.",
+            "cliCommand": "<command>",
+            "cliNotebook": "<notebook>",
             "imagePending": "The project's environment is being built; the job waits until it is ready.",
             "name": "Name",
             "nameHint": "Optional; also names the folder ~/jobs/<name>. Empty: the job's id.",

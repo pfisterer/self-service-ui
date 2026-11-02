@@ -366,6 +366,11 @@
         "left": "{{idle}}, spätestens in {{left}}.",
         "kernel": "GPU-Kernel: {{text}}"
     },
+    "projectId": {
+        "label": "Projekt-ID",
+        "copy": "Projekt-ID kopieren",
+        "copied": "Kopiert"
+    },
     "jobs": {
         "title": "Batch-Jobs",
         "intro": "GPU-Jobs ohne Workspace: ein Befehl oder ein Notebook läuft in der Umgebung des Projekts, wartet in der Warteschlange auf eine GPU und endet von selbst. Hier stehen die eigenen Jobs; nach Projekt gefiltert sehen Projektverantwortliche alle Jobs des Projekts.",
@@ -419,7 +424,10 @@
         "submit": {
             "title": "Job starten",
             "intro": "Der Job läuft in der Umgebung des Projekts mit dem eigenen Home und ~/project-shared. Die Ausgabe steht auch in ~/jobs/<Name>/output-<Versuch>.log. Ein verdrängbarer Job wird beendet, wenn ein Workspace die GPU braucht, und startet danach von vorn.",
-            "cli": "Dasselbe geht auf der Kommandozeile:",
+            "cliTitle": "Per Kommandozeile",
+            "cliHint": "pip install dhbw-cloud, dann dhbw-cloud login mit einem API-Token.",
+            "cliCommand": "<Befehl>",
+            "cliNotebook": "<Notebook>",
             "imagePending": "Die Umgebung des Projekts wird gerade gebaut; der Job wartet, bis sie fertig ist.",
             "name": "Name",
             "nameHint": "Optional; benennt auch den Ordner ~/jobs/<Name>. Leer: die Kennung des Jobs.",

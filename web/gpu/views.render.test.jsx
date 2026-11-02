@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { renderView } from '/test/render-harness.jsx';
 
 // Does each GPU view render at all, with data in it? Same question as llm/views.render.test.jsx.
@@ -120,6 +120,10 @@ describe('the GPU views render', () => {
         // The project image from Git: its build and the image in use until the build is ready.
         expect(screen.getByText('reg/envs/github-com-o-ml-kurs:0123456789ab-v1.1.0')).toBeTruthy();
         expect(screen.getByText('89abcdef0123 (main)')).toBeTruthy();
+        // The project id, which the command line takes as --project.
+        expect(screen.getByText(/^(Projekt-ID|Project ID):$/)).toBeTruthy();
+        expect(screen.getByText('wwi23seb-ml')).toBeTruthy();
+        expect(screen.getByRole('button', { name: /(Projekt-ID kopieren|Copy project ID)/ })).toBeTruthy();
         expectNoRenderFailure();
     });
 
@@ -171,6 +175,23 @@ describe('the GPU views render', () => {
         expect(screen.getByText(/(Exit-Code|Exit code) 1 · Error/)).toBeTruthy();
         // Another person's job (a manager's view) names the person.
         expect(screen.getByText('b@dhbw.de')).toBeTruthy();
+        // Without a chosen project there is no project id to show.
+        expect(screen.queryByText(/^(Projekt-ID|Project ID):$/)).toBeNull();
+        expectNoRenderFailure();
+    });
+
+    it('Batch jobs filtered by a project show its id to copy', async () => {
+        globalThis.__gpuApi.listProjects = async () => JOB_PROJECTS;
+        window.history.replaceState(null, '', '/jobs?project=wwi23seb-ml');
+        try {
+            renderView(<GpuJobs />);
+            expect(await screen.findByText('training-1')).toBeTruthy();
+            expect(screen.getByText(/^(Projekt-ID|Project ID):$/)).toBeTruthy();
+            expect(screen.getByText('wwi23seb-ml')).toBeTruthy();
+            expect(screen.getByRole('button', { name: /(Projekt-ID kopieren|Copy project ID)/ })).toBeTruthy();
+        } finally {
+            window.history.replaceState(null, '', '/');
+        }
         expectNoRenderFailure();
     });
 
@@ -196,7 +217,13 @@ describe('the GPU views render', () => {
         expect(screen.queryByText('Statistik')).toBeNull();
         expect(screen.getByText(/(höchstens|at most) 8 h/)).toBeTruthy();
         expect(screen.getByDisplayValue('4')).toBeTruthy();
-        expect(screen.getByText(/dhbw-cloud job submit --project wwi23seb-ml/)).toBeTruthy();
+        // The same job on the command line, following the form: two GPU classes, so the chosen one is named; the run time is below the project's maximum.
+        expect(screen.getByText(/^(Per Kommandozeile|On the command line)$/)).toBeTruthy();
+        const code = () => document.querySelector('code.hljs').textContent;
+        expect(code()).toMatch(/^dhbw-cloud job submit --project wwi23seb-ml --gpu-class l4-3q --max-hours 4 -- <(Befehl|command)>$/);
+        fireEvent.change(screen.getByPlaceholderText('python train.py --epochs 10'), { target: { value: 'python train.py --epochs 10' } });
+        expect(code()).toBe("dhbw-cloud job submit --project wwi23seb-ml --gpu-class l4-3q --max-hours 4 -- 'python train.py --epochs 10'");
+        expect(screen.getByText(/pip install dhbw-cloud/)).toBeTruthy();
         expectNoRenderFailure();
     });
 

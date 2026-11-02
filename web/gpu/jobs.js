@@ -49,3 +49,21 @@ export function jobBody(project, gpuClass, values) {
     if (values.workingDir?.trim()) body.working_dir = values.workingDir.trim();
     return body;
 }
+
+// shellQuote quotes a word for a POSIX shell: as it is when it holds only harmless characters, else in single quotes (a single quote inside as '\'').
+export function shellQuote(s) {
+    if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(s)) return s;
+    return `'${s.replace(/'/g, `'\\''`)}'`;
+}
+
+// jobCommandLine is the dhbw-cloud command (the PyPI package dhbw-cloud) that submits the same job as the form: options left out where they are empty or the project's default (the run time when it is the project's maximum, the GPU class when the project has one); the command is one argument, which the CLI runs in a shell as it is. placeholder stands in for a command or notebook not yet given.
+export function jobCommandLine(project, gpuClass, values, maxHours, placeholder) {
+    const parts = ['dhbw-cloud', 'job', 'submit', '--project', shellQuote(project)];
+    if (gpuClass) parts.push('--gpu-class', shellQuote(gpuClass));
+    if (values.name?.trim()) parts.push('--name', shellQuote(values.name.trim()));
+    if (values.maxHours !== '' && Number(values.maxHours) > 0 && Number(values.maxHours) !== maxHours) parts.push('--max-hours', String(Number(values.maxHours)));
+    if (values.workingDir?.trim()) parts.push('--workdir', shellQuote(values.workingDir.trim()));
+    if (values.mode === 'notebook') parts.push('--notebook', values.notebook?.trim() ? shellQuote(values.notebook.trim()) : placeholder);
+    else parts.push('--', values.command?.trim() ? shellQuote(values.command.trim()) : placeholder);
+    return parts.join(' ');
+}

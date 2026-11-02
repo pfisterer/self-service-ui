@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_JOB_MAX_HOURS, isActive, jobBody, jobErrors, jobMaxHours, jobProjects, MAX_JOB_HOURS } from '/gpu/jobs.js';
+import { DEFAULT_JOB_MAX_HOURS, isActive, jobBody, jobCommandLine, jobErrors, jobMaxHours, jobProjects, MAX_JOB_HOURS, shellQuote } from '/gpu/jobs.js';
 
 const t = (key, vars) => (vars ? `${key} ${JSON.stringify(vars)}` : key);
 
@@ -40,5 +40,21 @@ describe('batch jobs', () => {
             .toEqual({ project: 'ml', command: 'python x.py', max_hours: 2 });
         expect(jobBody('ml', 'l4', { mode: 'notebook', command: 'x', notebook: 'kurs/a.ipynb', name: 'run-1', workingDir: 'kurs', maxHours: 1.5 }))
             .toEqual({ project: 'ml', gpu_class: 'l4', name: 'run-1', notebook: 'kurs/a.ipynb', working_dir: 'kurs', max_hours: 1.5 });
+    });
+
+    it('quotes words for the shell only where needed', () => {
+        expect(shellQuote('train.py')).toBe('train.py');
+        expect(shellQuote('python train.py')).toBe("'python train.py'");
+        expect(shellQuote("echo 'a' | tee x")).toBe(`'echo '\\''a'\\'' | tee x'`);
+    });
+
+    it('writes the command line for the form, without defaults', () => {
+        const v = { mode: 'command', command: 'python train.py --epochs 10', notebook: '', name: '', workingDir: '', maxHours: 8 };
+        expect(jobCommandLine('t-1', '', v, 8, '<cmd>')).toBe("dhbw-cloud job submit --project t-1 -- 'python train.py --epochs 10'");
+        expect(jobCommandLine('t-1', 'l4', { ...v, name: 'run-1', maxHours: 2, workingDir: 'kurs a' }, 8, '<cmd>'))
+            .toBe("dhbw-cloud job submit --project t-1 --gpu-class l4 --name run-1 --max-hours 2 --workdir 'kurs a' -- 'python train.py --epochs 10'");
+        expect(jobCommandLine('t-1', '', { ...v, command: 'nvidia-smi' }, 8, '<cmd>')).toBe('dhbw-cloud job submit --project t-1 -- nvidia-smi');
+        expect(jobCommandLine('t-1', '', { ...v, command: ' ' }, 8, '<cmd>')).toBe('dhbw-cloud job submit --project t-1 -- <cmd>');
+        expect(jobCommandLine('t-1', '', { ...v, mode: 'notebook', notebook: 'kurs/a.ipynb' }, 8, '<nb>')).toBe('dhbw-cloud job submit --project t-1 --notebook kurs/a.ipynb');
     });
 });
