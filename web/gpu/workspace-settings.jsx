@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ActionIcon, Badge, Button, Checkbox, Code, Group, Loader, Modal, MultiSelect, NumberInput, Paper, Progress, SegmentedControl, Select, SimpleGrid, Stack, Switch, Text, TextInput } from '@mantine/core';
+import { ActionIcon, Badge, Button, Checkbox, Code, Group, Loader, Modal, MultiSelect, NumberInput, Paper, Progress, SegmentedControl, Select, SimpleGrid, Stack, Switch, Tabs, Text, TextInput } from '@mantine/core';
 import { FileText, Plus, RotateCcw, X } from 'lucide-react';
 import { BUILD_COLOUR, BuildLogModal } from '/gpu/build-log.jsx';
 import { GitSource } from '/gpu/git-source.jsx';
@@ -328,7 +328,7 @@ function ReleaseTimes({ draft, isAdmin }) {
     );
 }
 
-// WorkspaceSettingsPanel is the dialog's "Workspaces" tab.
+// WorkspaceSettingsPanel is the dialog's "Workspaces" tab: the project ID and who may change what on top, the rest in sub-tabs (environment, limits, batch jobs, release times) instead of one long page, like the budget dialog's Workspaces tab.
 export function WorkspaceSettingsPanel({ draft }) {
     const { t } = useTranslation();
     const api = useGpuApi();
@@ -353,65 +353,81 @@ export function WorkspaceSettingsPanel({ draft }) {
         <Stack gap="md">
             <ProjectId slug={draft.project?.slug} />
             {locked && <Text size="xs" c="dimmed">{t('gpu.projects.adminOnlyHint')}</Text>}
-            <Box title={t('gpu.projects.environments')}>
-                <MultiSelect label={t('gpu.projects.profiles')} description={p.tree_profiles ? t('gpu.projects.profilesFromTree') : t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)} readOnly={locked || !!p.tree_profiles}
-                    data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.name }))} />
-                <ProjectImage draft={draft} set={set} bases={catalog.data?.bases ?? []} />
-            </Box>
+            <Tabs defaultValue="environment" variant="pills" radius="md">
+                <Tabs.List mb="md">
+                    <Tabs.Tab value="environment">{t('gpu.projects.sub.environment')}</Tabs.Tab>
+                    <Tabs.Tab value="limits">{t('gpu.projects.sub.limits')}</Tabs.Tab>
+                    <Tabs.Tab value="jobs">{t('gpu.projects.sub.jobs')}</Tabs.Tab>
+                    <Tabs.Tab value="release">{t('gpu.projects.sub.release')}</Tabs.Tab>
+                </Tabs.List>
+                <Tabs.Panel value="environment">
+                    <Stack gap="md">
+                    <Box title={t('gpu.projects.environments')}>
+                        <MultiSelect label={t('gpu.projects.profiles')} description={p.tree_profiles ? t('gpu.projects.profilesFromTree') : t('gpu.projects.profilesHint')} value={p.profiles ?? []} onChange={v => set('profiles', v)} readOnly={locked || !!p.tree_profiles}
+                            data={(catalog.data?.profiles ?? []).map(x => ({ value: x.slug, label: x.name }))} />
+                        <ProjectImage draft={draft} set={set} bases={catalog.data?.bases ?? []} />
+                    </Box>
 
-            <Box title={t('gpu.projects.material.title')} hint={t('gpu.projects.material.hint')}>
-                <GitSource value={{ url: p.material_git_url, ref: p.material_git_ref }} refLabel={t('gpu.projects.material.ref')}
-                    onChange={({ url, ref }) => draft.update(cur => ({ ...cur, material_git_url: url, material_git_ref: ref }))} />
-            </Box>
+                    <Box title={t('gpu.projects.material.title')} hint={t('gpu.projects.material.hint')}>
+                        <GitSource value={{ url: p.material_git_url, ref: p.material_git_ref }} refLabel={t('gpu.projects.material.ref')}
+                            onChange={({ url, ref }) => draft.update(cur => ({ ...cur, material_git_url: url, material_git_ref: ref }))} />
+                    </Box>
 
-            {draft.project?.slug && (
-                <Box title={t('gpu.projects.credentials.title')} hint={t('gpu.projects.credentials.hint')}>
-                    <ProjectCredentials slug={draft.project.slug} />
-                </Box>
-            )}
-
-            <Box title={t('gpu.projects.limits')} hint={t('gpu.projects.limitsHint')}>
-                <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
-                    <NumberInput label={t('gpu.projects.limit.serversShort')} description={t('gpu.projects.limit.noLimit')} min={0} value={p.limits.servers_per_person} onChange={v => setLimit('servers_per_person', v)} readOnly={locked} />
-                    <NumberInput label={t('gpu.projects.limit.cpuShort')} description={t('gpu.projects.limit.noLimit')} min={0} decimalScale={1} value={p.limits.cpu_per_person} onChange={v => setLimit('cpu_per_person', v)} readOnly={locked} />
-                    <NumberInput label={t('gpu.projects.limit.ramShort')} description={t('gpu.projects.limit.noLimit')} min={0} value={p.limits.ram_gb_per_person} onChange={v => setLimit('ram_gb_per_person', v)} readOnly={locked} />
-                    <NumberInput label={t('gpu.projects.limit.gpusShort')} min={0} max={gpuCap >= 0 ? gpuCap : undefined} clampBehavior="strict"
-                        value={gpuCap === 0 ? 0 : p.limits.gpus_per_person} onChange={v => setLimit('gpus_per_person', v)} readOnly={locked}
-                        disabled={gpuCap === 0} description={t(gpuCap === 0 ? 'gpu.projects.limit.noGpus' : 'gpu.projects.limit.noGpu')} />
-                </SimpleGrid>
-            </Box>
-
-            <BatchJobsBox p={p} setLimit={setLimit} locked={locked} classes={catalog.data?.gpuClasses ?? []} />
-
-            <ReleaseTimes draft={draft} isAdmin={isAdmin} />
-
-            <Box title={t('gpu.projects.budgets')} hint={t('gpu.projects.budgetsHint')}>
-                {status.length > 0 && <Stack gap={6}>{status.map((b, i) => <BudgetBar key={i} b={b} classes={catalog.data?.gpuClasses ?? []} />)}</Stack>}
-                {/* The project's own quotas arrive here as budgets too (tree); they are edited in the quotas tab, so only the limits set here are listed — the others are kept and sent back as they are. */}
-                {/* Without their use (status) the budgets are at least named. */}
-                {locked && status.length === 0 && budgets.filter(b => !b.tree).map((b, i) => <Text key={i} size="xs">{budgetText(t, b, catalog.data?.gpuClasses ?? [])}</Text>)}
-                {!locked && budgets.map((b, i) => (b.tree ? null : (
-                    <Group key={i} gap="xs" wrap="nowrap" align="flex-end">
-                        <NumberInput w={110} min={0} label={i === firstOwn ? t('gpu.projects.budget.amount') : undefined} value={b.amount}
-                            onChange={v => setBudget(i, { amount: Number(v) || 0 })} />
-                        <Select w={170} allowDeselect={false} label={i === firstOwn ? t('gpu.projects.budget.unit') : undefined} value={b.unit}
-                            data={UNITS.map(u => ({ value: u, label: t(`gpu.projects.budget.units.${u}`) }))} onChange={v => setBudget(i, { unit: v })} />
-                        {b.unit === 'gpu_hours' && (
-                            <Select w={170} clearable label={i === firstOwn ? t('gpu.projects.budget.class') : undefined} value={b.gpu_class || null}
-                                placeholder={t('gpu.projects.budget.allClasses')} data={(catalog.data?.gpuClasses ?? []).map(c => ({ value: c.id, label: c.name }))} onChange={v => setBudget(i, { gpu_class: v || '' })} />
+                    {draft.project?.slug && (
+                        <Box title={t('gpu.projects.credentials.title')} hint={t('gpu.projects.credentials.hint')}>
+                            <ProjectCredentials slug={draft.project.slug} />
+                        </Box>
+                    )}
+                    </Stack>
+                </Tabs.Panel>
+                <Tabs.Panel value="limits">
+                    <Stack gap="md">
+                    <Box title={t('gpu.projects.limits')} hint={t('gpu.projects.limitsHint')}>
+                        <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
+                            <NumberInput label={t('gpu.projects.limit.serversShort')} description={t('gpu.projects.limit.noLimit')} min={0} value={p.limits.servers_per_person} onChange={v => setLimit('servers_per_person', v)} readOnly={locked} />
+                            <NumberInput label={t('gpu.projects.limit.cpuShort')} description={t('gpu.projects.limit.noLimit')} min={0} decimalScale={1} value={p.limits.cpu_per_person} onChange={v => setLimit('cpu_per_person', v)} readOnly={locked} />
+                            <NumberInput label={t('gpu.projects.limit.ramShort')} description={t('gpu.projects.limit.noLimit')} min={0} value={p.limits.ram_gb_per_person} onChange={v => setLimit('ram_gb_per_person', v)} readOnly={locked} />
+                            <NumberInput label={t('gpu.projects.limit.gpusShort')} min={0} max={gpuCap >= 0 ? gpuCap : undefined} clampBehavior="strict"
+                                value={gpuCap === 0 ? 0 : p.limits.gpus_per_person} onChange={v => setLimit('gpus_per_person', v)} readOnly={locked}
+                                disabled={gpuCap === 0} description={t(gpuCap === 0 ? 'gpu.projects.limit.noGpus' : 'gpu.projects.limit.noGpu')} />
+                        </SimpleGrid>
+                    </Box>
+                    <Box title={t('gpu.projects.budgets')} hint={t('gpu.projects.budgetsHint')}>
+                        {status.length > 0 && <Stack gap={6}>{status.map((b, i) => <BudgetBar key={i} b={b} classes={catalog.data?.gpuClasses ?? []} />)}</Stack>}
+                        {/* The project's own quotas arrive here as budgets too (tree); they are edited in the quotas tab, so only the limits set here are listed — the others are kept and sent back as they are. */}
+                        {/* Without their use (status) the budgets are at least named. */}
+                        {locked && status.length === 0 && budgets.filter(b => !b.tree).map((b, i) => <Text key={i} size="xs">{budgetText(t, b, catalog.data?.gpuClasses ?? [])}</Text>)}
+                        {!locked && budgets.map((b, i) => (b.tree ? null : (
+                            <Group key={i} gap="xs" wrap="nowrap" align="flex-end">
+                                <NumberInput w={110} min={0} label={i === firstOwn ? t('gpu.projects.budget.amount') : undefined} value={b.amount}
+                                    onChange={v => setBudget(i, { amount: Number(v) || 0 })} />
+                                <Select w={170} allowDeselect={false} label={i === firstOwn ? t('gpu.projects.budget.unit') : undefined} value={b.unit}
+                                    data={UNITS.map(u => ({ value: u, label: t(`gpu.projects.budget.units.${u}`) }))} onChange={v => setBudget(i, { unit: v })} />
+                                {b.unit === 'gpu_hours' && (
+                                    <Select w={170} clearable label={i === firstOwn ? t('gpu.projects.budget.class') : undefined} value={b.gpu_class || null}
+                                        placeholder={t('gpu.projects.budget.allClasses')} data={(catalog.data?.gpuClasses ?? []).map(c => ({ value: c.id, label: c.name }))} onChange={v => setBudget(i, { gpu_class: v || '' })} />
+                                )}
+                                <Select w={130} allowDeselect={false} label={i === firstOwn ? t('gpu.projects.budget.window') : undefined} value={b.window}
+                                    data={WINDOWS.map(w => ({ value: w, label: t(`gpu.projects.budget.windows.${w}`) }))} onChange={v => setBudget(i, { window: v })} />
+                                <Checkbox label={t('gpu.projects.budget.perPerson')} checked={!!b.per_person} mb={8}
+                                    onChange={e => setBudget(i, { per_person: e.currentTarget.checked })} />
+                                <ActionIcon variant="subtle" color="red" mb={4} aria-label={t('gpu.projects.remove')} onClick={() => set('budgets', budgets.filter((_, j) => j !== i))}><X size={16} /></ActionIcon>
+                            </Group>
+                        )))}
+                        {!locked && (
+                            <Button size="xs" variant="subtle" leftSection={<Plus size={14} />} w="fit-content"
+                                onClick={() => set('budgets', [...budgets, { unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true }])}>{t('gpu.projects.addBudget')}</Button>
                         )}
-                        <Select w={130} allowDeselect={false} label={i === firstOwn ? t('gpu.projects.budget.window') : undefined} value={b.window}
-                            data={WINDOWS.map(w => ({ value: w, label: t(`gpu.projects.budget.windows.${w}`) }))} onChange={v => setBudget(i, { window: v })} />
-                        <Checkbox label={t('gpu.projects.budget.perPerson')} checked={!!b.per_person} mb={8}
-                            onChange={e => setBudget(i, { per_person: e.currentTarget.checked })} />
-                        <ActionIcon variant="subtle" color="red" mb={4} aria-label={t('gpu.projects.remove')} onClick={() => set('budgets', budgets.filter((_, j) => j !== i))}><X size={16} /></ActionIcon>
-                    </Group>
-                )))}
-                {!locked && (
-                    <Button size="xs" variant="subtle" leftSection={<Plus size={14} />} w="fit-content"
-                        onClick={() => set('budgets', [...budgets, { unit: 'vcpu_hours', window: '30d', amount: 40, per_person: true }])}>{t('gpu.projects.addBudget')}</Button>
-                )}
-            </Box>
+                    </Box>
+                    </Stack>
+                </Tabs.Panel>
+                <Tabs.Panel value="jobs">
+                    <BatchJobsBox p={p} setLimit={setLimit} locked={locked} classes={catalog.data?.gpuClasses ?? []} />
+                </Tabs.Panel>
+                <Tabs.Panel value="release">
+                    <ReleaseTimes draft={draft} isAdmin={isAdmin} />
+                </Tabs.Panel>
+            </Tabs>
         </Stack>
     );
 }

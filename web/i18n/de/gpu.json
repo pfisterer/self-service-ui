@@ -191,6 +191,12 @@
             "gpusOfClass_one": "{{count}} × {{cls}}",
             "gpusOfClass_other": "{{count}} × {{cls}}",
             "gpuHours": "GPU-Stunden: {{budgets}}; jeder Job merkt beim Abschicken GPU × Höchstlaufzeit ({{hours}} h) davon vor."
+        },
+        "sub": {
+            "environment": "Umgebung",
+            "limits": "Grenzen",
+            "jobs": "Batch-Jobs",
+            "release": "Rückgabezeiten"
         }
     },
     "storage": {

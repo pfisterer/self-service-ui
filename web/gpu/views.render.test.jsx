@@ -146,7 +146,7 @@ describe('the GPU views render', () => {
     it('the workspace settings tab lets a manager choose the release times within the budget', async () => {
         globalThis.__llmIsAdmin = false;
         renderView(<SettingsTab nodeId="p_ml" />);
-        expect(await screen.findByText(/^(Rückgabezeiten|Release times)$/)).toBeTruthy();
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Rückgabezeiten|Release times)$/ }));
         // The budget's value as placeholder, the ceiling below, no upper bound offered where the budget allows it (own GPUs).
         expect(screen.getByPlaceholderText(/(wie Budget|as budget): 60/)).toBeTruthy();
         expect(screen.getAllByText(/(höchstens|at most) 120/).length).toBeGreaterThan(0);
@@ -157,6 +157,7 @@ describe('the GPU views render', () => {
 
     it('the workspace settings tab shows admins the budget maximums', async () => {
         renderView(<SettingsTab nodeId="p_ml" />);
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Rückgabezeiten|Release times)$/ }));
         expect(await screen.findByText(/(Höchstwerte des Budgets|Budget maximums)/)).toBeTruthy();
         expect(screen.getByText(/(Zurzeit gilt|Currently in effect)/)).toBeTruthy();
         expectNoRenderFailure();

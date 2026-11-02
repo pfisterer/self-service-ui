@@ -191,6 +191,12 @@
             "gpusOfClass_one": "{{count}} × {{cls}}",
             "gpusOfClass_other": "{{count}} × {{cls}}",
             "gpuHours": "GPU hours: {{budgets}}; each job reserves GPU × maximum run time ({{hours}} h) of them when submitted."
+        },
+        "sub": {
+            "environment": "Environment",
+            "limits": "Limits",
+            "jobs": "Batch jobs",
+            "release": "Release times"
         }
     },
     "storage": {

@@ -754,7 +754,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                     ...(workspaces.available ? [{
                         value: TAB_WORKSPACES, label: t('projects.resourceSections.workspaces'),
                         content: (
-                            <ResourceSection title={t('projects.resourceSections.workspaces')} hint={t('projects.resourceSections.workspacesHint')}>
+                            <ResourceSection hint={t('projects.resourceSections.workspacesHint')}>
                                 <WorkspaceSettingsPanel draft={workspaces} />
                             </ResourceSection>
                         ),
@@ -787,12 +787,12 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     );
 }
 
-// ResourceSection heads a tab's content: what it is about and how a change of it takes effect. No box — the tab already is one.
+// ResourceSection heads a tab's content: what it is about and how a change of it takes effect. No box — the tab already is one. Without a title only the hint, where the tab's name says it already.
 function ResourceSection({ title, hint, children }) {
     return (
         <Stack gap="sm">
             <div>
-                <Text fw={600}>{title}</Text>
+                {title && <Text fw={600}>{title}</Text>}
                 <Text size="sm" c="dimmed">{hint}</Text>
             </div>
             {children}
