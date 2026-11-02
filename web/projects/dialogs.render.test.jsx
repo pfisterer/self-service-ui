@@ -233,6 +233,65 @@ describe('node dialogs', () => {
         expect(fatal()).toEqual([]);
     });
 
+    it('the budget dialog offers batch jobs within what the budget above has, and sends the budget\'s own', async () => {
+        const tree = fixtureTree();
+        const ws = [...RESOURCES, { id: 'ws-vcpu-hours', name: 'vCPU-Stunden', provider: 'aiaas', area: 'workspaces', kind: 'window', window: '30d' }];
+        const ma = { ...tree.children.b_root.items[0], parent_name: 'Organization Root', parent_path: [], inherited_batch_jobs: { jobs_per_person: 3, max_hours: 8 } };
+        const sent = [];
+        globalThis.__testApi.updateNode = async (id, body) => { sent.push(body); return { ...ma, ...body }; };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={ws} mode="edit" node={ma} parent={{ ...tree.roots[0], limit: { ...tree.roots[0].limit, 'ws-vcpu-hours': -1 } }} />);
+        fireEvent.click(await screen.findByRole('tab', { name: /Workspaces|Lab/ }));
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Batch jobs|Batch-Jobs)$/ }));
+        expect(screen.getByText(i18n.t('projects.batchJobs.aboveHint', { value: i18n.t('projects.batchJobs.onValue', { count: 3, hours: 8 }) }))).toBeTruthy();
+        const toggle = screen.getByRole('switch', { name: i18n.t('projects.batchJobs.label') });
+        expect(toggle.checked).toBe(false);
+
+        // Switched on: the defaults within what is allowed above (2 per person, 4 hours).
+        fireEvent.click(toggle);
+        expect(await screen.findByDisplayValue('2')).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.forms.saveChanges') }));
+        await waitFor(() => expect(sent).toHaveLength(1));
+        expect(sent[0].batch_jobs).toEqual({ jobs_per_person: 2, max_hours: 4 });
+        expect(fatal()).toEqual([]);
+    });
+
+    it('the budget dialog switches the budget\'s batch jobs off', async () => {
+        const tree = fixtureTree();
+        const ws = [...RESOURCES, { id: 'ws-vcpu-hours', name: 'vCPU-Stunden', provider: 'aiaas', area: 'workspaces', kind: 'window', window: '30d' }];
+        const ma = { ...tree.children.b_root.items[0], parent_name: 'Organization Root', parent_path: [], batch_jobs: { jobs_per_person: 1, max_hours: 2 }, inherited_batch_jobs: { jobs_per_person: 3, max_hours: 8 } };
+        const sent = [];
+        globalThis.__testApi.updateNode = async (id, body) => { sent.push(body); return { ...ma, ...body }; };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={ws} mode="edit" node={ma} parent={{ ...tree.roots[0], limit: { ...tree.roots[0].limit, 'ws-vcpu-hours': -1 } }} />);
+        fireEvent.click(await screen.findByRole('tab', { name: /Workspaces|Lab/ }));
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Batch jobs|Batch-Jobs)$/ }));
+        const toggle = screen.getByRole('switch', { name: i18n.t('projects.batchJobs.label') });
+        expect(toggle.checked).toBe(true);
+        fireEvent.click(toggle);
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.forms.saveChanges') }));
+        await waitFor(() => expect(sent).toHaveLength(1));
+        expect(sent[0].clear_batch_jobs).toBe(true);
+        expect(fatal()).toEqual([]);
+    });
+
+    it('the budget dialog does not offer batch jobs where the budget above has none, but the root sets them', async () => {
+        const tree = fixtureTree();
+        const ws = [...RESOURCES, { id: 'ws-vcpu-hours', name: 'vCPU-Stunden', provider: 'aiaas', area: 'workspaces', kind: 'window', window: '30d' }];
+        const ma = { ...tree.children.b_root.items[0], parent_name: 'Organization Root', parent_path: [] };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={ws} mode="edit" node={ma} parent={{ ...tree.roots[0], limit: { ...tree.roots[0].limit, 'ws-vcpu-hours': -1 } }} />);
+        fireEvent.click(await screen.findByRole('tab', { name: /Workspaces|Lab/ }));
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Batch jobs|Batch-Jobs)$/ }));
+        expect(screen.queryByRole('switch', { name: i18n.t('projects.batchJobs.label') })).toBeNull();
+        cleanup();
+
+        const root = { ...tree.roots[0], parent_id: null };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={ws} mode="edit" node={root} />);
+        fireEvent.click(await screen.findByRole('tab', { name: /Workspaces|Lab/ }));
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Batch jobs|Batch-Jobs)$/ }));
+        expect(screen.getByRole('switch', { name: i18n.t('projects.batchJobs.label') })).toBeTruthy();
+        expect(screen.getByText(i18n.t('projects.batchJobs.rootHint'))).toBeTruthy();
+        expect(fatal()).toEqual([]);
+    });
+
     it('the root budget dialog shows preemptible as the default for batch jobs', async () => {
         const tree = fixtureTree();
         const ws = [...RESOURCES, { id: 'ws-vcpu-hours', name: 'vCPU-Stunden', provider: 'aiaas', area: 'workspaces', kind: 'window', window: '30d' }];

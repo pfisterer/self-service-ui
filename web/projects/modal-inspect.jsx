@@ -15,6 +15,7 @@ import { ExternalGroups } from './component-external-groups.jsx';
 import { releaseSummary } from './util-release-max.js';
 import { scratchSummary } from './util-workspace-scratch.js';
 import { batchPrioritySummary } from './util-batch-priority.js';
+import { batchJobsSummary } from './util-batch-jobs.js';
 import { LlmLimitHints } from './component-llm-limits.jsx';
 
 dayjs.extend(relativeTime);
@@ -303,6 +304,12 @@ function NodeHistoryPanel({ node, resources }) {
                         {(h.batch_priority_from || h.batch_priority_to) && (
                             <Text size="sm" mt="xs">
                                 {t('projects.batchPriority.historyChange', { from: batchPrioritySummary(t, h.batch_priority_from), to: batchPrioritySummary(t, h.batch_priority_to) })}
+                            </Text>
+                        )}
+
+                        {(h.batch_jobs_from || h.batch_jobs_to) && (
+                            <Text size="sm" mt="xs">
+                                {t('projects.batchJobs.historyChange', { from: batchJobsSummary(t, h.batch_jobs_from), to: batchJobsSummary(t, h.batch_jobs_to) })}
                             </Text>
                         )}
 

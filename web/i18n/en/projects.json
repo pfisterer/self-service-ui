@@ -945,6 +945,8 @@
         "maxHours": "Upper bound (h)",
         "unlimited": "no upper bound",
         "standard": "default",
+        "standardMinutes": "Default: {{value}}",
+        "standardHours": "Default: {{value}} h",
         "fromAbove": "as above: {{value}}",
         "errMinutes": "Between 1 and {{max}} minutes.",
         "errHours": "Between 1 and {{max}} hours.",
@@ -968,7 +970,7 @@
         "historyChange": "Local storage per workspace: {{from}} → {{to}}"
     },
     "batchPriority": {
-        "title": "Batch jobs",
+        "title": "Priority of batch jobs",
         "hint": "How batch jobs of the projects below this budget run. Preemptible: when a workspace needs the GPU, the job is ended and starts again later. Guaranteed: the job is not evicted and runs with the same priority as workspaces. Empty takes the value of the budgets above; without one there, jobs are preemptible. Budgets below can only tighten it to preemptible.",
         "label": "Priority",
         "preemptible": "preemptible",
@@ -977,6 +979,23 @@
         "fromAbove": "as above: {{value}}",
         "errAbove": "The budget above makes jobs preemptible; guaranteed is not possible here.",
         "none": "none of its own",
+        "historyChange": "Priority of batch jobs: {{from}} → {{to}}"
+    },
+    "batchJobs": {
+        "title": "Batch jobs",
+        "hint": "Whether the projects below this budget can submit batch jobs (GPU jobs without a workspace), how many per person may wait and run at the same time and how long one may run at most. Switched on, this holds in every project below without enabling them there; switched off, the budget and everything below have no batch jobs. Budgets below can switch them on only with the same or smaller values.",
+        "label": "Allow batch jobs",
+        "aboveHint": "At most as the budget above: {{value}}",
+        "rootHint": "The values here are the most any budget below can allow.",
+        "inherits": "Inherits the batch jobs of the budget above together with its limit: {{value}}",
+        "off": "none",
+        "onValue_one": "{{count}} job per person, up to {{hours}} h",
+        "onValue_other": "{{count}} jobs per person, up to {{hours}} h",
+        "errPerPerson": "At least 1 job per person.",
+        "errHours": "Between 1 and {{max}} hours.",
+        "errNoneAbove": "The budget above has no batch jobs.",
+        "errPerPersonAbove": "At most {{value}} jobs per person; the budget above allows no more.",
+        "errHoursAbove": "At most {{value}} hours; the budget above allows no more.",
         "historyChange": "Batch jobs: {{from}} → {{to}}"
     }
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Info } from 'lucide-react';
 import { Alert, Box, Checkbox, Fieldset, Indicator, Stack, Switch, Tabs, Text, TextInput } from '@mantine/core';
 import { Trans, useTranslation } from 'react-i18next';
@@ -22,6 +23,11 @@ import { WorkspaceScratchInput } from './component-workspace-scratch.jsx';
 import { effectiveScratch, normalizeScratch, scratchErrors } from './util-workspace-scratch.js';
 import { BatchPriorityInput } from './component-batch-priority.jsx';
 import { batchPriorityErrors, effectiveBatchPriority, normalizeBatchPriority } from './util-batch-priority.js';
+import { availableBatchJobs, BatchJobsInput } from './component-batch-jobs.jsx';
+import { batchJobsErrors, effectiveBatchJobs, normalizeBatchJobs, sameBatchJobs } from './util-batch-jobs.js';
+import { useGpuApi } from '/gpu/api-gpu.jsx';
+import { gpuKeys } from '/gpu/query-keys.js';
+import { llmEnabled } from '/features.js';
 
 // Same three-step split as the project dialog: what it is → how much → who.
 const TAB_DETAILS = 'details';
@@ -86,6 +92,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const scratchAbove = (parentId) => isEdit ? normalizeScratch(node?.inherited_workspace_scratch_gb) : effectiveScratch(boundFor(parentId));
     // And for the batch jobs: what the budgets above decide, which this one may only tighten.
     const batchAbove = (parentId) => isEdit ? normalizeBatchPriority(node?.inherited_batch_priority) : effectiveBatchPriority(boundFor(parentId));
+    // Batch jobs are there or not, like a resource: what the budget above has of them is the most this one may have; the root has nothing above.
+    const jobsAbove = (parentId) => isEdit ? normalizeBatchJobs(node?.inherited_batch_jobs) : effectiveBatchJobs(boundFor(parentId));
+    const isRoot = isEdit && !!node && !node.parent_id;
     // Which resources tab holds the release maximums: the workspaces one, or the only one when the catalogue does not split by kind; undefined where the budget offers nothing of the workspaces (then they would decide nothing).
     const releaseTabKind = (parentId) => {
         const scoped = visibleResources(resources, scopeFor(parentId));
@@ -122,6 +131,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 releaseMax: normalizeRelease(node.release_max),
                 workspaceScratchGb: normalizeScratch(node.workspace_scratch_gb),
                 batchPriority: normalizeBatchPriority(node.batch_priority),
+                batchJobs: normalizeBatchJobs(node.batch_jobs),
             }
             : {
                 parentId: parent?.id ?? eligibleBudgets[0]?.id ?? null,
@@ -158,6 +168,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 releaseMax: normalizeRelease(null),
                 workspaceScratchGb: null,
                 batchPriority: null,
+                batchJobs: null,
             },
         validate: (values) => ({
             name: (values.name || '').trim().length < 3
@@ -186,6 +197,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
             ...(releaseTabKind(values.parentId) === undefined ? {} : releaseErrors(t, values.releaseMax, releaseAbove(values.parentId))),
             ...(releaseTabKind(values.parentId) === undefined ? {} : scratchErrors(t, values.workspaceScratchGb, scratchAbove(values.parentId))),
             ...(releaseTabKind(values.parentId) === undefined ? {} : batchPriorityErrors(t, values.batchPriority, batchAbove(values.parentId))),
+            ...(releaseTabKind(values.parentId) === undefined || values.inheritsLimit ? {} : batchJobsErrors(t, values.batchJobs, jobsAbove(values.parentId), isRoot)),
         }),
     });
 
@@ -202,6 +214,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const ofKind = (kind) => (kind ? offered.filter(r => kindOfResource(r) === kind) : offered);
     const resourceById = Object.fromEntries((resources || []).map(r => [r.id, r]));
     const releaseKind = releaseTabKind(form.values.parentId);
+    // The AI service's release times where no budget sets any, for the placeholders of the release maximums: its catalogue, only where the budget holds workspaces. Without access to it (no workspace project of one's own) the placeholders say only "default".
+    const gpuApi = useGpuApi();
+    const catalog = useQuery({ queryKey: gpuKeys.catalog(), queryFn: () => gpuApi.catalog(), staleTime: 10 * 60 * 1000, retry: false, enabled: llmEnabled && releaseKind !== undefined });
 
     // The budget the new one would draw from: the picked one when requesting,
     // the parent when a manager carves out a sub-budget directly. Editing shows
@@ -241,7 +256,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const fieldsByTab = {
         [TAB_DETAILS]: (k) => ['name', 'reason', 'parentId', 'terminationDate', 'maxTermDays'].includes(k),
         ...Object.fromEntries(resourceKinds.map(kind => [resourceTabValue(kind),
-            (k) => (k.startsWith('quota.') && (!kind || kindOfResource(resourceById[k.slice(6)]) === kind)) || ((k.startsWith('releaseMax.') || k === 'workspaceScratchGb' || k === 'batchPriority') && kind === releaseKind)])),
+            (k) => (k.startsWith('quota.') && (!kind || kindOfResource(resourceById[k.slice(6)]) === kind)) || ((k.startsWith('releaseMax.') || k === 'workspaceScratchGb' || k === 'batchPriority' || k === 'batchJobs') && kind === releaseKind)])),
         [TAB_ACCESS]: (k) => k === 'adminScope' || k === 'eligibleRequesters',
         [TAB_AUTO_APPROVE]: (k) => k.startsWith('autoApproveQuota.'),
     };
@@ -284,6 +299,12 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         if (batch !== normalizeBatchPriority(node.batch_priority)) {
             if (batch === null) body.clear_batch_priority = true;
             else body.batch_priority = batch;
+        }
+        // A budget that inherits its limit passes on the batch jobs above; switching that on drops its own on the server.
+        if (!values.inheritsLimit && !sameBatchJobs(values.batchJobs, node.batch_jobs)) {
+            const jobs = normalizeBatchJobs(values.batchJobs);
+            if (jobs === null) body.clear_batch_jobs = true;
+            else body.batch_jobs = jobs;
         }
         if (values.maxTermDays !== (node.max_project_term_days ?? null)) {
             if (values.maxTermDays) body.max_project_term_days = values.maxTermDays;
@@ -341,6 +362,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 ...(isEmptyRelease(values.releaseMax) ? {} : { release_max: normalizeRelease(values.releaseMax) }),
                 ...(normalizeScratch(values.workspaceScratchGb) === null ? {} : { workspace_scratch_gb: normalizeScratch(values.workspaceScratchGb) }),
                 ...(normalizeBatchPriority(values.batchPriority) === null ? {} : { batch_priority: normalizeBatchPriority(values.batchPriority) }),
+                ...(values.inheritsLimit || normalizeBatchJobs(values.batchJobs) === null ? {} : { batch_jobs: normalizeBatchJobs(values.batchJobs) }),
                 termination_date: values.terminationDate ? values.terminationDate.toISOString() : null,
             });
         },
@@ -490,7 +512,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     {sub('quota', t('projects.budgetForm.sub.quota'), k => k.startsWith('quota.'))}
                     {sub('release', t('projects.budgetForm.sub.release'), k => k.startsWith('releaseMax.'))}
                     {sub('storage', t('projects.budgetForm.sub.storage'), k => k === 'workspaceScratchGb')}
-                    {sub('jobs', t('projects.budgetForm.sub.jobs'), k => k === 'batchPriority')}
+                    {sub('jobs', t('projects.budgetForm.sub.jobs'), k => k === 'batchPriority' || k === 'batchJobs')}
                 </Tabs.List>
                 <Tabs.Panel value="quota">{quotaPart}</Tabs.Panel>
                 {/* Not quantities, so not part of the limit: shown also while the limit is inherited. */}
@@ -498,6 +520,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     <ReleaseMaxInputs
                         value={form.values.releaseMax}
                         inherited={releaseAbove(form.values.parentId)}
+                        defaults={catalog.data?.releaseDefaults}
                         errors={form.errors}
                         onChange={(k, field, v) => {
                             const path = `releaseMax.${k}.${field}`;
@@ -518,15 +541,28 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     />
                 </Tabs.Panel>
                 <Tabs.Panel value="jobs">
-                    <BatchPriorityInput
-                        value={form.values.batchPriority}
-                        inherited={batchAbove(form.values.parentId)}
-                        error={form.errors.batchPriority}
-                        onChange={(v) => {
-                            form.setFieldValue('batchPriority', v);
-                            form.clearFieldError('batchPriority');
-                        }}
-                    />
+                    <Stack gap="lg">
+                        {(inheritsLimit || availableBatchJobs(form.values.batchJobs, jobsAbove(form.values.parentId), isRoot)) && <BatchJobsInput
+                            value={form.values.batchJobs}
+                            inherited={jobsAbove(form.values.parentId)}
+                            isRoot={isRoot}
+                            inheritsLimit={inheritsLimit}
+                            error={form.errors.batchJobs}
+                            onChange={(v) => {
+                                form.setFieldValue('batchJobs', v);
+                                form.clearFieldError('batchJobs');
+                            }}
+                        />}
+                        <BatchPriorityInput
+                            value={form.values.batchPriority}
+                            inherited={batchAbove(form.values.parentId)}
+                            error={form.errors.batchPriority}
+                            onChange={(v) => {
+                                form.setFieldValue('batchPriority', v);
+                                form.clearFieldError('batchPriority');
+                            }}
+                        />
+                    </Stack>
                 </Tabs.Panel>
             </Tabs>
         );

@@ -259,10 +259,15 @@ function withTime(release, kind, field, value) {
     return { ...(release ?? {}), [kind]: times };
 }
 
-// ReleaseRow is one kind's three times: number fields (empty = inherited, shown as placeholder) and, where no upper bound is allowed, a checkbox for it. ceiling: the most each time may be (max_hours 0 = no upper bound allowed); null = no limit shown (the budget's own maximums).
-function ReleaseRow({ kind, value, inherited, ceiling, unlimitedAllowed, onChange, readOnly }) {
+// ReleaseRow is one kind's three times: number fields (empty = inherited, shown as placeholder) and, where no upper bound is allowed, a checkbox for it. ceiling: the most each time may be (max_hours 0 = no upper bound allowed); null = no limit shown (the budget's own maximums). defaults: the AI service's times of the kind where nothing is set (catalogue releaseDefaults), shown as placeholder of an empty field without a value above; missing, the placeholder says only "default".
+export function ReleaseRow({ kind, value, inherited, ceiling, defaults, unlimitedAllowed, onChange, readOnly }) {
     const { t, i18n } = useTranslation();
     const fmt = (field, v) => (field === 'max_hours' && v === 0 ? t('gpu.release.unlimited') : String(v));
+    const standard = (field) => {
+        const d = defaults?.[field];
+        if (d === undefined || d === null) return t('gpu.release.standard');
+        return t(field === 'max_hours' ? 'gpu.release.standardHours' : 'gpu.release.standardMinutes', { value: d });
+    };
     return (
         <Stack gap={4}>
             <Text size="xs" fw={600}>{t(`gpu.release.kinds.${kind}`)}</Text>
@@ -277,7 +282,7 @@ function ReleaseRow({ kind, value, inherited, ceiling, unlimitedAllowed, onChang
                         <Stack key={field} gap={2}>
                             <NumberInput size="xs" label={t(RELEASE_LABELS[field])} min={1} max={ceil > 0 ? ceil : limit} clampBehavior="strict" allowDecimal={false}
                                 value={unlimited || own === undefined || own === null ? '' : own} disabled={unlimited} readOnly={readOnly}
-                                placeholder={from !== undefined && from !== null ? t('gpu.release.fromBudget', { value: fmt(field, from) }) : t('gpu.release.standard')}
+                                placeholder={from !== undefined && from !== null ? t('gpu.release.fromBudget', { value: fmt(field, from) }) : standard(field)}
                                 description={ceil === undefined || ceil === null ? undefined : ceil === 0 ? t('gpu.release.unlimitedAllowed') : t('gpu.release.atMost', { value: ceil.toLocaleString(i18n.language) })}
                                 onChange={v => onChange(field, v)} />
                             {field === 'max_hours' && unlimitedAllowed && (
@@ -293,7 +298,7 @@ function ReleaseRow({ kind, value, inherited, ceiling, unlimitedAllowed, onChang
 }
 
 // ReleaseTimes is the project's release times (docs/todo.md idle_release in aiaas-deployment): the project chooses within the budget's maximums, which admins set here while the budget tree sends none; below what the servers and GPU kernels enforce now.
-function ReleaseTimes({ draft, isAdmin }) {
+function ReleaseTimes({ draft, isAdmin, defaults }) {
     const { t, i18n } = useTranslation();
     const p = draft.value;
     const saved = draft.project;
@@ -306,7 +311,7 @@ function ReleaseTimes({ draft, isAdmin }) {
     return (
         <Box title={t('gpu.release.title')} hint={t('gpu.release.hint')}>
             {RELEASE_KINDS.map(kind => (
-                <ReleaseRow key={kind} kind={kind} value={p.release?.[kind]} inherited={p.release_max?.[kind]} ceiling={ceiling[kind]}
+                <ReleaseRow key={kind} kind={kind} value={p.release?.[kind]} inherited={p.release_max?.[kind]} ceiling={ceiling[kind]} defaults={defaults?.[kind]}
                     unlimitedAllowed={ceiling[kind]?.max_hours === 0} onChange={(field, v) => set('release', kind, field, v)} />
             ))}
             {effective && (
@@ -319,7 +324,7 @@ function ReleaseTimes({ draft, isAdmin }) {
                     <Text size="sm" fw={600}>{t('gpu.release.budgetTitle')}</Text>
                     <Text size="xs" c="dimmed">{p.tree_release ? t('gpu.release.budgetFromTree') : t('gpu.release.budgetHint')}</Text>
                     {RELEASE_KINDS.map(kind => (
-                        <ReleaseRow key={kind} kind={kind} value={p.release_max?.[kind]} readOnly={!!p.tree_release}
+                        <ReleaseRow key={kind} kind={kind} value={p.release_max?.[kind]} readOnly={!!p.tree_release} defaults={defaults?.[kind]}
                             unlimitedAllowed={kind === 'gpu' && own} onChange={(field, v) => set('release_max', kind, field, v)} />
                     ))}
                 </Stack>
@@ -425,16 +430,18 @@ export function WorkspaceSettingsPanel({ draft }) {
                     <BatchJobsBox p={p} setLimit={setLimit} locked={locked} classes={catalog.data?.gpuClasses ?? []} />
                 </Tabs.Panel>
                 <Tabs.Panel value="release">
-                    <ReleaseTimes draft={draft} isAdmin={isAdmin} />
+                    <ReleaseTimes draft={draft} isAdmin={isAdmin} defaults={catalog.data?.releaseDefaults} />
                 </Tabs.Panel>
             </Tabs>
         </Stack>
     );
 }
 
-// BatchJobsBox is whether the project allows batch jobs and their bounds there: a switch instead of "0 = none" (on sets DEFAULT_JOBS_PER_PERSON), how many a person may have waiting and running at once, and the longest one may run. Below it, in grey, what comes from the project's budget: the priority, its GPUs and its GPU hours. Without a GPU class the project cannot run jobs, so the switch stays off. Also the dialog of the jobs page (job-settings.jsx).
-export function BatchJobsBox({ p, setLimit, locked, classes }) {
+// BatchJobsBox is whether the project allows batch jobs and their bounds there: a switch instead of "0 = none" (on sets DEFAULT_JOBS_PER_PERSON), how many a person may have waiting and running at once, and the longest one may run. Where the project's budgets set them (tree_jobs) they come from there and are locked, as the profiles are. Below it, in grey, what comes from the project's budget: the priority, its GPUs and its GPU hours. Without a GPU class the project cannot run jobs, so the switch stays off. Also the dialog of the jobs page (job-settings.jsx).
+export function BatchJobsBox({ p, setLimit, locked: lockedByRole, classes }) {
     const { t } = useTranslation();
+    const fromTree = !!p.tree_jobs;
+    const locked = lockedByRole || fromTree;
     const gpuClasses = p.gpu_classes ?? [];
     const on = (p.limits.jobs_per_person ?? 0) > 0;
     const hours = jobMaxHours(p);
@@ -445,7 +452,7 @@ export function BatchJobsBox({ p, setLimit, locked, classes }) {
     return (
         <Box title={t('gpu.projects.jobs.title')}>
             <Switch label={t('gpu.projects.jobs.allow')} checked={on} disabled={locked || (!on && gpuClasses.length === 0)}
-                description={gpuClasses.length === 0 ? t('gpu.projects.jobs.noGpu') : t('gpu.projects.jobs.allowHint')}
+                description={fromTree ? t('gpu.projects.jobs.fromTree') : gpuClasses.length === 0 ? t('gpu.projects.jobs.noGpu') : t('gpu.projects.jobs.allowHint')}
                 onChange={e => setLimit('jobs_per_person', e.currentTarget.checked ? DEFAULT_JOBS_PER_PERSON : 0)} />
             {on && (
                 <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">

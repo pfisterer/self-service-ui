@@ -4,8 +4,8 @@ import { MAX_IDLE_MINUTES, MAX_MAX_HOURS, RELEASE_FIELDS, RELEASE_KINDS, unlimit
 
 const LABELS = { idle_open_minutes: 'projects.releaseMax.idleOpen', idle_closed_minutes: 'projects.releaseMax.idleClosed', max_hours: 'projects.releaseMax.maxHours' };
 
-// ReleaseMaxInputs edits a budget's release maximums ("Rückgabezeiten (Höchstwerte)") for CPU and GPU: an empty field sets nothing here, so the budgets above decide it, shown as placeholder; without a value above, the AI service's default applies. inherited: the strictest maximums of the budgets above (inherited_release_max). onChange(kind, field, value) with null to clear.
-export function ReleaseMaxInputs({ value, inherited, errors = {}, onChange, disabled = false }) {
+// ReleaseMaxInputs edits a budget's release maximums ("Rückgabezeiten (Höchstwerte)") for CPU and GPU: an empty field sets nothing here, so the budgets above decide it, shown as placeholder; without a value above, the AI service's default applies, shown with its value where defaults (the catalogue's releaseDefaults) has it. inherited: the strictest maximums of the budgets above (inherited_release_max). onChange(kind, field, value) with null to clear.
+export function ReleaseMaxInputs({ value, inherited, defaults, errors = {}, onChange, disabled = false }) {
     const { t } = useTranslation();
     return (
         <Stack gap="xs">
@@ -23,8 +23,9 @@ export function ReleaseMaxInputs({ value, inherited, errors = {}, onChange, disa
                             const hours = field === 'max_hours';
                             const unlimited = hours && own === 0;
                             const ceiling = above !== undefined && above !== null && above > 0 ? above : (hours ? MAX_MAX_HOURS : MAX_IDLE_MINUTES);
+                            const standard = defaults?.[kind]?.[field];
                             const placeholder = above === undefined || above === null
-                                ? t('projects.releaseMax.standard')
+                                ? (standard === undefined || standard === null ? t('projects.releaseMax.standard') : t(hours ? 'projects.releaseMax.standardHours' : 'projects.releaseMax.standardMinutes', { value: standard }))
                                 : t('projects.releaseMax.fromAbove', { value: hours && above === 0 ? t('projects.releaseMax.unlimited') : above });
                             return (
                                 <Stack key={field} gap={2}>

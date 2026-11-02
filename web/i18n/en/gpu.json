@@ -190,7 +190,8 @@
             "gpus": "GPUs in the project: {{gpus}}",
             "gpusOfClass_one": "{{count}} × {{cls}}",
             "gpusOfClass_other": "{{count}} × {{cls}}",
-            "gpuHours": "GPU hours: {{budgets}}; each job reserves GPU × maximum run time ({{hours}} h) of them when submitted."
+            "gpuHours": "GPU hours: {{budgets}}; each job reserves GPU × maximum run time ({{hours}} h) of them when submitted.",
+            "fromTree": "The project's budget decides whether and how it has batch jobs (Workspaces tab of the budget, “Batch jobs”)."
         },
         "sub": {
             "environment": "Environment",
@@ -369,6 +370,8 @@
         "unlimited": "no upper bound",
         "fromBudget": "as budget: {{value}}",
         "standard": "default",
+        "standardMinutes": "Default: {{value}}",
+        "standardHours": "Default: {{value}} h",
         "atMost": "at most {{value}}",
         "unlimitedAllowed": "no upper bound possible",
         "budgetTitle": "Budget maximums",
@@ -401,7 +404,7 @@
         "allOwn": "Own jobs of all projects",
         "allOfProject": "All jobs of the project",
         "ownInProject": "Own jobs in this project",
-        "noProject": "None of your projects allows batch jobs. The DHBW Cloud admins decide that.",
+        "noProject": "None of your projects allows batch jobs. A project's budget decides that; the budget's managers can enable them.",
         "none": "No jobs.",
         "name": "Job",
         "state": "State",
@@ -462,8 +465,10 @@
             "notebookRequired": "Please enter the notebook's path.",
             "errHours": "More than 0 and at most {{max}} hours."
         },
-        "notAllowed": "Batch jobs are not enabled in this project. The DHBW Cloud admins decide that.",
+        "notAllowed": "Batch jobs are not enabled in this project. The project's budget decides that; the budget's managers can enable them.",
         "notAllowedAdmin": "Batch jobs are not enabled in this project.",
+        "notAllowedByBudget": "The budget of this project has no batch jobs. The budget's managers can enable them.",
+        "notAllowedNoBudget": "Batch jobs are not enabled in this project. The DHBW Cloud admins decide that.",
         "enable": "Enable",
         "noProjectAdmin": "None of your projects allows batch jobs. Choose a project above to enable them.",
         "settings": {

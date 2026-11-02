@@ -53,6 +53,13 @@ function runTime(job, lang) {
     return formatDuration(end - new Date(job.started).getTime(), lang);
 }
 
+// notAllowedKey is the text for a project without batch jobs: its budget says no (tree_jobs), its budget could allow them (a project in the budget tree), or, outside the tree, the admins decide.
+export function notAllowedKey(project, isAdmin) {
+    if (project?.tree_jobs) return 'gpu.jobs.notAllowedByBudget';
+    if (isAdmin) return 'gpu.jobs.notAllowedAdmin';
+    return project?.tree_node ? 'gpu.jobs.notAllowed' : 'gpu.jobs.notAllowedNoBudget';
+}
+
 export function GpuJobs() {
     const { t, i18n } = useTranslation();
     const api = useGpuApi();
@@ -95,12 +102,12 @@ export function GpuJobs() {
                     {project && <Text size="xs" c="dimmed" mb={6}>{t(manages ? 'gpu.jobs.allOfProject' : 'gpu.jobs.ownInProject')}</Text>}
                     {project && <ProjectId slug={project} mb={4} />}
                 </Group>
-                {/* Where jobs are missing, say who switches them on: an admin right here, everybody else is told it is the admins'. */}
+                {/* Where jobs are missing, say who switches them on: the budget when it says no (tree_jobs) or, for a project in the budget tree, may say yes; an admin right here where the budget sets nothing. */}
                 {chosen && !projectHasJobs(chosen) && (
                     <Alert color="gray" variant="light" mt="md">
                         <Group justify="space-between" gap="sm">
-                            <Text size="sm">{t(isAdmin ? 'gpu.jobs.notAllowedAdmin' : 'gpu.jobs.notAllowed')}</Text>
-                            {isAdmin && <Button size="xs" variant="light" onClick={() => setSettingsOpen(true)}>{t('gpu.jobs.enable')}</Button>}
+                            <Text size="sm">{t(notAllowedKey(chosen, isAdmin))}</Text>
+                            {isAdmin && !chosen.tree_jobs && <Button size="xs" variant="light" onClick={() => setSettingsOpen(true)}>{t('gpu.jobs.enable')}</Button>}
                         </Group>
                     </Alert>
                 )}

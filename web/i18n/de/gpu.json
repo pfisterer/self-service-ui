@@ -190,7 +190,8 @@
             "gpus": "GPUs im Projekt: {{gpus}}",
             "gpusOfClass_one": "{{count}} × {{cls}}",
             "gpusOfClass_other": "{{count}} × {{cls}}",
-            "gpuHours": "GPU-Stunden: {{budgets}}; jeder Job merkt beim Abschicken GPU × Höchstlaufzeit ({{hours}} h) davon vor."
+            "gpuHours": "GPU-Stunden: {{budgets}}; jeder Job merkt beim Abschicken GPU × Höchstlaufzeit ({{hours}} h) davon vor.",
+            "fromTree": "Ob und wie das Projekt Batch-Jobs hat, legt sein Budget fest (Reiter Workspaces im Budget, „Batch-Jobs“)."
         },
         "sub": {
             "environment": "Umgebung",
@@ -369,6 +370,8 @@
         "unlimited": "ohne Obergrenze",
         "fromBudget": "wie Budget: {{value}}",
         "standard": "Standard",
+        "standardMinutes": "Standard: {{value}}",
+        "standardHours": "Standard: {{value}} Std.",
         "atMost": "höchstens {{value}}",
         "unlimitedAllowed": "ohne Obergrenze möglich",
         "budgetTitle": "Höchstwerte des Budgets",
@@ -401,7 +404,7 @@
         "allOwn": "Eigene Jobs aller Projekte",
         "allOfProject": "Alle Jobs des Projekts",
         "ownInProject": "Eigene Jobs in diesem Projekt",
-        "noProject": "Keines der eigenen Projekte erlaubt Batch-Jobs. Das legen Admins der DHBW Cloud fest.",
+        "noProject": "Keines der eigenen Projekte erlaubt Batch-Jobs. Das legt das Budget eines Projekts fest; freischalten können die Verwaltenden des Budgets.",
         "none": "Keine Jobs.",
         "name": "Job",
         "state": "Zustand",
@@ -462,8 +465,10 @@
             "notebookRequired": "Bitte den Pfad des Notebooks angeben.",
             "errHours": "Mehr als 0 und höchstens {{max}} Stunden."
         },
-        "notAllowed": "In diesem Projekt sind Batch-Jobs nicht freigeschaltet. Das legen Admins der DHBW Cloud fest.",
+        "notAllowed": "In diesem Projekt sind Batch-Jobs nicht freigeschaltet. Das legt das Budget des Projekts fest; freischalten können die Verwaltenden des Budgets.",
         "notAllowedAdmin": "In diesem Projekt sind Batch-Jobs nicht freigeschaltet.",
+        "notAllowedByBudget": "Das Budget dieses Projekts hat keine Batch-Jobs. Freischalten können die Verwaltenden des Budgets.",
+        "notAllowedNoBudget": "In diesem Projekt sind Batch-Jobs nicht freigeschaltet. Das legen Admins der DHBW Cloud fest.",
         "enable": "Freischalten",
         "noProjectAdmin": "Keines der eigenen Projekte erlaubt Batch-Jobs. Zum Freischalten oben ein Projekt wählen.",
         "settings": {
