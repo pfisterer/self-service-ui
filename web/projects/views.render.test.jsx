@@ -141,6 +141,24 @@ describe('the cloud project views render', () => {
         expectNoRenderFailure();
     });
 
+    // With "expand everything" on, collapsing a branch dropped its children's
+    // query, the tree data changed, and the expand-all pass opened the branch
+    // again at once: nothing could be collapsed by hand any more.
+    it('lets a branch be collapsed while everything is expanded', async () => {
+        renderView(<MyBudgetsView />);
+        const tree = () => within(screen.getByRole('tree'));
+
+        await waitFor(() => expect(tree().getAllByText('Mannheim')).toHaveLength(1));
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.budgets.expandAll') }));
+        await screen.findByRole('button', { name: i18n.t('projects.budgets.collapseAll') });
+        fireEvent.click(tree().getByText('Organization Root'));
+
+        await waitFor(() => expect(tree().queryAllByText('Mannheim')).toHaveLength(0));
+        await new Promise(resolve => setTimeout(resolve, 250));
+        expect(tree().queryAllByText('Mannheim')).toHaveLength(0);
+        expectNoRenderFailure();
+    });
+
     // A requester who manages nothing still sees where their requests would
     // draw from: the eligible budget appears in the tree, read-only — no
     // manager actions, but requesting from it is offered.

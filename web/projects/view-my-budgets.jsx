@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronsDownUp, ChevronsUpDown, Inbox, Search, X } from 'lucide-react';
 import { ActionIcon, Alert, Anchor, Badge, Box, Button, Checkbox, Flex, Group, Loader, Paper, SegmentedControl, Stack, Text, TextInput, Title, Tooltip, useTree } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
@@ -385,16 +385,27 @@ export function MyBudgetsView({ params }) {
     // it is opened, so everything cannot be opened at once: each pass opens the
     // budgets that are loaded and still closed, their children arrive, and the
     // next pass opens those — level by level until nothing closed is left.
+    // Each budget is handled once: collapsing one drops its branch's query, which
+    // changes treeData and re-runs the pass, and that must not reopen what the
+    // viewer just closed. `seen` remembers every budget a pass has met, open or
+    // not — the first level is open before the pass and closable all the same.
     const [expandAll, setExpandAll] = useLocalStorage({
         key: 'self-service.budget-tree.expand-all',
         defaultValue: false,
         getInitialValueInEffect: false,
     });
+    const seen = useRef(new Set());
     useEffect(() => {
-        if (!expandAll) return;
+        if (!expandAll) {
+            seen.current.clear();
+            return;
+        }
         const closed = [];
         const walk = (rows) => rows.forEach(row => {
-            if (row.hasChildren && !tree.expandedState[row.value]) closed.push(row.value);
+            if (row.hasChildren && !seen.current.has(row.value)) {
+                seen.current.add(row.value);
+                if (!tree.expandedState[row.value]) closed.push(row.value);
+            }
             if (row.children) walk(row.children);
         });
         walk(treeData);
