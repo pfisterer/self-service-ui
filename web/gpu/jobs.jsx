@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useSearch } from 'wouter';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +11,7 @@ import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { isActive, projectHasJobs } from '/gpu/jobs.js';
 import { ProjectId } from '/gpu/project-id.jsx';
+import { JobSettingsModal } from '/gpu/job-settings.jsx';
 import { formatDateTime } from '/format-date.js';
 import { formatDuration } from '/helper/duration.js';
 
@@ -54,7 +56,8 @@ function runTime(job, lang) {
 export function GpuJobs() {
     const { t, i18n } = useTranslation();
     const api = useGpuApi();
-    const { me } = useLlmMe();
+    const { me, isAdmin } = useLlmMe();
+    const [settingsOpen, setSettingsOpen] = useState(false);
     const params = new URLSearchParams(useSearch());
     const [, navigate] = useLocation();
     const project = params.get('project') || '';
@@ -92,7 +95,17 @@ export function GpuJobs() {
                     {project && <Text size="xs" c="dimmed" mb={6}>{t(manages ? 'gpu.jobs.allOfProject' : 'gpu.jobs.ownInProject')}</Text>}
                     {project && <ProjectId slug={project} mb={4} />}
                 </Group>
-                {projects.isSuccess && withJobs.length === 0 && <Alert color="gray" variant="light" mt="md">{t('gpu.jobs.noProject')}</Alert>}
+                {/* Where jobs are missing, say who switches them on: an admin right here, everybody else is told it is the admins'. */}
+                {chosen && !projectHasJobs(chosen) && (
+                    <Alert color="gray" variant="light" mt="md">
+                        <Group justify="space-between" gap="sm">
+                            <Text size="sm">{t(isAdmin ? 'gpu.jobs.notAllowedAdmin' : 'gpu.jobs.notAllowed')}</Text>
+                            {isAdmin && <Button size="xs" variant="light" onClick={() => setSettingsOpen(true)}>{t('gpu.jobs.enable')}</Button>}
+                        </Group>
+                    </Alert>
+                )}
+                {!chosen && projects.isSuccess && withJobs.length === 0 && <Alert color="gray" variant="light" mt="md">{t(isAdmin ? 'gpu.jobs.noProjectAdmin' : 'gpu.jobs.noProject')}</Alert>}
+                {isAdmin && chosen && <JobSettingsModal key={chosen.slug} project={chosen} opened={settingsOpen} onClose={() => setSettingsOpen(false)} />}
                 {jobs.isPending && <Loading />}
                 {jobs.isError && <LoadError query={jobs} />}
                 {jobs.isSuccess && (

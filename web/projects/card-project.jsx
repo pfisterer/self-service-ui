@@ -24,8 +24,9 @@ const MEMBERS_SHOWN = 5;
 
 //
 // link: when set, a button next to the date copies this link to the project.
+// jobs: what the project allows of batch jobs ({perPerson, hours}), else null.
 // envBuild: the build of the project's workspace environment from Git while it builds or after it failed ({status, message, hasImage}), else null.
-export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction, link, envBuild }) {
+export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction, link, envBuild, jobs }) {
     const { t } = useTranslation();
     const act = (action) => onAction?.(action, node);
     const config = useProjectConfig();
@@ -96,6 +97,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         ))}
                         {deletionRequested(node) && <DeletingBadge size="sm" purge={openstackSide(node).purge} />}
                         {envBuild && <EnvBuildBadge build={envBuild} />}
+                        {jobs && <Badge color={COLOR.identity} variant="outline" tt="none">{t('projects.projectCard.jobs', { count: jobs.perPerson, hours: jobs.hours })}</Badge>}
                         {/* Who shared it says it all, so it stands on the badge rather
                             than behind a hover nobody finds. Not uppercased: an
                             address in capitals is hard to read. */}

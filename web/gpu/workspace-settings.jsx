@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ActionIcon, Badge, Button, Checkbox, Code, Group, Loader, Modal, MultiSelect, NumberInput, Paper, Progress, SegmentedControl, Select, SimpleGrid, Stack, Text, TextInput } from '@mantine/core';
+import { ActionIcon, Badge, Button, Checkbox, Code, Group, Loader, Modal, MultiSelect, NumberInput, Paper, Progress, SegmentedControl, Select, SimpleGrid, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { FileText, Plus, RotateCcw, X } from 'lucide-react';
 import { BUILD_COLOUR, BuildLogModal } from '/gpu/build-log.jsx';
 import { GitSource } from '/gpu/git-source.jsx';
@@ -14,7 +14,7 @@ import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { formatDay } from '/format-date.js';
 import { formatDuration } from '/helper/duration.js';
 import { gpuKeys } from '/gpu/query-keys.js';
-import { MAX_JOB_HOURS } from '/gpu/jobs.js';
+import { DEFAULT_JOBS_PER_PERSON, JOB_HOUR_CHOICES, jobMaxHours } from '/gpu/jobs.js';
 
 // How a Lab/KI project's workspaces are used — profiles, the project image, limits and shares per person, shorter windows. Everything else about the project (name, members, end, quotas) is the project's own and edited in its dialog; this is the one part only the AI service knows, so it is a tab of the project's edit dialog (modal-project-form.jsx) instead of a second list of the same projects.
 
@@ -372,21 +372,16 @@ export function WorkspaceSettingsPanel({ draft }) {
 
             <Box title={t('gpu.projects.limits')} hint={t('gpu.projects.limitsHint')}>
                 <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
-                    <NumberInput label={t('gpu.projects.limit.serversShort')} min={0} value={p.limits.servers_per_person} onChange={v => setLimit('servers_per_person', v)} readOnly={locked} />
-                    <NumberInput label={t('gpu.projects.limit.cpuShort')} min={0} decimalScale={1} value={p.limits.cpu_per_person} onChange={v => setLimit('cpu_per_person', v)} readOnly={locked} />
-                    <NumberInput label={t('gpu.projects.limit.ramShort')} min={0} value={p.limits.ram_gb_per_person} onChange={v => setLimit('ram_gb_per_person', v)} readOnly={locked} />
+                    <NumberInput label={t('gpu.projects.limit.serversShort')} description={t('gpu.projects.limit.noLimit')} min={0} value={p.limits.servers_per_person} onChange={v => setLimit('servers_per_person', v)} readOnly={locked} />
+                    <NumberInput label={t('gpu.projects.limit.cpuShort')} description={t('gpu.projects.limit.noLimit')} min={0} decimalScale={1} value={p.limits.cpu_per_person} onChange={v => setLimit('cpu_per_person', v)} readOnly={locked} />
+                    <NumberInput label={t('gpu.projects.limit.ramShort')} description={t('gpu.projects.limit.noLimit')} min={0} value={p.limits.ram_gb_per_person} onChange={v => setLimit('ram_gb_per_person', v)} readOnly={locked} />
                     <NumberInput label={t('gpu.projects.limit.gpusShort')} min={0} max={gpuCap >= 0 ? gpuCap : undefined} clampBehavior="strict"
                         value={gpuCap === 0 ? 0 : p.limits.gpus_per_person} onChange={v => setLimit('gpus_per_person', v)} readOnly={locked}
-                        disabled={gpuCap === 0} description={gpuCap === 0 ? t('gpu.projects.limit.noGpus') : undefined} />
-                </SimpleGrid>
-                {/* Batch jobs: how many a person may have waiting and running at once (0 = the project has none), and how long one may run (0 = the AI service's default). */}
-                <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
-                    <NumberInput label={t('gpu.projects.limit.jobsShort')} description={t('gpu.projects.limit.jobsHint')} min={0} allowDecimal={false}
-                        value={p.limits.jobs_per_person ?? 0} onChange={v => setLimit('jobs_per_person', v)} readOnly={locked} />
-                    <NumberInput label={t('gpu.projects.limit.jobHoursShort')} description={t('gpu.projects.limit.jobHoursHint')} min={0} max={MAX_JOB_HOURS} clampBehavior="strict" decimalScale={2}
-                        value={p.limits.job_max_hours ?? 0} onChange={v => setLimit('job_max_hours', v)} readOnly={locked} />
+                        disabled={gpuCap === 0} description={t(gpuCap === 0 ? 'gpu.projects.limit.noGpus' : 'gpu.projects.limit.noGpu')} />
                 </SimpleGrid>
             </Box>
+
+            <BatchJobsBox p={p} setLimit={setLimit} locked={locked} classes={catalog.data?.gpuClasses ?? []} />
 
             <ReleaseTimes draft={draft} isAdmin={isAdmin} />
 
@@ -418,6 +413,40 @@ export function WorkspaceSettingsPanel({ draft }) {
                 )}
             </Box>
         </Stack>
+    );
+}
+
+// BatchJobsBox is whether the project allows batch jobs and their bounds there: a switch instead of "0 = none" (on sets DEFAULT_JOBS_PER_PERSON), how many a person may have waiting and running at once, and the longest one may run. Below it, in grey, what comes from the project's budget: the priority, its GPUs and its GPU hours. Without a GPU class the project cannot run jobs, so the switch stays off. Also the dialog of the jobs page (job-settings.jsx).
+export function BatchJobsBox({ p, setLimit, locked, classes }) {
+    const { t } = useTranslation();
+    const gpuClasses = p.gpu_classes ?? [];
+    const on = (p.limits.jobs_per_person ?? 0) > 0;
+    const hours = jobMaxHours(p);
+    const hourChoices = [...new Set([...JOB_HOUR_CHOICES, hours])].sort((a, b) => a - b).map(h => ({ value: String(h), label: t('gpu.projects.jobs.hours', { count: h }) }));
+    const className = (id) => classes.find(c => c.id === id)?.name || id;
+    const gpus = gpuClasses.map(c => (p.gpus_by_class?.[c] ? t('gpu.projects.jobs.gpusOfClass', { count: p.gpus_by_class[c], cls: className(c) }) : className(c))).join(', ');
+    const gpuHours = (p.budgets ?? []).filter(b => b.tree && b.unit === 'gpu_hours').map(b => budgetText(t, b, classes)).join(', ');
+    return (
+        <Box title={t('gpu.projects.jobs.title')}>
+            <Switch label={t('gpu.projects.jobs.allow')} checked={on} disabled={locked || (!on && gpuClasses.length === 0)}
+                description={gpuClasses.length === 0 ? t('gpu.projects.jobs.noGpu') : t('gpu.projects.jobs.allowHint')}
+                onChange={e => setLimit('jobs_per_person', e.currentTarget.checked ? DEFAULT_JOBS_PER_PERSON : 0)} />
+            {on && (
+                <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
+                    <NumberInput label={t('gpu.projects.jobs.perPerson')} description={t('gpu.projects.jobs.perPersonHint')} min={1} allowDecimal={false} clampBehavior="strict"
+                        value={p.limits.jobs_per_person} onChange={v => setLimit('jobs_per_person', Math.max(1, Number(v) || 1))} readOnly={locked} />
+                    <Select label={t('gpu.projects.jobs.maxHours')} description={t('gpu.projects.jobs.maxHoursHint')} allowDeselect={false} data={hourChoices}
+                        value={String(hours)} onChange={v => setLimit('job_max_hours', v)} readOnly={locked} />
+                </SimpleGrid>
+            )}
+            {gpuClasses.length > 0 && (
+                <Stack gap={2}>
+                    <Text size="xs" c="dimmed">{t(p.batch_priority === 'guaranteed' ? 'gpu.projects.jobs.guaranteed' : 'gpu.projects.jobs.preemptible')}</Text>
+                    <Text size="xs" c="dimmed">{t('gpu.projects.jobs.gpus', { gpus })}</Text>
+                    {gpuHours && <Text size="xs" c="dimmed">{t('gpu.projects.jobs.gpuHours', { budgets: gpuHours, hours })}</Text>}
+                </Stack>
+            )}
+        </Box>
     );
 }
 

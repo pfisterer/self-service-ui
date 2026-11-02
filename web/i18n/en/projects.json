@@ -331,7 +331,9 @@
         "envRebuilding": "Environment rebuilding",
         "envRebuildingTip": "A new version of the environment is being built; until then workspaces start with the previous one.",
         "envFailed": "Environment failed",
-        "envFailedTip": "Building the environment failed: {{message}} Log and a new build in the project settings (Workspaces)."
+        "envFailedTip": "Building the environment failed: {{message}} Log and a new build in the project settings (Workspaces).",
+        "jobs_one": "Batch jobs: {{count}} per person, {{hours}} h",
+        "jobs_other": "Batch jobs: {{count}} per person, {{hours}} h"
     },
     "projectForm": {
         "titleNew": "New project",

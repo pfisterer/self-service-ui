@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { llmEnabled } from '/features.js';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
+import { jobMaxHours, projectHasJobs } from '/gpu/jobs.js';
 import { COLOR, PROJECT_SORTS, budgetKinds, getAuthUserEmail, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
 
 // MyProjectsView lists the projects of one area (cloud, workspaces, llm) the
@@ -66,6 +67,12 @@ export function MyProjectsView({ area = 'cloud' }) {
         const status = p?.image_build?.status;
         if (!p?.image_git_url || (status !== 'building' && status !== 'failed')) return null;
         return { status, message: p.image_build?.message || '', hasImage: !!p.project_image };
+    };
+
+    // Batch jobs: what a project allows ({perPerson, hours}), on its card; null where it allows none.
+    const jobsOf = (node) => {
+        const p = (workspaceProjects.data ?? []).find(x => x.tree_node === node.id);
+        return projectHasJobs(p) ? { perPerson: p.limits.jobs_per_person, hours: jobMaxHours(p) } : null;
     };
 
     const [projectsQuery, myBudgetsQuery, eligibleQuery] = useQueries({
@@ -173,6 +180,7 @@ export function MyProjectsView({ area = 'cloud' }) {
                         parentName={node.parent_name}
                         perspective={memberOnly(node) ? 'member' : 'owner'}
                         envBuild={envBuildOf(node)}
+                        jobs={jobsOf(node)}
                         onAction={handleAction}
                     />
                 ))}

@@ -3,6 +3,9 @@
 // The run time of a job when the project sets none (job_max_hours 0), and the most a project may allow.
 export const DEFAULT_JOB_MAX_HOURS = 4;
 export const MAX_JOB_HOURS = 24;
+// What switching jobs on in a project sets as jobs per person, and the run times offered for the project's maximum.
+export const DEFAULT_JOBS_PER_PERSON = 2;
+export const JOB_HOUR_CHOICES = [1, 2, 4, 8, 12, 24];
 
 // isActive: the job still waits or runs, so its state changes on its own.
 export function isActive(job) {

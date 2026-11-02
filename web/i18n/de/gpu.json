@@ -133,7 +133,7 @@
             "providers": "GitHub: klassisches Token mit „repo“ und „read:packages“, Benutzername = GitHub-Name. GitLab: Deploy-Token des Projekts oder der Gruppe mit „read_repository“ und „read_registry“, Benutzername = Name des Tokens (Registry-Host eigens eintragen, z. B. registry.gitlab.com). Forgejo/Gitea: Token mit „read:repository“ und „read:package“."
         },
         "limits": "Grenzen pro Person (gleichzeitig)",
-        "limitsHint": "Gezählt wird, was eine Person in diesem Projekt gleichzeitig laufen hat. 0 heißt: keine Grenze – außer bei GPUs, dort heißt 0: keine GPU.",
+        "limitsHint": "Gezählt wird, was eine Person in diesem Projekt gleichzeitig laufen hat.",
         "cancel": "Abbrechen",
         "save": "Speichern",
         "limit": {
@@ -142,10 +142,8 @@
             "ramShort": "RAM (GB)",
             "gpusShort": "GPUs",
             "noGpus": "Das Projekt hat keine GPUs; GPUs werden im Budget beantragt.",
-            "jobsShort": "Batch-Jobs je Person",
-            "jobsHint": "0 = keine",
-            "jobHoursShort": "Höchstlaufzeit eines Jobs (h)",
-            "jobHoursHint": "0 = Standard 4 h, höchstens 24"
+            "noLimit": "0 = keine Grenze",
+            "noGpu": "0 = keine GPU"
         },
         "budgets": "Zusätzliche Verbrauchsgrenzen",
         "addBudget": "Grenze hinzufügen",
@@ -175,7 +173,25 @@
             "fromTree": "aus dem Projekt"
         },
         "profilesHint": "Was Mitglieder beim Start eines Workspaces in JupyterHub wählen können. Die Liste gibt die Plattform vor; GPU-Arten zählen gegen die GPU-Kontingente des Projekts.",
-        "adminOnlyHint": "Workspace-Arten, Grenzen und Verbrauchsgrenzen legen Admins fest. Die Umgebung (Basis, Projekt-Image, Git), das Material und die Rückgabezeiten (innerhalb der Höchstwerte des Budgets) lassen sich hier ändern."
+        "adminOnlyHint": "Workspace-Arten, Grenzen und Verbrauchsgrenzen legen Admins fest. Die Umgebung (Basis, Projekt-Image, Git), das Material und die Rückgabezeiten (innerhalb der Höchstwerte des Budgets) lassen sich hier ändern.",
+        "jobs": {
+            "title": "Batch-Jobs",
+            "allow": "Batch-Jobs erlauben",
+            "allowHint": "Befehle und Notebooks laufen als Job auf einer GPU des Projekts, ohne geöffneten Workspace.",
+            "noGpu": "Das Projekt hat keine GPU-Klasse; GPUs werden im Budget beantragt.",
+            "perPerson": "Gleichzeitig je Person",
+            "perPersonHint": "wartend und laufend",
+            "maxHours": "Höchstlaufzeit eines Jobs",
+            "maxHoursHint": "danach wird er beendet",
+            "hours_one": "{{count}} Stunde",
+            "hours_other": "{{count}} Stunden",
+            "preemptible": "Aus dem Budget: verdrängbar – braucht ein Workspace die GPU, wird der Job angehalten und startet danach von vorn.",
+            "guaranteed": "Aus dem Budget: garantiert – Workspaces verdrängen die Jobs nicht.",
+            "gpus": "GPUs im Projekt: {{gpus}}",
+            "gpusOfClass_one": "{{count}} × {{cls}}",
+            "gpusOfClass_other": "{{count}} × {{cls}}",
+            "gpuHours": "GPU-Stunden: {{budgets}}; jeder Job merkt beim Abschicken GPU × Höchstlaufzeit ({{hours}} h) davon vor."
+        }
     },
     "storage": {
         "title": "Speicher (Admins)",
@@ -379,7 +395,7 @@
         "allOwn": "Eigene Jobs aller Projekte",
         "allOfProject": "Alle Jobs des Projekts",
         "ownInProject": "Eigene Jobs in diesem Projekt",
-        "noProject": "Keines der eigenen Projekte erlaubt Batch-Jobs. Das legen Admins in den Grenzen des Projekts fest.",
+        "noProject": "Keines der eigenen Projekte erlaubt Batch-Jobs. Das legen Admins der DHBW Cloud fest.",
         "none": "Keine Jobs.",
         "name": "Job",
         "state": "Zustand",
@@ -439,6 +455,13 @@
             "commandRequired": "Bitte einen Befehl angeben.",
             "notebookRequired": "Bitte den Pfad des Notebooks angeben.",
             "errHours": "Mehr als 0 und höchstens {{max}} Stunden."
+        },
+        "notAllowed": "In diesem Projekt sind Batch-Jobs nicht freigeschaltet. Das legen Admins der DHBW Cloud fest.",
+        "notAllowedAdmin": "In diesem Projekt sind Batch-Jobs nicht freigeschaltet.",
+        "enable": "Freischalten",
+        "noProjectAdmin": "Keines der eigenen Projekte erlaubt Batch-Jobs. Zum Freischalten oben ein Projekt wählen.",
+        "settings": {
+            "title": "Batch-Jobs in {{project}}"
         }
     }
 }

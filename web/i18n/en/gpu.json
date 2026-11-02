@@ -133,7 +133,7 @@
             "providers": "GitHub: classic token with “repo” and “read:packages”, user name = GitHub name. GitLab: deploy token of the project or group with “read_repository” and “read_registry”, user name = the token's name (add the registry host separately, e.g. registry.gitlab.com). Forgejo/Gitea: token with “read:repository” and “read:package”."
         },
         "limits": "Limits per person (at the same time)",
-        "limitsHint": "Counted is what one person runs in this project at the same time. 0 means no limit – except for GPUs, where 0 means no GPU.",
+        "limitsHint": "Counted is what one person runs in this project at the same time.",
         "cancel": "Cancel",
         "save": "Save",
         "limit": {
@@ -142,10 +142,8 @@
             "ramShort": "RAM (GB)",
             "gpusShort": "GPUs",
             "noGpus": "The project has no GPUs; GPUs are requested in the budget.",
-            "jobsShort": "Batch jobs per person",
-            "jobsHint": "0 = none",
-            "jobHoursShort": "Maximum run time of a job (h)",
-            "jobHoursHint": "0 = default 4 h, at most 24"
+            "noLimit": "0 = no limit",
+            "noGpu": "0 = no GPU"
         },
         "budgets": "Additional usage limits",
         "addBudget": "Add a limit",
@@ -175,7 +173,25 @@
             "fromTree": "from the project"
         },
         "profilesHint": "What members can choose when starting a workspace in JupyterHub. The platform sets the list; GPU types count against the project's GPU quotas.",
-        "adminOnlyHint": "Workspace types, limits and usage limits are set by admins. The environment (base, project image, Git), the material and the release times (within the budget's maximums) can be changed here."
+        "adminOnlyHint": "Workspace types, limits and usage limits are set by admins. The environment (base, project image, Git), the material and the release times (within the budget's maximums) can be changed here.",
+        "jobs": {
+            "title": "Batch jobs",
+            "allow": "Allow batch jobs",
+            "allowHint": "Commands and notebooks run as a job on one of the project's GPUs, without an open workspace.",
+            "noGpu": "The project has no GPU class; GPUs are requested in the budget.",
+            "perPerson": "At once per person",
+            "perPersonHint": "waiting and running",
+            "maxHours": "Maximum run time of a job",
+            "maxHoursHint": "it is ended after that",
+            "hours_one": "{{count}} hour",
+            "hours_other": "{{count}} hours",
+            "preemptible": "From the budget: preemptible – when a workspace needs the GPU, the job is stopped and starts over afterwards.",
+            "guaranteed": "From the budget: guaranteed – workspaces do not preempt the jobs.",
+            "gpus": "GPUs in the project: {{gpus}}",
+            "gpusOfClass_one": "{{count}} × {{cls}}",
+            "gpusOfClass_other": "{{count}} × {{cls}}",
+            "gpuHours": "GPU hours: {{budgets}}; each job reserves GPU × maximum run time ({{hours}} h) of them when submitted."
+        }
     },
     "storage": {
         "title": "Storage (admins)",
@@ -379,7 +395,7 @@
         "allOwn": "Own jobs of all projects",
         "allOfProject": "All jobs of the project",
         "ownInProject": "Own jobs in this project",
-        "noProject": "None of the own projects allows batch jobs. Admins set this in the project's limits.",
+        "noProject": "None of your projects allows batch jobs. The DHBW Cloud admins decide that.",
         "none": "No jobs.",
         "name": "Job",
         "state": "State",
@@ -439,6 +455,13 @@
             "commandRequired": "Please enter a command.",
             "notebookRequired": "Please enter the notebook's path.",
             "errHours": "More than 0 and at most {{max}} hours."
+        },
+        "notAllowed": "Batch jobs are not enabled in this project. The DHBW Cloud admins decide that.",
+        "notAllowedAdmin": "Batch jobs are not enabled in this project.",
+        "enable": "Enable",
+        "noProjectAdmin": "None of your projects allows batch jobs. Choose a project above to enable them.",
+        "settings": {
+            "title": "Batch jobs in {{project}}"
         }
     }
 }

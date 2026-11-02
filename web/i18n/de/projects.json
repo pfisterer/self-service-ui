@@ -331,7 +331,9 @@
         "envRebuilding": "Umgebung wird neu gebaut",
         "envRebuildingTip": "Eine neue Version der Umgebung wird gebaut; bis dahin starten Workspaces mit der bisherigen.",
         "envFailed": "Umgebung fehlgeschlagen",
-        "envFailedTip": "Der Bau der Umgebung ist gescheitert: {{message}} Protokoll und neuer Bau in den Projekteinstellungen (Workspaces)."
+        "envFailedTip": "Der Bau der Umgebung ist gescheitert: {{message}} Protokoll und neuer Bau in den Projekteinstellungen (Workspaces).",
+        "jobs_one": "Batch-Jobs: {{count}} je Person, {{hours}} h",
+        "jobs_other": "Batch-Jobs: {{count}} je Person, {{hours}} h"
     },
     "projectForm": {
         "titleNew": "Neues Projekt",
