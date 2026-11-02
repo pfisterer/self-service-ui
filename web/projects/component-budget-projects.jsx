@@ -8,7 +8,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { InfoPopover, NodeStatusBadge } from './component-common.jsx';
 import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
-import { COLOR, UNLIMITED_QUOTA, budgetKinds, resourcesOfKinds, deletesOnRequest, deletionRequested, effectiveLimit, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, budgetKinds, resourcesOfKinds, deletesOnRequest, deletionRequested, effectiveLimit, finalDeletion, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
@@ -550,7 +550,7 @@ function ProjectRow({ node, resources, columns, compact = false, onAction, onOpe
                 fifth of the table. Being deleted says more than released. */}
             <Table.Td style={{ whiteSpace: 'nowrap' }}>
                 <Group gap={6} wrap="nowrap">
-                    <NodeStatusBadge icon status={node.status} deleting={deletionRequested(node)} purge={openstackSide(node).purge} />
+                    <NodeStatusBadge icon status={node.status} deleting={deletionRequested(node)} purge={openstackSide(node).purge} deletionAt={finalDeletion(node, resources, config?.retirement)} />
                     {/* A given-up project has no end date that means anything.
                         The colour says whether it is close; how far, on hover. */}
                     {node.termination_date && !isRetired(node) ? (

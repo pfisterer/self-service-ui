@@ -26,7 +26,7 @@ time; one big file per language would be a merge conflict on every branch.
 * Terms that are the product's own or the protocol's stay untranslated: Budget,
   Projekt, Quota, Token, Zone, TSIG, AXFR, DNS, MCP, OpenStack, ArgoCD.
 * Everything else is German, including "Anfrage" (request), "genehmigen"
-  (approve), "freigeben" (release) and "verschieben" (move).
+  (approve), "löschen" (release a project: it ends at once and is deleted for good after the grace period) and "verschieben" (move).
 
 `i18n.test.js` enforces that both languages carry the same keys, the same
 placeholders, and nothing empty.

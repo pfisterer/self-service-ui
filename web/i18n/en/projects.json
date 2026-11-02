@@ -8,14 +8,14 @@
         "subBudget": "Sub-budget",
         "edit": "Edit",
         "delete": "Delete",
-        "release": "Release",
+        "release": "Delete",
         "newProject": "New project",
         "cancel": "Cancel",
         "close": "Close",
         "showMore": "Show more",
         "loading": "Loading…",
         "adopt": "Adopt",
-        "deleteForGood": "Delete for good",
+        "deleteForGood": "Delete for good right away",
         "copyLink": "Copy link",
         "linkCopied": "Link copied",
         "decide": "Decide"
@@ -212,7 +212,7 @@
         "archivedOn": "Archived on",
         "labDeletion": "Workspace files deleted on",
         "labDeletionHint": "Workspaces with home directories and “project-shared”. Extending the project moves the day.",
-        "deletion": "Deletion",
+        "deletion": "Deleted for good on",
         "workspaces": "Workspaces"
     },
     "forms": {
@@ -252,7 +252,7 @@
             "change_rejected": "Change declined (kept as before)",
             "amended": "Request updated",
             "updated": "Edited by a manager",
-            "released": "Released",
+            "released": "Deleted (ends at once, for good after the period)",
             "reparented": "Moved to another budget",
             "owner_transferred": "Ownership transferred",
             "promote_requested": "Adoption queued",
@@ -260,8 +260,8 @@
             "term_shortened": "Term shortened to the budget's maximum",
             "allocation_set": "Allocation changed",
             "allocation_removed": "Allocation removed",
-            "archived": "Archived",
-            "deletion_requested": "Deletion for good requested",
+            "archived": "Shut down",
+            "deletion_requested": "Deletion for good right away requested",
             "attributes_changed": "Attributes changed",
             "external_group_removed": "External group removed"
         },
@@ -330,8 +330,8 @@
         "memberOf": "Member · project of {{owner}}",
         "memberTip": "This project is shared with you: you can use it (e.g. start workspaces); changes are made by its owner and the people who administer it.",
         "membersMore": "+{{count}} more",
-        "deleting": "Being deleted",
-        "deletingHint": "Everything in the OpenStack project is deleted within the next minutes; then the project disappears from this list.",
+        "deleting": "Being deleted now",
+        "deletingHint": "Everything in the project is deleted for good within the next minutes; then it disappears from this list.",
         "envBuilding": "Environment building",
         "envBuildingTip": "The environment's image is being built from the Git repository; workspaces start once it is done.",
         "envRebuilding": "Environment rebuilding",
@@ -384,7 +384,7 @@
         "outcomeWaitingChange": "A manager decides. Until then the project keeps its current resources.",
         "outcomeWaiting": "A manager of this budget decides on this request.",
         "admins": "Project admins",
-        "adminsHint": "Administer the project here together with the owner: rename it, request changes, edit this list and release it. This gives no access in OpenStack.",
+        "adminsHint": "Administer the project here together with the owner: rename it, request changes, edit this list and delete it. This gives no access in OpenStack.",
         "access": "Access in OpenStack",
         "accessHint": "Who gets into the project in OpenStack, and with which role.",
         "adminsEmpty": "Nobody besides the owner.",
@@ -396,8 +396,8 @@
         "accessAiaasHint": "Who uses the project: its workspaces and its LLM quota. The quota is one shared pool all members draw from. With the role “Shared Workspace Reader” the shared folder project-shared is read-only, with “Shared Workspace Writer” writable too.",
         "accessBoth": "Access",
         "accessBothHint": "Who uses the project: in OpenStack with the chosen role, plus its workspaces and the shared LLM quota. The role also applies to the workspaces' shared folder project-shared: “Reader” only reads, “Member” writes too (Shared Workspace Reader or Writer).",
-        "adminsHintAiaas": "Administer the project here together with the owner: rename it, request changes, edit this list and release it. They use its workspaces and LLM quota too.",
-        "adminsHintBoth": "Administer the project here together with the owner: rename it, request changes, edit this list and release it. They use its workspaces and LLM quota too; this gives no access in OpenStack.",
+        "adminsHintAiaas": "Administer the project here together with the owner: rename it, request changes, edit this list and delete it. They use its workspaces and LLM quota too.",
+        "adminsHintBoth": "Administer the project here together with the owner: rename it, request changes, edit this list and delete it. They use its workspaces and LLM quota too; this gives no access in OpenStack.",
         "nameHintAiaas": "A short, recognizable name — this is how the project appears in workspaces and LLM."
     },
     "quotaInputs": {
@@ -486,12 +486,12 @@
             "description": "The request was turned down. Nothing was created and nothing is charged to the budget."
         },
         "released": {
-            "label": "Released",
-            "description": "This project was given up. Depending on the setup it is archived or deleted shortly; until then its machines keep running and it holds its budget. This cannot be undone."
+            "label": "To be deleted",
+            "description": "The project was deleted and has ended: nobody can use it any more. It is deleted for good once the period is over, or right away on request (“Delete for good right away”)."
         },
         "archived": {
-            "label": "Archived",
-            "description": "Given up and shut down: nobody can log in any more, the machines are shelved, the floating IPs returned. Volumes and data are kept until the project is deleted for good."
+            "label": "To be deleted (shut down)",
+            "description": "Deleted and shut down: nobody can log in any more, the machines are shelved, the floating IPs returned. Volumes and data are kept until the deletion for good."
         },
         "imported": {
             "label": "Imported",
@@ -501,7 +501,8 @@
             "label": "Setting up",
             "description": "Approved. The OpenStack project is being created — this usually takes a few minutes.",
             "descriptionAiaas": "Approved. The project is being set up at the AI service — this usually takes seconds to a few minutes."
-        }
+        },
+        "deletingOn": "To be deleted on {{date}}"
     },
     "tokenList": {
         "placeholder": "group:name or user:email@…",
@@ -638,28 +639,36 @@
         "willRemove": "Without amounts the allocation is removed when saved."
     },
     "retire": {
-        "releaseTitle": "Release project “{{name}}”?",
-        "deleteTitle": "Delete project “{{name}}” for good?",
-        "archive": "The project is archived: nobody can log in any more, the machines are shelved, the floating IPs returned.",
-        "keptGrace_one": "Volumes and data are kept for {{count}} more day, then everything is deleted. “Delete for good” does it sooner.",
-        "keptGrace_other": "Volumes and data are kept for {{count}} more days, then everything is deleted. “Delete for good” does it sooner.",
-        "keptOnRequest": "Volumes and data are kept until the project is deleted with “Delete for good”.",
-        "keptForever": "Volumes and data are kept.",
+        "releaseTitle": "Delete project “{{name}}”?",
+        "deleteTitle": "Delete project “{{name}}” for good right away?",
+        "endsNow": "The project ends at once: nobody can use it any more.",
+        "archive": "OpenStack: nobody can log in any more, the machines are shelved, the floating IPs returned.",
+        "noArchive": "OpenStack: the project is marked for deletion; its machines keep running until it is deleted in OpenStack.",
+        "endsWorkspaces": "Workspaces: from now on nobody can start a workspace in this project.",
+        "endsKeys": "LLM: the project's API keys have no quota any more from now on.",
+        "deletedAfter_one": "After {{count}} day everything is deleted for good: {{what}}.",
+        "deletedAfter_other": "After {{count}} days everything is deleted for good: {{what}}.",
+        "partDeletedAfter_one": "After {{count}} day this is deleted for good: {{what}}.",
+        "partDeletedAfter_other": "After {{count}} days this is deleted for good: {{what}}.",
+        "keptOnRequest": "Kept until the project is deleted with “Delete for good right away”: {{what}}.",
+        "keptForever": "Kept: {{what}}.",
+        "what": {
+            "cloud": "the machines, volumes and all data on them",
+            "workspaces": "the workspace storage (home directories and “project-shared”)",
+            "llm": "the LLM project at the AI service"
+        },
         "chargeStorage": "From then on it holds only its storage in the budget.",
-        "chargeNothing": "From then on it holds no budget any more.",
-        "noArchive": "The project is marked for deletion; its machines keep running until it is deleted in OpenStack.",
-        "deletedAfter_one": "After {{count}} day it is deleted with everything in it.",
-        "deletedAfter_other": "After {{count}} days it is deleted with everything in it.",
-        "chargeUntilGone": "Until then it keeps holding its budget.",
+        "chargeNothing": "Once it is shut down, it holds no budget any more.",
+        "chargeNothingNow": "Its budget is free at once.",
+        "chargeUntilGone": "Until then it keeps holding its budget; “Delete for good right away” frees it at once.",
         "deleteWhat": "Everything in the OpenStack project is deleted within the next minutes: machines, volumes, snapshots, images, networks and all data on them.",
         "deleteWorkspaces": "Workspaces: running workspaces are ended and the workspace storage is deleted — every member's home directory in this project and the folder “project-shared”. Only admins can restore it for another 7 days.",
-        "releaseWorkspacesGrace_one": "Workspaces: from now on nobody can start a workspace in this project. The workspace storage (home directories and “project-shared”) is kept for {{count}} more day, then it is deleted.",
-        "releaseWorkspacesGrace_other": "Workspaces: from now on nobody can start a workspace in this project. The workspace storage (home directories and “project-shared”) is kept for {{count}} more days, then it is deleted.",
-        "releaseWorkspaces": "Workspaces: from now on nobody can start a workspace in this project. The workspace storage (home directories and “project-shared”) is kept until the project is deleted for good.",
+        "deleteKeys": "LLM: the project at the AI service is deleted; its API keys have no quota any more.",
         "deleteAfter": "Then the project disappears from the list. What it used stays in the usage statistics.",
         "irreversible": "This cannot be undone.",
+        "noWayBack": "This cannot be undone here. Whether a project can still be saved before the period ends, only support can check, case by case.",
         "deleteNow": "Delete for good right away",
-        "deleteNowHint": "Instead of archiving, everything is deleted at once, volumes and data included.",
+        "deleteNowHint": "Not only once the period is over: everything is deleted within the next minutes, volumes and data included.",
         "confirmName": "To confirm, type the project name: <1>{{name}}</1>"
     },
     "consumption": {
@@ -687,7 +696,7 @@
         "dailyVcpu": "vCPU hours per day",
         "used": "used",
         "reserved": "reserved",
-        "idle": "No VM ran in this project in the last 30 days. If it is no longer needed, releasing it returns its resources to the budget.",
+        "idle": "No VM ran in this project in the last 30 days. If it is no longer needed, deleting it returns its resources to the budget.",
         "project": "Project",
         "projects": "Projects",
         "coresUsed": "Cores used",
@@ -696,7 +705,7 @@
         "backfilled_one": "{{count}} day was collected afterwards: no storage, name and budget as of the day of collection.",
         "backfilled_other": "{{count}} days were collected afterwards: no storage, name and budget as of the day of collection.",
         "reportTitle": "Usage evaluation",
-        "reportText": "What all projects actually used from {{from}} to {{to}}, released and deleted ones included. Each day counts for the budget the project was under that day.",
+        "reportText": "What all projects actually used from {{from}} to {{to}}, deleted ones included. Each day counts for the budget the project was under that day.",
         "groupBy": {
             "project": "Project",
             "budget": "Budget",

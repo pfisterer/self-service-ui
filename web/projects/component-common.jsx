@@ -87,6 +87,7 @@ export function FactRow({ label, hint, children }) {
 // `icon` draws it for tight spaces: one icon in the status's colour, label and
 // explanation on hover. `deleting` (with the reconciler's `purge` progress)
 // shows a project being deleted instead of its status, in either form.
+// `deletionAt` dates a retired project's deletion for good in its label.
 const STATUS_ICONS = {
     pending: Clock,
     approved: CircleCheck,
@@ -97,12 +98,12 @@ const STATUS_ICONS = {
     imported: CloudDownload,
 };
 
-export function NodeStatusBadge({ status, size = 'sm', provisioning = false, full = false, icon = false, deleting = false, purge = null }) {
+export function NodeStatusBadge({ status, size = 'sm', provisioning = false, full = false, icon = false, deleting = false, purge = null, deletionAt = null }) {
     const { t } = useTranslation();
     if (icon) {
         const Icon = deleting ? Trash2 : (STATUS_ICONS[status] ?? CircleHelp);
         const color = deleting ? COLOR.negative : statusStyle(status, provisioning).color;
-        const title = deleting ? t('projects.projectCard.deleting') : statusLabel(t, status, provisioning);
+        const title = deleting ? t('projects.projectCard.deleting') : statusLabel(t, status, provisioning, deletionAt);
         const detail = deleting
             ? (purge ? purgeLines(t, purge).join(' ') : t('projects.projectCard.deletingHint'))
             : statusDescription(t, status, provisioning);
@@ -120,7 +121,7 @@ export function NodeStatusBadge({ status, size = 'sm', provisioning = false, ful
     const badge = (
         <Badge size={size} color={style.color} variant={style.variant}
             styles={full ? { root: { maxWidth: 'none', flexShrink: 0 }, label: { overflow: 'visible' } } : undefined}>
-            {statusLabel(t, status, provisioning)}
+            {statusLabel(t, status, provisioning, deletionAt)}
         </Badge>
     );
     const description = statusDescription(t, status, provisioning);

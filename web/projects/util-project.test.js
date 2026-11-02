@@ -699,6 +699,8 @@ describe('retirement', () => {
         expect(isRetired({ status: 'approved' })).toBe(false);
         expect(deletionRequested(deleting)).toBe(true);
         expect(deletionRequested(archived)).toBe(false);
+        // Due by its grace period: the reconciler's report says it is under way.
+        expect(deletionRequested({ ...archived, bindings: { openstack: { purge: { step: 'servers', index: 2, steps: 9 } } } })).toBe(true);
     });
 
     it('deletes on request in every mode but never', () => {

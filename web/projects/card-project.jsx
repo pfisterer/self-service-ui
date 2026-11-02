@@ -1,7 +1,7 @@
 import { AlertTriangle, ExternalLink, Eye, Gift, Pencil, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Loader, Stack, Text, Tooltip } from '@mantine/core';
 import { CopyLinkButton, DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
-import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, scheduledDeletion, labDeletion, openstackSide, catalogKinds, projectKinds } from './util-project.jsx';
+import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, finalDeletion, labDeletion, openstackSide, catalogKinds, projectKinds } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
 import { useProjectConfig } from './projects.jsx';
@@ -46,8 +46,9 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     const can = isMember ? { details: true } : projectActions(node, { manager: isManager, canDelete: deletesOnRequest(config?.retirement) });
     // Given up: when it was put away, and when it goes by itself.
     const archivedAt = node.status === 'archived' ? lastEventAt(node, 'archived') : null;
-    const deletionAt = deletionRequested(node) ? null : scheduledDeletion(node, config?.retirement);
-    const labDeletionAt = deletionRequested(node) ? null : labDeletion(node, resources, config?.retirement);
+    // A retired project has one day it goes for good, wherever it lives; an active one only the day its Lab/AI part goes after its end.
+    const deletionAt = deletionRequested(node) ? null : finalDeletion(node, resources, config?.retirement);
+    const labDeletionAt = deletionRequested(node) || isRetired(node) ? null : labDeletion(node, resources, config?.retirement);
 
     const createdDate = node.created_at ? formatDate(node.created_at) : '';
     const owner = ownerEmail(node);
@@ -91,7 +92,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                 {/* ── Header: status + creation date ─────────────────────── */}
                 <Group justify="space-between" mb="xs">
                     <Group gap="xs">
-                        <NodeStatusBadge status={node.status} provisioning={provisioning} />
+                        <NodeStatusBadge status={node.status} provisioning={provisioning} deletionAt={deletionAt} />
                         {kinds.map(k => (
                             <Badge key={k} color={COLOR.identity} variant="light">{t(`projects.kind.${k}`)}</Badge>
                         ))}

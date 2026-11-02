@@ -80,11 +80,12 @@ const STATUS_META = {
     approved: { color: COLOR.positive, variant: 'filled' },
     change_pending: { color: COLOR.attention, variant: 'outline' },
     rejected: { color: COLOR.negative, variant: 'filled' },
-    // The one people ask about: they gave the project up, expect it gone, and
-    // see it still listed and still charged. Both are true and both are
-    // deliberate — releasing asks for deletion, it does not perform it.
+    // Deleted in the portal ("released"): it ended at once and is deleted for
+    // good after the grace period. Still listed until then, which is what
+    // people ask about.
     released: { color: COLOR.identity, variant: 'light' },
-    // Released and put away: nobody logs in, servers shelved, volumes kept.
+    // Released and shut down: nobody logs in, servers shelved, volumes kept
+    // until the deletion for good.
     archived: { color: COLOR.identity, variant: 'outline' },
     imported: { color: COLOR.outside, variant: 'light' },
 };
@@ -96,10 +97,11 @@ export function isRetired(node) {
     return node?.status === 'released' || node?.status === 'archived';
 }
 
-// deletionRequested: someone asked for it to be deleted for good, and the
-// reconciler is on it.
+// deletionRequested: its deletion for good is under way — someone asked for
+// it, or its grace period is over and the reconciler has started emptying its
+// OpenStack project (it reports how far it got, see PurgeProgress).
 export function deletionRequested(node) {
-    return (node?.flags || []).includes('delete_requested');
+    return (node?.flags || []).includes('delete_requested') || (isRetired(node) && !!openstackSide(node).purge);
 }
 
 // pollWhileDeleting is a react-query refetchInterval for a page of nodes: while
@@ -135,21 +137,37 @@ export function scheduledDeletion(node, retirement) {
 }
 
 // labDeletion is the day a project's Lab/AI part — workspaces, homes, shared
-// folder — is deleted by itself: the day after its end (termination date, or
-// release if earlier) plus the grace days, as openstack-management-api's AI
-// service sync counts them. null without Lab/AI resources, without an end, or
-// with the deletion switched off (aiaasDeleteGraceDays 0).
+// folder — is deleted by itself: the day after its end (termination date) or
+// its release day, whichever comes first, plus the grace days, as
+// openstack-management-api's AI service sync counts them — for a released
+// project the same day its OpenStack project is due. null without Lab/AI
+// resources, without an end, or with the deletion switched off
+// (aiaasDeleteGraceDays 0).
 export function labDeletion(node, resources, retirement) {
     const grace = retirement?.aiaasDeleteGraceDays || 0;
     if (!grace || !isLab(projectKinds(node, resources))) return null;
     const days = [];
-    if (node.termination_date) days.push(node.termination_date.slice(0, 10));
+    if (node.termination_date) {
+        const after = new Date(`${node.termination_date.slice(0, 10)}T00:00:00Z`);
+        after.setUTCDate(after.getUTCDate() + 1);
+        days.push(after.toISOString().slice(0, 10));
+    }
     const released = isRetired(node) ? lastEventAt(node, 'released') : null;
     if (released) days.push(released.slice(0, 10));
     if (!days.length) return null;
     const d = new Date(`${days.sort()[0]}T00:00:00Z`);
-    d.setUTCDate(d.getUTCDate() + 1 + grace);
+    d.setUTCDate(d.getUTCDate() + grace);
     return d.toISOString();
+}
+
+// finalDeletion is the day a retired project is deleted for good by itself,
+// wherever it lives: its OpenStack project (scheduledDeletion) or its Lab/AI
+// part (labDeletion), the later of the two. null for one that is not retired
+// or not deleted by itself.
+export function finalDeletion(node, resources, retirement) {
+    if (!isRetired(node)) return null;
+    const days = [scheduledDeletion(node, retirement), labDeletion(node, resources, retirement)].filter(Boolean);
+    return days.length ? days.sort().at(-1) : null;
 }
 
 // A leaf that is approved but has no OpenStack project yet. The reconciler runs
@@ -242,8 +260,9 @@ export function statusStyle(status, provisioning = false) {
 // Returns the human-readable label for a status string. Takes `t` rather than
 // reaching for the i18n instance: this module is imported by plain functions as
 // well as components, and a parameter keeps both honest.
-export function statusLabel(t, status, provisioning = false) {
+export function statusLabel(t, status, provisioning = false, deletionAt = null) {
     if (provisioning) return t('projects.status.provisioning.label');
+    if (deletionAt && (status === 'released' || status === 'archived')) return t('projects.status.deletingOn', { date: formatDate(deletionAt) });
     return STATUS_META[status] ? t(`projects.status.${status}.label`) : status;
 }
 

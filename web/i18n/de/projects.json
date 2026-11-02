@@ -8,14 +8,14 @@
         "subBudget": "Teilbudget",
         "edit": "Bearbeiten",
         "delete": "Löschen",
-        "release": "Freigeben",
+        "release": "Löschen",
         "newProject": "Neues Projekt",
         "cancel": "Abbrechen",
         "close": "Schließen",
         "showMore": "Mehr anzeigen",
         "loading": "Lädt…",
         "adopt": "Übernehmen",
-        "deleteForGood": "Endgültig löschen",
+        "deleteForGood": "Sofort endgültig löschen",
         "copyLink": "Link kopieren",
         "linkCopied": "Link kopiert",
         "decide": "Entscheiden"
@@ -212,7 +212,7 @@
         "archivedOn": "Archiviert am",
         "labDeletion": "Workspace-Dateien gelöscht am",
         "labDeletionHint": "Workspaces mit Home-Verzeichnissen und „project-shared“. Verlängern verschiebt den Tag.",
-        "deletion": "Löschung",
+        "deletion": "Endgültig gelöscht am",
         "workspaces": "Workspaces"
     },
     "forms": {
@@ -252,7 +252,7 @@
             "change_rejected": "Änderung abgelehnt (bleibt wie vorher)",
             "amended": "Anfrage aktualisiert",
             "updated": "Von einer verwaltenden Person bearbeitet",
-            "released": "Freigegeben",
+            "released": "Gelöscht (endet sofort, endgültig nach Ablauf der Frist)",
             "reparented": "In ein anderes Budget verschoben",
             "owner_transferred": "Verantwortung übertragen",
             "promote_requested": "Zur Übernahme vorgemerkt",
@@ -260,8 +260,8 @@
             "term_shortened": "Laufzeit auf das Höchstmaß des Budgets gekürzt",
             "allocation_set": "Sonderzuteilung geändert",
             "allocation_removed": "Sonderzuteilung entfernt",
-            "archived": "Archiviert",
-            "deletion_requested": "Endgültiges Löschen angefordert",
+            "archived": "Stillgelegt",
+            "deletion_requested": "Sofort endgültig löschen angefordert",
             "attributes_changed": "Merkmale geändert",
             "external_group_removed": "Externe Gruppe entfernt"
         },
@@ -330,8 +330,8 @@
         "memberOf": "Mitglied · Projekt von {{owner}}",
         "memberTip": "Dieses Projekt ist geteilt: Es kann genutzt werden (z. B. Workspaces starten), Änderungen nehmen die Inhaberin oder der Inhaber und die Verwaltenden des Projekts vor.",
         "membersMore": "+{{count}} weitere",
-        "deleting": "Wird gelöscht",
-        "deletingHint": "Alles im OpenStack-Projekt wird in den nächsten Minuten gelöscht; danach verschwindet das Projekt aus dieser Liste.",
+        "deleting": "Wird jetzt gelöscht",
+        "deletingHint": "Alles im Projekt wird in den nächsten Minuten endgültig gelöscht; danach verschwindet es aus dieser Liste.",
         "envBuilding": "Umgebung wird gebaut",
         "envBuildingTip": "Das Image der Umgebung wird aus dem Git-Repository gebaut; Workspaces starten, sobald es fertig ist.",
         "envRebuilding": "Umgebung wird neu gebaut",
@@ -384,7 +384,7 @@
         "outcomeWaitingChange": "Eine verwaltende Person entscheidet. Bis dahin behält das Projekt seine jetzigen Ressourcen.",
         "outcomeWaiting": "Eine Person, die dieses Budget verwaltet, entscheidet über diese Anfrage.",
         "admins": "Projekt-Admins",
-        "adminsHint": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt freigeben. Zugang in OpenStack entsteht dadurch nicht.",
+        "adminsHint": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt löschen. Zugang in OpenStack entsteht dadurch nicht.",
         "access": "Zugang in OpenStack",
         "accessHint": "Wer in OpenStack Zugang zum Projekt erhält, und mit welcher Rolle.",
         "adminsEmpty": "Niemand außer dem Owner.",
@@ -396,8 +396,8 @@
         "accessAiaasHint": "Wer das Projekt nutzt: seine Workspaces und das LLM-Kontingent. Das Kontingent ist ein gemeinsamer Topf, alle Mitglieder verbrauchen daraus. Mit der Rolle „Shared Workspace Reader“ ist der gemeinsame Ordner project-shared nur lesbar, mit „Shared Workspace Writer“ auch beschreibbar.",
         "accessBoth": "Zugang",
         "accessBothHint": "Wer das Projekt nutzt: in OpenStack mit der gewählten Rolle, dazu seine Workspaces und das gemeinsame LLM-Kontingent. Die Rolle gilt auch für den gemeinsamen Ordner project-shared der Workspaces: „Reader“ liest nur, „Member“ schreibt auch (Shared Workspace Reader bzw. Writer).",
-        "adminsHintAiaas": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt freigeben. Workspaces und LLM-Kontingent nutzen sie mit.",
-        "adminsHintBoth": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt freigeben. Workspaces und LLM-Kontingent nutzen sie mit, Zugang in OpenStack entsteht dadurch nicht.",
+        "adminsHintAiaas": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt löschen. Workspaces und LLM-Kontingent nutzen sie mit.",
+        "adminsHintBoth": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt löschen. Workspaces und LLM-Kontingent nutzen sie mit, Zugang in OpenStack entsteht dadurch nicht.",
         "nameHintAiaas": "Ein kurzer, wiedererkennbarer Name — so erscheint das Projekt bei Workspaces und LLM."
     },
     "quotaInputs": {
@@ -486,12 +486,12 @@
             "description": "Die Anfrage wurde abgelehnt. Es wurde nichts angelegt, und dem Budget wird nichts berechnet."
         },
         "released": {
-            "label": "Freigegeben",
-            "description": "Dieses Projekt wurde aufgegeben. Je nach Einstellung wird es in Kürze archiviert oder gelöscht; bis dahin laufen seine Maschinen weiter und es belegt sein Budget. Das lässt sich nicht rückgängig machen."
+            "label": "Wird gelöscht",
+            "description": "Das Projekt wurde gelöscht und ist beendet: Niemand kann es mehr nutzen. Endgültig gelöscht wird es nach Ablauf der Frist, auf Wunsch auch sofort („Sofort endgültig löschen“)."
         },
         "archived": {
-            "label": "Archiviert",
-            "description": "Aufgegeben und stillgelegt: Anmelden ist nicht mehr möglich, die Maschinen sind abgelegt (shelved), die Floating IPs zurückgegeben. Volumes und Daten bleiben erhalten, bis das Projekt endgültig gelöscht wird."
+            "label": "Wird gelöscht (stillgelegt)",
+            "description": "Gelöscht und stillgelegt: Anmelden ist nicht mehr möglich, die Maschinen sind abgelegt (shelved), die Floating IPs zurückgegeben. Volumes und Daten bleiben bis zum endgültigen Löschen erhalten."
         },
         "imported": {
             "label": "Importiert",
@@ -501,7 +501,8 @@
             "label": "Wird eingerichtet",
             "description": "Genehmigt. Das OpenStack-Projekt wird gerade angelegt — das dauert meist ein paar Minuten.",
             "descriptionAiaas": "Genehmigt. Das Projekt wird im KI-Dienst eingerichtet — das dauert meist nur Sekunden bis wenige Minuten."
-        }
+        },
+        "deletingOn": "Wird gelöscht am {{date}}"
     },
     "tokenList": {
         "placeholder": "group:name oder user:email@…",
@@ -638,28 +639,36 @@
         "willRemove": "Ohne Mengen wird die Sonderzuteilung beim Speichern entfernt."
     },
     "retire": {
-        "releaseTitle": "Projekt „{{name}}“ freigeben?",
-        "deleteTitle": "Projekt „{{name}}“ endgültig löschen?",
-        "archive": "Das Projekt wird archiviert: Anmelden ist nicht mehr möglich, die Maschinen werden abgelegt (shelved), die Floating IPs zurückgegeben.",
-        "keptGrace_one": "Volumes und Daten bleiben noch {{count}} Tag erhalten, dann wird alles gelöscht. Früher geht es über „Endgültig löschen“.",
-        "keptGrace_other": "Volumes und Daten bleiben noch {{count}} Tage erhalten, dann wird alles gelöscht. Früher geht es über „Endgültig löschen“.",
-        "keptOnRequest": "Volumes und Daten bleiben erhalten, bis das Projekt über „Endgültig löschen“ gelöscht wird.",
-        "keptForever": "Volumes und Daten bleiben erhalten.",
+        "releaseTitle": "Projekt „{{name}}“ löschen?",
+        "deleteTitle": "Projekt „{{name}}“ sofort endgültig löschen?",
+        "endsNow": "Das Projekt endet sofort: Niemand kann es mehr nutzen.",
+        "archive": "OpenStack: Anmelden ist nicht mehr möglich, die Maschinen werden abgelegt (shelved), die Floating IPs zurückgegeben.",
+        "noArchive": "OpenStack: Das Projekt wird zum Löschen vorgemerkt; seine Maschinen laufen weiter, bis es in OpenStack gelöscht ist.",
+        "endsWorkspaces": "Workspaces: Ab sofort startet niemand mehr einen Workspace in diesem Projekt.",
+        "endsKeys": "LLM: Die API-Keys des Projekts haben ab sofort kein Kontingent mehr.",
+        "deletedAfter_one": "Nach {{count}} Tag wird alles endgültig gelöscht: {{what}}.",
+        "deletedAfter_other": "Nach {{count}} Tagen wird alles endgültig gelöscht: {{what}}.",
+        "partDeletedAfter_one": "Nach {{count}} Tag wird endgültig gelöscht: {{what}}.",
+        "partDeletedAfter_other": "Nach {{count}} Tagen wird endgültig gelöscht: {{what}}.",
+        "keptOnRequest": "Erhalten bleibt, bis es über „Sofort endgültig löschen“ gelöscht wird: {{what}}.",
+        "keptForever": "Erhalten bleibt: {{what}}.",
+        "what": {
+            "cloud": "die Maschinen, Volumes und alle Daten darauf",
+            "workspaces": "der Workspace-Speicher (Home-Verzeichnisse und „project-shared“)",
+            "llm": "das LLM-Projekt im KI-Dienst"
+        },
         "chargeStorage": "Ab dann belegt es im Budget nur noch seinen Speicher.",
-        "chargeNothing": "Ab dann belegt es kein Budget mehr.",
-        "noArchive": "Das Projekt wird zum Löschen vorgemerkt; seine Maschinen laufen weiter, bis es in OpenStack gelöscht ist.",
-        "deletedAfter_one": "Nach {{count}} Tag wird es mit allem darin gelöscht.",
-        "deletedAfter_other": "Nach {{count}} Tagen wird es mit allem darin gelöscht.",
-        "chargeUntilGone": "Bis dahin belegt es weiter sein Budget.",
+        "chargeNothing": "Sobald es stillgelegt ist, belegt es kein Budget mehr.",
+        "chargeNothingNow": "Das Budget wird sofort frei.",
+        "chargeUntilGone": "Bis dahin belegt es weiter sein Budget; „Sofort endgültig löschen“ gibt es sofort frei.",
         "deleteWhat": "Alles im OpenStack-Projekt wird in den nächsten Minuten gelöscht: Maschinen, Volumes, Snapshots, Images, Netze und alle Daten darauf.",
         "deleteWorkspaces": "Workspaces: Laufende Workspaces werden beendet, und der Workspace-Speicher wird gelöscht – die Home-Verzeichnisse aller Mitglieder in diesem Projekt und der Ordner „project-shared“. Nur Admins können ihn noch 7 Tage lang wiederherstellen.",
-        "releaseWorkspacesGrace_one": "Workspaces: Ab sofort startet niemand mehr einen Workspace in diesem Projekt. Der Workspace-Speicher (Home-Verzeichnisse und „project-shared“) bleibt noch {{count}} Tag erhalten, dann wird er gelöscht.",
-        "releaseWorkspacesGrace_other": "Workspaces: Ab sofort startet niemand mehr einen Workspace in diesem Projekt. Der Workspace-Speicher (Home-Verzeichnisse und „project-shared“) bleibt noch {{count}} Tage erhalten, dann wird er gelöscht.",
-        "releaseWorkspaces": "Workspaces: Ab sofort startet niemand mehr einen Workspace in diesem Projekt. Der Workspace-Speicher (Home-Verzeichnisse und „project-shared“) bleibt erhalten, bis das Projekt endgültig gelöscht wird.",
+        "deleteKeys": "LLM: Das Projekt im KI-Dienst wird gelöscht; seine API-Keys haben kein Kontingent mehr.",
         "deleteAfter": "Danach verschwindet das Projekt aus der Liste. Was es verbraucht hat, bleibt in der Verbrauchsstatistik.",
         "irreversible": "Das lässt sich nicht rückgängig machen.",
-        "deleteNow": "Gleich endgültig löschen",
-        "deleteNowHint": "Statt zu archivieren, wird alles sofort gelöscht, auch Volumes und Daten.",
+        "noWayBack": "Das lässt sich hier nicht rückgängig machen. Ob ein Projekt vor Ablauf der Frist noch zu retten ist, kann nur der Support im Einzelfall prüfen.",
+        "deleteNow": "Sofort endgültig löschen",
+        "deleteNowHint": "Nicht erst nach Ablauf der Frist: Alles wird in den nächsten Minuten gelöscht, auch Volumes und Daten.",
         "confirmName": "Zur Bestätigung den Projektnamen eingeben: <1>{{name}}</1>"
     },
     "consumption": {
@@ -687,7 +696,7 @@
         "dailyVcpu": "vCPU-Stunden pro Tag",
         "used": "genutzt",
         "reserved": "reserviert",
-        "idle": "In den letzten 30 Tagen lief in diesem Projekt keine VM. Wird es nicht mehr gebraucht, gibt das Freigeben die Ressourcen an das Budget zurück.",
+        "idle": "In den letzten 30 Tagen lief in diesem Projekt keine VM. Wird es nicht mehr gebraucht, gibt das Löschen die Ressourcen an das Budget zurück.",
         "project": "Projekt",
         "projects": "Projekte",
         "coresUsed": "Kerne genutzt",
@@ -696,7 +705,7 @@
         "backfilled_one": "{{count}} Tag wurde nachträglich erfasst: ohne Speicherwert, Name und Budget vom Tag der Erfassung.",
         "backfilled_other": "{{count}} Tage wurden nachträglich erfasst: ohne Speicherwert, Name und Budget vom Tag der Erfassung.",
         "reportTitle": "Verbrauchsauswertung",
-        "reportText": "Was alle Projekte von {{from}} bis {{to}} tatsächlich genutzt haben, auch freigegebene und gelöschte. Zugeordnet wird nach dem Budget, unter dem ein Projekt am jeweiligen Tag stand.",
+        "reportText": "Was alle Projekte von {{from}} bis {{to}} tatsächlich genutzt haben, auch gelöschte. Zugeordnet wird nach dem Budget, unter dem ein Projekt am jeweiligen Tag stand.",
         "groupBy": {
             "project": "Projekt",
             "budget": "Budget",
