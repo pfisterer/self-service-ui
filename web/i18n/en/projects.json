@@ -100,7 +100,13 @@
         "inheritsLimitFrom": "The limit of “{{name}}” applies.",
         "inheritsLimitFromAbove": "The limit of the budget above applies.",
         "parent": "Parent budget",
-        "moveHint": "The budget this one belongs to. Moving takes effect when saved and needs management rights on both sides."
+        "moveHint": "The budget this one belongs to. Moving takes effect when saved and needs management rights on both sides.",
+        "sub": {
+            "quota": "Quotas",
+            "release": "Release times",
+            "storage": "Local storage",
+            "jobs": "Batch jobs"
+        }
     },
     "budgets": {
         "deleteTitle": "Delete budget “{{name}}”?",

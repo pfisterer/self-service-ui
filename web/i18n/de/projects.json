@@ -100,7 +100,13 @@
         "inheritsLimitFrom": "Es gilt das Limit von „{{name}}“.",
         "inheritsLimitFromAbove": "Es gilt das Limit des Budgets darüber.",
         "parent": "Übergeordnetes Budget",
-        "moveHint": "Unter welchem Budget dieses steht. Verschieben wirkt sofort beim Speichern und braucht Verwaltungsrechte auf beiden Seiten."
+        "moveHint": "Unter welchem Budget dieses steht. Verschieben wirkt sofort beim Speichern und braucht Verwaltungsrechte auf beiden Seiten.",
+        "sub": {
+            "quota": "Kontingente",
+            "release": "Rückgabezeiten",
+            "storage": "Lokaler Speicher",
+            "jobs": "Batch-Jobs"
+        }
     },
     "budgets": {
         "deleteTitle": "Budget „{{name}}“ löschen?",

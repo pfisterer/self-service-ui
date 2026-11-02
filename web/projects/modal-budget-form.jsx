@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Info } from 'lucide-react';
-import { Alert, Box, Checkbox, Fieldset, Stack, Switch, Text, TextInput } from '@mantine/core';
+import { Alert, Box, Checkbox, Fieldset, Indicator, Stack, Switch, Tabs, Text, TextInput } from '@mantine/core';
 import { Trans, useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { useForm } from '@mantine/form';
@@ -439,77 +439,98 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
 
     // Passing on the whole limit above is for managers only — a requester
     // asks for an amount.
-    const resourcesTab = (kind, first) => (
-        <Stack>
-            {first && !isRequest && (
-                <Switch
-                    label={t('projects.budgetForm.inheritsLimit')}
-                    description={t('projects.budgetForm.inheritsLimitHint')}
-                    {...form.getInputProps('inheritsLimit', { type: 'checkbox' })}
-                />
-            )}
-            {inheritsLimit ? (
-                <Alert variant="light" color={COLOR.info} icon={<Info size="16" />} p="xs">
-                    <Text size="xs">
-                        {inheritedFrom
-                            ? t('projects.budgetForm.inheritsLimitFrom', { name: inheritedFrom })
-                            : t('projects.budgetForm.inheritsLimitFromAbove')}
-                    </Text>
-                </Alert>
-            ) : (
-                <div>
-                    <Text fw={600} size="sm">{t('projects.budgetForm.resourceCap')}</Text>
-                    <Text size="xs" c="dimmed" mb="xs">
-                        {t('projects.budgetForm.resourceCapHint')}
-                    </Text>
-                    <QuotaInputs
-                        emptyIsZero
-                        resources={ofKind(kind)}
-                        value={quota}
-                        errors={Object.fromEntries(ofKind(kind).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
-                        allowUnlimited
-                        headroom={headroom}
-                        onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}
+    const resourcesTab = (kind, first) => {
+        const quotaPart = (
+            <Stack>
+                {first && !isRequest && (
+                    <Switch
+                        label={t('projects.budgetForm.inheritsLimit')}
+                        description={t('projects.budgetForm.inheritsLimitHint')}
+                        {...form.getInputProps('inheritsLimit', { type: 'checkbox' })}
                     />
-                </div>
-            )}
-            {/* Not a quantity, so not part of the limit: shown also while the limit is inherited. */}
-            {releaseKind !== undefined && kind === releaseKind && (
-                <ReleaseMaxInputs
-                    value={form.values.releaseMax}
-                    inherited={releaseAbove(form.values.parentId)}
-                    errors={form.errors}
-                    onChange={(k, field, v) => {
-                        const path = `releaseMax.${k}.${field}`;
-                        form.setFieldValue(path, v);
-                        form.clearFieldError(path);
-                    }}
-                />
-            )}
-            {releaseKind !== undefined && kind === releaseKind && (
-                <WorkspaceScratchInput
-                    value={form.values.workspaceScratchGb}
-                    inherited={scratchAbove(form.values.parentId)}
-                    error={form.errors.workspaceScratchGb}
-                    onChange={(v) => {
-                        form.setFieldValue('workspaceScratchGb', v);
-                        form.clearFieldError('workspaceScratchGb');
-                    }}
-                />
-            )}
-            {releaseKind !== undefined && kind === releaseKind && (
-                <BatchPriorityInput
-                    value={form.values.batchPriority}
-                    inherited={batchAbove(form.values.parentId)}
-                    error={form.errors.batchPriority}
-                    onChange={(v) => {
-                        form.setFieldValue('batchPriority', v);
-                        form.clearFieldError('batchPriority');
-                    }}
-                />
-            )}
-        </Stack>
-    );
+                )}
+                {inheritsLimit ? (
+                    <Alert variant="light" color={COLOR.info} icon={<Info size="16" />} p="xs">
+                        <Text size="xs">
+                            {inheritedFrom
+                                ? t('projects.budgetForm.inheritsLimitFrom', { name: inheritedFrom })
+                                : t('projects.budgetForm.inheritsLimitFromAbove')}
+                        </Text>
+                    </Alert>
+                ) : (
+                    <div>
+                        <Text fw={600} size="sm">{t('projects.budgetForm.resourceCap')}</Text>
+                        <Text size="xs" c="dimmed" mb="xs">
+                            {t('projects.budgetForm.resourceCapHint')}
+                        </Text>
+                        <QuotaInputs
+                            emptyIsZero
+                            resources={ofKind(kind)}
+                            value={quota}
+                            errors={Object.fromEntries(ofKind(kind).map(r => [r.id, form.errors[`quota.${r.id}`]]))}
+                            allowUnlimited
+                            headroom={headroom}
+                            onChange={(id, v) => { form.setFieldValue(`quota.${id}`, v); form.clearFieldError(`quota.${id}`); }}
+                        />
+                    </div>
+                )}
+            </Stack>
+        );
+        if (releaseKind === undefined || kind !== releaseKind) return quotaPart;
+        // Workspaces: the quantities and three rules that are no quantities (release times, local storage, batch jobs), each in a sub-tab of its own instead of one long page; a sub-tab with an error is marked, as the dialog's tabs are.
+        const hasError = (test) => Object.keys(form.errors).some(test);
+        const sub = (value, label, test) => (
+            <Tabs.Tab value={value}>
+                <Indicator color="red" size={7} offset={-2} disabled={!hasError(test)}>{label}</Indicator>
+            </Tabs.Tab>
+        );
+        return (
+            <Tabs defaultValue="quota" variant="pills" radius="md">
+                <Tabs.List mb="md">
+                    {sub('quota', t('projects.budgetForm.sub.quota'), k => k.startsWith('quota.'))}
+                    {sub('release', t('projects.budgetForm.sub.release'), k => k.startsWith('releaseMax.'))}
+                    {sub('storage', t('projects.budgetForm.sub.storage'), k => k === 'workspaceScratchGb')}
+                    {sub('jobs', t('projects.budgetForm.sub.jobs'), k => k === 'batchPriority')}
+                </Tabs.List>
+                <Tabs.Panel value="quota">{quotaPart}</Tabs.Panel>
+                {/* Not quantities, so not part of the limit: shown also while the limit is inherited. */}
+                <Tabs.Panel value="release">
+                    <ReleaseMaxInputs
+                        value={form.values.releaseMax}
+                        inherited={releaseAbove(form.values.parentId)}
+                        errors={form.errors}
+                        onChange={(k, field, v) => {
+                            const path = `releaseMax.${k}.${field}`;
+                            form.setFieldValue(path, v);
+                            form.clearFieldError(path);
+                        }}
+                    />
+                </Tabs.Panel>
+                <Tabs.Panel value="storage">
+                    <WorkspaceScratchInput
+                        value={form.values.workspaceScratchGb}
+                        inherited={scratchAbove(form.values.parentId)}
+                        error={form.errors.workspaceScratchGb}
+                        onChange={(v) => {
+                            form.setFieldValue('workspaceScratchGb', v);
+                            form.clearFieldError('workspaceScratchGb');
+                        }}
+                    />
+                </Tabs.Panel>
+                <Tabs.Panel value="jobs">
+                    <BatchPriorityInput
+                        value={form.values.batchPriority}
+                        inherited={batchAbove(form.values.parentId)}
+                        error={form.errors.batchPriority}
+                        onChange={(v) => {
+                            form.setFieldValue('batchPriority', v);
+                            form.clearFieldError('batchPriority');
+                        }}
+                    />
+                </Tabs.Panel>
+            </Tabs>
+        );
+    };
 
     // Two questions, two boxes: who runs this budget, and who may ask it for
     // something. Flat in one column they read as equally important switches

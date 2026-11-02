@@ -228,7 +228,7 @@ describe('node dialogs', () => {
         const ma = { ...tree.children.b_root.items[0], parent_name: 'Organization Root', parent_path: [], inherited_batch_priority: 'preemptible' };
         renderView(<BudgetFormModal opened onClose={() => {}} resources={ws} mode="edit" node={ma} parent={{ ...tree.roots[0], limit: { ...tree.roots[0].limit, 'ws-vcpu-hours': -1 } }} />);
         fireEvent.click(await screen.findByRole('tab', { name: /Workspaces|Lab/ }));
-        expect(await screen.findByText(/^(Batch jobs|Batch-Jobs)$/)).toBeTruthy();
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Batch jobs|Batch-Jobs)$/ }));
         expect(screen.getByPlaceholderText(/(as above|wie darüber): (preemptible|verdrängbar)/)).toBeTruthy();
         expect(fatal()).toEqual([]);
     });
