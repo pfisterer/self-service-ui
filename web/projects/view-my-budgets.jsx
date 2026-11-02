@@ -209,7 +209,29 @@ export function MyBudgetsView({ params }) {
     // reopening retries it.
     const loadChildren = (nodeId) => queryClient.fetchQuery(childQuery(nodeId));
 
-    const tree = useTree({ multiple: false, onLoadChildren: loadChildren });
+    // "Expand everything", remembered per browser (see the pass further down).
+    const [expandAll, setExpandAll] = useLocalStorage({
+        key: 'self-service.budget-tree.expand-all',
+        defaultValue: false,
+        getInitialValueInEffect: false,
+    });
+    // The open branches, remembered per browser, so the tree comes back as the viewer last left it. The viewer's last action wins: closing a branch by hand ends "expand everything", which would otherwise reopen it on the next visit. Only read once, as the tree's starting state; null means nothing remembered yet, and then the first level opens as before.
+    const [storedExpanded, setStoredExpanded] = useLocalStorage({
+        key: 'self-service.budget-tree.expanded',
+        defaultValue: null,
+        getInitialValueInEffect: false,
+    });
+    const [restoredExpanded] = useState(storedExpanded);
+    const tree = useTree({
+        multiple: false,
+        onLoadChildren: loadChildren,
+        initialExpandedState: restoredExpanded ?? {},
+        onNodeCollapse: () => setExpandAll(false),
+    });
+    useEffect(() => {
+        setStoredExpanded(Object.fromEntries(Object.entries(tree.expandedState).filter(([, open]) => open)));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tree.expandedState]);
 
     // The branches currently open. This — not a Map the view maintains — is what
     // decides which children are fetched, so expansion and data cannot disagree.
@@ -301,7 +323,9 @@ export function MyBudgetsView({ params }) {
     // but the same set of roots, and re-running then re-opened what the user had
     // just collapsed.
     const rootIds = rootBudgets.map(b => b.id).join('\u0000');
+    // A remembered state replaces this: it already says which roots the viewer left open.
     useEffect(() => {
+        if (restoredExpanded) return;
         const openable = rootBudgets.filter(b => budgetChildCount(b) > 0);
         if (openable.length === 0) return;
         tree.setExpandedState({
@@ -389,11 +413,6 @@ export function MyBudgetsView({ params }) {
     // changes treeData and re-runs the pass, and that must not reopen what the
     // viewer just closed. `seen` remembers every budget a pass has met, open or
     // not — the first level is open before the pass and closable all the same.
-    const [expandAll, setExpandAll] = useLocalStorage({
-        key: 'self-service.budget-tree.expand-all',
-        defaultValue: false,
-        getInitialValueInEffect: false,
-    });
     const seen = useRef(new Set());
     useEffect(() => {
         if (!expandAll) {

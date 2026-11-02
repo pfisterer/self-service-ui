@@ -61,11 +61,20 @@ beforeEach(() => {
     globalThis.__testApi = fakeNodesApi(fixtureTree());
     globalThis.__cloudStatus = undefined;
     consoleErrors = [];
+    // The budget tree remembers what was open in localStorage, which this environment lacks: a fresh one per test, so one test's tree does not become the next one's.
+    const store = new Map();
+    vi.stubGlobal('localStorage', {
+        getItem: k => (store.has(k) ? store.get(k) : null),
+        setItem: (k, v) => store.set(k, String(v)),
+        removeItem: k => store.delete(k),
+        clear: () => store.clear(),
+    });
     vi.spyOn(console, 'error').mockImplementation((...args) => { consoleErrors.push(args.join(' ')); });
 });
 afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
 });
 
 function expectNoRenderFailure() {
@@ -156,6 +165,27 @@ describe('the cloud project views render', () => {
         await waitFor(() => expect(tree().queryAllByText('Mannheim')).toHaveLength(0));
         await new Promise(resolve => setTimeout(resolve, 250));
         expect(tree().queryAllByText('Mannheim')).toHaveLength(0);
+        expectNoRenderFailure();
+    });
+
+    // The tree comes back as it was left: a branch closed by hand stays closed on the next visit, and that closing ends "expand everything", which would reopen it.
+    it('remembers the open branches and the last action across visits', async () => {
+        renderView(<MyBudgetsView />);
+        const tree = () => within(screen.getByRole('tree'));
+
+        await waitFor(() => expect(tree().getAllByText('Mannheim')).toHaveLength(1));
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.budgets.expandAll') }));
+        await screen.findByRole('button', { name: i18n.t('projects.budgets.collapseAll') });
+        fireEvent.click(tree().getByText('Organization Root'));
+        await waitFor(() => expect(tree().queryAllByText('Mannheim')).toHaveLength(0));
+        await screen.findByRole('button', { name: i18n.t('projects.budgets.expandAll') });
+        cleanup();
+
+        renderView(<MyBudgetsView />);
+        expect(await screen.findAllByText('Organization Root')).not.toHaveLength(0);
+        await new Promise(resolve => setTimeout(resolve, 250));
+        expect(tree().queryAllByText('Mannheim')).toHaveLength(0);
+        expect(screen.getByRole('button', { name: i18n.t('projects.budgets.expandAll') })).toBeTruthy();
         expectNoRenderFailure();
     });
 
