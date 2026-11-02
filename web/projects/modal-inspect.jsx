@@ -14,6 +14,7 @@ import { AttributesView, hasAttributes } from './component-node-attributes.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
 import { releaseSummary } from './util-release-max.js';
 import { scratchSummary } from './util-workspace-scratch.js';
+import { batchPrioritySummary } from './util-batch-priority.js';
 import { LlmLimitHints } from './component-llm-limits.jsx';
 
 dayjs.extend(relativeTime);
@@ -296,6 +297,12 @@ function NodeHistoryPanel({ node, resources }) {
                         {(h.workspace_scratch_gb_from || h.workspace_scratch_gb_to) && (
                             <Text size="sm" mt="xs">
                                 {t('projects.workspaceScratch.historyChange', { from: scratchSummary(t, h.workspace_scratch_gb_from), to: scratchSummary(t, h.workspace_scratch_gb_to) })}
+                            </Text>
+                        )}
+
+                        {(h.batch_priority_from || h.batch_priority_to) && (
+                            <Text size="sm" mt="xs">
+                                {t('projects.batchPriority.historyChange', { from: batchPrioritySummary(t, h.batch_priority_from), to: batchPrioritySummary(t, h.batch_priority_to) })}
                             </Text>
                         )}
 

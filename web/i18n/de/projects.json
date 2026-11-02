@@ -958,5 +958,17 @@
         "none": "kein eigener",
         "gbValue": "{{value}} GB",
         "historyChange": "Lokaler Speicher je Workspace: {{from}} → {{to}}"
+    },
+    "batchPriority": {
+        "title": "Batch-Jobs",
+        "hint": "Wie Batch-Jobs der Projekte unter diesem Budget laufen. Verdrängbar: Braucht ein Workspace die GPU, wird der Job beendet und startet später erneut. Garantiert: Der Job wird nicht verdrängt und läuft mit derselben Priorität wie Workspaces. Leer übernimmt den Wert der Budgets darüber, ohne Wert dort sind Jobs verdrängbar. Budgets darunter können nur auf verdrängbar verschärfen.",
+        "label": "Priorität",
+        "preemptible": "verdrängbar",
+        "guaranteed": "garantiert",
+        "standard": "verdrängbar (Standard)",
+        "fromAbove": "wie darüber: {{value}}",
+        "errAbove": "Das Budget darüber macht Jobs verdrängbar, garantiert ist hier nicht möglich.",
+        "none": "kein eigener",
+        "historyChange": "Batch-Jobs: {{from}} → {{to}}"
     }
 }

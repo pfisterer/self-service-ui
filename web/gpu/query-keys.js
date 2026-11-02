@@ -8,5 +8,9 @@ export const gpuKeys = {
     catalog: () => ['gpu', 'catalog'],
     storage: () => ['gpu', 'storage'],
     fleet: () => ['gpu', 'fleet'],
+    // Without a project the own jobs, which is also the prefix of every project's list (invalidating it refreshes them all).
+    jobs: (project) => (project ? ['gpu', 'jobs', project] : ['gpu', 'jobs']),
+    job: (id) => ['gpu', 'job', id],
+    jobLog: (id) => ['gpu', 'job', id, 'log'],
     gpuHours: (scope, period) => ['gpu', 'gpu-hours', scope, period.from, period.to],
 };

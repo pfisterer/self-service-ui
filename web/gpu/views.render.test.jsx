@@ -50,10 +50,19 @@ const PROJECTS = [
     { slug: 'statistik', name: 'Statistik', role: 'member', profiles: ['cpu'], gpu_classes: [], members: [],
       limits: { servers_per_person: 1 }, budgets: [], ends_at: '2027-03-31T00:00:00Z' },
 ];
+const JOBS = [
+    { id: 'j-1', name: 'training-1', person: 'dennis.pfisterer@dhbw.de', project: 'wwi23seb-ml', gpu_class: 'l4-3q', gpus: 1, max_hours: 4, state: 'queued', position: 2, submitted: '2026-10-31T10:00:00Z', command: 'python train.py' },
+    { id: 'j-2', name: 'eval', person: 'b@dhbw.de', project: 'wwi23seb-ml', gpu_class: 'l4-3q', gpus: 1, max_hours: 2, state: 'failed', exit_code: 1, reason: 'Error', submitted: '2026-10-30T10:00:00Z', started: '2026-10-30T10:01:00Z', ended: '2026-10-30T10:31:00Z', gpu_hours: 0.5, evictions: 1, command: 'python eval.py' },
+];
+const START_OPTIONS = { profiles: [], projects: [{ slug: 'wwi23seb-ml', name: 'Machine Learning WWI23SEB', gpu_classes: [{ id: 'l4-3q', name: 'L4 klein', hardware: 'L4-3Q · 3 GB' }, { id: 'l4-6q', name: 'L4 mittel' }] }, { slug: 'statistik', name: 'Statistik', gpu_classes: [] }] };
+const JOB_PROJECTS = PROJECTS.map(p => (p.slug === 'wwi23seb-ml' ? { ...p, limits: { ...p.limits, jobs_per_person: 2, job_max_hours: 8 } } : p));
+
 const CATALOG = { profiles: [{ slug: 'cpu', name: 'CPU' }, { slug: 'gpu', name: 'GPU', gpu_class: 'l4-3q' }], gpuClasses: ['l4-3q'],
     bases: [{ id: 'python', name: 'Python', image: 'reg/platform/base-python:v2' }, { id: 'pytorch', name: 'PyTorch', image: 'reg/platform/base-pytorch:v2', default: true }, { id: 'tensorflow', name: 'TensorFlow / Keras', image: 'reg/platform/base-tensorflow:v2' }] };
 
 const { GpuServers } = await import('/gpu/servers.jsx');
+const { GpuJobs, GpuJobDetail } = await import('/gpu/jobs.jsx');
+const { GpuJobSubmit } = await import('/gpu/job-submit.jsx');
 const { GpuUsage, groupUsage } = await import('/gpu/usage.jsx');
 const { WorkspaceSettingsPanel, useWorkspaceSettings } = await import('/gpu/workspace-settings.jsx');
 
@@ -76,6 +85,12 @@ beforeEach(() => {
         listProjects: async () => PROJECTS,
         catalog: async () => CATALOG,
         workspaceUsage: async () => USAGE,
+        listJobs: async () => JOBS,
+        getJob: async (id) => JOBS.find(j => j.id === id),
+        jobLog: async () => ({ log: 'epoch 1/10' }),
+        cancelJob: async () => ({}),
+        submitJob: async () => JOBS[0],
+        startOptions: async () => START_OPTIONS,
     };
     globalThis.__llmIsAdmin = true;
     consoleErrors = [];
@@ -146,6 +161,49 @@ describe('the GPU views render', () => {
     it('the workspace settings tab stays away for a project the AI service does not know', async () => {
         renderView(<SettingsTab nodeId="p_unknown" />);
         expect(await screen.findByText('none')).toBeTruthy();
+    });
+
+    it('Batch jobs lists the jobs with their place in the queue and their outcome', async () => {
+        globalThis.__gpuApi.listProjects = async () => JOB_PROJECTS;
+        renderView(<GpuJobs />);
+        expect(await screen.findByText('training-1')).toBeTruthy();
+        expect(screen.getByText(/(Platz 2 in der Warteschlange|Place 2 in the queue)/)).toBeTruthy();
+        expect(screen.getByText(/(Exit-Code|Exit code) 1 · Error/)).toBeTruthy();
+        // Another person's job (a manager's view) names the person.
+        expect(screen.getByText('b@dhbw.de')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('a job shows its output and offers to cancel it while it runs', async () => {
+        globalThis.__gpuApi.getJob = async () => ({ ...JOBS[0], state: 'running', position: 0, started: '2026-10-31T10:05:00Z' });
+        renderView(<GpuJobDetail params={{ id: 'j-1' }} />);
+        expect(await screen.findByText('epoch 1/10')).toBeTruthy();
+        expect(screen.getByRole('button', { name: /^(Abbrechen|Cancel)$/ })).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('a finished job offers no cancelling', async () => {
+        renderView(<GpuJobDetail params={{ id: 'j-2' }} />);
+        expect(await screen.findByText('epoch 1/10')).toBeTruthy();
+        expect(screen.queryByRole('button', { name: /^(Abbrechen|Cancel)$/ })).toBeNull();
+        expectNoRenderFailure();
+    });
+
+    it('the submit form offers only the projects that allow jobs, with their maximum run time', async () => {
+        globalThis.__gpuApi.listProjects = async () => JOB_PROJECTS;
+        renderView(<GpuJobSubmit />);
+        expect(await screen.findByText('Machine Learning WWI23SEB')).toBeTruthy();
+        expect(screen.queryByText('Statistik')).toBeNull();
+        expect(screen.getByText(/(höchstens|at most) 8 h/)).toBeTruthy();
+        expect(screen.getByDisplayValue('4')).toBeTruthy();
+        expect(screen.getByText(/dhbw-cloud job submit --project wwi23seb-ml/)).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('the submit form says when no project allows jobs', async () => {
+        renderView(<GpuJobSubmit />);
+        expect(await screen.findByText(/(erlaubt Batch-Jobs|allows batch jobs)/)).toBeTruthy();
+        expectNoRenderFailure();
     });
 
     it('Usage shows the units per profile', async () => {

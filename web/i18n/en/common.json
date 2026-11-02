@@ -22,6 +22,7 @@
         "llmModels": "Models",
         "gpu": "GPU",
         "gpuServers": "Active workspaces",
+        "gpuJobs": "Batch jobs",
         "gpuUsage": "Usage",
         "gpuFleet": "GPUs",
         "workspaces": "Workspaces",

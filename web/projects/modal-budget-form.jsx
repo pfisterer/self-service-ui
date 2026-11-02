@@ -20,6 +20,8 @@ import { ReleaseMaxInputs } from './component-release-max.jsx';
 import { effectiveRelease, isEmptyRelease, normalizeRelease, releaseErrors, sameRelease } from './util-release-max.js';
 import { WorkspaceScratchInput } from './component-workspace-scratch.jsx';
 import { effectiveScratch, normalizeScratch, scratchErrors } from './util-workspace-scratch.js';
+import { BatchPriorityInput } from './component-batch-priority.jsx';
+import { batchPriorityErrors, effectiveBatchPriority, normalizeBatchPriority } from './util-batch-priority.js';
 
 // Same three-step split as the project dialog: what it is → how much → who.
 const TAB_DETAILS = 'details';
@@ -82,6 +84,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const releaseAbove = (parentId) => isEdit ? (node?.inherited_release_max ?? null) : effectiveRelease(boundFor(parentId));
     // The same for the local storage per workspace: what the budgets above allow, which this one may only lower.
     const scratchAbove = (parentId) => isEdit ? normalizeScratch(node?.inherited_workspace_scratch_gb) : effectiveScratch(boundFor(parentId));
+    // And for the batch jobs: what the budgets above decide, which this one may only tighten.
+    const batchAbove = (parentId) => isEdit ? normalizeBatchPriority(node?.inherited_batch_priority) : effectiveBatchPriority(boundFor(parentId));
     // Which resources tab holds the release maximums: the workspaces one, or the only one when the catalogue does not split by kind; undefined where the budget offers nothing of the workspaces (then they would decide nothing).
     const releaseTabKind = (parentId) => {
         const scoped = visibleResources(resources, scopeFor(parentId));
@@ -117,6 +121,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 inheritsLimit: !!node.inherits_limit,
                 releaseMax: normalizeRelease(node.release_max),
                 workspaceScratchGb: normalizeScratch(node.workspace_scratch_gb),
+                batchPriority: normalizeBatchPriority(node.batch_priority),
             }
             : {
                 parentId: parent?.id ?? eligibleBudgets[0]?.id ?? null,
@@ -152,6 +157,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 // Nothing of its own: the budgets above decide until somebody tightens them here.
                 releaseMax: normalizeRelease(null),
                 workspaceScratchGb: null,
+                batchPriority: null,
             },
         validate: (values) => ({
             name: (values.name || '').trim().length < 3
@@ -179,6 +185,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 : {}),
             ...(releaseTabKind(values.parentId) === undefined ? {} : releaseErrors(t, values.releaseMax, releaseAbove(values.parentId))),
             ...(releaseTabKind(values.parentId) === undefined ? {} : scratchErrors(t, values.workspaceScratchGb, scratchAbove(values.parentId))),
+            ...(releaseTabKind(values.parentId) === undefined ? {} : batchPriorityErrors(t, values.batchPriority, batchAbove(values.parentId))),
         }),
     });
 
@@ -234,7 +241,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const fieldsByTab = {
         [TAB_DETAILS]: (k) => ['name', 'reason', 'parentId', 'terminationDate', 'maxTermDays'].includes(k),
         ...Object.fromEntries(resourceKinds.map(kind => [resourceTabValue(kind),
-            (k) => (k.startsWith('quota.') && (!kind || kindOfResource(resourceById[k.slice(6)]) === kind)) || ((k.startsWith('releaseMax.') || k === 'workspaceScratchGb') && kind === releaseKind)])),
+            (k) => (k.startsWith('quota.') && (!kind || kindOfResource(resourceById[k.slice(6)]) === kind)) || ((k.startsWith('releaseMax.') || k === 'workspaceScratchGb' || k === 'batchPriority') && kind === releaseKind)])),
         [TAB_ACCESS]: (k) => k === 'adminScope' || k === 'eligibleRequesters',
         [TAB_AUTO_APPROVE]: (k) => k.startsWith('autoApproveQuota.'),
     };
@@ -272,6 +279,11 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         if (scratch !== normalizeScratch(node.workspace_scratch_gb)) {
             if (scratch === null) body.clear_workspace_scratch_gb = true;
             else body.workspace_scratch_gb = scratch;
+        }
+        const batch = normalizeBatchPriority(values.batchPriority);
+        if (batch !== normalizeBatchPriority(node.batch_priority)) {
+            if (batch === null) body.clear_batch_priority = true;
+            else body.batch_priority = batch;
         }
         if (values.maxTermDays !== (node.max_project_term_days ?? null)) {
             if (values.maxTermDays) body.max_project_term_days = values.maxTermDays;
@@ -328,6 +340,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 max_project_term_days: values.maxTermDays,
                 ...(isEmptyRelease(values.releaseMax) ? {} : { release_max: normalizeRelease(values.releaseMax) }),
                 ...(normalizeScratch(values.workspaceScratchGb) === null ? {} : { workspace_scratch_gb: normalizeScratch(values.workspaceScratchGb) }),
+                ...(normalizeBatchPriority(values.batchPriority) === null ? {} : { batch_priority: normalizeBatchPriority(values.batchPriority) }),
                 termination_date: values.terminationDate ? values.terminationDate.toISOString() : null,
             });
         },
@@ -481,6 +494,17 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     onChange={(v) => {
                         form.setFieldValue('workspaceScratchGb', v);
                         form.clearFieldError('workspaceScratchGb');
+                    }}
+                />
+            )}
+            {releaseKind !== undefined && kind === releaseKind && (
+                <BatchPriorityInput
+                    value={form.values.batchPriority}
+                    inherited={batchAbove(form.values.parentId)}
+                    error={form.errors.batchPriority}
+                    onChange={(v) => {
+                        form.setFieldValue('batchPriority', v);
+                        form.clearFieldError('batchPriority');
                     }}
                 />
             )}

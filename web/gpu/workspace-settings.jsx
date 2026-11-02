@@ -13,12 +13,13 @@ import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { formatDay } from '/format-date.js';
 import { formatDuration } from '/helper/duration.js';
 import { gpuKeys } from '/gpu/query-keys.js';
+import { MAX_JOB_HOURS } from '/gpu/jobs.js';
 
 // How a Lab/KI project's workspaces are used — profiles, the project image, limits and shares per person, shorter windows. Everything else about the project (name, members, end, quotas) is the project's own and edited in its dialog; this is the one part only the AI service knows, so it is a tab of the project's edit dialog (modal-project-form.jsx) instead of a second list of the same projects.
 
 const UNITS = ['vcpu_hours', 'ram_gb_hours', 'gpu_hours', 'server_hours'];
 const WINDOWS = ['24h', '7d', '30d', 'total'];
-const DEFAULT_LIMITS = { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 0 };
+const DEFAULT_LIMITS = { servers_per_person: 2, cpu_per_person: 4, ram_gb_per_person: 16, gpus_per_person: 0, jobs_per_person: 0, job_max_hours: 0 };
 
 // classes: the GPU classes of the catalogue, to name a budget's class ("General · medium") instead of its id.
 export function budgetText(t, b, classes = []) {
@@ -375,6 +376,13 @@ export function WorkspaceSettingsPanel({ draft }) {
                     <NumberInput label={t('gpu.projects.limit.gpusShort')} min={0} max={gpuCap >= 0 ? gpuCap : undefined} clampBehavior="strict"
                         value={gpuCap === 0 ? 0 : p.limits.gpus_per_person} onChange={v => setLimit('gpus_per_person', v)} readOnly={locked}
                         disabled={gpuCap === 0} description={gpuCap === 0 ? t('gpu.projects.limit.noGpus') : undefined} />
+                </SimpleGrid>
+                {/* Batch jobs: how many a person may have waiting and running at once (0 = the project has none), and how long one may run (0 = the AI service's default). */}
+                <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs">
+                    <NumberInput label={t('gpu.projects.limit.jobsShort')} description={t('gpu.projects.limit.jobsHint')} min={0} allowDecimal={false}
+                        value={p.limits.jobs_per_person ?? 0} onChange={v => setLimit('jobs_per_person', v)} readOnly={locked} />
+                    <NumberInput label={t('gpu.projects.limit.jobHoursShort')} description={t('gpu.projects.limit.jobHoursHint')} min={0} max={MAX_JOB_HOURS} clampBehavior="strict" decimalScale={2}
+                        value={p.limits.job_max_hours ?? 0} onChange={v => setLimit('job_max_hours', v)} readOnly={locked} />
                 </SimpleGrid>
             </Box>
 

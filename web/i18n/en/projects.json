@@ -958,5 +958,17 @@
         "none": "none of its own",
         "gbValue": "{{value}} GB",
         "historyChange": "Local storage per workspace: {{from}} → {{to}}"
+    },
+    "batchPriority": {
+        "title": "Batch jobs",
+        "hint": "How batch jobs of the projects below this budget run. Preemptible: when a workspace needs the GPU, the job is ended and starts again later. Guaranteed: the job is not evicted and runs with the same priority as workspaces. Empty takes the value of the budgets above; without one there, jobs are preemptible. Budgets below can only tighten it to preemptible.",
+        "label": "Priority",
+        "preemptible": "preemptible",
+        "guaranteed": "guaranteed",
+        "standard": "preemptible (default)",
+        "fromAbove": "as above: {{value}}",
+        "errAbove": "The budget above makes jobs preemptible; guaranteed is not possible here.",
+        "none": "none of its own",
+        "historyChange": "Batch jobs: {{from}} → {{to}}"
     }
 }

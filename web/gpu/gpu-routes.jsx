@@ -8,10 +8,12 @@ import { GpuServers } from '/gpu/servers.jsx';
 import { GpuStart } from '/gpu/start.jsx';
 import { GpuUsage } from '/gpu/usage.jsx';
 import { GpuFleet } from '/gpu/fleet.jsx';
+import { GpuJobDetail, GpuJobs } from '/gpu/jobs.jsx';
+import { GpuJobSubmit } from '/gpu/job-submit.jsx';
 import { NoProject } from '/projects/no-project.jsx';
 import { AreaProjects } from '/projects/projects.jsx';
 
-// Workspaces (docs/plan-workspaces.md): running servers and usage. A project's workspace settings open from its card under Projects (gpu/workspace-settings.jsx). Served by llm-management-api; who may use it is its decision: a member of a project (workspace_projects in /v1/me); admins always, they manage the projects. Without a project it offers the way to one.
+// Workspaces (docs/plan-workspaces.md): running servers, batch jobs and usage. A project's workspace settings open from its card under Projects (gpu/workspace-settings.jsx). Served by llm-management-api; who may use it is its decision: a member of a project (workspace_projects in /v1/me); admins always, they manage the projects. Without a project it offers the way to one.
 export function GpuManagement() {
     const { t } = useTranslation();
     const { query, me, isAdmin } = useLlmMe();
@@ -33,6 +35,9 @@ export function GpuManagement() {
             {projects}
             <Route path="/servers/start" component={GpuStart} />
             <Route path="/servers" component={GpuServers} />
+            <Route path="/jobs/new" component={GpuJobSubmit} />
+            <Route path="/jobs/:id" component={GpuJobDetail} />
+            <Route path="/jobs" component={GpuJobs} />
             <Route path="/usage" component={GpuUsage} />
             <Route path="/gpus" component={GpuFleet} />
             <Route path="/"><Redirect to="/servers" replace /></Route>

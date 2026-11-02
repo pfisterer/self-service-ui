@@ -8,6 +8,7 @@ import {
     deleteGpuPool, deleteWorkspaceProject, getGpuFleet, getMyWorkspaceUsage, getGpuHours, putGpuNode, putGpuPool, getProjectImageLog, getWorkspaceCatalog, getWorkspaceStorage, getWorkspaceUsage,
     getGpuServerProgress, getGpuStartOptions, listGpuServers, listWorkspaceProjects, startGpuServer, rebuildProjectImage, stopGpuServer, updateProjectImage, updateWorkspaceProject,
     deleteProjectCredential, listProjectCredentials, setProjectCredential,
+    cancelGpuJob, getGpuJob, getGpuJobLog, listGpuJobs, submitGpuJob,
 } from '@dhbw-cloud/llm-client';
 
 function unwrap(res) {
@@ -58,6 +59,13 @@ export function useGpuApi() {
             deletePool: (id) => call(deleteGpuPool, { path: { id } }),
             // GPU use per hour; period = { from, to }, project for a project's managers.
             gpuHours: (period, project) => call(getGpuHours, { query: project ? { ...period, project } : period }),
+            // Batch jobs: without project the caller's own, with project the caller's there, or all of it for its managers and admins. A refused submit is a 409 with a message for people.
+            listJobs: async (project) => (await call(listGpuJobs, project ? { query: { project } } : {})) ?? [],
+            submitJob: (body) => call(submitGpuJob, { body, headers: JSON_HEADERS }),
+            getJob: (id) => call(getGpuJob, { path: { id } }),
+            // The end of a job's output: { log }, live while it runs, what was kept once it ended.
+            jobLog: async (id, lines) => (await call(getGpuJobLog, { path: { id }, query: lines ? { lines } : undefined })) ?? { log: '' },
+            cancelJob: (id) => call(cancelGpuJob, { path: { id } }),
         };
     }, [client]);
 }

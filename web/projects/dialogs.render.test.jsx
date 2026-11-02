@@ -222,6 +222,27 @@ describe('node dialogs', () => {
         expect(fatal()).toEqual([]);
     });
 
+    it('the budget dialog offers the batch job priority, and not guaranteed under a budget that makes jobs preemptible', async () => {
+        const tree = fixtureTree();
+        const ws = [...RESOURCES, { id: 'ws-vcpu-hours', name: 'vCPU-Stunden', provider: 'aiaas', area: 'workspaces', kind: 'window', window: '30d' }];
+        const ma = { ...tree.children.b_root.items[0], parent_name: 'Organization Root', parent_path: [], inherited_batch_priority: 'preemptible' };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={ws} mode="edit" node={ma} parent={{ ...tree.roots[0], limit: { ...tree.roots[0].limit, 'ws-vcpu-hours': -1 } }} />);
+        fireEvent.click(await screen.findByRole('tab', { name: /Workspaces|Lab/ }));
+        expect(await screen.findByText(/^(Batch jobs|Batch-Jobs)$/)).toBeTruthy();
+        expect(screen.getByPlaceholderText(/(as above|wie darüber): (preemptible|verdrängbar)/)).toBeTruthy();
+        expect(fatal()).toEqual([]);
+    });
+
+    it('the root budget dialog shows preemptible as the default for batch jobs', async () => {
+        const tree = fixtureTree();
+        const ws = [...RESOURCES, { id: 'ws-vcpu-hours', name: 'vCPU-Stunden', provider: 'aiaas', area: 'workspaces', kind: 'window', window: '30d' }];
+        const root = { ...tree.roots[0], parent_id: null };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={ws} mode="edit" node={root} />);
+        fireEvent.click(await screen.findByRole('tab', { name: /Workspaces|Lab/ }));
+        expect(await screen.findByPlaceholderText(/(preemptible \(default\)|verdrängbar \(Standard\))/)).toBeTruthy();
+        expect(fatal()).toEqual([]);
+    });
+
     it('the read-only dialog shows the same tabs', async () => {
         renderView(<NodeInspectModal opened onClose={() => {}} resources={RESOURCES} node={project({ status: 'archived' })} />);
         expect(await screen.findAllByRole('tab')).not.toHaveLength(0);
