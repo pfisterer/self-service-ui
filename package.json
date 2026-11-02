@@ -1,6 +1,6 @@
 {
   "name": "dynamic-zones-ui",
-  "version": "0.8.167-test.1",
+  "version": "0.8.167",
   "type": "module",
   "scripts": {
     "dev": "npx vite",
@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@dhbw-cloud/dynamic-zones-client": "^0.8.12",
-    "@dhbw-cloud/llm-client": "^0.2.62-test.4",
-    "@dhbw-cloud/os-mgt-client": "^0.8.69-test.1",
+    "@dhbw-cloud/llm-client": "^0.2.62",
+    "@dhbw-cloud/os-mgt-client": "^0.8.69",
     "@mantine/charts": "^9.5.2",
     "@mantine/core": "^9.4.1",
     "@mantine/dates": "^9.4.1",
