@@ -377,9 +377,7 @@
         "standardHours": "Standard: {{value}} Std.",
         "atMost": "höchstens {{value}}",
         "unlimitedAllowed": "ohne Obergrenze möglich",
-        "budgetTitle": "Höchstwerte des Budgets",
         "budgetHint": "Bis zu diesen Werten wählt das Projekt; leere Felder = Standard. Ohne Obergrenze geht es nur bei GPU und nur mit eigenen GPUs des Projekts (GPUs je Klasse); im gemeinsamen Pool gibt es immer eine.",
-        "budgetFromTree": "Die Höchstwerte setzt das Budget im Budgetbaum.",
         "effective": "Zurzeit gilt",
         "uses": {
             "cpu": "CPU",

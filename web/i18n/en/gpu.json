@@ -377,9 +377,7 @@
         "standardHours": "Default: {{value}} h",
         "atMost": "at most {{value}}",
         "unlimitedAllowed": "no upper bound possible",
-        "budgetTitle": "Budget maximums",
         "budgetHint": "The project chooses up to these values; empty fields = default. No upper bound only for GPU and only with the project's own GPUs (GPUs per class); the shared pool always has one.",
-        "budgetFromTree": "The maximums are set by the budget in the budget tree.",
         "effective": "Currently in effect",
         "uses": {
             "cpu": "CPU",

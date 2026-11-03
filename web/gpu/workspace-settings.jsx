@@ -260,8 +260,8 @@ function withTime(release, kind, field, value) {
     return { ...(release ?? {}), [kind]: times };
 }
 
-// ReleaseRow is one kind's three times: number fields (empty = inherited, shown as placeholder) and, where no upper bound is allowed, a checkbox for it. ceiling: the most each time may be (max_hours 0 = no upper bound allowed); null = no limit shown (the budget's own maximums). defaults: the AI service's times of the kind where nothing is set (catalogue releaseDefaults), shown as placeholder of an empty field without a value above; missing, the placeholder says only "default".
-export function ReleaseRow({ kind, value, inherited, ceiling, defaults, unlimitedAllowed, onChange, readOnly }) {
+// ReleaseRow is one kind's three times: number fields (empty = inherited, shown as placeholder) and, where no upper bound is allowed, a checkbox for it. ceiling: the most each time may be (max_hours 0 = no upper bound allowed); null = no limit shown. defaults: the AI service's times of the kind where nothing is set (catalogue releaseDefaults), shown as placeholder of an empty field without a value above; missing, the placeholder says only "default".
+export function ReleaseRow({ kind, value, inherited, ceiling, defaults, unlimitedAllowed, onChange }) {
     const { t, i18n } = useTranslation();
     const fmt = (field, v) => (field === 'max_hours' && v === 0 ? t('gpu.release.unlimited') : String(v));
     const standard = (field) => {
@@ -282,12 +282,12 @@ export function ReleaseRow({ kind, value, inherited, ceiling, defaults, unlimite
                     return (
                         <Stack key={field} gap={2}>
                             <NumberInput size="xs" label={t(RELEASE_LABELS[field])} min={1} max={ceil > 0 ? ceil : limit} clampBehavior="strict" allowDecimal={false}
-                                value={unlimited || own === undefined || own === null ? '' : own} disabled={unlimited} readOnly={readOnly}
+                                value={unlimited || own === undefined || own === null ? '' : own} disabled={unlimited}
                                 placeholder={from !== undefined && from !== null ? t('gpu.release.fromBudget', { value: fmt(field, from) }) : standard(field)}
                                 description={ceil === undefined || ceil === null ? undefined : ceil === 0 ? t('gpu.release.unlimitedAllowed') : t('gpu.release.atMost', { value: ceil.toLocaleString(i18n.language) })}
                                 onChange={v => onChange(field, v)} />
                             {field === 'max_hours' && unlimitedAllowed && (
-                                <Checkbox size="xs" label={t('gpu.release.unlimited')} checked={unlimited} disabled={readOnly}
+                                <Checkbox size="xs" label={t('gpu.release.unlimited')} checked={unlimited}
                                     onChange={e => onChange(field, e.currentTarget.checked ? 0 : null)} />
                             )}
                         </Stack>
@@ -298,15 +298,14 @@ export function ReleaseRow({ kind, value, inherited, ceiling, defaults, unlimite
     );
 }
 
-// ReleaseTimes is the project's release times (docs/todo.md idle_release in aiaas-deployment): the project chooses within the budget's maximums, which admins set here while the budget tree sends none; below what the servers and GPU kernels enforce now.
-function ReleaseTimes({ draft, isAdmin, defaults }) {
+// ReleaseTimes is the project's release times (docs/todo.md idle_release in aiaas-deployment): the project chooses within the budget's maximums, which the budget tree sets and which show as placeholders and limits; below what the servers and GPU kernels enforce now.
+function ReleaseTimes({ draft, defaults }) {
     const { t, i18n } = useTranslation();
     const p = draft.value;
     const saved = draft.project;
     const ceiling = saved?.release_ceiling ?? {};
     const effective = saved?.release_effective;
     const set = (key, kind, field, v) => draft.update(cur => ({ ...cur, [key]: withTime(cur[key], kind, field, v) }));
-    const own = projectGpuCap(p) > 0;
     const fmt = (sec) => formatDuration(sec * 1000, i18n.language);
     const line = (r) => r ? `${fmt(r.idle_open)} / ${fmt(r.idle_closed)}, ${r.max > 0 ? fmt(r.max) : t('gpu.release.unlimited')}` : '';
     return (
@@ -319,16 +318,6 @@ function ReleaseTimes({ draft, isAdmin, defaults }) {
                 <Text size="xs" c="dimmed">
                     {t('gpu.release.effective')}: {[...Object.entries(effective.servers ?? {}).map(([slug, r]) => `${t(`gpu.release.uses.${slug}`, { defaultValue: slug })} ${line(r)}`), effective.kernel && (p.profiles ?? []).includes('cpu-gpukernel') ? `${t('gpu.release.uses.kernel')} ${line(effective.kernel)}` : null].filter(Boolean).join(' · ')}
                 </Text>
-            )}
-            {isAdmin && (
-                <Stack gap={6} mt="xs">
-                    <Text size="sm" fw={600}>{t('gpu.release.budgetTitle')}</Text>
-                    <Text size="xs" c="dimmed">{p.tree_release ? t('gpu.release.budgetFromTree') : t('gpu.release.budgetHint')}</Text>
-                    {RELEASE_KINDS.map(kind => (
-                        <ReleaseRow key={kind} kind={kind} value={p.release_max?.[kind]} readOnly={!!p.tree_release} defaults={defaults?.[kind]}
-                            unlimitedAllowed={kind === 'gpu' && own} onChange={(field, v) => set('release_max', kind, field, v)} />
-                    ))}
-                </Stack>
             )}
         </Box>
     );
@@ -431,7 +420,7 @@ export function WorkspaceSettingsPanel({ draft }) {
                     <BatchJobsBox p={p} setLimit={setLimit} locked={locked} classes={catalog.data?.gpuClasses ?? []} />
                 </Tabs.Panel>
                 <Tabs.Panel value="release">
-                    <ReleaseTimes draft={draft} isAdmin={isAdmin} defaults={catalog.data?.releaseDefaults} />
+                    <ReleaseTimes draft={draft} defaults={catalog.data?.releaseDefaults} />
                 </Tabs.Panel>
             </Tabs>
         </Stack>

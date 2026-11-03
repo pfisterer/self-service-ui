@@ -155,11 +155,11 @@ describe('the GPU views render', () => {
         expectNoRenderFailure();
     });
 
-    it('the workspace settings tab shows admins the budget maximums', async () => {
+    it('the workspace settings tab shows admins what is in effect, the budget maximums only in the budget', async () => {
         renderView(<SettingsTab nodeId="p_ml" />);
         fireEvent.click(await screen.findByRole('tab', { name: /^(Rückgabezeiten|Release times)$/ }));
-        expect(await screen.findByText(/(Höchstwerte des Budgets|Budget maximums)/)).toBeTruthy();
-        expect(screen.getByText(/(Zurzeit gilt|Currently in effect)/)).toBeTruthy();
+        expect(await screen.findByText(/(Zurzeit gilt|Currently in effect)/)).toBeTruthy();
+        expect(screen.queryByText(/(Höchstwerte des Budgets|Budget maximums)/)).toBeNull();
         expectNoRenderFailure();
     });
 
