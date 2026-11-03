@@ -19,8 +19,13 @@ export function releaseIdle(r, t, lang) {
     return t('gpu.release.idleBoth', { open, closed: formatDuration(r.idle_closed * 1000, lang) });
 }
 
+// oneDot ends a sentence that ends in an abbreviation ("nach 8 Std.") with that abbreviation's dot, not a second one.
+export function oneDot(text) {
+    return text.replace(/\.\.(?=\s|$)/g, '.');
+}
+
 // releaseText is the whole sentence for a start: idle times and the upper bound.
 export function releaseText(r, t, lang) {
     const idle = releaseIdle(r, t, lang);
-    return r.max > 0 ? t('gpu.release.withMax', { idle, max: formatDuration(r.max * 1000, lang) }) : t('gpu.release.noMax', { idle });
+    return oneDot(r.max > 0 ? t('gpu.release.withMax', { idle, max: formatDuration(r.max * 1000, lang) }) : t('gpu.release.noMax', { idle }));
 }

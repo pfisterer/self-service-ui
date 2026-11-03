@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { kernelReleaseOf, releaseOf, releaseText } from './release.js';
+import { kernelReleaseOf, oneDot, releaseOf, releaseText } from './release.js';
 
 // Keys and values as the translation sees them, so the test checks what goes into the sentence.
 const t = (key, v = {}) => `${key}(${Object.entries(v).map(([k, x]) => `${k}=${x}`).join(',')})`;
@@ -20,5 +20,10 @@ describe('release times', () => {
         const cpu = releaseText(releaseOf(project, 'cpu'), t, 'de');
         expect(cpu).toContain('gpu.release.withMax');
         expect(cpu).toContain('gpu.release.idle(');
+    });
+    it('ends a sentence after an abbreviation with one dot', () => {
+        expect(oneDot('spätestens nach 8 Std..')).toBe('spätestens nach 8 Std.');
+        expect(oneDot('nach 8 Std.. GPU-Kernel: nach 4 Std..')).toBe('nach 8 Std. GPU-Kernel: nach 4 Std.');
+        expect(oneDot('after 8 hr.')).toBe('after 8 hr.');
     });
 });

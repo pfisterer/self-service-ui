@@ -11,7 +11,7 @@ import { gpuKeys } from '/gpu/query-keys.js';
 import { SPLIT_GUIDE_URL, profileLabel } from '/gpu/profiles.js';
 import { BuildLogBody, useBuildLog } from '/gpu/build-log.jsx';
 import { formatDuration } from '/helper/duration.js';
-import { kernelReleaseOf, releaseOf, releaseText } from '/gpu/release.js';
+import { kernelReleaseOf, oneDot, releaseOf, releaseText } from '/gpu/release.js';
 import { NoStartableProject } from '/gpu/start-empty.jsx';
 
 // Starting a server (Workspaces → Server → Server starten): the hub has no start form of its own any more, its start page leads here. The choice is in the URL (?project=<slug>&env=<profile>&gpu_class=<class>), so a link to this page with a project and an environment can go out to a course; the page offers only what the person's projects allow and starts through llm-management-api, where the hub checks the start as every start. While the server starts the page waits, then opens it in this tab.
@@ -41,10 +41,10 @@ function limitsText(p, project, t, lang) {
     const r = releaseOf(project, p.slug);
     if (r) {
         const kernel = p.slug === SPLIT_PROFILE ? kernelReleaseOf(project) : null;
-        return ' ' + releaseText(r, t, lang) + (kernel ? ' ' + t('gpu.release.kernel', { text: releaseText(kernel, t, lang) }) : '');
+        return ' ' + releaseText(r, t, lang) + (kernel ? ' ' + oneDot(t('gpu.release.kernel', { text: releaseText(kernel, t, lang) })) : '');
     }
     if (!p.idle_minutes || !p.max_hours) return '';
-    return ' ' + t('gpu.start.limits', { idle: formatDuration(p.idle_minutes * 60000, lang), max: formatDuration(p.max_hours * 3600000, lang) });
+    return ' ' + oneDot(t('gpu.start.limits', { idle: formatDuration(p.idle_minutes * 60000, lang), max: formatDuration(p.max_hours * 3600000, lang) }));
 }
 
 function day(iso) {

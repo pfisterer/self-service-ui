@@ -9,7 +9,7 @@ DOCKER_PLATFORMS ?= linux/amd64,linux/arm64
 
 # --- Targets ---
 .DEFAULT_GOAL := docker-build
-.PHONY: publish all check clean docker-build multi-arch-build docker-login help dev helm-update bump version-check
+.PHONY: publish screenshots all check clean docker-build multi-arch-build docker-login help dev helm-update bump version-check
 
 # Alias for the primary build target
 all: docker-build
@@ -138,3 +138,13 @@ publish: version-check check
 	helm push tmp/chart/*.tgz oci://ghcr.io/pfisterer/charts; \
 	git push; \
 	echo "✅ $$I:$$V and its chart are published, commits pushed — CI only verifies"
+	@if [ -n "$(SCREENSHOTS_OUT)" ]; then $(MAKE) --no-print-directory screenshots OUT="$(SCREENSHOTS_OUT)"; fi
+
+# The screenshots in the guides on dhbw.cloud: the dev server with made-up data (screenshots/fixtures.mjs), one PNG per entry of screenshots/shots.mjs, written to OUT (the homepage's frontend/public/img/anleitungen). Without OUT, the path in .screenshots-out (not versioned, one line); with it set, every `make publish` takes them again afterwards and names the pictures that changed, to be committed and published with the homepage. ONLY=name,name takes just those.
+SCREENSHOTS_OUT ?= $(shell cat .screenshots-out 2>/dev/null)
+screenshots:
+	@out="$(or $(OUT),$(SCREENSHOTS_OUT))"; test -n "$$out" || { echo "usage: make screenshots OUT=<homepage>/frontend/public/img/anleitungen (or the path in .screenshots-out)"; exit 1; }; \
+	echo "📸 screenshots → $$out"; \
+	node screenshots/take.mjs "$$out" $(ONLY); \
+	if git -C "$$out" rev-parse >/dev/null 2>&1; then changed=$$(git -C "$$out" status --porcelain -- .); \
+	if [ -n "$$changed" ]; then echo "🖼️  changed on the homepage — commit and publish it:"; echo "$$changed"; else echo "🖼️  no picture changed"; fi; fi

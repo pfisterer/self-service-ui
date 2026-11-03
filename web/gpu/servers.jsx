@@ -9,7 +9,7 @@ import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { profileLabel, usesGpu } from '/gpu/profiles.js';
 import { formatDuration } from '/helper/duration.js';
-import { releaseIdle, releaseOf } from '/gpu/release.js';
+import { oneDot, releaseIdle, releaseOf } from '/gpu/release.js';
 
 // The person's JupyterHub servers (also those started on the hub page itself).
 export function GpuServers() {
@@ -27,10 +27,10 @@ export function GpuServers() {
         const r = releaseOf(project, s.profile);
         if (r) {
             const idle = releaseIdle(r, t, i18n.language);
-            if (!r.max || !s.started) return { text: r.max ? `${idle}.` : t('gpu.release.noMax', { idle }), at: null };
+            if (!r.max || !s.started) return { text: oneDot(r.max ? `${idle}.` : t('gpu.release.noMax', { idle })), at: null };
             const end = new Date(s.started).getTime() + r.max * 1000;
             return {
-                text: t('gpu.release.left', { idle, left: formatDuration(end - servers.dataUpdatedAt, i18n.language) }),
+                text: oneDot(t('gpu.release.left', { idle, left: formatDuration(end - servers.dataUpdatedAt, i18n.language) })),
                 at: new Date(end).toLocaleString(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit' }),
             };
         }
@@ -38,7 +38,7 @@ export function GpuServers() {
         if (!p?.idle_minutes || !p?.max_hours || !s.started) return null;
         const end = new Date(s.started).getTime() + p.max_hours * 3600 * 1000;
         return {
-            text: t('gpu.servers.ends', { idle: formatDuration(p.idle_minutes * 60000, i18n.language), left: formatDuration(end - servers.dataUpdatedAt, i18n.language) }),
+            text: oneDot(t('gpu.servers.ends', { idle: formatDuration(p.idle_minutes * 60000, i18n.language), left: formatDuration(end - servers.dataUpdatedAt, i18n.language) })),
             at: new Date(end).toLocaleString(i18n.language, { weekday: 'short', hour: '2-digit', minute: '2-digit' }),
         };
     };

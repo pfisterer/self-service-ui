@@ -15,3 +15,5 @@ kubeconfig-*.yaml
 web/config.js
 dist/
 .vscode/settings.json
+.screenshots-out
+screenshots/out/
