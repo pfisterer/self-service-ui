@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ActionIcon, Badge, Button, Checkbox, Code, Group, Loader, Modal, MultiSelect, NumberInput, Paper, Progress, SegmentedControl, Select, SimpleGrid, Stack, Switch, Tabs, Text, TextInput } from '@mantine/core';
+import { ActionIcon, Anchor, Badge, Button, Checkbox, Code, Group, Loader, Modal, MultiSelect, NumberInput, Paper, Progress, SegmentedControl, Select, SimpleGrid, Stack, Switch, Tabs, Text, TextInput } from '@mantine/core';
 import { FileText, Plus, RotateCcw, X } from 'lucide-react';
 import { BUILD_COLOUR, BuildLogModal } from '/gpu/build-log.jsx';
 import { GitSource } from '/gpu/git-source.jsx';
@@ -14,6 +14,7 @@ import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { formatDay } from '/format-date.js';
 import { formatDuration } from '/helper/duration.js';
 import { gpuKeys } from '/gpu/query-keys.js';
+import { SPLIT_GUIDE_URL } from '/gpu/profiles.js';
 import { DEFAULT_JOBS_PER_PERSON, JOB_HOUR_CHOICES, jobMaxHours } from '/gpu/jobs.js';
 
 // How a Lab/KI project's workspaces are used — profiles, the project image, limits and shares per person, shorter windows. Everything else about the project (name, members, end, quotas) is the project's own and edited in its dialog; this is the one part only the AI service knows, so it is a tab of the project's edit dialog (modal-project-form.jsx) instead of a second list of the same projects.
@@ -187,7 +188,7 @@ function ProjectImage({ draft, set, bases }) {
                     value={p.project_image ?? ''} onChange={e => set('project_image', e.currentTarget.value.trim())} />
             )}
             {source === 'image' && saved?.project_image && saved.project_image === p.project_image && !saved.image_derived && (
-                <Text size="xs" c="orange">{t('gpu.projects.image.notDerived')}</Text>
+                <Text size="xs" c="orange">{t('gpu.projects.image.notDerived')} <Anchor href={SPLIT_GUIDE_URL} target="_blank" rel="noopener" size="xs">{t('gpu.start.splitNeedsBaseLink')}</Anchor></Text>
             )}
             <ImageFacts project={facts} />
             {pinnedImage?.image_digest && (

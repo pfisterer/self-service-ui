@@ -99,4 +99,24 @@ describe('start page', () => {
         renderView(<GpuStart />);
         expect(await screen.findByText(i18n.t('gpu.start.scratch', { gb: 1 }))).toBeTruthy();
     });
+    it('points a project on a free image that allows CPU + GPU kernel to a base and the guide', async () => {
+        globalThis.__gpuApi = {
+            startOptions: async () => ({ projects: [{ slug: 'ws', name: 'Eigenes Image', profiles: ['cpu'], image_derived: false, split_needs_base: true, storage_gb: 15 }], profiles: PROFILES }),
+            listServers: async () => [],
+        };
+        globalThis.__nodesApi = nodesApi();
+        renderView(<GpuStart />);
+        expect(await screen.findByText(i18n.t('gpu.start.splitNeedsBase'))).toBeTruthy();
+        expect(screen.getByText(i18n.t('gpu.start.splitNeedsBaseLink')).closest('a').getAttribute('href')).toBe('https://dhbw.cloud/anleitungen/cpu-gpu-kernel');
+    });
+    it('says nothing about bases where the project has no CPU + GPU kernel to miss', async () => {
+        globalThis.__gpuApi = {
+            startOptions: async () => ({ projects: [{ slug: 'ws', name: 'Eigenes Image', profiles: ['cpu'], image_derived: false, storage_gb: 15 }], profiles: PROFILES }),
+            listServers: async () => [],
+        };
+        globalThis.__nodesApi = nodesApi();
+        renderView(<GpuStart />);
+        expect(await screen.findByText('Eigenes Image')).toBeTruthy();
+        expect(screen.queryByText(i18n.t('gpu.start.splitNeedsBase'))).toBeNull();
+    });
 });

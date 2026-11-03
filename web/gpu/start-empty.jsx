@@ -1,8 +1,9 @@
 import { useQueries } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'wouter';
-import { Alert, Button, List, Stack, Text } from '@mantine/core';
+import { Alert, Anchor, Button, List, Stack, Text } from '@mantine/core';
 import { FolderPlus } from 'lucide-react';
+import { SPLIT_GUIDE_URL } from '/gpu/profiles.js';
 import { useNodesApi } from '/projects/api-nodes.jsx';
 import { projectKeys } from '/projects/query-keys.js';
 import { autoApproveHeadroom, isAvailability, kindOfResource, visibleResources } from '/projects/util-project.jsx';
@@ -58,6 +59,10 @@ export function NoStartableProject({ blocked = [] }) {
                 <Text size="sm">{t('gpu.start.empty.why')}</Text>
                 {blocked.length > 0 && (
                     <Text size="sm">{t('gpu.start.empty.noEnv', { count: blocked.length, projects: blocked.map(p => `„${p.name || p.slug}“`).join(', ') })}</Text>
+                )}
+                {/* A project that would offer "CPU + GPU kernel" on one of our bases: say how to get it there. */}
+                {blocked.some(p => p.split_needs_base) && (
+                    <Text size="sm">{t('gpu.start.splitNeedsBase')} <Anchor href={SPLIT_GUIDE_URL} target="_blank" rel="noopener" size="sm">{t('gpu.start.splitNeedsBaseLink')}</Anchor></Text>
                 )}
                 {/* Only once the budgets are known: "no budget" while they load would be wrong for a moment. */}
                 {loaded && (offers.length > 0 ? (

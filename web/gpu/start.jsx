@@ -8,7 +8,7 @@ import { ChevronDown, ChevronRight, Copy, Play } from 'lucide-react';
 import { LoadError, Loading } from '/helper/query-state.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
-import { profileLabel } from '/gpu/profiles.js';
+import { SPLIT_GUIDE_URL, profileLabel } from '/gpu/profiles.js';
 import { BuildLogBody, useBuildLog } from '/gpu/build-log.jsx';
 import { formatDuration } from '/helper/duration.js';
 import { kernelReleaseOf, releaseOf, releaseText } from '/gpu/release.js';
@@ -239,6 +239,7 @@ export function GpuStart() {
                                 )}
                             </Stack>
 
+                            {project.split_needs_base && <SplitNeedsBase />}
                             {project.image_pending && <BuildState project={project} />}
                             {start.isError && <Alert color="red" variant="light">{start.error?.message}</Alert>}
                             <Group gap="sm">
@@ -284,6 +285,19 @@ export function StartLog({ events, open: openFromStart }) {
                 )}
             </Collapse>
         </div>
+    );
+}
+
+// SplitNeedsBase says that the project would offer "CPU + GPU kernel" in an environment built on one of our bases (split_needs_base), and where to read how.
+export function SplitNeedsBase() {
+    const { t } = useTranslation();
+    return (
+        <Alert color="blue" variant="light" title={t('gpu.start.splitNeedsBaseTitle')}>
+            <Stack gap={6}>
+                <Text size="sm">{t('gpu.start.splitNeedsBase')}</Text>
+                <Anchor href={SPLIT_GUIDE_URL} target="_blank" rel="noopener" size="sm">{t('gpu.start.splitNeedsBaseLink')}</Anchor>
+            </Stack>
+        </Alert>
     );
 }
 
