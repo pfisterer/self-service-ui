@@ -58,6 +58,8 @@
         "dynamicZonesUpstream": { "type": "string" },
         "cloudResourcesUpstream": { "type": "string" },
         "llmBaseUrl": { "type": "string" },
+        "groupsBaseUrl": { "type": "string" },
+        "groupsUpstream": { "type": "string" },
         "llmUpstream": { "type": "string" },
         "llmHost": { "type": "string" }
       }

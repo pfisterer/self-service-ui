@@ -27,6 +27,9 @@ export const dnsZonesEnabled = Boolean(window?.appconfig?.dynamicZonesBaseUrl);
 // and the section stays hidden (see llm/use-llm-me.jsx).
 export const llmEnabled = Boolean(window?.appconfig?.llmBaseUrl);
 
+// Groups maintained by hand (the role provider's local source), reached through this UI's proxy. Whether a person sees the section is the service's answer (groups/use-groups-me.jsx): it is offered to whoever maintains a group.
+export const groupsEnabled = Boolean(window?.appconfig?.groupsBaseUrl);
+
 // At least one API has to be there for a token to be issuable at all.
 export const apiTokensEnabled = dnsZonesEnabled || cloudProjectsEnabled || llmEnabled;
 

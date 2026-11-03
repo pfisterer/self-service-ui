@@ -1,0 +1,117 @@
+{
+    "cancel": "Abbrechen",
+    "relationMember": "Mitglied",
+    "patternText": "alle Adressen {{pattern}}",
+    "kind": {
+        "user": "Person",
+        "group": "Gruppe",
+        "pattern": "Muster",
+        "unknown": "Eintrag"
+    },
+    "noAccess": {
+        "title": "Keine Gruppen zu verwalten",
+        "text": "Gruppen werden hier von den Personen gepflegt, die sie verwalten. Für die Verwaltung einer Gruppe bitte an das ZWR oder an die Person wenden, die sie bereits verwaltet."
+    },
+    "list": {
+        "title": "Gruppen",
+        "intro": "Gruppen, deren Mitglieder hier gepflegt werden: Personen, andere Gruppen und Regeln für ganze Adressbereiche, jeweils mit Rolle und auf Wunsch befristet.",
+        "introAdmin": "Alle Gruppen der Quelle {{source}}. Gruppen aus anderen Quellen (z. B. bwIDM) werden dort gepflegt und können hier als Mitglied eingetragen werden.",
+        "search": "Gruppen durchsuchen",
+        "create": "Gruppe anlegen",
+        "group": "Gruppe",
+        "description": "Beschreibung",
+        "roles": "Rollen",
+        "none": "Keine Gruppen.",
+        "noMatch": "Keine Gruppe passt zur Suche."
+    },
+    "create": {
+        "title": "Gruppe anlegen",
+        "id": "Kennung",
+        "idHint": "Wird zum Token group:<Kennung>, mit dem Regeln die Gruppe nennen; lässt sich später nicht ändern. Kleinbuchstaben, Ziffern, Punkt, Binde- und Unterstrich.",
+        "idInvalid": "Nur Kleinbuchstaben, Ziffern, Punkt, Binde- und Unterstrich, beginnend mit Buchstabe oder Ziffer.",
+        "displayName": "Anzeigename",
+        "description": "Beschreibung",
+        "managers": "Verwaltet von",
+        "managersHint": "Personen oder Gruppen, die Mitglieder pflegen dürfen. Verwalten heißt nicht Mitglied sein.",
+        "submit": "Anlegen"
+    },
+    "edit": {
+        "title": "{{id}} bearbeiten",
+        "save": "Speichern"
+    },
+    "delete": {
+        "button": "Löschen",
+        "title": "Gruppe löschen?",
+        "confirm": "Endgültig löschen",
+        "message": "{{id}} wird mit allen Einträgen gelöscht und aus allen anderen Gruppen entfernt. Regeln in den Diensten, die group:{{id}} nennen, greifen danach nicht mehr."
+    },
+    "detail": {
+        "back": "Alle Gruppen",
+        "token": "Token: {{token}}",
+        "edit": "Bearbeiten"
+    },
+    "tabs": {
+        "entries": "Einträge ({{count}})",
+        "effective": "Mitglieder insgesamt",
+        "managers": "Verwaltung ({{count}})",
+        "history": "Verlauf"
+    },
+    "entries": {
+        "member": "Eintrag",
+        "placeholder": "Adresse, Gruppe oder pattern:*@domain",
+        "relation": "Rolle",
+        "until": "Gültig bis",
+        "noEnd": "unbefristet",
+        "since": "Seit",
+        "add": "Hinzufügen",
+        "hint": "Eine Gruppe als Eintrag macht alle ihre Mitglieder zu Mitgliedern dieser Gruppe, mit der gewählten Rolle. Ein befristeter Eintrag gilt bis zum Ende des gewählten Tages.",
+        "none": "Noch keine Einträge.",
+        "expired": "abgelaufen am {{date}}",
+        "changeUntil": "Befristung",
+        "remove": "Entfernen",
+        "removeTitle": "Eintrag entfernen?",
+        "removeConfirm": "Entfernen",
+        "removeMessage": "{{member}} verliert die Rolle „{{relation}}“ in dieser Gruppe."
+    },
+    "expiry": {
+        "title": "Befristung ändern",
+        "hint": "Ohne Datum gilt der Eintrag unbefristet. Ein abgelaufener Eintrag wird mit einem neuen Datum wieder gültig."
+    },
+    "effective": {
+        "hint_one": "{{count}} Person gehört am Ende zu dieser Gruppe, Untergruppen eingerechnet und abgelaufene Einträge nicht. Wer nur über ein Adressmuster dazugehört, ist hier nicht aufgeführt.",
+        "hint_other": "{{count}} Personen gehören am Ende zu dieser Gruppe, Untergruppen eingerechnet und abgelaufene Einträge nicht. Wer nur über ein Adressmuster dazugehört, ist hier nicht aufgeführt.",
+        "none": "Niemand."
+    },
+    "managers": {
+        "hint": "Wer eine Gruppe verwaltet, pflegt ihre Einträge, ihre Beschreibung und die Verwaltung selbst. Verwalten heißt nicht Mitglied sein: Die Rechte der Gruppe erhält dadurch niemand.",
+        "add": "Verwaltung übertragen an",
+        "addButton": "Hinzufügen",
+        "placeholder": "Adresse, Gruppe oder Gruppe#Rolle",
+        "none": "Nur Administrator:innen verwalten diese Gruppe.",
+        "addedBy": "eingetragen von {{who}} am {{date}}",
+        "remove": "Entfernen",
+        "removeTitle": "Verwaltung entziehen?",
+        "removeConfirm": "Entziehen",
+        "removeMessage": "{{manager}} kann diese Gruppe danach nicht mehr verwalten."
+    },
+    "history": {
+        "at": "Zeitpunkt",
+        "who": "Wer",
+        "what": "Was",
+        "none": "Noch keine Änderungen.",
+        "onBehalf": "im Auftrag von {{who}}",
+        "apiToken": "API-Token",
+        "system": "System",
+        "actions": {
+            "group_created": "Gruppe angelegt ({{detail}})",
+            "group_updated": "Name und Beschreibung geändert: {{detail}}",
+            "group_deleted": "Gruppe gelöscht",
+            "group_adopted": "Übernommen: {{detail}}",
+            "member_added": "{{member}} als {{relation}} eingetragen",
+            "member_added_until": "{{member}} als {{relation}} eingetragen, bis {{date}}",
+            "member_removed": "{{member}} als {{relation}} entfernt",
+            "manager_added": "Verwaltung an {{member}} übertragen",
+            "manager_removed": "Verwaltung von {{member}} entzogen"
+        }
+    }
+}

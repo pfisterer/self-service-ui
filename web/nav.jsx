@@ -1,6 +1,7 @@
 import { useLocation } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import { cloudProjectsEnabled, dnsZonesEnabled } from '/features.js';
+import { useGroupsMe } from '/groups/use-groups-me.jsx';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
 import { useAiAreasVisible } from '/ai-areas.jsx';
@@ -38,8 +39,8 @@ export function useNav() {
     const { hasPolicy, adminEvents, ownEvents } = useDnsPolicyStatus();
     // Which of the AI service's areas are visible, and how (ai-areas.jsx, shared with the footer).
     const { llm, workspaces, llmArea } = useAiAreasVisible();
-
-
+    // Only for whoever maintains a group (or admins), as the role provider answers.
+    const groups = useGroupsMe();
 
     const sections = [
         { id: 'home', label: t('nav.home'), href: '/', items: [] },
@@ -116,6 +117,13 @@ export function useNav() {
                 { label: t('nav.myBudgets'), href: '/budgets', dot: pending > 0 },
                 isRoot && { label: t('nav.rootAdmin'), href: '/budgets/admin' },
             ].filter(Boolean),
+        },
+        // Groups maintained by hand: courses, study programmes, offices. Last, because few people have it.
+        groups.visible && {
+            id: 'groups',
+            label: t('nav.groups'),
+            base: '/groups',
+            items: [{ label: t('nav.groups'), href: '/groups' }],
         },
     ].filter(Boolean).map(s => ({ ...s, href: s.href ?? s.items[0]?.href ?? '/' }));
 

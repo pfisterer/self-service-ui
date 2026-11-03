@@ -1,0 +1,117 @@
+{
+    "cancel": "Cancel",
+    "relationMember": "Member",
+    "patternText": "all addresses {{pattern}}",
+    "kind": {
+        "user": "Person",
+        "group": "Group",
+        "pattern": "Pattern",
+        "unknown": "Entry"
+    },
+    "noAccess": {
+        "title": "No groups to maintain",
+        "text": "Groups are maintained here by the people who manage them. To manage a group, contact the ZWR or whoever manages it already."
+    },
+    "list": {
+        "title": "Groups",
+        "intro": "Groups whose members are maintained here: people, other groups and rules for whole address ranges, each with a role and, if wanted, until a date.",
+        "introAdmin": "All groups of the source {{source}}. Groups from other sources (e.g. bwIDM) are maintained there and can be entered here as members.",
+        "search": "Search groups",
+        "create": "Create group",
+        "group": "Group",
+        "description": "Description",
+        "roles": "Roles",
+        "none": "No groups.",
+        "noMatch": "No group matches the search."
+    },
+    "create": {
+        "title": "Create group",
+        "id": "Identifier",
+        "idHint": "Becomes the token group:<identifier> by which rules name the group; cannot be changed later. Lowercase letters, digits, dot, hyphen and underscore.",
+        "idInvalid": "Only lowercase letters, digits, dot, hyphen and underscore, starting with a letter or digit.",
+        "displayName": "Display name",
+        "description": "Description",
+        "managers": "Managed by",
+        "managersHint": "People or groups allowed to maintain the members. Managing is not being a member.",
+        "submit": "Create"
+    },
+    "edit": {
+        "title": "Edit {{id}}",
+        "save": "Save"
+    },
+    "delete": {
+        "button": "Delete",
+        "title": "Delete group?",
+        "confirm": "Delete for good",
+        "message": "{{id}} is deleted with all its entries and removed from every other group. Rules in the services that name group:{{id}} no longer apply."
+    },
+    "detail": {
+        "back": "All groups",
+        "token": "Token: {{token}}",
+        "edit": "Edit"
+    },
+    "tabs": {
+        "entries": "Entries ({{count}})",
+        "effective": "All members",
+        "managers": "Managers ({{count}})",
+        "history": "History"
+    },
+    "entries": {
+        "member": "Entry",
+        "placeholder": "Address, group or pattern:*@domain",
+        "relation": "Role",
+        "until": "Valid until",
+        "noEnd": "no end",
+        "since": "Since",
+        "add": "Add",
+        "hint": "A group as entry makes all of its members members of this group, in the chosen role. An entry with an end date counts until the end of that day.",
+        "none": "No entries yet.",
+        "expired": "expired on {{date}}",
+        "changeUntil": "End date",
+        "remove": "Remove",
+        "removeTitle": "Remove entry?",
+        "removeConfirm": "Remove",
+        "removeMessage": "{{member}} loses the role “{{relation}}” in this group."
+    },
+    "expiry": {
+        "title": "Change end date",
+        "hint": "Without a date the entry does not end. An expired entry counts again with a new date."
+    },
+    "effective": {
+        "hint_one": "{{count}} person belongs to this group in the end, sub-groups included and expired entries not. Whoever belongs only through an address pattern is not listed.",
+        "hint_other": "{{count}} people belong to this group in the end, sub-groups included and expired entries not. Whoever belongs only through an address pattern is not listed.",
+        "none": "Nobody."
+    },
+    "managers": {
+        "hint": "Whoever manages a group maintains its entries, its description and who manages it. Managing is not being a member: nobody gains the group's rights by it.",
+        "add": "Hand management to",
+        "addButton": "Add",
+        "placeholder": "Address, group or group#role",
+        "none": "Only administrators manage this group.",
+        "addedBy": "added by {{who}} on {{date}}",
+        "remove": "Remove",
+        "removeTitle": "Take management away?",
+        "removeConfirm": "Take away",
+        "removeMessage": "{{manager}} can no longer manage this group."
+    },
+    "history": {
+        "at": "When",
+        "who": "Who",
+        "what": "What",
+        "none": "No changes yet.",
+        "onBehalf": "on behalf of {{who}}",
+        "apiToken": "API token",
+        "system": "System",
+        "actions": {
+            "group_created": "Group created ({{detail}})",
+            "group_updated": "Name and description changed: {{detail}}",
+            "group_deleted": "Group deleted",
+            "group_adopted": "Taken over: {{detail}}",
+            "member_added": "{{member}} added as {{relation}}",
+            "member_added_until": "{{member}} added as {{relation}}, until {{date}}",
+            "member_removed": "{{member}} removed as {{relation}}",
+            "manager_added": "Management handed to {{member}}",
+            "manager_removed": "Management taken from {{member}}"
+        }
+    }
+}

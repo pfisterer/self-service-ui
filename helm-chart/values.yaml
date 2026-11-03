@@ -44,6 +44,13 @@ selfServiceUI:
   llmBaseUrl: ""
   llmUpstream: ""
   llmHost: ""
+  # Groups maintained by hand, in the role provider (role-provider-service). Empty
+  # groupsBaseUrl hides the section; normally "/api/groups", which Caddy forwards
+  # to groupsUpstream (the role provider's Service, host:port; empty -> the image
+  # default role-provider-service:8085). Who sees the section is the role
+  # provider's answer: whoever maintains a group.
+  groupsBaseUrl: ""
+  groupsUpstream: ""
 
 #------------------------------------
 # OIDC/Auth Configuration

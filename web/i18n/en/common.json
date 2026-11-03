@@ -27,7 +27,8 @@
         "gpuFleet": "GPUs",
         "workspaces": "Workspaces",
         "cloud": "Cloud",
-        "budgets": "Budgets"
+        "budgets": "Budgets",
+        "groups": "Groups"
     },
     "account": {
         "signIn": "Sign in",

@@ -22,6 +22,7 @@ window.appconfig = {
   cloudResourcesMcpUrl: "${CLOUD_RESOURCES_MCP_URL}",
   dynamicZonesMcpUrl: "${DYN_ZONES_MCP_URL}",
   llmBaseUrl: "${LLM_BASE_URL}",
+  groupsBaseUrl: "${GROUPS_BASE_URL}",
   acmeServer: "${ACME_SERVER:-https://certificates.dhbw.cloud}",
   dummyAuth: ${DUMMY_AUTH:-false},
   "oidc": {

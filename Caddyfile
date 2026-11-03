@@ -40,6 +40,18 @@
         reverse_proxy {$CLOUD_RESOURCES_UPSTREAM:openstack-management-api-openstack-management:8083}
     }
 
+    # The role provider, for the people maintaining groups. Only /v1/manage: it
+    # takes the person's ID token the proxy in front injects, while the rest of
+    # the role provider's API is for services with their own tokens and has no
+    # business being reachable from a browser. The service enforces the same
+    # split; this keeps everything else from even reaching it.
+    handle_path /api/groups/* {
+        header Cache-Control "no-store"
+        @notmanage not path /v1/manage/*
+        respond @notmanage 404
+        reverse_proxy {$GROUPS_UPSTREAM:role-provider-service:8085}
+    }
+
     # The LLM service runs in a cluster of its own, behind that cluster's ingress,
     # always over TLS. Two values, because where to connect and whom to ask for
     # are not the same thing there: its public name resolves to IPv6 only, while

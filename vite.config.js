@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => {
       cloudResourcesMcpUrl: env.CLOUD_RESOURCES_MCP_URL || '',
       dynamicZonesMcpUrl: env.DYNAMIC_ZONE_MCP_URL || '',
       llmBaseUrl: env.LLM_BASE_URL || '',
+      groupsBaseUrl: env.GROUPS_BASE_URL || '',
       acmeServer: env.ACME_SERVER || 'https://certificates.dhbw.cloud',
       dummyAuth: env.DUMMY_AUTH === 'true',
       oidc: {
@@ -70,12 +71,24 @@ export default defineConfig(({ mode }) => {
       // LLM_DEV_UPSTREAM names a local llm-management-api, e.g.
       //   LLM_BASE_URL=http://localhost:8084/api/llm/
       //   LLM_DEV_UPSTREAM=http://localhost:8086
-      proxy: env.LLM_DEV_UPSTREAM ? {
-        '/api/llm': {
-          target: env.LLM_DEV_UPSTREAM,
-          changeOrigin: true,
-          rewrite: (p) => p.replace(/^\/api\/llm/, ''),
-        },
+      // The role provider's /v1/manage likewise, with GROUPS_DEV_UPSTREAM naming a local role-provider-service, e.g.
+      //   GROUPS_BASE_URL=http://localhost:8084/api/groups
+      //   GROUPS_DEV_UPSTREAM=http://localhost:8085
+      proxy: (env.LLM_DEV_UPSTREAM || env.GROUPS_DEV_UPSTREAM) ? {
+        ...(env.LLM_DEV_UPSTREAM ? {
+          '/api/llm': {
+            target: env.LLM_DEV_UPSTREAM,
+            changeOrigin: true,
+            rewrite: (p) => p.replace(/^\/api\/llm/, ''),
+          },
+        } : {}),
+        ...(env.GROUPS_DEV_UPSTREAM ? {
+          '/api/groups': {
+            target: env.GROUPS_DEV_UPSTREAM,
+            changeOrigin: true,
+            rewrite: (p) => p.replace(/^\/api\/groups/, ''),
+          },
+        } : {}),
       } : undefined,
     },
     // Unit tests. Two kinds, and the default stays the cheap one.

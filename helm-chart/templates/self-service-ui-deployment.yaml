@@ -69,6 +69,9 @@ spec:
             # Empty -> LLM section disabled.
             - name: LLM_BASE_URL
               value: "{{ .Values.selfServiceUI.llmBaseUrl }}"
+            # Empty -> groups section disabled.
+            - name: GROUPS_BASE_URL
+              value: "{{ .Values.selfServiceUI.groupsBaseUrl }}"
             - name: ACME_SERVER
               value: "{{ .Values.selfServiceUI.acmeServer }}"
             {{- if .Values.selfServiceUI.dynamicZonesUpstream }}
@@ -78,6 +81,10 @@ spec:
             {{- if .Values.selfServiceUI.cloudResourcesUpstream }}
             - name: CLOUD_RESOURCES_UPSTREAM
               value: "{{ .Values.selfServiceUI.cloudResourcesUpstream }}"
+            {{- end }}
+            {{- if .Values.selfServiceUI.groupsUpstream }}
+            - name: GROUPS_UPSTREAM
+              value: "{{ .Values.selfServiceUI.groupsUpstream }}"
             {{- end }}
             {{- if .Values.selfServiceUI.llmUpstream }}
             - name: LLM_UPSTREAM
