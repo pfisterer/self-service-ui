@@ -2,6 +2,7 @@
     "actions": {
         "open": "Open",
         "details": "Details",
+        "startWorkspace": "Start workspace",
         "requestBudget": "Request sub-budget",
         "approve": "Approve",
         "reject": "Reject",

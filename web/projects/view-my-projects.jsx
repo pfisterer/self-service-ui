@@ -22,7 +22,7 @@ import { llmEnabled } from '/features.js';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { jobMaxHours, projectHasJobs } from '/gpu/jobs.js';
-import { COLOR, PROJECT_SORTS, budgetKinds, getAuthUserEmail, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
+import { COLOR, PROJECT_SORTS, budgetKinds, deletionRequested, getAuthUserEmail, isRetired, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
 
 // MyProjectsView lists the projects of one area (cloud, workspaces, llm) the
 // signed-in user owns or shares, and lets them request new ones, propose changes
@@ -73,6 +73,13 @@ export function MyProjectsView({ area = 'cloud' }) {
     const jobsOf = (node) => {
         const p = (workspaceProjects.data ?? []).find(x => x.tree_node === node.id);
         return projectHasJobs(p) ? { perPerson: p.limits.jobs_per_person, hours: jobMaxHours(p) } : null;
+    };
+
+    // Starting a workspace: the start page with the project chosen, for a project the AI service knows with an environment to start; the start page says what is missing beyond that.
+    const startOf = (node) => {
+        const p = (workspaceProjects.data ?? []).find(x => x.tree_node === node.id);
+        if (!p?.slug || !(p.profiles ?? []).length || isRetired(node) || deletionRequested(node)) return null;
+        return `/servers/start?project=${encodeURIComponent(p.slug)}`;
     };
 
     const [projectsQuery, myBudgetsQuery, eligibleQuery] = useQueries({
@@ -181,6 +188,7 @@ export function MyProjectsView({ area = 'cloud' }) {
                         perspective={memberOnly(node) ? 'member' : 'owner'}
                         envBuild={envBuildOf(node)}
                         jobs={jobsOf(node)}
+                        start={startOf(node)}
                         onAction={handleAction}
                     />
                 ))}

@@ -49,6 +49,18 @@ vi.mock('/projects/token-labels.jsx', () => ({
     TokenLabelProvider: ({ children }) => children,
 }));
 
+// Workspaces: the AI service's projects, and the switch for its section, per test.
+vi.mock('/gpu/api-gpu.jsx', async (importOriginal) => {
+    const actual = await importOriginal();
+    return { ...actual, useGpuApi: () => globalThis.__gpuApi ?? { listProjects: async () => [] } };
+});
+vi.mock('/features.js', async (importOriginal) => {
+    const actual = await importOriginal();
+    const mocked = { ...actual };
+    Object.defineProperty(mocked, 'llmEnabled', { get: () => !!globalThis.__llmEnabled, enumerable: true });
+    return mocked;
+});
+
 const { MyBudgetsView } = await import('/projects/view-my-budgets.jsx');
 const { MyProjectsView } = await import('/projects/view-my-projects.jsx');
 const { RootAdminView } = await import('/projects/root-admin-view.jsx');
@@ -267,6 +279,24 @@ describe('the cloud project views render', () => {
         expect(screen.getByText(i18n.t('projects.actions.details'))).toBeDefined();
         expect(screen.queryByText(i18n.t('projects.myProjects.none'))).toBeNull();
         expectNoRenderFailure();
+    });
+
+    it('My Projects under Workspaces offers to start a workspace of a project the AI service knows', async () => {
+        // A project that holds nothing yet belongs to every area, Workspaces among them.
+        const { items } = await globalThis.__testApi.listMine();
+        const node = { ...items.find(n => n.name === 'Mein Projekt'), limit: {}, pending: null };
+        globalThis.__testApi.listMine = async () => ({ items: [node], total: 1 });
+        globalThis.__llmEnabled = true;
+        globalThis.__gpuApi = { listProjects: async () => [{ slug: 'mein-projekt', tree_node: node.id, profiles: ['cpu'], limits: {} }] };
+        try {
+            renderView(<MyProjectsView area="workspaces" />);
+            const start = await screen.findByRole('link', { name: i18n.t('projects.actions.startWorkspace') });
+            expect(start.getAttribute('href')).toMatch(/\/servers\/start\?project=mein-projekt$/);
+            expectNoRenderFailure();
+        } finally {
+            globalThis.__llmEnabled = undefined;
+            globalThis.__gpuApi = undefined;
+        }
     });
 
     it('Root Admin renders', async () => {

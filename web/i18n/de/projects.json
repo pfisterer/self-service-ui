@@ -2,6 +2,7 @@
     "actions": {
         "open": "Öffnen",
         "details": "Details",
+        "startWorkspace": "Workspace starten",
         "requestBudget": "Teilbudget beantragen",
         "approve": "Genehmigen",
         "reject": "Ablehnen",

@@ -1,9 +1,10 @@
-import { AlertTriangle, ExternalLink, Eye, Gift, Pencil, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Eye, Gift, Pencil, Play, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Loader, Stack, Text, Tooltip } from '@mantine/core';
 import { CopyLinkButton, DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
 import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, finalDeletion, labDeletion, openstackSide, catalogKinds, projectKinds } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'wouter';
 import { useProjectConfig } from './projects.jsx';
 import { formatDate } from '../format-date.js';
 import { BudgetPath } from './component-budget-path.jsx';
@@ -25,8 +26,9 @@ const MEMBERS_SHOWN = 5;
 //
 // link: when set, a button next to the date copies this link to the project.
 // jobs: what the project allows of batch jobs ({perPerson, hours}), else null.
+// start: where a workspace of the project starts (the start page with it chosen), else null.
 // envBuild: the build of the project's workspace environment from Git while it builds or after it failed ({status, message, hasImage}), else null.
-export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction, link, envBuild, jobs }) {
+export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction, link, envBuild, jobs, start }) {
     const { t } = useTranslation();
     const act = (action) => onAction?.(action, node);
     const config = useProjectConfig();
@@ -279,6 +281,11 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
             {/* ── Actions ────────────────────────────────────────────────── */}
             <Card.Section withBorder inheritPadding py="xs" mt="auto">
                 <Group grow>
+                    {start && (
+                        <Button variant="filled" size="xs" component={Link} href={start}>
+                            <Play size="13" style={{ marginRight: 4 }} />{t('projects.actions.startWorkspace')}
+                        </Button>
+                    )}
                     {/* One dialog per project, with history and usage as tabs:
                         editable where it may be changed, read-only otherwise.
                         Editing is not an owner privilege: a manager of the
