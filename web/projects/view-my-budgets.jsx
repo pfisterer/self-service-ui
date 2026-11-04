@@ -215,23 +215,25 @@ export function MyBudgetsView({ params }) {
         defaultValue: false,
         getInitialValueInEffect: false,
     });
-    // The open branches, remembered per browser, so the tree comes back as the viewer last left it. The viewer's last action wins: closing a branch by hand ends "expand everything", which would otherwise reopen it on the next visit. Only read once, as the tree's starting state; null means nothing remembered yet, and then the first level opens as before.
-    const [storedExpanded, setStoredExpanded] = useLocalStorage({
+    // The open branches, remembered per browser, so the tree comes back as the viewer last left it. Held here and handed to the tree controlled: the tree rebuilds its own state from the nodes it has loaded whenever its data changes, so closing a branch forgot what was open below it. Only the viewer's expanding and collapsing changes it, and our own passes below. The viewer's last action wins: closing a branch by hand ends "expand everything", which would otherwise reopen it on the next visit.
+    const [expanded, setExpanded] = useLocalStorage({
         key: 'self-service.budget-tree.expanded',
         defaultValue: null,
         getInitialValueInEffect: false,
     });
-    const [restoredExpanded] = useState(storedExpanded);
+    // null means nothing remembered yet, and then the first level opens as before.
+    const [restoredExpanded] = useState(expanded !== null);
     const tree = useTree({
         multiple: false,
         onLoadChildren: loadChildren,
-        initialExpandedState: restoredExpanded ?? {},
-        onNodeCollapse: () => setExpandAll(false),
+        expandedState: expanded ?? {},
+        onExpandedStateChange: () => {},
+        onNodeExpand: (id) => setExpanded(prev => ({ ...prev, [id]: true })),
+        onNodeCollapse: (id) => {
+            setExpanded(prev => Object.fromEntries(Object.entries(prev ?? {}).filter(([key]) => key !== id)));
+            setExpandAll(false);
+        },
     });
-    useEffect(() => {
-        setStoredExpanded(Object.fromEntries(Object.entries(tree.expandedState).filter(([, open]) => open)));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tree.expandedState]);
 
     // The branches currently open. This — not a Map the view maintains — is what
     // decides which children are fetched, so expansion and data cannot disagree.
@@ -328,7 +330,7 @@ export function MyBudgetsView({ params }) {
         if (restoredExpanded) return;
         const openable = rootBudgets.filter(b => budgetChildCount(b) > 0);
         if (openable.length === 0) return;
-        tree.setExpandedState({
+        setExpanded({
             ...tree.expandedState,
             ...Object.fromEntries(openable.map(b => [b.id, true])),
         });
@@ -347,7 +349,7 @@ export function MyBudgetsView({ params }) {
         let from = path.findIndex(id => shown.has(id));
         if (from < 0 && shown.has('root')) from = 0;
         if (from < 0) return;
-        tree.setExpandedState({
+        setExpanded({
             ...tree.expandedState,
             ...Object.fromEntries(path.slice(from).map(id => [id, true])),
         });
@@ -429,7 +431,7 @@ export function MyBudgetsView({ params }) {
         });
         walk(treeData);
         if (closed.length) {
-            tree.setExpandedState({ ...tree.expandedState, ...Object.fromEntries(closed.map(id => [id, true])) });
+            setExpanded({ ...tree.expandedState, ...Object.fromEntries(closed.map(id => [id, true])) });
         }
         // `tree` is read to see what is open; listing it would re-run this on
         // every toggle, which is the point only while expandAll is on anyway.
@@ -438,7 +440,7 @@ export function MyBudgetsView({ params }) {
     // Switching it off goes back to the default: the first level open.
     const toggleExpandAll = () => {
         if (expandAll) {
-            tree.setExpandedState(Object.fromEntries(
+            setExpanded(Object.fromEntries(
                 rootBudgets.filter(b => budgetChildCount(b) > 0).map(b => [b.id, true])));
         }
         setExpandAll(!expandAll);

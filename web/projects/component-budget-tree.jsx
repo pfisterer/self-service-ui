@@ -182,7 +182,7 @@ function MoreRow({ more, elementProps, onLoadMore }) {
 // auto-approve marker and status dot.
 function TreeRow({ payload, selectedId, onSelect, onLoadMore }) {
     const { t } = useTranslation();
-    const { node: treeNode, expanded, hasChildren, isLoading, loadError, elementProps } = payload;
+    const { node: treeNode, tree, expanded, hasChildren, isLoading, loadError, elementProps } = payload;
 
     if (treeNode.nodeProps?.more) {
         return <MoreRow more={treeNode.nodeProps.more} elementProps={elementProps} onLoadMore={onLoadMore} />;
@@ -202,7 +202,12 @@ function TreeRow({ payload, selectedId, onSelect, onLoadMore }) {
             // Right-side spacing only, which does not collide.
             pr="6"
             py="4"
-            onClick={(event) => { elementProps.onClick(event); onSelect(node); }}
+            // A click on the row selects it and opens it, but never closes it: looking at a budget's details used to close it, and the tree remembered it closed. Only the arrow closes a branch.
+            onClick={(event) => {
+                if (expanded) event.stopPropagation();
+                else elementProps.onClick(event);
+                onSelect(node);
+            }}
             style={{ ...elementProps.style, ...rowStyle(isSelected) }}
         >
             {hasChildren ? (
@@ -210,8 +215,12 @@ function TreeRow({ payload, selectedId, onSelect, onLoadMore }) {
                     ? <Loader size="12" style={{ flexShrink: 0 }} />
                     : <ChevronRight
                         size="14"
+                        role="button"
+                        aria-label={t(expanded ? 'projects.tree.collapse' : 'projects.tree.expand')}
+                        onClick={(event) => { event.stopPropagation(); tree.toggleExpanded(treeNode.value); }}
                         style={{
                             flexShrink: 0,
+                            cursor: 'pointer',
                             transform: expanded ? 'rotate(90deg)' : 'none',
                             transition: 'transform 150ms ease',
                         }} />

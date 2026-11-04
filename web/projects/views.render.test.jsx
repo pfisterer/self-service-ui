@@ -172,7 +172,7 @@ describe('the cloud project views render', () => {
         await waitFor(() => expect(tree().getAllByText('Mannheim')).toHaveLength(1));
         fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.budgets.expandAll') }));
         await screen.findByRole('button', { name: i18n.t('projects.budgets.collapseAll') });
-        fireEvent.click(tree().getByText('Organization Root'));
+        fireEvent.click(tree().getAllByRole('button', { name: i18n.t('projects.tree.collapse') })[0]);
 
         await waitFor(() => expect(tree().queryAllByText('Mannheim')).toHaveLength(0));
         await new Promise(resolve => setTimeout(resolve, 250));
@@ -188,7 +188,7 @@ describe('the cloud project views render', () => {
         await waitFor(() => expect(tree().getAllByText('Mannheim')).toHaveLength(1));
         fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.budgets.expandAll') }));
         await screen.findByRole('button', { name: i18n.t('projects.budgets.collapseAll') });
-        fireEvent.click(tree().getByText('Organization Root'));
+        fireEvent.click(tree().getAllByRole('button', { name: i18n.t('projects.tree.collapse') })[0]);
         await waitFor(() => expect(tree().queryAllByText('Mannheim')).toHaveLength(0));
         await screen.findByRole('button', { name: i18n.t('projects.budgets.expandAll') });
         cleanup();
@@ -198,6 +198,24 @@ describe('the cloud project views render', () => {
         await new Promise(resolve => setTimeout(resolve, 250));
         expect(tree().queryAllByText('Mannheim')).toHaveLength(0);
         expect(screen.getByRole('button', { name: i18n.t('projects.budgets.expandAll') })).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    // Looking at a budget meant clicking its row, and that closed it: the tree then came back closed on every visit. The row only selects and opens; the arrow closes.
+    it('selects an open branch without closing it, and remembers it open', async () => {
+        renderView(<MyBudgetsView />);
+        const tree = () => within(screen.getByRole('tree'));
+
+        await waitFor(() => expect(tree().getAllByText('Mannheim')).toHaveLength(1));
+        fireEvent.click(tree().getByText('Organization Root'));
+        await new Promise(resolve => setTimeout(resolve, 100));
+        expect(tree().getAllByText('Mannheim')).toHaveLength(1);
+        cleanup();
+
+        renderView(<MyBudgetsView />);
+        await waitFor(() => expect(tree().getAllByText('Mannheim')).toHaveLength(1));
+        fireEvent.click(tree().getAllByRole('button', { name: i18n.t('projects.tree.collapse') })[0]);
+        await waitFor(() => expect(tree().queryAllByText('Mannheim')).toHaveLength(0));
         expectNoRenderFailure();
     });
 
