@@ -33,8 +33,8 @@ export function endOfDay(date) {
     return date ? dayjs(date).endOf('day').toDate() : null;
 }
 
-// GroupDetail: one group the caller maintains — its entries, everyone it counts in the end, who maintains it, and what happened to it.
-export function GroupDetail({ params }) {
+// GroupDetail: one group — its entries, everyone it counts in the end, who maintains it, and what happened to it. A group of a sync source (admins see every source) is read-only: it changes at its source. Embedded, it is the right-hand side of the admins' browser, without a page of its own.
+export function GroupDetail({ params, embedded = false }) {
     const id = decodeURIComponent(params.id);
     const { t } = useTranslation();
     const api = useGroupsApi();
@@ -49,17 +49,12 @@ export function GroupDetail({ params }) {
         onSuccess: () => navigate('/'),
     });
 
-    if (detail.isPending) return <Container size="lg" py="md"><Loading /></Container>;
-    if (detail.isError) {
-        return (
-            <Container size="lg" py="md">
-                <BackLink />
-                <LoadError query={detail} />
-            </Container>
-        );
-    }
+    const Frame = embedded ? EmbeddedFrame : PageFrame;
+    if (detail.isPending) return <Frame><Loading /></Frame>;
+    if (detail.isError) return <Frame><LoadError query={detail} /></Frame>;
 
-    const { group, memberships = [], managers = [], may_delete: mayDelete } = detail.data;
+    const { group, memberships = [], managers = [], may_delete: mayDelete, editable } = detail.data;
+    const readOnly = !editable;
 
     async function onDelete() {
         const ok = await confirm({
@@ -71,9 +66,8 @@ export function GroupDetail({ params }) {
     }
 
     return (
-        <Container size="lg" py="md">
-            <BackLink />
-            <Stack gap="lg" mt="xs">
+        <Frame>
+            <Stack gap="lg">
                 <Paper p="lg" radius="md" withBorder>
                     <Group justify="space-between" align="flex-start" wrap="wrap">
                         <div>
@@ -85,15 +79,16 @@ export function GroupDetail({ params }) {
                             {group.description && <Text size="sm" c="dimmed">{group.description}</Text>}
                             <Text size="xs" c="dimmed" mt={4}>{t('groups.detail.token', { token: group.token })}</Text>
                         </div>
-                        <Group gap="xs">
+                        {!readOnly && <Group gap="xs">
                             <Button variant="default" leftSection={<Pencil size={14} />} onClick={() => setEditing(true)}>{t('groups.detail.edit')}</Button>
                             {mayDelete && (
                                 <Button variant="subtle" color="red" leftSection={<Trash2 size={14} />} loading={remove.isPending} onClick={onDelete}>
                                     {t('groups.delete.button')}
                                 </Button>
                             )}
-                        </Group>
+                        </Group>}
                     </Group>
+                    {readOnly && <Alert variant="light" color="gray" mt="md">{t('groups.detail.readOnly', { source: group.source_name || '?' })}</Alert>}
                 </Paper>
 
                 <Tabs defaultValue="entries" keepMounted={false}>
@@ -103,15 +98,28 @@ export function GroupDetail({ params }) {
                         <Tabs.Tab value="managers">{t('groups.tabs.managers', { count: managers.length })}</Tabs.Tab>
                         <Tabs.Tab value="history">{t('groups.tabs.history')}</Tabs.Tab>
                     </Tabs.List>
-                    <Tabs.Panel value="entries" pt="md"><Entries id={group.id} memberships={memberships} /></Tabs.Panel>
+                    <Tabs.Panel value="entries" pt="md"><Entries id={group.id} memberships={memberships} readOnly={readOnly} /></Tabs.Panel>
                     <Tabs.Panel value="effective" pt="md"><Effective id={group.id} /></Tabs.Panel>
-                    <Tabs.Panel value="managers" pt="md"><Managers id={group.id} managers={managers} /></Tabs.Panel>
+                    <Tabs.Panel value="managers" pt="md"><Managers id={group.id} managers={managers} readOnly={readOnly} /></Tabs.Panel>
                     <Tabs.Panel value="history" pt="md"><History id={group.id} /></Tabs.Panel>
                 </Tabs>
             </Stack>
             {editing && <EditGroupModal group={group} onClose={() => setEditing(false)} />}
+        </Frame>
+    );
+}
+
+function PageFrame({ children }) {
+    return (
+        <Container size="lg" py="md">
+            <BackLink />
+            <div style={{ marginTop: 'var(--mantine-spacing-xs)' }}>{children}</div>
         </Container>
     );
+}
+
+function EmbeddedFrame({ children }) {
+    return <div>{children}</div>;
 }
 
 function BackLink() {
@@ -148,7 +156,7 @@ function EditGroupModal({ group, onClose }) {
 }
 
 // Entries: the group's direct entries with role and expiry, and the form for a new one. An expired entry grants nothing but stays until removed, so it is visible that it ran out.
-function Entries({ id, memberships }) {
+function Entries({ id, memberships, readOnly }) {
     const { t } = useTranslation();
     const api = useGroupsApi();
     const confirm = useConfirm();
@@ -185,7 +193,7 @@ function Entries({ id, memberships }) {
 
     return (
         <Paper p="lg" radius="md" withBorder>
-            <Group align="flex-end" gap="xs" wrap="wrap">
+            {!readOnly && <><Group align="flex-end" gap="xs" wrap="wrap">
                 <div style={{ flex: '1 1 280px' }}>
                     <PrincipalTokenAutocomplete single label={t('groups.entries.member')} placeholder={t('groups.entries.placeholder')}
                         value={member} onChange={setMember} search={api.searchPrincipals} searchKey={groupsKeys.principals()} />
@@ -201,9 +209,9 @@ function Entries({ id, memberships }) {
                     {t('groups.entries.add')}
                 </Button>
             </Group>
-            <Text size="xs" c="dimmed" mt="xs">{t('groups.entries.hint')}</Text>
+            <Text size="xs" c="dimmed" mt="xs" mb="md">{t('groups.entries.hint')}</Text></>}
 
-            <Table striped highlightOnHover mt="md">
+            <Table striped highlightOnHover>
                 <Table.Thead>
                     <Table.Tr>
                         <Table.Th>{t('groups.entries.member')}</Table.Th>
@@ -221,7 +229,7 @@ function Entries({ id, memberships }) {
                         <Table.Tr key={`${m.member}#${m.relation}`} style={m.expired ? { opacity: 0.6 } : undefined}>
                             <Table.Td><TokenText token={m.member} /></Table.Td>
                             <Table.Td>
-                                {relations.length > 1 ? (
+                                {relations.length > 1 && !readOnly ? (
                                     <Select size="xs" w={170} allowDeselect={false} aria-label={t('groups.entries.relation')}
                                         value={m.relation} disabled={changeRole.isPending && changeRole.variables?.entry === m}
                                         onChange={(next) => next && next !== m.relation && changeRole.mutate({ entry: m, relation: next })}
@@ -235,7 +243,7 @@ function Entries({ id, memberships }) {
                             </Table.Td>
                             <Table.Td>{m.created_at ? formatDate(m.created_at) : ''}</Table.Td>
                             <Table.Td align="right">
-                                <Group gap={4} justify="flex-end" wrap="nowrap">
+                                {!readOnly && <Group gap={4} justify="flex-end" wrap="nowrap">
                                     <Button size="xs" variant="subtle" leftSection={<Calendar size={14} />} onClick={() => setExtending(m)}>
                                         {t('groups.entries.changeUntil')}
                                     </Button>
@@ -243,7 +251,7 @@ function Entries({ id, memberships }) {
                                         loading={remove.isPending && remove.variables === m} onClick={() => onRemove(m)}>
                                         {t('groups.entries.remove')}
                                     </Button>
-                                </Group>
+                                </Group>}
                             </Table.Td>
                         </Table.Tr>
                     ))}
@@ -304,7 +312,7 @@ function Effective({ id }) {
 }
 
 // Managers: who maintains the group. Maintaining a group is not being in it, which the hint says, because the two are easy to confuse.
-function Managers({ id, managers }) {
+function Managers({ id, managers, readOnly }) {
     const { t } = useTranslation();
     const api = useGroupsApi();
     const confirm = useConfirm();
@@ -332,7 +340,7 @@ function Managers({ id, managers }) {
     return (
         <Paper p="lg" radius="md" withBorder>
             <Alert variant="light" color="gray" mb="md">{t('groups.managers.hint')}</Alert>
-            <Group align="flex-end" gap="xs">
+            {!readOnly && <Group align="flex-end" gap="xs">
                 <div style={{ flex: '1 1 280px' }}>
                     <PrincipalTokenAutocomplete single label={t('groups.managers.add')} placeholder={t('groups.managers.placeholder')}
                         value={input} onChange={setInput} search={api.searchPrincipals} searchKey={groupsKeys.principals()} />
@@ -340,7 +348,7 @@ function Managers({ id, managers }) {
                 <Button leftSection={<Plus size={16} />} disabled={!asToken(input)} loading={add.isPending} onClick={() => add.mutate(asToken(input))}>
                     {t('groups.managers.addButton')}
                 </Button>
-            </Group>
+            </Group>}
             <Table striped mt="md">
                 <Table.Tbody>
                     {managers.length === 0 && (
@@ -351,10 +359,10 @@ function Managers({ id, managers }) {
                             <Table.Td><TokenText token={m.token} /></Table.Td>
                             <Table.Td><Text size="xs" c="dimmed">{m.created_by ? t('groups.managers.addedBy', { who: m.created_by, date: formatDate(m.created_at) }) : formatDate(m.created_at)}</Text></Table.Td>
                             <Table.Td align="right">
-                                <Button size="xs" variant="subtle" color="red" leftSection={<Trash2 size={14} />}
+                                {!readOnly && <Button size="xs" variant="subtle" color="red" leftSection={<Trash2 size={14} />}
                                     loading={remove.isPending && remove.variables === m.token} onClick={() => onRemove(m.token)}>
                                     {t('groups.managers.remove')}
-                                </Button>
+                                </Button>}
                             </Table.Td>
                         </Table.Tr>
                     ))}

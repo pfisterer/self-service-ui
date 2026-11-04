@@ -48,7 +48,8 @@
     "detail": {
         "back": "All groups",
         "token": "Token: {{token}}",
-        "edit": "Edit"
+        "edit": "Edit",
+        "readOnly": "This group comes from the source {{source}} and is maintained there; it is read-only here."
     },
     "tabs": {
         "entries": "Entries ({{count}})",
@@ -114,5 +115,17 @@
             "manager_removed": "Management taken from {{member}}",
             "relation_changed": "{{member}}: role changed from {{from}} to {{relation}}"
         }
+    },
+    "browser": {
+        "search": "Search all sources",
+        "more_one": "… and {{count}} more",
+        "more_other": "… and {{count}} more",
+        "intro": "Groups of every source. Only the groups of {{source}} are maintained here; groups of other sources come from their import and are read-only here. Pick a group on the left.",
+        "source": "Source",
+        "kind": "Kind",
+        "groups": "Groups",
+        "lastSync": "Last import",
+        "local": "maintained here",
+        "synced": "import ({{type}})"
     }
 }

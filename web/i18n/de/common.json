@@ -79,8 +79,8 @@
             "ipv6": "Bitte eine gültige IPv6-Adresse eingeben (z. B. 2001:db8::1)."
         },
         "principalSearch": {
-            "placeholder": "z. B. mannheim UND beschäftigte",
-            "syntax": "Mehrere Wörter: eines davon · \"…\": genaue Phrase · UND oder +Wort: muss vorkommen · * als Platzhalter. Rollen wie #beschaeftigte werden mit ihrer Gruppe angeboten.",
+            "placeholder": "Gruppe oder E-Mail-Adresse, z. B. wwi24 oder mustermann@",
+            "syntax": "Gefunden werden Gruppen über Kennung, Name und Beschreibung, und Personen über einen Teil ihrer E-Mail-Adresse – Personen allerdings nur, wenn sie schon in einer Gruppe stehen. Mehrere Wörter: Treffer für eines davon; mit UND (oder +Wort) müssen alle vorkommen. \"…\" sucht genau diese Wortfolge, * steht für beliebige Zeichen. Gruppen mit Rollen erscheinen zusätzlich als Gruppe#Rolle, z. B. standort-ma#beschaeftigte: nur die Personen mit dieser Rolle.",
             "unreachable": "Das Gruppenverzeichnis ist nicht erreichbar — keine Vorschläge. Ein Token lässt sich trotzdem von Hand eintippen."
         }
     },

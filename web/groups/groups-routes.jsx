@@ -5,11 +5,12 @@ import { LoadError, Loading } from '/helper/query-state.jsx';
 import { useGroupsMe } from '/groups/use-groups-me.jsx';
 import { GroupsList } from '/groups/list.jsx';
 import { GroupDetail } from '/groups/detail.jsx';
+import { GroupsBrowser } from '/groups/browser.jsx';
 
 // The section exists in every deployment with a groupsBaseUrl; whether a person has anything to do here is the role provider's answer (use-groups-me.jsx). Somebody who maintains no group and reaches the section by URL is told so instead of shown a page of 403s.
 export function GroupsSection() {
     const { t } = useTranslation();
-    const { query, visible } = useGroupsMe();
+    const { query, visible, isAdmin } = useGroupsMe();
 
     if (query.isPending) return <Container size="lg" py="md"><Loading /></Container>;
     if (query.isError) return <Container size="lg" py="md"><LoadError query={query} /></Container>;
@@ -18,6 +19,15 @@ export function GroupsSection() {
             <Container size="md" py="md">
                 <Alert color="gray" variant="light" title={t('groups.noAccess.title')}>{t('groups.noAccess.text')}</Alert>
             </Container>
+        );
+    }
+    // Admins browse every source as a tree, with the group beside it; everybody else lists the groups they maintain.
+    if (isAdmin) {
+        return (
+            <Switch>
+                <Route path="/" component={GroupsBrowser} />
+                <Route path="/:id" component={GroupsBrowser} />
+            </Switch>
         );
     }
     return (

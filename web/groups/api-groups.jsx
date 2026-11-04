@@ -4,7 +4,7 @@ import { useClient } from '/providers/client.jsx';
 // Named imports, as in llm/api-llm.jsx: an operation missing from the client fails the build, not the browser.
 import {
     manageAddManager, manageAddMember, manageChangeRelation, manageCreateGroup, manageDeleteGroup, manageEffectiveMembers, manageGetGroup,
-    manageGetMe, manageHistory, manageListGroups, manageRemoveManager, manageRemoveMember, manageSearchPrincipals,
+    manageGetMe, manageHistory, manageListGroups, manageListSources, manageRemoveManager, manageRemoveMember, manageSearchPrincipals,
     manageUpdateGroup,
 } from '@dhbw-cloud/role-provider-client';
 
@@ -23,7 +23,12 @@ export function useGroupsApi() {
         const call = async (op, opts = {}) => unwrap(await op({ client, ...opts }));
         return {
             getMe: () => call(manageGetMe),
-            listGroups: (q) => call(manageListGroups, { query: q ? { q } : undefined }),
+            // One page { items, total }. For admins: { parent } lists the groups in a group, { q, source? } searches, { source } is the top of a source's tree; everybody else gets the groups they maintain, narrowed by q.
+            listGroups: ({ q, source, parent, limit } = {}) => call(manageListGroups, {
+                query: Object.fromEntries(Object.entries({ q, source, parent, limit }).filter(([, v]) => v)),
+            }),
+            // Admins only: every source with its number of groups, the local one first.
+            listSources: () => call(manageListSources),
             createGroup: ({ id, displayName, description, managers }) =>
                 call(manageCreateGroup, { body: { id, display_name: displayName, description, managers }, headers: JSON_HEADERS }),
             getGroup: (group) => call(manageGetGroup, { path: { group } }),

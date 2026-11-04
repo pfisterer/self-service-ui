@@ -3,7 +3,9 @@ export const groupsKeys = {
     all: () => ['groups'],
     me: () => ['groups', 'me'],
     lists: () => ['groups', 'list'],
-    list: (q) => ['groups', 'list', q ?? ''],
+    // params as given to listGroups: { q, source, parent }.
+    list: (params) => ['groups', 'list', params ?? {}],
+    sources: () => ['groups', 'sources'],
     detail: (id) => ['groups', 'detail', id],
     effective: (id) => ['groups', 'effective', id],
     history: (id) => ['groups', 'history', id],

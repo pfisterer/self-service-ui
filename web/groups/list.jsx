@@ -15,7 +15,7 @@ import { TokenChips } from '/groups/tokens.jsx';
 // The same shape the service accepts (common.GroupIDPattern), checked here so the button says it before the server does.
 export const GROUP_ID = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 
-// GroupsList: the groups the caller maintains — every local group for an admin — with a search, and for admins the way to a new one.
+// GroupsList: the groups the caller maintains, with a search. Admins get the browser over every source instead (browser.jsx).
 export function GroupsList() {
     const { t } = useTranslation();
     const api = useGroupsApi();
@@ -24,7 +24,7 @@ export function GroupsList() {
     const [q] = useDebouncedValue(search.trim(), 250);
     const [creating, setCreating] = useState(false);
 
-    const groups = useQuery({ queryKey: groupsKeys.list(q), queryFn: () => api.listGroups(q), placeholderData: (prev) => prev });
+    const groups = useQuery({ queryKey: groupsKeys.list({ q }), queryFn: () => api.listGroups({ q }), placeholderData: (prev) => prev });
 
     return (
         <Container size="lg" py="md">
@@ -57,10 +57,10 @@ export function GroupsList() {
                                 </Table.Tr>
                             </Table.Thead>
                             <Table.Tbody>
-                                {groups.data.length === 0 && (
+                                {groups.data.items.length === 0 && (
                                     <Table.Tr><Table.Td colSpan={3}><Text size="sm" c="dimmed">{q ? t('groups.list.noMatch') : t('groups.list.none')}</Text></Table.Td></Table.Tr>
                                 )}
-                                {groups.data.map(g => (
+                                {groups.data.items.map(g => (
                                     <Table.Tr key={g.id}>
                                         <Table.Td>
                                             <Anchor component={Link} to={`/${encodeURIComponent(g.id)}`} fw={500}>{g.id}</Anchor>
@@ -85,7 +85,7 @@ export function GroupsList() {
 }
 
 // CreateGroupModal: id, name, description and who maintains the new group. The id is the token every rule will name, so it is fixed at creation; name and description can change later.
-function CreateGroupModal({ onClose }) {
+export function CreateGroupModal({ onClose }) {
     const { t } = useTranslation();
     const api = useGroupsApi();
     const [, navigate] = useLocation();

@@ -48,7 +48,8 @@
     "detail": {
         "back": "Alle Gruppen",
         "token": "Token: {{token}}",
-        "edit": "Bearbeiten"
+        "edit": "Bearbeiten",
+        "readOnly": "Diese Gruppe kommt aus der Quelle {{source}} und wird dort gepflegt; hier ist sie nur lesbar."
     },
     "tabs": {
         "entries": "Einträge ({{count}})",
@@ -114,5 +115,17 @@
             "manager_removed": "Verwaltung von {{member}} entzogen",
             "relation_changed": "{{member}}: Rolle von {{from}} auf {{relation}} geändert"
         }
+    },
+    "browser": {
+        "search": "Alle Quellen durchsuchen",
+        "more_one": "… und {{count}} weitere",
+        "more_other": "… und {{count}} weitere",
+        "intro": "Gruppen aus allen Quellen. Gepflegt werden hier nur die Gruppen von {{source}}; Gruppen anderer Quellen kommen aus deren Import und sind hier nur lesbar. Links eine Gruppe wählen.",
+        "source": "Quelle",
+        "kind": "Art",
+        "groups": "Gruppen",
+        "lastSync": "Letzter Import",
+        "local": "hier gepflegt",
+        "synced": "Import ({{type}})"
     }
 }

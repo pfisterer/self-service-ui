@@ -33,14 +33,44 @@ const HISTORY = [
     { id: 'h1', group_id: 'wwi23seb', at: '2026-10-01T10:00:00Z', actor: 'system', action: 'group_adopted', detail: 'taken over from source "dhbw-mannheim"' },
 ];
 
+const DUALIS_TOP = [
+    { id: 'dualis-standort-mannheim', token: 'group:dualis-standort-mannheim', display_name: 'dualis-standort-mannheim', description: 'DHBW Mannheim · alle Kurse · Studierende aus Dualis (Rolle studierende)', source_name: 'dualis', editable: false, child_groups: 1 },
+];
+const DUALIS_INSIDE = [
+    { id: 'dualis-mannheim-fakultaet-technik', token: 'group:dualis-mannheim-fakultaet-technik', display_name: 'dualis-mannheim-fakultaet-technik', description: 'Fakultät Technik · DHBW Mannheim · Studierende aus Dualis (Rolle studierende)', source_name: 'dualis', editable: false, child_groups: 0 },
+];
+const DUALIS_DETAIL = {
+    group: { ...DUALIS_INSIDE[0] },
+    editable: false,
+    may_delete: false,
+    memberships: [{ member: 'group:dualis-orga-ma-t-mb', relation: 'studierende', created_at: '2026-11-04T10:00:00Z' }],
+    managers: [],
+};
+const SOURCES = [
+    { name: 'ZWR', type: 'local', local: true, groups: 1 },
+    { name: 'dualis', type: 'csv', local: false, groups: 2, last_synced_at: '2026-11-04T13:30:00Z', last_sync_status: 'ok' },
+];
+
 const { GroupsList } = await import('/groups/list.jsx');
 const { GroupDetail } = await import('/groups/detail.jsx');
+const { GroupsBrowser } = await import('/groups/browser.jsx');
 
 let consoleErrors = [];
+let calls = [];
 beforeEach(() => {
+    calls = [];
+    const store = new Map();
+    vi.stubGlobal('localStorage', { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k), clear: () => store.clear() });
     globalThis.__groupsApi = {
-        listGroups: async () => [GROUP],
-        getGroup: async () => DETAIL,
+        listGroups: async ({ source, parent, q } = {}) => {
+            calls.push({ source, parent, q });
+            if (parent === 'dualis-standort-mannheim') return { items: DUALIS_INSIDE, total: 1 };
+            if (source === 'dualis') return { items: DUALIS_TOP, total: 1 };
+            if (q) return { items: DUALIS_INSIDE, total: 1 };
+            return { items: [{ ...GROUP, editable: true, child_groups: 0 }], total: 1 };
+        },
+        listSources: async () => SOURCES,
+        getGroup: async (id) => (id.startsWith('dualis-') ? DUALIS_DETAIL : { ...DETAIL, editable: true }),
         effectiveMembers: async () => ['user:anna@dhbw.de', 'user:ben@dhbw.de'],
         history: async () => HISTORY,
         searchPrincipals: async () => [],
@@ -51,6 +81,7 @@ beforeEach(() => {
 afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
 });
 
 function expectNoRenderFailure() {
@@ -88,6 +119,41 @@ describe('the groups views render', () => {
         expect(await screen.findByText(/(im Auftrag von|on behalf of) dekan@dhbw.de/)).toBeTruthy();
         expect(screen.getByText(/dhbw-mannheim/)).toBeTruthy();
         expect(screen.getByText(/ben@dhbw.de: (Rolle von Mitglied auf|role changed from Member to)/)).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    // Admins browse every source: the tree loads a branch when it opens, a group of a sync source is shown read-only, and a search lists matches flat.
+    it('the browser shows every source as a tree and a Dualis group read-only', async () => {
+        renderView(<GroupsBrowser params={{}} />);
+        expect((await screen.findAllByText('dualis')).length).toBe(2);
+        expect(screen.getByText(/Letzter Import|Last import/)).toBeTruthy();
+        expect(calls.some(c => c.source === 'dualis')).toBe(false);
+
+        fireEvent.click(screen.getAllByText('dualis')[0]);
+        expect(await screen.findByText('dualis-standort-mannheim')).toBeTruthy();
+        // The last arrow still closed is the Mannheim row's, below the opened source.
+        fireEvent.click(screen.getAllByRole('button', { name: /Aufklappen|Expand/ }).at(-1));
+        expect(await screen.findByText('dualis-mannheim-fakultaet-technik')).toBeTruthy();
+        expect(screen.getByText('Fakultät Technik')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('a group of a sync source has no forms and says where it is maintained', async () => {
+        renderView(<GroupsBrowser params={{ id: 'dualis-mannheim-fakultaet-technik' }} />);
+        expect(await screen.findByText(/(Quelle|source) dualis/)).toBeTruthy();
+        expect(screen.queryByRole('button', { name: /^(Bearbeiten|Edit)$/ })).toBeNull();
+        expect(screen.queryByRole('button', { name: /^(Hinzufügen|Add)$/ })).toBeNull();
+        expect(screen.queryByRole('button', { name: /^(Entfernen|Remove)$/ })).toBeNull();
+        expect(screen.getByText('dualis-orga-ma-t-mb')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('a search lists matches from every source', async () => {
+        renderView(<GroupsBrowser params={{}} />);
+        await screen.findAllByText('dualis');
+        fireEvent.change(screen.getByLabelText(/Alle Quellen durchsuchen|Search all sources/), { target: { value: 'technik' } });
+        expect(await screen.findByText('dualis-mannheim-fakultaet-technik')).toBeTruthy();
+        expect(calls.some(c => c.q === 'technik')).toBe(true);
         expectNoRenderFailure();
     });
 });
