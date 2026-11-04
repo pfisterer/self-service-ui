@@ -592,6 +592,8 @@
         "summary": {
             "gpuHours": "GPU-h",
             "cpuHours": "CPU-h",
+            "ramHours": "RAM-GB-h",
+            "storage": "Speicher GB",
             "llmTokens": "Mio. Tokens",
             "cores": "Kerne"
         },

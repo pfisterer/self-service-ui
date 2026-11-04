@@ -111,7 +111,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
     const items = query.data?.items ?? [];
     const kindResources = kind === 'all' ? resources : resourcesOfKinds(resources, [kind]);
     const columns = resourceColumns(t, kindResources, items, kind !== 'all' && kind !== 'cloud');
-    const summaries = summaryColumns(kindResources, columns);
+    const summaries = summaryColumns(kindResources, columns, kind);
     // Too narrow for a column per resource, the table shows a few sums instead (summaryColumns), the rest in the project's dialog. Measured, not guessed from the screen: the panel's width depends
     // on the layout around it as much as on the window.
     const { ref: tableBoxRef, width: tableWidth } = useElementSize();
@@ -407,13 +407,16 @@ const VMS = '__vms';
 const SUMMARIES = [
     { key: 'gpuHours', match: (r) => r.unit === 'GPU h' },
     { key: 'cpuHours', match: (r) => r.unit === 'vCPU h' },
+    // Two more where the table shows Workspaces only; among all areas they would crowd the others out.
+    { key: 'ramHours', match: (r) => r.unit === 'GB h', only: 'workspaces' },
+    { key: 'storage', match: (r) => r.id === 'ws-storage-gb', only: 'workspaces' },
     { key: 'llmTokens', match: (r) => r.unit === 'M tokens' },
     { key: 'cores', match: (r) => r.id === 'cores' },
 ];
 
 // summaryColumns are the SUMMARIES any listed project holds a resource of; sorted on the server by the sum over all of their resources (used:a,b,…), not only those on this page.
-function summaryColumns(resources, columns) {
-    return SUMMARIES.flatMap(sum => {
+function summaryColumns(resources, columns, kind) {
+    return SUMMARIES.filter(sum => !sum.only || sum.only === kind).flatMap(sum => {
         const ids = (resources || []).filter(r => !isAvailability(r) && sum.match(r)).map(r => r.id);
         if (!columns.some(c => ids.includes(c.id))) return [];
         return [{ key: sum.key, ids, sortKey: `used:${ids.join(',')}` }];
