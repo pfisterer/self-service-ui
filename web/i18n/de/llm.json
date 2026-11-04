@@ -29,7 +29,7 @@
             "json": "Auf das Zahnrad neben <1>DHBW</1> klicken — die Datei <2>chatLanguageModels.json</2> öffnet sich. Im Eintrag „DHBW“ den Teil <3>\"models\": [ … ]</3> durch das JSON unten ersetzen; die Zeile mit dem API Key stehen lassen. Speichern.",
             "select": "Im Chat-Fenster oben das Modell <1>DHBW Code</1> auswählen, für den Agent-Modus mit langen Aufgaben <1>DHBW Agent</1>."
         },
-        "keepIds": "Den Modellnamen nicht ändern: <2>\"id\"</2> muss genau code, agent, chat-default oder chat-fast lauten. Die Werte bei maxInputTokens entsprechen dem, was jedes Modell hinter dem Namen verarbeitet; darüber kürzt VS Code den Verlauf selbst.",
+        "keepIds": "Den Modellnamen nicht ändern: <2>\"id\"</2> muss genau einer von {{ids}} sein. Die Werte bei maxInputTokens entsprechen dem, was jedes Modell hinter dem Namen verarbeitet; darüber kürzt VS Code den Verlauf selbst.",
         "docs": "Anleitung von VS Code",
         "names": {
             "code": "DHBW Code",

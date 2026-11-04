@@ -7,7 +7,7 @@ import { ExternalLink } from '/helper/external-link.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { llmKeys } from '/llm/query-keys.js';
-import { LITELLM_CLIENT_DOCS, STABLE_MODELS, TOOLS } from '/llm/tools.js';
+import { LITELLM_CLIENT_DOCS, STABLE_MODELS, TOOLS, grantedModels } from '/llm/tools.js';
 import { LlmPoolWarnings } from '/projects/component-llm-limits.jsx';
 
 // One alias with the model that serves it most often underneath, dimmed; the tooltip lists every model behind it with its count. Nothing underneath while the list is loading or not readable: the alias itself stays usable either way.
@@ -100,7 +100,7 @@ export function LlmOverview() {
                             <Text size="sm" w={110} style={{ flexShrink: 0 }}>{t('llm.overview.models')}</Text>
                             <div>
                                 <Group gap="md" align="flex-start">
-                                    {STABLE_MODELS.map(m => <AliasChip key={m} alias={m} info={byAlias[m]} healthKnown={!!aliases.data?.health_known} />)}
+                                    {[...STABLE_MODELS, ...grantedModels(aliases.data)].map(m => <AliasChip key={m} alias={m} info={byAlias[m]} healthKnown={!!aliases.data?.health_known} />)}
                                 </Group>
                                 <Text size="xs" c="dimmed" mt={4} maw={780}>
                                     <Trans i18nKey="llm.overview.modelsHint" components={{ 1: <Code fz="xs" /> }} />

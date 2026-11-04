@@ -21,6 +21,14 @@ export const TOOLS = [
 // The stable alias names. They are LiteLLM model groups, not concrete models, and the only names worth writing into a configuration. `agent` holds only models with a context of 64k and more, for coding agents; `code` and the chat aliases also run on machines with 32k.
 export const STABLE_MODELS = ['chat-default', 'chat-fast', 'code', 'agent'];
 
+// grantedModels: the names the service lists beyond the stable ones (getModelAliases), i.e. a model group a project of the person was granted, like chat-large. Everybody else never sees them.
+export function grantedModels(aliases) {
+    return (aliases?.aliases ?? []).map(a => a.alias).filter(a => !STABLE_MODELS.includes(a)).sort();
+}
+
+// The display name of a granted model group in the tools: chat-large → DHBW Large.
+export const grantedName = (alias) => `DHBW ${alias.replace(/^chat-/, '').replace(/(^|-)(\w)/g, (_, sep, c) => (sep ? ' ' : '') + c.toUpperCase())}`;
+
 // What every deployment behind an alias takes when the service names no limit (an older service, or no deployment declares one): a 32k Mac, prompt plus answer. `agent` promises 64k.
 const DEFAULT_LIMITS = {
     agent: { input: 57344, output: 8192 },
@@ -48,7 +56,7 @@ const base = (apiUrl) => apiUrl.replace(/\/+$/, '');
 const root = (apiUrl) => base(apiUrl).replace(/\/v1$/, '');
 
 // Model entries for VS Code (Copilot Chat, provider "Custom Endpoint", file chatLanguageModels.json). The id is the LiteLLM alias — the most common mistake was the provider's name there ("Invalid model name"). maxInputTokens is what every machine behind the alias takes; VS Code then summarises the history itself.
-export function vscodeModels(apiUrl, names, limits) {
+export function vscodeModels(apiUrl, names, limits, granted = []) {
     const url = `${base(apiUrl)}/chat/completions`;
     const m = (id, name) => {
         const l = limitOf(limits, id);
@@ -60,12 +68,13 @@ export function vscodeModels(apiUrl, names, limits) {
             m('agent', names.agent),
             m('chat-default', names.chat),
             m('chat-fast', names.fast),
+            ...granted.map(a => m(a, grantedName(a))),
         ],
     }, null, 2).slice(2, -2).replace(/^ {2}/gm, '');
 }
 
 // Ready-made configuration files for the agents, with the key filled in: OpenCode, Claude Code, Codex and Continue. Each names its file and the place it belongs; the code is what goes into it.
-export function toolConfigs(apiUrl, key, limits) {
+export function toolConfigs(apiUrl, key, limits, granted = []) {
     const agent = limitOf(limits, 'agent');
     const fast = limitOf(limits, 'chat-fast');
     const code = limitOf(limits, 'code');
@@ -83,6 +92,7 @@ export function toolConfigs(apiUrl, key, limits) {
                     agent: ocModel('DHBW Agent', agent),
                     code: ocModel('DHBW Code', code),
                     'chat-fast': ocModel('DHBW Schnell', fast),
+                    ...Object.fromEntries(granted.map(a => [a, ocModel(grantedName(a), limitOf(limits, a))])),
                 },
             },
         },
@@ -143,6 +153,7 @@ export function toolConfigs(apiUrl, key, limits) {
         'models:',
         ...cModel('DHBW Agent', 'agent', agent, ['chat']),
         ...cModel('DHBW Code', 'code', code, ['chat', 'edit', 'apply']),
+        ...granted.flatMap(a => cModel(grantedName(a), a, limitOf(limits, a), ['chat'])),
         '',
     ].join('\n');
 

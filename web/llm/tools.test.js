@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { limitsFrom, toolConfigs, vscodeModels } from '/llm/tools.js';
+import { grantedModels, grantedName, limitsFrom, toolConfigs, vscodeModels } from '/llm/tools.js';
 
 const API = 'https://api.llm.services.dhbw.cloud/v1';
 const ALIASES = {
@@ -58,5 +58,24 @@ describe('configuration files for the agents', () => {
         expect(files.continue.code).toContain('model: agent');
         expect(files.continue.code).toContain('contextLength: 131072');
         expect(files.continue.code).toContain('contextLength: 32768');
+    });
+});
+
+describe('model groups granted on top', () => {
+    const withLarge = { aliases: [...ALIASES.aliases, { alias: 'chat-large', models: [], limit: { max_input_tokens: 57344, max_output_tokens: 8192 } }] };
+
+    it('are the names beyond the stable ones, and only those the service lists', () => {
+        expect(grantedModels(withLarge)).toEqual(['chat-large']);
+        expect(grantedModels(ALIASES)).toEqual([]);
+        expect(grantedName('chat-large')).toBe('DHBW Large');
+    });
+
+    it('join the VS Code entries and the files of OpenCode and Continue', () => {
+        const limits = limitsFrom(withLarge);
+        const models = JSON.parse(`{${vscodeModels(API, { code: 'C', agent: 'A', chat: 'D', fast: 'F' }, limits, ['chat-large'])}}`).models;
+        expect(models.at(-1)).toMatchObject({ id: 'chat-large', name: 'DHBW Large', maxInputTokens: 57344 });
+        const files = Object.fromEntries(toolConfigs(API, 'sk-test', limits, ['chat-large']).map(c => [c.id, c]));
+        expect(JSON.parse(files.opencode.code).provider.dhbw.models['chat-large'].limit).toEqual({ context: 65536, output: 8192 });
+        expect(files.continue.code).toContain('model: chat-large');
     });
 });

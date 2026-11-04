@@ -6,7 +6,7 @@ import { CodeBlock } from '/helper/codeblock.jsx';
 import { ExternalLink } from '/helper/external-link.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
-import { TOOLS, VSCODE_DOCS, limitsFrom, toolConfigs, vscodeModels } from '/llm/tools.js';
+import { STABLE_MODELS, TOOLS, VSCODE_DOCS, grantedModels, limitsFrom, toolConfigs, vscodeModels } from '/llm/tools.js';
 
 // Hands a configuration file to the browser as a download; nothing leaves the page.
 function save(name, text) {
@@ -19,11 +19,11 @@ function save(name, text) {
 }
 
 // The steps for VS Code's built-in Copilot Chat with a custom endpoint, plus the model entries to paste.
-function VscodeSetup({ apiUrl, limits }) {
+function VscodeSetup({ apiUrl, limits, granted }) {
     const { t } = useTranslation();
     const models = vscodeModels(apiUrl, {
         code: t('llm.vscode.names.code'), agent: t('llm.vscode.names.agent'), chat: t('llm.vscode.names.chat'), fast: t('llm.vscode.names.fast'),
-    }, limits);
+    }, limits, granted);
     const b = { 1: <b />, 2: <Code />, 3: <Code /> };
 
     return (
@@ -35,7 +35,7 @@ function VscodeSetup({ apiUrl, limits }) {
                 ))}
             </List>
             <Text size="xs" c="dimmed" mt="xs">
-                <Trans i18nKey="llm.vscode.keepIds" components={{ 2: <Code /> }} />
+                <Trans i18nKey="llm.vscode.keepIds" components={{ 2: <Code /> }} values={{ ids: [...STABLE_MODELS, ...granted].join(', ') }} />
                 {' '}<ExternalLink href={VSCODE_DOCS} size="xs">{t('llm.vscode.docs')}</ExternalLink>
             </Text>
             <CodeBlock language="json" code={models} />
@@ -75,7 +75,8 @@ export function ToolSetup({ apiUrl, apiKey }) {
     const api = useLlmApi();
     const aliases = useQuery({ queryKey: llmKeys.aliases(), queryFn: () => api.getModelAliases() });
     const limits = limitsFrom(aliases.data);
-    const configs = toolConfigs(apiUrl, apiKey, limits);
+    const granted = grantedModels(aliases.data);
+    const configs = toolConfigs(apiUrl, apiKey, limits, granted);
 
     return (
         <>
@@ -86,7 +87,7 @@ export function ToolSetup({ apiUrl, apiKey }) {
                     <Tabs.Tab value="vscode">{t('llm.vscode.tab')}</Tabs.Tab>
                     {configs.map(c => <Tabs.Tab key={c.id} value={c.id}>{c.name}</Tabs.Tab>)}
                 </Tabs.List>
-                <Tabs.Panel value="vscode" pt="xs"><VscodeSetup apiUrl={apiUrl} limits={limits} /></Tabs.Panel>
+                <Tabs.Panel value="vscode" pt="xs"><VscodeSetup apiUrl={apiUrl} limits={limits} granted={granted} /></Tabs.Panel>
                 {configs.map(c => <Tabs.Panel key={c.id} value={c.id} pt="xs"><ConfigSetup config={c} /></Tabs.Panel>)}
             </Tabs>
         </>
