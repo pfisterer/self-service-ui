@@ -6,9 +6,11 @@ import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
 
-// For admins: the models the platform runs itself on its GPUs (llm-management-api, /v1/inference; docs/bauplan.md 10.16). The inference gap fillers of the GPU nodes run them: each tier's default, or the model chosen at a node (Workspaces → GPUs). The state comes from the vLLM pods, so arguments that do not fit the GPU (context length, memory share) show up here as restarts.
+// For admins: the models the platform runs itself on its GPUs (llm-management-api, /v1/inference; docs/bauplan.md 10.16). The inference gap fillers of the GPU nodes run them: each tier's default, or the model chosen at a node (Workspaces → GPUs), with vLLM or, for large MoE models on little GPU memory (the GB10), Strata. The state comes from the replicas' pods, so arguments that do not fit the GPU (context length, memory share) show up here as restarts.
 
-const EMPTY = { key: '', model: '', args: [], cpu: '', memory_request: '', memory_limit: '', min_gb: 0, category: 'general' };
+const EMPTY = { key: '', engine: 'vllm', model: '', args: [], cpu: '', memory_request: '', memory_limit: '', min_gb: 0, category: 'general' };
+
+export const MODEL_ENGINES = ['vllm', 'strata'];
 
 export const MODEL_CATEGORIES = ['chat', 'code', 'fast', 'general'];
 const CATEGORY_COLOR = { chat: 'blue', code: 'grape', fast: 'teal', general: 'gray' };
@@ -45,17 +47,21 @@ function ModelForm({ initial, onSave, onClose, saving, error }) {
     const [m, setM] = useState({ ...EMPTY, ...initial });
     const [args, setArgs] = useState((initial.args || []).join(' '));
     const set = (k) => (v) => setM({ ...m, [k]: v?.currentTarget ? v.currentTarget.value : v });
+    // The labels of the model and its arguments follow the engine (Strata: the served name and its settings).
+    const strata = m.engine === 'strata';
     return (
         <Modal opened onClose={onClose} title={editing ? t('llm.models.edit', { key: initial.key }) : t('llm.models.add')} size="lg">
             <Stack gap="sm">
                 {error && <Alert color="red" variant="light">{error}</Alert>}
-                <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+                <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
                     <TextInput label={t('llm.models.key')} description={t('llm.models.keyHint')} value={m.key} disabled={editing} onChange={e => setM({ ...m, key: e.currentTarget.value.toLowerCase() })} />
-                    <TextInput label={t('llm.models.repo')} description={t('llm.models.repoHint')} value={m.model} onChange={set('model')} />
+                    <Select label={t('llm.models.engine')} description={t('llm.models.engineHint')} allowDeselect={false} value={m.engine || 'vllm'}
+                        data={MODEL_ENGINES.map(e => ({ value: e, label: t(`llm.models.engines.${e}`) }))} onChange={v => setM({ ...m, engine: v })} />
+                    <TextInput label={t(strata ? 'llm.models.repoStrata' : 'llm.models.repo')} description={t(strata ? 'llm.models.repoHintStrata' : 'llm.models.repoHint')} value={m.model} onChange={set('model')} />
                     <Select label={t('llm.models.category')} description={t('llm.models.categoryHint')} allowDeselect={false} value={m.category || 'general'}
                         data={MODEL_CATEGORIES.map(c => ({ value: c, label: t(`llm.models.categories.${c}`) }))} onChange={v => setM({ ...m, category: v })} />
                 </SimpleGrid>
-                <Textarea label={t('llm.models.args')} description={t('llm.models.argsHint')} autosize minRows={2} ff="monospace" value={args} onChange={e => setArgs(e.currentTarget.value)} />
+                <Textarea label={t(strata ? 'llm.models.argsStrata' : 'llm.models.args')} description={t(strata ? 'llm.models.argsHintStrata' : 'llm.models.argsHint')} autosize minRows={2} ff="monospace" value={args} onChange={e => setArgs(e.currentTarget.value)} />
                 <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
                     <NumberInput label={t('llm.models.minGb')} min={0} decimalScale={1} value={m.min_gb} onChange={v => setM({ ...m, min_gb: Number(v) || 0 })} />
                     <TextInput label={t('llm.models.cpu')} placeholder="1" value={m.cpu} onChange={set('cpu')} />
@@ -132,6 +138,7 @@ export function LlmModels() {
                                                 <Badge variant="light" color="gray" tt="none">{m.key}</Badge>
                                                 <CategoryBadge stated={m.category} measured={states[m.key]?.category} reason={states[m.key]?.reason} />
                                                 <Text size="sm">{m.model}</Text>
+                                                {m.engine === 'strata' && <Badge size="sm" variant="outline" color="violet">{t('llm.models.engines.strata')}</Badge>}
                                             </Group>
                                             {m.args?.length > 0 && <Code fz="xs" mt={4} block style={{ whiteSpace: 'pre-wrap' }}>{m.args.join(' ')}</Code>}
                                         </Table.Td>

@@ -340,6 +340,16 @@
         "edit": "Modell {{key}} ändern",
         "key": "Kürzel",
         "keyHint": "z. B. qwen3-8b-awq; danach fest",
+        "engine": "Engine",
+        "engineHint": "vLLM für die meisten Modelle; Strata für große MoE-Modelle bei wenig GPU-Speicher (GB10)",
+        "engines": {
+            "vllm": "vLLM",
+            "strata": "Strata"
+        },
+        "repoStrata": "Modell",
+        "repoHintStrata": "Name, den Strata in /v1/models meldet, z. B. qwen3.8-flash-next-iq3_s",
+        "argsStrata": "Strata-Einstellungen",
+        "argsHintStrata": "--family und --quant, dazu wahlweise --context, --parallel (1–8) und --ple-io (ssd oder ram), z. B. --family qwen --quant IQ3_S --context 65536 --parallel 4 --ple-io ssd",
         "repo": "Modell",
         "repoHint": "Hugging-Face-Repository, z. B. Qwen/Qwen3-8B-AWQ",
         "args": "vLLM-Argumente",

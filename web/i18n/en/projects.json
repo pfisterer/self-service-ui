@@ -605,7 +605,7 @@
         "allStatuses": "All statuses",
         "groupAccess": "Has access",
         "groupOwner": "Owner is in",
-        "groupPlaceholder": "Filter by group or person, e.g. mannheim UND studierende",
+        "groupPlaceholder": "Filter by group or person, e.g. mannheim studierende",
         "clearGroup": "Remove group filter",
         "loadError": "The projects could not be loaded.",
         "colName": "Name",
