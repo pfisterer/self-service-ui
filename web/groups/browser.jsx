@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useDebouncedValue, useLocalStorage } from '@mantine/hooks';
-import { ActionIcon, Badge, Box, Button, CloseButton, Container, Grid, Group, Loader, Paper, ScrollArea, Stack, Table, Text, TextInput, Title, Tooltip, UnstyledButton } from '@mantine/core';
+import { ActionIcon, Badge, Box, Button, CloseButton, Container, Grid, Group, Loader, Paper, Stack, Table, Text, TextInput, Title, Tooltip, UnstyledButton } from '@mantine/core';
 import { ChevronRight, Database, ListTree, Plus, Search, Users } from 'lucide-react';
 import { formatDateTime } from '/format-date.js';
 import { LoadError, Loading } from '/helper/query-state.jsx';
@@ -66,7 +66,8 @@ export function GroupsBrowser({ params }) {
                             onChange={e => setSearch(e.currentTarget.value)}
                             onKeyDown={e => e.key === 'Escape' && clearSearch()}
                             rightSection={search ? <CloseButton size="sm" aria-label={t('groups.browser.clear')} onClick={clearSearch} /> : null} />
-                        <ScrollArea.Autosize mah="calc(100vh - 220px)" type="auto" offsetScrollbars>
+                        {/* Only up and down: a scroll area that also scrolls sideways grows to the longest row, and then nothing is shortened and the buttons at the end slide out of view. */}
+                        <Box style={{ maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', overflowX: 'hidden' }}>
                             {q
                                 ? <SearchResults q={q} selectedId={selectedId} onSelect={select} onReveal={(id) => reveal(id).catch(() => {})} />
                                 : (
@@ -78,7 +79,7 @@ export function GroupsBrowser({ params }) {
                                         ))}
                                     </>
                                 )}
-                        </ScrollArea.Autosize>
+                        </Box>
                     </Paper>
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, md: 8 }}>
