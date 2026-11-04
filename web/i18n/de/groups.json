@@ -126,6 +126,8 @@
         "groups": "Gruppen",
         "lastSync": "Letzter Import",
         "local": "hier gepflegt",
-        "synced": "Import ({{type}})"
+        "synced": "Import ({{type}})",
+        "clear": "Suche zurücksetzen",
+        "showInTree": "Im Baum zeigen"
     }
 }

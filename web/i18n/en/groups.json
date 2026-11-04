@@ -126,6 +126,8 @@
         "groups": "Groups",
         "lastSync": "Last import",
         "local": "maintained here",
-        "synced": "import ({{type}})"
+        "synced": "import ({{type}})",
+        "clear": "Clear search",
+        "showInTree": "Show in tree"
     }
 }

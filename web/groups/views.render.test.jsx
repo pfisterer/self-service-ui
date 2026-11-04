@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderView } from '/test/render-harness.jsx';
 
 // Does each groups view render at all, with data in it? Same question and reasoning as llm/views.render.test.jsx.
@@ -62,8 +62,9 @@ beforeEach(() => {
     const store = new Map();
     vi.stubGlobal('localStorage', { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k), clear: () => store.clear() });
     globalThis.__groupsApi = {
-        listGroups: async ({ source, parent, q } = {}) => {
-            calls.push({ source, parent, q });
+        listGroups: async ({ source, parent, q, pathTo } = {}) => {
+            calls.push({ source, parent, q, pathTo });
+            if (pathTo) return { items: [...DUALIS_TOP, ...DUALIS_INSIDE], total: 2 };
             if (parent === 'dualis-standort-mannheim') return { items: DUALIS_INSIDE, total: 1 };
             if (source === 'dualis') return { items: DUALIS_TOP, total: 1 };
             if (q) return { items: DUALIS_INSIDE, total: 1 };
@@ -134,7 +135,7 @@ describe('the groups views render', () => {
         // The last arrow still closed is the Mannheim row's, below the opened source.
         fireEvent.click(screen.getAllByRole('button', { name: /Aufklappen|Expand/ }).at(-1));
         expect(await screen.findByText('dualis-mannheim-fakultaet-technik')).toBeTruthy();
-        expect(screen.getByText('Fakultät Technik')).toBeTruthy();
+        expect(screen.getByText('Fakultät Technik · DHBW Mannheim')).toBeTruthy();
         expectNoRenderFailure();
     });
 
@@ -154,6 +155,27 @@ describe('the groups views render', () => {
         fireEvent.change(screen.getByLabelText(/Alle Quellen durchsuchen|Search all sources/), { target: { value: 'technik' } });
         expect(await screen.findByText('dualis-mannheim-fakultaet-technik')).toBeTruthy();
         expect(calls.some(c => c.q === 'technik')).toBe(true);
+        expectNoRenderFailure();
+    });
+
+    // From a search hit to its place: the way down opens, the search goes, and the group is selected.
+    it('shows a search hit in the tree, and the x clears the search', async () => {
+        renderView(<GroupsBrowser params={{}} />);
+        await screen.findAllByText('dualis');
+        const input = screen.getByLabelText(/Alle Quellen durchsuchen|Search all sources/);
+        fireEvent.change(input, { target: { value: 'technik' } });
+        await screen.findByText('dualis-mannheim-fakultaet-technik');
+        fireEvent.click(screen.getByRole('button', { name: /Im Baum zeigen|Show in tree/ }));
+        await waitFor(() => expect(input.value).toBe(''));
+        expect(calls.some(c => c.pathTo === 'dualis-mannheim-fakultaet-technik')).toBe(true);
+        // The tree is open down to it: the source, then Mannheim, then the faculty.
+        expect(await screen.findByText('dualis-standort-mannheim')).toBeTruthy();
+        expect(await screen.findByText('dualis-mannheim-fakultaet-technik')).toBeTruthy();
+        expect(calls.some(c => c.parent === 'dualis-standort-mannheim')).toBe(true);
+
+        fireEvent.change(input, { target: { value: 'xyz' } });
+        fireEvent.click(screen.getByRole('button', { name: /Suche zurücksetzen|Clear search/ }));
+        await waitFor(() => expect(input.value).toBe(''));
         expectNoRenderFailure();
     });
 });

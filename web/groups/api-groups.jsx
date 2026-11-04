@@ -23,9 +23,9 @@ export function useGroupsApi() {
         const call = async (op, opts = {}) => unwrap(await op({ client, ...opts }));
         return {
             getMe: () => call(manageGetMe),
-            // One page { items, total }. For admins: { parent } lists the groups in a group, { q, source? } searches, { source } is the top of a source's tree; everybody else gets the groups they maintain, narrowed by q.
-            listGroups: ({ q, source, parent, limit } = {}) => call(manageListGroups, {
-                query: Object.fromEntries(Object.entries({ q, source, parent, limit }).filter(([, v]) => v)),
+            // One page { items, total }. For admins: { pathTo } is the way from the top of a group's source down to it, { parent } lists the groups in a group, { q, source? } searches, { source } is the top of a source's tree; everybody else gets the groups they maintain, narrowed by q.
+            listGroups: ({ q, source, parent, pathTo, limit } = {}) => call(manageListGroups, {
+                query: Object.fromEntries(Object.entries({ q, source, parent, path_to: pathTo, limit }).filter(([, v]) => v)),
             }),
             // Admins only: every source with its number of groups, the local one first.
             listSources: () => call(manageListSources),
