@@ -118,7 +118,7 @@ function OutcomeNote({ outcome, isChange, budget, hasPolicy, over = [] }) {
 // management — the same tabs as any project, prefilled from OpenStack, plus who
 // answers for it and which budget pays. Its members can be corrected before it
 // goes through approval, instead of the adoption failing on one of them.
-export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null, initialKind = null, asManager = false, moveTargets = [], adopt = false }) {
+export function ProjectFormModal({ opened, onClose, onDone, resources, openstackRoles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null, initialKind = null, asManager = false, moveTargets = [], adopt = false, initialTab }) {
     const { t } = useTranslation();
     const api = useNodesApi();
     const isAdopt = adopt && !!node;
@@ -152,7 +152,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
     const workspaces = useWorkspaceSettings(isChange && opened ? node?.id : null, isChange && opened);
     const attrs = useAttributesTab(node);
 
-    const [activeTab, setActiveTab] = useState(TAB_DETAILS);
+    const [activeTab, setActiveTab] = useState(initialTab ?? TAB_DETAILS);
 
 
     // Auto-approve only ever applies to budgets you REQUEST under. On a budget

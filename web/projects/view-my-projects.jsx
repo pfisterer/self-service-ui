@@ -90,7 +90,7 @@ export function MyProjectsView({ area = 'cloud' }) {
         ],
     });
 
-    const handleAction = (action, node) => dlg.open(action, node);
+    const handleAction = (action, node, tab) => dlg.open(action, node, tab);
 
     if (!api || !config || projectsQuery.isPending) return <Loading />;
     if (projectsQuery.isError) return <LoadError query={projectsQuery} title={t('projects.myProjects.loadError')} />;
@@ -231,6 +231,7 @@ export function MyProjectsView({ area = 'cloud' }) {
                 myBudgets={myBudgets}
                 eligibleBudgets={eligibleBudgets}
                 myProjects={ownProjects}
+                initialTab={dlg.tab}
             />
             <BudgetFormModal
                 key={`budget-request:${budgetRequestFrom?.id ?? 'closed'}`}
@@ -245,7 +246,7 @@ export function MyProjectsView({ area = 'cloud' }) {
             />
             {/* History is a tab in here, not a button of its own outside. */}
             <NodeInspectModal key={`inspect:${dlg.key}`} opened={dlg.is('details')}
-                onClose={dlg.close} node={dlg.node} resources={resources} />
+                onClose={dlg.close} node={dlg.node} resources={resources} initialTab={dlg.tab} />
             <RetireModal key={`retire:${dlg.key}`} opened={dlg.is('release') || dlg.is('delete-for-good')}
                 mode={dlg.is('delete-for-good') ? 'delete' : 'release'} onClose={dlg.close} node={dlg.node} />
         </Stack>

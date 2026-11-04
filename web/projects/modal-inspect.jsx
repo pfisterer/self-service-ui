@@ -203,8 +203,24 @@ function NodeFacts({ node }) {
 
 // showsUsage: a budget's consumption is its managers' business; a budget
 // someone may only request from does not show it. A project shows it to
-// everyone who sees the project — once it exists in OpenStack.
-const showsUsage = (node) => (isBudget(node) ? !node.request_only : !!openstackSide(node).external_id);
+// everyone who sees the project, whatever area it is in.
+const showsUsage = (node) => (isBudget(node) ? !node.request_only : true);
+
+// ProjectConsumption is a project's "Consumption" tab: what it uses now of what it was granted, per resource (Cloud, Workspaces, LLM alike, as the services report it), and below the daily history where there is one (OpenStack).
+function ProjectConsumption({ node, resources }) {
+    const { t } = useTranslation();
+    const cloud = !!openstackSide(node).external_id;
+    return (
+        <Stack>
+            <Section label={t('projects.consumption.now')}>
+                {measuredUse(node)
+                    ? <ProjectResources node={node} resources={resources} quota={effectiveLimit(node, node.limit)} />
+                    : <Text size="xs" c="dimmed">{t('projects.consumption.notMeasured')}</Text>}
+            </Section>
+            {cloud && <Section label={t('projects.consumption.history')}><UsagePanel node={node} /></Section>}
+        </Stack>
+    );
+}
 
 // nodeExtraTabs are the read-only tabs the edit dialogs add after their own,
 // in FormTabs' shape. The usage panel fetches, so it renders only while its
@@ -218,7 +234,8 @@ export function nodeExtraTabs(t, node, resources, activeTab) {
         },
         ...(showsUsage(node) ? [{
             value: TAB_USAGE, label: t('projects.consumption.tab'),
-            content: activeTab === TAB_USAGE ? <UsagePanel node={node} /> : null,
+            content: activeTab !== TAB_USAGE ? null
+                : isBudget(node) ? <UsagePanel node={node} /> : <ProjectConsumption node={node} resources={resources} />,
         }] : []),
     ];
 }
@@ -334,13 +351,13 @@ function NodeHistoryPanel({ node, resources }) {
 }
 
 // initialTab decides which tab opens.
-export function NodeInspectModal({ opened, onClose, node, resources, initialTab = TAB_DETAILS }) {
+export function NodeInspectModal({ opened, onClose, node, resources, initialTab }) {
     const { t } = useTranslation();
     // Opening again — for another node, or via the other trigger — must land on
     // the requested tab, not on whatever was open the last time. The call sites
     // key this modal on (action, node), so a fresh open is a fresh mount and
     // `initialTab` is simply the initial state.
-    const [tab, setTab] = useState(initialTab);
+    const [tab, setTab] = useState(initialTab ?? TAB_DETAILS);
 
     if (!node) return null;
     const budget = isBudget(node);

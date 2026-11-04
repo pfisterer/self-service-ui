@@ -588,6 +588,13 @@
         "allRemoved": "All entries have been removed."
     },
     "budgetProjects": {
+        "summaryHint": "Consumed in the last 30 days or in use now, summed over the resources of the kind. Click the row to see each one.",
+        "summary": {
+            "gpuHours": "GPU h",
+            "cpuHours": "CPU h",
+            "llmTokens": "M tokens",
+            "cores": "Cores"
+        },
         "title": "Projects in this budget ({{count}})",
         "searchPlaceholder": "Search name, owner, purpose…",
         "status": "Status",
@@ -673,6 +680,9 @@
         "confirmName": "To confirm, type the project name: <1>{{name}}</1>"
     },
     "consumption": {
+        "now": "Right now",
+        "notMeasured": "Not measured yet: the figures come with the next sync.",
+        "history": "History (Cloud)",
         "tab": "Usage",
         "period": {
             "30": "30 days",

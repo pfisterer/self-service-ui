@@ -13,11 +13,13 @@ import { useState } from 'react';
 // body, and one more thing to forget when adding the next dialog. Keying on
 // "which action, which node" makes React throw the old instance away instead.
 export function useNodeDialog() {
-    const [state, setState] = useState(null); // { action, node } | null
+    const [state, setState] = useState(null); // { action, node, tab } | null
 
     return {
         node: state?.node ?? null,
-        open: (action, node) => setState({ action, node }),
+        tab: state?.tab,
+        // tab: the dialog's tab to open on (e.g. the consumption from a budget's table), else its first.
+        open: (action, node, tab) => setState({ action, node, tab }),
         close: () => setState(null),
         is: (action) => state?.action === action,
         key: state ? `${state.action}:${state.node?.id ?? ''}` : 'closed',

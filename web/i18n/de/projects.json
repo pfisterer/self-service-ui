@@ -588,6 +588,13 @@
         "allRemoved": "Alle Einträge wurden entfernt."
     },
     "budgetProjects": {
+        "summaryHint": "Verbraucht in den letzten 30 Tagen bzw. zurzeit belegt, summiert über die Ressourcen der Art. Ein Klick auf die Zeile zeigt alles einzeln.",
+        "summary": {
+            "gpuHours": "GPU-h",
+            "cpuHours": "CPU-h",
+            "llmTokens": "Mio. Tokens",
+            "cores": "Kerne"
+        },
         "title": "Projekte in diesem Budget ({{count}})",
         "searchPlaceholder": "Name, Owner, Zweck suchen…",
         "status": "Status",
@@ -673,6 +680,9 @@
         "confirmName": "Zur Bestätigung den Projektnamen eingeben: <1>{{name}}</1>"
     },
     "consumption": {
+        "now": "Zurzeit",
+        "notMeasured": "Noch nicht gemessen: Die Werte kommen mit dem nächsten Abgleich.",
+        "history": "Verlauf (Cloud)",
         "tab": "Verbrauch",
         "period": {
             "30": "30 Tage",

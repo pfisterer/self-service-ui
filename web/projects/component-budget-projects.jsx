@@ -109,9 +109,10 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
     const countOf = (k) => counts[['all', ...kinds].indexOf(k)]?.data?.total ?? '…';
 
     const items = query.data?.items ?? [];
-    const columns = resourceColumns(t, kind === 'all' ? resources : resourcesOfKinds(resources, [kind]), items, kind !== 'all' && kind !== 'cloud');
-    // Too narrow for a column per resource, each row shows an (i) with them
-    // instead. Measured, not guessed from the screen: the panel's width depends
+    const kindResources = kind === 'all' ? resources : resourcesOfKinds(resources, [kind]);
+    const columns = resourceColumns(t, kindResources, items, kind !== 'all' && kind !== 'cloud');
+    const summaries = summaryColumns(kindResources, columns);
+    // Too narrow for a column per resource, the table shows a few sums instead (summaryColumns), the rest in the project's dialog. Measured, not guessed from the screen: the panel's width depends
     // on the layout around it as much as on the window.
     const { ref: tableBoxRef, width: tableWidth } = useElementSize();
     const compact = tableWidth > 0 && tableWidth < 440 + 58 * columns.length;
@@ -287,11 +288,15 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                                     </Table.Th>
                                     {/* The row markers: in use on the first line of
                                         a row, granted on the second. */}
-                                    {compact ? (
-                                        <Table.Th w={104}>
-                                            <Text size="sm" fw={600} style={{ whiteSpace: 'nowrap' }}>{t('projects.budgetProjects.colResources')}</Text>
+                                    {compact ? summaries.map(c => (
+                                        <Table.Th key={c.key} w={92} ta="right" px={6}>
+                                            <Tooltip label={t('projects.budgetProjects.summaryHint')} openDelay={300} multiline w={260}>
+                                                <Box>
+                                                    <SortButton label={t(`projects.budgetProjects.summary.${c.key}`)} sortKey={c.sortKey} sort={sort} onSort={toggleSort} />
+                                                </Box>
+                                            </Tooltip>
                                         </Table.Th>
-                                    ) : (
+                                    )) : (
                                         <Table.Th w={22} px={0}><VisuallyHidden>{t('projects.budgetProjects.colResources')}</VisuallyHidden></Table.Th>
                                     )}
                                     {!compact && columns.map(c => (
@@ -316,13 +321,13 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                             </Table.Thead>
                             <Table.Tbody>
                                 {items.map(node => (
-                                    <ProjectRow key={node.id} node={node} resources={resources} columns={columns} compact={compact}
+                                    <ProjectRow key={node.id} node={node} resources={resources} columns={columns} summaries={summaries} compact={compact}
                                         showBudget={allocatedOnly || (deep && node.parent_id !== budget.id)}
                                         onAction={onAction} onOpen={onOpen} />
                                 ))}
                                 {items.length === 0 && !query.isPending && (
                                     <Table.Tr>
-                                        <Table.Td colSpan={compact ? 4 : 4 + columns.length}>
+                                        <Table.Td colSpan={compact ? 3 + summaries.length : 4 + columns.length}>
                                             <Text size="sm" c="dimmed" ta="center" py="md">
                                                 {filtered ? t('projects.budgetProjects.noMatches') : t('projects.budgetProjects.none')}
                                             </Text>
@@ -398,6 +403,30 @@ function resourceColumns(t, resources, items, short = false) {
 
 const VMS = '__vms';
 
+// SUMMARIES are the sums the narrow table shows instead of a column per resource: what a manager compares projects by, each summed over its resources (the GPU hours of all classes, say). In use now, or consumed in the current window for an amount per window.
+const SUMMARIES = [
+    { key: 'gpuHours', match: (r) => r.unit === 'GPU h' },
+    { key: 'cpuHours', match: (r) => r.unit === 'vCPU h' },
+    { key: 'llmTokens', match: (r) => r.unit === 'M tokens' },
+    { key: 'cores', match: (r) => r.id === 'cores' },
+];
+
+// summaryColumns are the SUMMARIES any listed project holds a resource of; sorted on the server by the sum over all of their resources (used:a,b,…), not only those on this page.
+function summaryColumns(resources, columns) {
+    return SUMMARIES.flatMap(sum => {
+        const ids = (resources || []).filter(r => !isAvailability(r) && sum.match(r)).map(r => r.id);
+        if (!columns.some(c => ids.includes(c.id))) return [];
+        return [{ key: sum.key, ids, sortKey: `used:${ids.join(',')}` }];
+    });
+}
+
+// summaryValue is a project's sum of one summary; null when none of its resources was measured, so a dash, never a zero.
+function summaryValue(node, c) {
+    const inUse = measuredUse(node) || {};
+    const values = c.ids.map(id => inUse[id]).filter(v => typeof v === 'number');
+    return values.length ? values.reduce((a, b) => a + b, 0).toLocaleString() : null;
+}
+
 // The symbol of each kind in the switch.
 const KIND_ICONS = { cloud: Server, workspaces: SquareTerminal, llm: Sparkles };
 function KindIcon({ kind }) {
@@ -469,41 +498,7 @@ function ResourceCells({ node, columns }) {
     );
 }
 
-// ResourceTable is the same as a small table of its own, for the (i) a row
-// shows instead when the table is too narrow for one column per resource.
-function ResourceTable({ node, columns }) {
-    const { t } = useTranslation();
-    return (
-        <Table withRowBorders={false} verticalSpacing={0} horizontalSpacing={8} fz="xs">
-            <Table.Thead>
-                <Table.Tr>
-                    <Table.Th />
-                    {columns.map(c => (
-                        <Table.Th key={c.id} ta="right">
-                            <Text size="xs" fw={600} lh={1.2}>{c.label}</Text>
-                            {c.unit && <Text size="10px" c="dimmed" lh={1.2}>{c.unit}</Text>}
-                        </Table.Th>
-                    ))}
-                </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-                {['used', 'reserved'].map(kind => (
-                    <Table.Tr key={kind}>
-                        <Table.Td>
-                            <RowMarker icon={kind === 'reserved' ? Package : Activity}
-                                label={t(kind === 'reserved' ? 'projects.resources.reserved' : 'projects.resources.inUse')} />
-                        </Table.Td>
-                        {columns.map(c => (
-                            <Table.Td key={c.id} ta="right">{figure(resourceFigures(node, c)[kind], kind === 'used' ? figureLevel(resourceFigures(node, c)) : null)}</Table.Td>
-                        ))}
-                    </Table.Tr>
-                ))}
-            </Table.Tbody>
-        </Table>
-    );
-}
-
-function ProjectRow({ node, resources, columns, compact = false, onAction, onOpen, showBudget = false }) {
+function ProjectRow({ node, resources, columns, summaries, compact = false, onAction, onOpen, showBudget = false }) {
     const { t } = useTranslation();
     const config = useProjectConfig();
     const can = projectActions(node, { manager: true, canDelete: deletesOnRequest(config?.retirement) });
@@ -562,14 +557,9 @@ function ProjectRow({ node, resources, columns, compact = false, onAction, onOpe
                     ) : <Text size="xs" c="dimmed">—</Text>}
                 </Group>
             </Table.Td>
-            {compact ? (
-                // Stop the click here: opening the (i) must not open the row.
-                <Table.Td onClick={(e) => e.stopPropagation()}>
-                    <InfoPopover plain width="auto" label={t('projects.budgetProjects.colResources')}>
-                        <ResourceTable node={node} columns={columns} />
-                    </InfoPopover>
-                </Table.Td>
-            ) : <ResourceCells node={node} columns={columns} />}
+            {compact ? summaries.map(c => (
+                <Table.Td key={c.key} ta="right" px={6}>{figure(summaryValue(node, c))}</Table.Td>
+            )) : <ResourceCells node={node} columns={columns} />}
             <Table.Td>
                 <Group gap="2" wrap="wrap" justify="flex-end">
                     {/* One dialog per project: editable where it may be changed. */}

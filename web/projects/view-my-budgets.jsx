@@ -17,7 +17,7 @@ import { RetireModal } from './modal-retire.jsx';
 import { DecisionModal } from './modal-decide.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
-import { NodeInspectModal } from './modal-inspect.jsx';
+import { NodeInspectModal, TAB_USAGE } from './modal-inspect.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useTranslation } from 'react-i18next';
@@ -487,7 +487,7 @@ export function MyBudgetsView({ params }) {
     };
 
     // Central action dispatch for both node kinds.
-    const handleAction = (action, node) => {
+    const handleAction = (action, node, tab) => {
         if (action === 'sub-budget') return setBudgetForm({ mode: 'create', parent: node });
         // From a read-only budget: request under it — `parent` preselects it.
         if (action === 'request-here') return setBudgetForm({ mode: 'request', parent: node });
@@ -505,7 +505,7 @@ export function MyBudgetsView({ params }) {
         }
         if (action === 'delete') return handleDelete(node);
         if (action === 'show-allocated') return setAllocatedFor(node.id);
-        dlg.open(action, node);
+        dlg.open(action, node, tab);
     };
 
     if (!api || !config || myBudgetsQuery.isPending) return <Loading />;
@@ -774,7 +774,8 @@ export function MyBudgetsView({ params }) {
                                         onAction={handleAction}
                                         // A row opens the project's one dialog, as its
                                         // Edit or Details button does.
-                                        onOpen={(node) => handleAction(projectActions(node, { manager: true }).change ? 'change' : 'details', node)}
+                                        // A row opens its project on what it consumes: the table shows only the summary of it.
+                                        onOpen={(node) => handleAction(projectActions(node, { manager: true }).change ? 'change' : 'details', node, TAB_USAGE)}
                                         allocatedOnly={allocatedFor === selected.id}
                                         onAllocatedOnlyChange={(on) => setAllocatedFor(on ? selected.id : null)} />
                                 )}
@@ -846,10 +847,11 @@ export function MyBudgetsView({ params }) {
                 // who pays, moves it and hands it over — the owner does not.
                 asManager
                 moveTargets={moveTargets}
+                initialTab={dlg.tab}
             />
             {/* History is a tab in here, not a button of its own outside. */}
             <NodeInspectModal key={`nodeinspectmodal:${dlg.key}`} opened={dlg.is('details')}
-                onClose={dlg.close} node={dlg.node} resources={resources} />
+                onClose={dlg.close} node={dlg.node} resources={resources} initialTab={dlg.tab} />
         </Stack>
     );
 }
