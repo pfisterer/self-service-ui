@@ -64,7 +64,7 @@
         "noEnd": "no end",
         "since": "Since",
         "add": "Add",
-        "hint": "A group as entry makes all of its members members of this group, in the chosen role. An entry with an end date counts until the end of that day.",
+        "hint": "A group as entry makes all of its members members of this group, in the chosen role. An entry with an end date counts until the end of that day. The role can be changed right in the table; the end date stays.",
         "none": "No entries yet.",
         "expired": "expired on {{date}}",
         "changeUntil": "End date",
@@ -111,7 +111,8 @@
             "member_added_until": "{{member}} added as {{relation}}, until {{date}}",
             "member_removed": "{{member}} removed as {{relation}}",
             "manager_added": "Management handed to {{member}}",
-            "manager_removed": "Management taken from {{member}}"
+            "manager_removed": "Management taken from {{member}}",
+            "relation_changed": "{{member}}: role changed from {{from}} to {{relation}}"
         }
     }
 }

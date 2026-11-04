@@ -3,7 +3,7 @@ import { apiError, apiErrorMessage } from '/helper/api-error.js';
 import { useClient } from '/providers/client.jsx';
 // Named imports, as in llm/api-llm.jsx: an operation missing from the client fails the build, not the browser.
 import {
-    manageAddManager, manageAddMember, manageCreateGroup, manageDeleteGroup, manageEffectiveMembers, manageGetGroup,
+    manageAddManager, manageAddMember, manageChangeRelation, manageCreateGroup, manageDeleteGroup, manageEffectiveMembers, manageGetGroup,
     manageGetMe, manageHistory, manageListGroups, manageRemoveManager, manageRemoveMember, manageSearchPrincipals,
     manageUpdateGroup,
 } from '@dhbw-cloud/role-provider-client';
@@ -38,6 +38,9 @@ export function useGroupsApi() {
                     headers: JSON_HEADERS,
                 }),
             removeMember: (group, { member, relation }) => call(manageRemoveMember, { path: { group }, query: { member, relation } }),
+            // One step on the server: the entry never holds both roles or neither, and its end date stays.
+            changeRelation: (group, { member, relation, newRelation }) =>
+                call(manageChangeRelation, { path: { group }, body: { member, relation, new_relation: newRelation }, headers: JSON_HEADERS }),
             effectiveMembers: (group) => call(manageEffectiveMembers, { path: { group } }),
             addManager: (group, manager) => call(manageAddManager, { path: { group }, body: { manager }, headers: JSON_HEADERS }),
             removeManager: (group, manager) => call(manageRemoveManager, { path: { group }, query: { manager } }),

@@ -28,6 +28,7 @@ const DETAIL = {
     managers: [{ token: 'user:dekan@dhbw.de', created_by: 'root@dhbw.de', created_at: '2026-10-01T10:00:00Z' }],
 };
 const HISTORY = [
+    { id: 'h3', group_id: 'wwi23seb', at: '2026-10-03T10:00:00Z', actor: 'dekan@dhbw.de', action: 'relation_changed', member: 'user:ben@dhbw.de', relation: 'dozent', detail: 'member' },
     { id: 'h2', group_id: 'wwi23seb', at: '2026-10-02T10:00:00Z', actor: 'root@dhbw.de', on_behalf_of: 'dekan@dhbw.de', action: 'member_added', member: 'user:anna@dhbw.de', relation: 'dozent', expires_at: '2027-03-31T21:59:59Z' },
     { id: 'h1', group_id: 'wwi23seb', at: '2026-10-01T10:00:00Z', actor: 'system', action: 'group_adopted', detail: 'taken over from source "dhbw-mannheim"' },
 ];
@@ -71,6 +72,8 @@ describe('the groups views render', () => {
         expect(await screen.findByText('anna@dhbw.de')).toBeTruthy();
         expect(screen.getByText(/abgelaufen am|expired on/)).toBeTruthy();
         expect(screen.getByText(/alle Adressen \*@student|all addresses \*@student/)).toBeTruthy();
+        // The role is a choice in the row, one per entry.
+        expect(screen.getAllByLabelText(/^(Rolle|Role)$/).length).toBeGreaterThanOrEqual(4);
         expectNoRenderFailure();
     });
 
@@ -84,6 +87,7 @@ describe('the groups views render', () => {
         fireEvent.click(screen.getByRole('tab', { name: /Verlauf|History/ }));
         expect(await screen.findByText(/(im Auftrag von|on behalf of) dekan@dhbw.de/)).toBeTruthy();
         expect(screen.getByText(/dhbw-mannheim/)).toBeTruthy();
+        expect(screen.getByText(/ben@dhbw.de: (Rolle von Mitglied auf|role changed from Member to)/)).toBeTruthy();
         expectNoRenderFailure();
     });
 });

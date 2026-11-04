@@ -64,7 +64,7 @@
         "noEnd": "unbefristet",
         "since": "Seit",
         "add": "Hinzufügen",
-        "hint": "Eine Gruppe als Eintrag macht alle ihre Mitglieder zu Mitgliedern dieser Gruppe, mit der gewählten Rolle. Ein befristeter Eintrag gilt bis zum Ende des gewählten Tages.",
+        "hint": "Eine Gruppe als Eintrag macht alle ihre Mitglieder zu Mitgliedern dieser Gruppe, mit der gewählten Rolle. Ein befristeter Eintrag gilt bis zum Ende des gewählten Tages. Die Rolle lässt sich in der Tabelle direkt ändern; das Ablaufdatum bleibt dabei erhalten.",
         "none": "Noch keine Einträge.",
         "expired": "abgelaufen am {{date}}",
         "changeUntil": "Befristung",
@@ -111,7 +111,8 @@
             "member_added_until": "{{member}} als {{relation}} eingetragen, bis {{date}}",
             "member_removed": "{{member}} als {{relation}} entfernt",
             "manager_added": "Verwaltung an {{member}} übertragen",
-            "manager_removed": "Verwaltung von {{member}} entzogen"
+            "manager_removed": "Verwaltung von {{member}} entzogen",
+            "relation_changed": "{{member}}: Rolle von {{from}} auf {{relation}} geändert"
         }
     }
 }

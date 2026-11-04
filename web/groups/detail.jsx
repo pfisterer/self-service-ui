@@ -169,6 +169,10 @@ function Entries({ id, memberships }) {
         mutationFn: (m) => api.removeMember(id, { member: m.member, relation: m.relation }),
         invalidates,
     });
+    const changeRole = useApiMutation({
+        mutationFn: ({ entry, relation: next }) => api.changeRelation(id, { member: entry.member, relation: entry.relation, newRelation: next }),
+        invalidates,
+    });
 
     async function onRemove(m) {
         const ok = await confirm({
@@ -216,7 +220,14 @@ function Entries({ id, memberships }) {
                     {memberships.map(m => (
                         <Table.Tr key={`${m.member}#${m.relation}`} style={m.expired ? { opacity: 0.6 } : undefined}>
                             <Table.Td><TokenText token={m.member} /></Table.Td>
-                            <Table.Td>{relationText(t, m.relation)}</Table.Td>
+                            <Table.Td>
+                                {relations.length > 1 ? (
+                                    <Select size="xs" w={170} allowDeselect={false} aria-label={t('groups.entries.relation')}
+                                        value={m.relation} disabled={changeRole.isPending && changeRole.variables?.entry === m}
+                                        onChange={(next) => next && next !== m.relation && changeRole.mutate({ entry: m, relation: next })}
+                                        data={[...new Set([...relations, m.relation])].map(r => ({ value: r, label: relationText(t, r) }))} />
+                                ) : relationText(t, m.relation)}
+                            </Table.Td>
                             <Table.Td>
                                 {m.expired
                                     ? <Badge color="red" variant="light">{t('groups.entries.expired', { date: formatDate(m.expires_at) })}</Badge>
@@ -404,6 +415,8 @@ function ChangeText({ change: c }) {
         relation: relationText(t, c.relation),
         date: c.expires_at ? formatDate(c.expires_at) : '',
         detail: c.detail ?? '',
+        // A role change keeps the role before in detail.
+        from: relationText(t, c.detail),
     };
     const key = c.action === 'member_added' && c.expires_at ? 'member_added_until' : c.action;
     return <Text size="sm">{t(`groups.history.actions.${key}`, { ...values, defaultValue: c.action })}</Text>;
