@@ -299,10 +299,12 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             <Eye size="13" style={{ marginRight: 4 }} />{t('projects.actions.details')}
                         </Button>
                     )}
-                    {/* What it consumes: the same dialog, on its consumption tab. */}
-                    <Button variant="light" size="xs" onClick={() => act(can.change ? 'change' : 'details', TAB_USAGE)}>
-                        <Activity size="13" style={{ marginRight: 4 }} />{t('projects.consumption.tab')}
-                    </Button>
+                    {/* What it consumed day by day: the same dialog, on its consumption tab. Only a cloud project has that history; for the others the tab repeats the bars above. */}
+                    {openstackSide(node).external_id && (
+                        <Button variant="light" size="xs" onClick={() => act(can.change ? 'change' : 'details', TAB_USAGE)}>
+                            <Activity size="13" style={{ marginRight: 4 }} />{t('projects.consumption.tab')}
+                        </Button>
+                    )}
                     {/* Also a manager's to do: they carry the budget it is paid
                         from, and the API has always allowed a manager of the
                         funding chain to release a leaf. Without the button they
