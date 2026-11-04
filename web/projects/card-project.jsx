@@ -1,4 +1,4 @@
-import { AlertTriangle, ExternalLink, Eye, Gift, Pencil, Play, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
+import { Activity, AlertTriangle, ExternalLink, Eye, Gift, Pencil, Play, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Loader, Stack, Text, Tooltip } from '@mantine/core';
 import { CopyLinkButton, DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
 import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, finalDeletion, labDeletion, openstackSide, catalogKinds, projectKinds } from './util-project.jsx';
@@ -10,6 +10,7 @@ import { formatDate } from '../format-date.js';
 import { BudgetPath } from './component-budget-path.jsx';
 import { ProjectResources } from './component-project-resources.jsx';
 import { LlmLimitHints } from './component-llm-limits.jsx';
+import { TAB_USAGE } from './modal-inspect.jsx';
 
 // ProjectCard renders one project leaf. It is purely presentational: every
 // button reports an action to the owning view via onAction(actionId, node),
@@ -30,7 +31,7 @@ const MEMBERS_SHOWN = 5;
 // envBuild: the build of the project's workspace environment from Git while it builds or after it failed ({status, message, hasImage}), else null.
 export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction, link, envBuild, jobs, start }) {
     const { t } = useTranslation();
-    const act = (action) => onAction?.(action, node);
+    const act = (action, tab) => onAction?.(action, node, tab);
     const config = useProjectConfig();
 
     const imported = isImported(node);
@@ -281,11 +282,6 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
             {/* ── Actions ────────────────────────────────────────────────── */}
             <Card.Section withBorder inheritPadding py="xs" mt="auto">
                 <Group grow>
-                    {start && (
-                        <Button variant="filled" size="xs" component={Link} href={start}>
-                            <Play size="13" style={{ marginRight: 4 }} />{t('projects.actions.startWorkspace')}
-                        </Button>
-                    )}
                     {/* One dialog per project, with history and usage as tabs:
                         editable where it may be changed, read-only otherwise.
                         Editing is not an owner privilege: a manager of the
@@ -303,6 +299,10 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             <Eye size="13" style={{ marginRight: 4 }} />{t('projects.actions.details')}
                         </Button>
                     )}
+                    {/* What it consumes: the same dialog, on its consumption tab. */}
+                    <Button variant="light" size="xs" onClick={() => act(can.change ? 'change' : 'details', TAB_USAGE)}>
+                        <Activity size="13" style={{ marginRight: 4 }} />{t('projects.consumption.tab')}
+                    </Button>
                     {/* Also a manager's to do: they carry the budget it is paid
                         from, and the API has always allowed a manager of the
                         funding chain to release a leaf. Without the button they
@@ -334,6 +334,12 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         </Button>
                     )}
                 </Group>
+                {/* The main action on a line of its own below, the whole width: beside three others its label was cut off. */}
+                {start && (
+                    <Button fullWidth mt="xs" variant="filled" size="xs" component={Link} href={start}>
+                        <Play size="13" style={{ marginRight: 4 }} />{t('projects.actions.startWorkspace')}
+                    </Button>
+                )}
             </Card.Section>
         </Card>
     );
