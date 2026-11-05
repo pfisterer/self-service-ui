@@ -45,11 +45,26 @@
             "opencode": "Als <1>{{path}}</1> speichern, bei vorhandener Datei den Eintrag „dhbw“ unter „provider“ übernehmen. Danach <1>opencode</1> starten; das Modell ist dhbw/agent.",
             "claude-code": "Als <1>{{path}}</1> speichern, bei vorhandener Datei den Block „env“ übernehmen. Eine Anmeldung bei Anthropic ist nicht nötig; Telemetrie und Fehlerberichte an Anthropic sind abgeschaltet.",
             "codex": "Als <1>{{path}}</1> speichern. Codex liest den API Key aus der Umgebungsvariablen DHBW_API_KEY und spricht nur die Responses API.",
-            "continue": "Als <1>{{path}}</1> speichern oder die beiden Modelle in die vorhandene Datei übernehmen."
+            "continue": "Als <1>{{path}}</1> speichern oder die beiden Modelle in die vorhandene Datei übernehmen.",
+            "kilo": "Als <1>{{path}}</1> speichern, bei vorhandener Datei den Eintrag „dhbw“ unter „provider“ übernehmen. Die Erweiterung für VS Code und die Kommandozeile <1>kilo</1> lesen dieselbe Datei; das Modell ist dhbw/agent.",
+            "zed": "Den Inhalt in <1>{{path}}</1> übernehmen (Befehl „zed: open settings“), vorhandene Einstellungen bleiben stehen. Den API Key liest Zed nicht aus der Datei, sondern aus der Umgebungsvariablen DHBW_API_KEY oder aus den Agent-Einstellungen beim Anbieter „dhbw“.",
+            "cline": "In den Einstellungen von Cline den API Provider <1>OpenAI Compatible</1> wählen und die Felder ausfüllen; eine Konfigurationsdatei liest Cline nicht.",
+            "roo": "In den Einstellungen von Roo Code den API Provider <1>OpenAI Compatible</1> wählen und die Felder ausfüllen; für ein weiteres Modell ein eigenes Konfigurationsprofil anlegen."
         },
         "env": "Den API Key in der Shell setzen, z. B. in ~/.bashrc oder ~/.zshrc:",
         "docs": "Anleitung des Projekts",
-        "download": "{{file}} herunterladen"
+        "download": "{{file}} herunterladen",
+        "fields": {
+            "baseUrl": "Base URL",
+            "apiKey": "API Key",
+            "modelId": "Model ID",
+            "contextWindow": "Context Window",
+            "maxOutput": "Max Output Tokens"
+        },
+        "fieldsRest": "Unter „Model Configuration“ Image Support und Computer Use ausgeschaltet lassen, die Preise leer.",
+        "otherModels": "Alle Modelle mit ihren Grenzen, z. B. für ein weiteres Profil:",
+        "copy": "Kopieren",
+        "copied": "Kopiert"
     },
     "keys": {
         "title": "API Keys",

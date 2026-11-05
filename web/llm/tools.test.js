@@ -59,6 +59,36 @@ describe('configuration files for the agents', () => {
         expect(files.continue.code).toContain('contextLength: 131072');
         expect(files.continue.code).toContain('contextLength: 32768');
     });
+
+    it('Kilo Code gets the OpenCode-style provider in kilo.jsonc', () => {
+        const kc = JSON.parse(files.kilo.code);
+        expect(kc.$schema).toBe('https://app.kilo.ai/config.json');
+        expect(kc.provider.dhbw.npm).toBe('@ai-sdk/openai-compatible');
+        expect(kc.provider.dhbw.options).toEqual({ baseURL: API, apiKey: 'sk-test' });
+        expect(kc.provider.dhbw.models.agent.limit).toEqual({ context: 131072, output: 8192 });
+        expect(kc.model).toBe('dhbw/agent');
+        expect(files.kilo.path).toBe('~/.config/kilo/kilo.jsonc');
+    });
+
+    it('Zed gets an OpenAI-compatible provider without the key, which comes from DHBW_API_KEY', () => {
+        const z = JSON.parse(files.zed.code);
+        const dhbw = z.language_models.openai_compatible.dhbw;
+        expect(dhbw.api_url).toBe(API);
+        expect(dhbw.available_models[0]).toEqual({ name: 'agent', display_name: 'DHBW Agent', max_tokens: 131072, max_output_tokens: 8192, capabilities: { tools: true, images: false, parallel_tool_calls: false, prompt_cache_key: false } });
+        expect(dhbw.available_models.find(m => m.name === 'code').max_tokens).toBe(32768);
+        expect(z.agent.default_model).toEqual({ provider: 'dhbw', model: 'agent' });
+        expect(files.zed.code).not.toContain('sk-test');
+        expect(files.zed.env).toBe('export DHBW_API_KEY=sk-test');
+    });
+
+    it('Cline and Roo Code get the fields to fill in instead of a file', () => {
+        for (const id of ['cline', 'roo']) {
+            expect(files[id].code).toBeUndefined();
+            expect(Object.fromEntries(files[id].fields.map(f => [f.key, f.value]))).toEqual({ baseUrl: API, apiKey: 'sk-test', modelId: 'agent', contextWindow: '131072', maxOutput: '8192' });
+            expect(files[id].models.map(m => m.id)).toEqual(['agent', 'code', 'chat-fast']);
+            expect(files[id].models[1]).toEqual({ id: 'code', context: 32768, output: 8192 });
+        }
+    });
 });
 
 describe('model groups granted on top', () => {
@@ -77,5 +107,8 @@ describe('model groups granted on top', () => {
         const files = Object.fromEntries(toolConfigs(API, 'sk-test', limits, ['chat-large']).map(c => [c.id, c]));
         expect(JSON.parse(files.opencode.code).provider.dhbw.models['chat-large'].limit).toEqual({ context: 65536, output: 8192 });
         expect(files.continue.code).toContain('model: chat-large');
+        expect(JSON.parse(files.kilo.code).provider.dhbw.models['chat-large'].limit).toEqual({ context: 65536, output: 8192 });
+        expect(JSON.parse(files.zed.code).language_models.openai_compatible.dhbw.available_models.at(-1)).toMatchObject({ name: 'chat-large', display_name: 'DHBW Large', max_tokens: 65536 });
+        expect(files.cline.models.at(-1)).toEqual({ id: 'chat-large', context: 65536, output: 8192 });
     });
 });

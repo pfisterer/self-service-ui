@@ -45,11 +45,26 @@
             "opencode": "Save as <1>{{path}}</1>; with an existing file, take over the entry “dhbw” under “provider”. Then start <1>opencode</1>; the model is dhbw/agent.",
             "claude-code": "Save as <1>{{path}}</1>; with an existing file, take over the “env” block. No Anthropic sign-in is needed; telemetry and error reports to Anthropic are switched off.",
             "codex": "Save as <1>{{path}}</1>. Codex reads the API key from the environment variable DHBW_API_KEY and speaks the Responses API only.",
-            "continue": "Save as <1>{{path}}</1> or take the two models over into the existing file."
+            "continue": "Save as <1>{{path}}</1> or take the two models over into the existing file.",
+            "kilo": "Save as <1>{{path}}</1>; with an existing file, take over the entry “dhbw” under “provider”. The VS Code extension and the command line <1>kilo</1> read the same file; the model is dhbw/agent.",
+            "zed": "Take the content over into <1>{{path}}</1> (command “zed: open settings”), existing settings stay. Zed does not read the API key from the file but from the environment variable DHBW_API_KEY or from the agent settings of the provider “dhbw”.",
+            "cline": "In Cline's settings, choose the API provider <1>OpenAI Compatible</1> and fill in the fields; Cline reads no configuration file.",
+            "roo": "In Roo Code's settings, choose the API provider <1>OpenAI Compatible</1> and fill in the fields; for another model, create a configuration profile of its own."
         },
         "env": "Set the API key in the shell, e.g. in ~/.bashrc or ~/.zshrc:",
         "docs": "Project guide",
-        "download": "Download {{file}}"
+        "download": "Download {{file}}",
+        "fields": {
+            "baseUrl": "Base URL",
+            "apiKey": "API Key",
+            "modelId": "Model ID",
+            "contextWindow": "Context Window",
+            "maxOutput": "Max Output Tokens"
+        },
+        "fieldsRest": "Under “Model Configuration”, leave Image Support and Computer Use off and the prices empty.",
+        "otherModels": "All models with their limits, e.g. for a further profile:",
+        "copy": "Copy",
+        "copied": "Copied"
     },
     "keys": {
         "title": "API keys",

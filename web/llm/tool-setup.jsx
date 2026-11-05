@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
-import { Button, Code, Group, List, Tabs, Text } from '@mantine/core';
-import { Download } from 'lucide-react';
+import { ActionIcon, Button, Code, CopyButton, Group, List, Table, Tabs, Text, Tooltip } from '@mantine/core';
+import { Check, Copy, Download } from 'lucide-react';
 import { CodeBlock } from '/helper/codeblock.jsx';
 import { ExternalLink } from '/helper/external-link.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
@@ -43,7 +43,7 @@ function VscodeSetup({ apiUrl, limits, granted }) {
     );
 }
 
-// One agent's ready-made file with the key filled in: where it goes, the file itself (copy or download) and, for Codex, the variable it reads the key from.
+// One agent's ready-made file with the key filled in: where it goes, the file itself (copy or download) and, for Codex and Zed, the variable it reads the key from.
 function ConfigSetup({ config }) {
     const { t } = useTranslation();
     const docs = TOOLS.find(tool => tool.id === config.id)?.url;
@@ -69,7 +69,68 @@ function ConfigSetup({ config }) {
     );
 }
 
-// The setup of the tools right after a key was created, where the key is still on screen: VS Code's model entries and ready-made files for the coding agents, each with the context sizes the service names for the aliases (getModelAliases), so a tool shortens its history itself instead of the backend cutting it off.
+// A value with a button that copies it, for the fields of Cline and Roo Code.
+function Copyable({ value }) {
+    const { t } = useTranslation();
+    return (
+        <Group gap={4} wrap="nowrap">
+            <Code style={{ wordBreak: 'break-all' }}>{value}</Code>
+            <CopyButton value={value} timeout={1500}>
+                {({ copied, copy }) => (
+                    <Tooltip label={copied ? t('llm.tools.copied') : t('llm.tools.copy')} withArrow>
+                        <ActionIcon variant="subtle" color="gray" size="sm" onClick={copy} aria-label={t('llm.tools.copy')}>{copied ? <Check size={14} /> : <Copy size={14} />}</ActionIcon>
+                    </Tooltip>
+                )}
+            </CopyButton>
+        </Group>
+    );
+}
+
+// The tools that read no file (Cline, Roo Code): the fields of their provider "OpenAI Compatible" with copy buttons, then the other models with their limits for further profiles.
+function FieldsSetup({ config }) {
+    const { t } = useTranslation();
+    const docs = TOOLS.find(tool => tool.id === config.id)?.url;
+    return (
+        <>
+            <Text size="xs" c="dimmed">
+                <Trans i18nKey={`llm.tools.hint.${config.id}`} components={{ 1: <b /> }} />
+                {docs && <>{' '}<ExternalLink href={docs} size="xs">{t('llm.tools.docs')}</ExternalLink></>}
+            </Text>
+            <Table withRowBorders={false} verticalSpacing={4} mt="xs" maw={720}>
+                <Table.Tbody>
+                    {config.fields.map(f => (
+                        <Table.Tr key={f.key}>
+                            <Table.Td w={200}><Text size="sm">{t(`llm.tools.fields.${f.key}`)}</Text></Table.Td>
+                            <Table.Td><Copyable value={f.value} /></Table.Td>
+                        </Table.Tr>
+                    ))}
+                </Table.Tbody>
+            </Table>
+            <Text size="xs" c="dimmed" mt="xs">{t('llm.tools.fieldsRest')}</Text>
+            <Text size="xs" c="dimmed" mt="sm">{t('llm.tools.otherModels')}</Text>
+            <Table verticalSpacing={2} mt={4} maw={520}>
+                <Table.Thead>
+                    <Table.Tr>
+                        <Table.Th><Text size="xs">{t('llm.tools.fields.modelId')}</Text></Table.Th>
+                        <Table.Th><Text size="xs">{t('llm.tools.fields.contextWindow')}</Text></Table.Th>
+                        <Table.Th><Text size="xs">{t('llm.tools.fields.maxOutput')}</Text></Table.Th>
+                    </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                    {config.models.map(m => (
+                        <Table.Tr key={m.id}>
+                            <Table.Td><Copyable value={m.id} /></Table.Td>
+                            <Table.Td><Text size="sm">{m.context}</Text></Table.Td>
+                            <Table.Td><Text size="sm">{m.output}</Text></Table.Td>
+                        </Table.Tr>
+                    ))}
+                </Table.Tbody>
+            </Table>
+        </>
+    );
+}
+
+// The setup of the tools right after a key was created, where the key is still on screen: VS Code's model entries, ready-made files for the coding agents and the fields for those that read none, each with the context sizes the service names for the aliases (getModelAliases), so a tool shortens its history itself instead of the backend cutting it off.
 export function ToolSetup({ apiUrl, apiKey }) {
     const { t } = useTranslation();
     const api = useLlmApi();
@@ -88,7 +149,7 @@ export function ToolSetup({ apiUrl, apiKey }) {
                     {configs.map(c => <Tabs.Tab key={c.id} value={c.id}>{c.name}</Tabs.Tab>)}
                 </Tabs.List>
                 <Tabs.Panel value="vscode" pt="xs"><VscodeSetup apiUrl={apiUrl} limits={limits} granted={granted} /></Tabs.Panel>
-                {configs.map(c => <Tabs.Panel key={c.id} value={c.id} pt="xs"><ConfigSetup config={c} /></Tabs.Panel>)}
+                {configs.map(c => <Tabs.Panel key={c.id} value={c.id} pt="xs">{c.fields ? <FieldsSetup config={c} /> : <ConfigSetup config={c} />}</Tabs.Panel>)}
             </Tabs>
         </>
     );

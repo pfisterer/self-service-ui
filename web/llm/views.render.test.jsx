@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { renderView } from '/test/render-harness.jsx';
 
 // Does each LLM view render at all, with data in it? Same question and same
@@ -120,9 +120,17 @@ describe('the LLM views render', () => {
     it('The setup after a new key offers VS Code and the agents with the key filled in', async () => {
         globalThis.__llmApi.getModelAliases = async () => ({ ...ALIASES, aliases: [...ALIASES.aliases, { alias: 'agent', models: [], limit: { max_input_tokens: 57344, max_output_tokens: 8192 } }] });
         renderView(<ToolSetup apiUrl="https://api.example/v1" apiKey="sk-new" />);
-        for (const name of ['VS Code', 'OpenCode', 'Claude Code', 'Codex', 'Continue']) expect(await screen.findByRole('tab', { name })).toBeTruthy();
+        for (const name of ['VS Code', 'OpenCode', 'Claude Code', 'Codex', 'Continue', 'Kilo Code', 'Zed', 'Cline', 'Roo Code']) expect(await screen.findByRole('tab', { name })).toBeTruthy();
         // VS Code is open first, with the limits the service names for agent.
         expect(await screen.findByText(/57344/)).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('The setup lists the fields for Cline, which reads no file', async () => {
+        renderView(<ToolSetup apiUrl="https://api.example/v1" apiKey="sk-new" />);
+        fireEvent.click(await screen.findByRole('tab', { name: 'Cline' }));
+        expect(await screen.findByText('sk-new')).toBeTruthy();
+        expect(screen.getByText('https://api.example/v1')).toBeTruthy();
         expectNoRenderFailure();
     });
 
