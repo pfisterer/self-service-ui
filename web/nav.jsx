@@ -65,9 +65,9 @@ export function useNav() {
             label: t('nav.workspaces'),
             base: '/workspaces',
             items: [
+                cloudProjectsEnabled && { label: t('nav.projects'), href: '/workspaces/projects' },
                 { label: t('nav.gpuServers'), href: '/workspaces/servers' },
                 { label: t('nav.gpuJobs'), href: '/workspaces/jobs' },
-                cloudProjectsEnabled && { label: t('nav.projects'), href: '/workspaces/projects' },
                 { label: t('nav.gpuUsage'), href: '/workspaces/usage' },
                 llm.isAdmin && { label: t('nav.gpuFleet'), href: '/workspaces/gpus' },
             ].filter(Boolean),

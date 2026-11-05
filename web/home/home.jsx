@@ -42,7 +42,7 @@ export function Home() {
             key: 'workspaces',
             icon: SquareTerminal,
             color: 'orange',
-            to: hasWorkspaces(llmMe, isAdmin) ? '/workspaces/servers' : '/workspaces/projects',
+            to: hasWorkspaces(llmMe, isAdmin) && !cloudProjectsEnabled ? '/workspaces/servers' : '/workspaces/projects',
         },
         withLlm && {
             key: 'llm',

@@ -1,5 +1,6 @@
 import { Route, Switch, Redirect } from 'wouter';
 import { useTranslation } from 'react-i18next';
+import { cloudProjectsEnabled } from '/features.js';
 import { Alert, Container } from '@mantine/core';
 import { LoadError, Loading } from '/helper/query-state.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
@@ -40,7 +41,7 @@ export function GpuManagement() {
             <Route path="/jobs" component={GpuJobs} />
             <Route path="/usage" component={GpuUsage} />
             <Route path="/gpus" component={GpuFleet} />
-            <Route path="/"><Redirect to="/servers" replace /></Route>
+            <Route path="/"><Redirect to={cloudProjectsEnabled ? '/projects' : '/servers'} replace /></Route>
             <Route>
                 <Container size="md" py="md">
                     <Alert color="gray" variant="light">{t('gpu.noAccess.page')}</Alert>
