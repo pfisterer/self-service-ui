@@ -116,7 +116,8 @@ describe('the GPU views render', () => {
 
     it('the workspace settings tab shows a project the AI service knows, with what is used of it', async () => {
         renderView(<SettingsTab nodeId="p_ml" />);
-        expect(await screen.findByText(/34.5 (von|of) 40/)).toBeTruthy();
+        // The tab waits for several queries (project, usage, LLM projects) before it shows the usage; the default 1 s is too short on a busy CI runner.
+        expect(await screen.findByText(/34.5 (von|of) 40/, {}, { timeout: 5000 })).toBeTruthy();
         // The project image from Git: its build and the image in use until the build is ready.
         expect(screen.getByText('reg/envs/github-com-o-ml-kurs:0123456789ab-v1.1.0')).toBeTruthy();
         expect(screen.getByText('89abcdef0123 (main)')).toBeTruthy();
