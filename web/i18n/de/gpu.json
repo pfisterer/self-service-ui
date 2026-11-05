@@ -474,7 +474,7 @@
             "title": "Job starten",
             "intro": "Der Job läuft in der Umgebung des Projekts mit dem eigenen Home und ~/project-shared. Die Ausgabe steht auch in ~/jobs/<Name>/output-<Versuch>.log. Ein verdrängbarer Job wird beendet, wenn ein Workspace die GPU braucht, und startet danach von vorn.",
             "cliTitle": "Per Kommandozeile",
-            "cliHint": "pip install dhbw-cloud, dann dhbw-cloud login mit einem API-Token.",
+            "cliHint": "pip install dhbw-cloud, dann dhbw-cloud login mit einem API-Token; in einem Workspace der DHBW Cloud geht es ohne Anmeldung.",
             "cliCommand": "<Befehl>",
             "cliNotebook": "<Notebook>",
             "imagePending": "Die Umgebung des Projekts wird gerade gebaut; der Job wartet, bis sie fertig ist.",
@@ -487,7 +487,11 @@
             "maxHoursHint": "Danach wird der Job beendet. Die Zeit wird vom GPU-Budget des Projekts vorgemerkt; höchstens {{max}} h.",
             "commandRequired": "Bitte einen Befehl angeben.",
             "notebookRequired": "Bitte den Pfad des Notebooks angeben.",
-            "errHours": "Mehr als 0 und höchstens {{max}} Stunden."
+            "errHours": "Mehr als 0 und höchstens {{max}} Stunden.",
+            "llm": "LLM im Job",
+            "llmHint": "OPENAI_API_KEY und OPENAI_BASE_URL sowie die ANTHROPIC_*-Variablen für Claude Code im Job, wie in den Workspaces des Projekts oder aus einem anderen eigenen Projekt mit LLM-Tokens.",
+            "llmAuto": "Wie in den Workspaces des Projekts",
+            "llmNone": "Ohne LLM"
         },
         "notAllowed": "In diesem Projekt sind Batch-Jobs nicht freigeschaltet. Das legt das Budget des Projekts fest; freischalten können die Verwaltenden des Budgets.",
         "notAllowedAdmin": "In diesem Projekt sind Batch-Jobs nicht freigeschaltet.",
@@ -497,6 +501,17 @@
         "noProjectAdmin": "Keines der eigenen Projekte erlaubt Batch-Jobs. Zum Freischalten oben ein Projekt wählen.",
         "settings": {
             "title": "Batch-Jobs in {{project}}"
+        },
+        "llm": "LLM im Job",
+        "noLlm": "ohne",
+        "files": {
+            "title": "Dateien",
+            "hint": "Ergebnisse und Checkpoints im Ordner des Jobs, auch nach dem Ende und ohne Workspace. Das erste Laden dauert einige Sekunden; Dateien bis 5 GB.",
+            "show": "Dateien anzeigen",
+            "up": "Ordner darüber",
+            "empty": "Leer.",
+            "download": "Herunterladen",
+            "truncated": "Der Ordner hat mehr Einträge; angezeigt werden die ersten."
         }
     }
 }

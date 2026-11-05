@@ -474,7 +474,7 @@
             "title": "Submit job",
             "intro": "The job runs in the project's environment with the own home and ~/project-shared. Its output is also in ~/jobs/<name>/output-<attempt>.log. A preemptible job is ended when a workspace needs the GPU and starts again from the beginning afterwards.",
             "cliTitle": "On the command line",
-            "cliHint": "pip install dhbw-cloud, then dhbw-cloud login with an API token.",
+            "cliHint": "pip install dhbw-cloud, then dhbw-cloud login with an API token; inside a workspace of the DHBW Cloud no login is needed.",
             "cliCommand": "<command>",
             "cliNotebook": "<notebook>",
             "imagePending": "The project's environment is being built; the job waits until it is ready.",
@@ -487,7 +487,11 @@
             "maxHoursHint": "After that the job is ended. The time is reserved of the project's GPU budget; at most {{max}} h.",
             "commandRequired": "Please enter a command.",
             "notebookRequired": "Please enter the notebook's path.",
-            "errHours": "More than 0 and at most {{max}} hours."
+            "errHours": "More than 0 and at most {{max}} hours.",
+            "llm": "LLM in the job",
+            "llmHint": "OPENAI_API_KEY and OPENAI_BASE_URL plus the ANTHROPIC_* variables for Claude Code in the job, as in the project's workspaces or from another of the own projects with LLM tokens.",
+            "llmAuto": "As in the project's workspaces",
+            "llmNone": "Without LLM"
         },
         "notAllowed": "Batch jobs are not enabled in this project. The project's budget decides that; the budget's managers can enable them.",
         "notAllowedAdmin": "Batch jobs are not enabled in this project.",
@@ -497,6 +501,17 @@
         "noProjectAdmin": "None of your projects allows batch jobs. Choose a project above to enable them.",
         "settings": {
             "title": "Batch jobs in {{project}}"
+        },
+        "llm": "LLM in the job",
+        "noLlm": "none",
+        "files": {
+            "title": "Files",
+            "hint": "Results and checkpoints in the job's folder, also after it ended and without a workspace. The first load takes a few seconds; files up to 5 GB.",
+            "show": "Show files",
+            "up": "Folder above",
+            "empty": "Empty.",
+            "download": "Download",
+            "truncated": "The folder has more entries; the first ones are shown."
         }
     }
 }

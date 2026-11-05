@@ -24,7 +24,7 @@ export function GpuJobSubmit() {
 
     const [projectSlug, setProjectSlug] = useState(params.get('project') || '');
     const [gpuClass, setGpuClass] = useState('');
-    const [values, setValues] = useState({ name: '', mode: 'command', command: '', notebook: '', workingDir: '', maxHours: DEFAULT_JOB_MAX_HOURS });
+    const [values, setValues] = useState({ name: '', mode: 'command', command: '', notebook: '', workingDir: '', maxHours: DEFAULT_JOB_MAX_HOURS, llmProject: '' });
     const [errors, setErrors] = useState({});
     const set = (k, v) => { setValues(cur => ({ ...cur, [k]: v })); setErrors(cur => ({ ...cur, [k]: undefined })); };
 
@@ -45,6 +45,8 @@ export function GpuJobSubmit() {
     const classes = project?.gpu_classes ?? [];
     const chosenClass = classes.find(c => c.id === gpuClass) ?? classes[0];
     const maxHours = jobMaxHours(project);
+    // The job's LLM key (OPENAI_API_KEY): as the project's workspaces get it (empty), another of the person's projects with LLM tokens, or none.
+    const llmProjects = options.data?.llm_projects ?? [];
     // The default of 4 h is lowered to a project's shorter maximum.
     const hours = values.maxHours === '' ? '' : Math.min(values.maxHours, maxHours);
 
@@ -110,6 +112,12 @@ export function GpuJobSubmit() {
 
                             <TextInput label={t('gpu.jobs.submit.workingDir')} description={t('gpu.jobs.submit.workingDirHint')} placeholder="projects/kurs" maw={480}
                                 value={values.workingDir} onChange={(e) => set('workingDir', e.currentTarget.value)} />
+
+                            {llmProjects.length > 0 && (
+                                <Select label={t('gpu.jobs.submit.llm')} description={t('gpu.jobs.submit.llmHint')} allowDeselect={false} maw={480}
+                                    value={values.llmProject || 'auto'} onChange={(v) => set('llmProject', v === 'auto' ? '' : v)}
+                                    data={[{ value: 'auto', label: t('gpu.jobs.submit.llmAuto') }, ...llmProjects.map(p => ({ value: p.slug, label: p.name || p.slug })), { value: 'none', label: t('gpu.jobs.submit.llmNone') }]} />
+                            )}
 
                             <NumberInput label={t('gpu.jobs.maxHours')} description={t('gpu.jobs.submit.maxHoursHint', { max: maxHours })} maw={240}
                                 min={0.25} max={maxHours} step={0.5} decimalScale={2} allowNegative={false}

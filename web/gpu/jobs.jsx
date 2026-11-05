@@ -3,13 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useSearch } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import { Alert, Anchor, Badge, Button, Code, Container, Group, Paper, Select, SimpleGrid, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
-import { ArrowLeft, Play, Square } from 'lucide-react';
+import { ArrowLeft, ArrowUp, Download, Folder, Play, Square } from 'lucide-react';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
-import { isActive, projectHasJobs } from '/gpu/jobs.js';
+import { formatBytes, isActive, parentPath, projectHasJobs } from '/gpu/jobs.js';
 import { ProjectId } from '/gpu/project-id.jsx';
 import { JobSettingsModal } from '/gpu/job-settings.jsx';
 import { formatDateTime } from '/format-date.js';
@@ -230,6 +230,7 @@ export function GpuJobDetail({ params }) {
                         {fact(t('gpu.jobs.started'), j.started && formatDateTime(j.started))}
                         {fact(t('gpu.jobs.ended'), j.ended && formatDateTime(j.ended))}
                         {fact(t('gpu.jobs.gpuHours'), j.gpu_hours ? Math.round(j.gpu_hours * 100) / 100 : '')}
+                        {fact(t('gpu.jobs.llm'), j.llm_project || t('gpu.jobs.noLlm'))}
                     </SimpleGrid>
                     {outcome(j, t) && <Alert color={j.state === 'failed' ? 'red' : 'gray'} variant="light">{outcome(j, t)}</Alert>}
                     <div>
@@ -249,8 +250,103 @@ export function GpuJobDetail({ params }) {
                             <Code block style={{ maxHeight: 480, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{log.data?.log || t('gpu.jobs.noOutput')}</Code>
                         )}
                     </div>
+                    <JobFiles job={j} />
                 </Stack>
             </Paper>
         </Container>
+    );
+}
+
+// JobFiles lists a job's files and downloads them, also after the end and without a workspace (todo job_files). Loaded only when asked for: the service starts a short-lived pod for it. The list starts at the job's folder ~/jobs/<name>; folders open, and the way up ends where the person may read (the service decides: its person the whole home, managers only the job's folder, which a refusal there shows).
+export function JobFiles({ job }) {
+    const { t } = useTranslation();
+    const api = useGpuApi();
+    const [open, setOpen] = useState(false);
+    const [path, setPath] = useState(null);
+    const [downloading, setDownloading] = useState('');
+    const [downloadError, setDownloadError] = useState('');
+    const own = `jobs/${job.name || job.id}`;
+    const files = useQuery({ queryKey: gpuKeys.jobFiles(job.id, path), queryFn: () => api.jobFiles(job.id, path ?? ''), enabled: open });
+    const shown = files.data?.path ?? path ?? own;
+    // Above the job's folder only for whom the home is readable; the folder above is tried, a refusal is shown as such.
+    const up = parentPath(shown, '');
+
+    async function download(f) {
+        setDownloading(f.path);
+        setDownloadError('');
+        try {
+            const blob = await api.jobFile(job.id, f.path);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = f.name;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+        } catch (e) {
+            setDownloadError(e?.message || String(e));
+        } finally {
+            setDownloading('');
+        }
+    }
+
+    return (
+        <div>
+            <Group justify="space-between" align="center">
+                <div>
+                    <Text fw={600} size="sm">{t('gpu.jobs.files.title')}</Text>
+                    <Text size="xs" c="dimmed">{t('gpu.jobs.files.hint')}</Text>
+                </div>
+                {!open && <Button size="xs" variant="light" leftSection={<Folder size={14} />} onClick={() => setOpen(true)}>{t('gpu.jobs.files.show')}</Button>}
+            </Group>
+            {open && (
+                <Stack gap={4} mt="xs">
+                    <Group gap="xs">
+                        <Code>~/{shown}</Code>
+                        {up !== null && (
+                            <Button size="compact-xs" variant="subtle" leftSection={<ArrowUp size={12} />} onClick={() => setPath(up)}>{t('gpu.jobs.files.up')}</Button>
+                        )}
+                    </Group>
+                    {files.isPending && <Loading />}
+                    {files.isError && <LoadError query={files} />}
+                    {downloadError && <Alert color="red" variant="light">{downloadError}</Alert>}
+                    {files.isSuccess && (
+                        <Table.ScrollContainer minWidth={520}>
+                            <Table striped>
+                                <Table.Tbody>
+                                    {files.data.files.length === 0 && (
+                                        <Table.Tr><Table.Td colSpan={3}><Text size="sm" c="dimmed">{t('gpu.jobs.files.empty')}</Text></Table.Td></Table.Tr>
+                                    )}
+                                    {files.data.files.map(f => (
+                                        <Table.Tr key={f.path}>
+                                            <Table.Td>
+                                                {f.type === 'dir' ? (
+                                                    <Anchor component="button" size="sm" onClick={() => setPath(f.path)}>
+                                                        <Group gap={4}><Folder size={14} />{f.name}/</Group>
+                                                    </Anchor>
+                                                ) : (
+                                                    <Text size="sm" c={f.type === 'file' ? undefined : 'dimmed'}>{f.name}{f.type === 'link' ? ' →' : ''}</Text>
+                                                )}
+                                            </Table.Td>
+                                            <Table.Td><Text size="xs" c="dimmed">{f.type === 'file' ? formatBytes(f.size) : ''}</Text></Table.Td>
+                                            <Table.Td><Text size="xs" c="dimmed">{f.modified && formatDateTime(f.modified)}</Text></Table.Td>
+                                            <Table.Td align="right">
+                                                {(f.type === 'file' || f.type === 'link') && (
+                                                    <Button size="compact-xs" variant="subtle" leftSection={<Download size={12} />} loading={downloading === f.path} onClick={() => download(f)}>
+                                                        {t('gpu.jobs.files.download')}
+                                                    </Button>
+                                                )}
+                                            </Table.Td>
+                                        </Table.Tr>
+                                    ))}
+                                </Table.Tbody>
+                            </Table>
+                        </Table.ScrollContainer>
+                    )}
+                    {files.data?.truncated && <Text size="xs" c="dimmed">{t('gpu.jobs.files.truncated')}</Text>}
+                </Stack>
+            )}
+        </div>
     );
 }

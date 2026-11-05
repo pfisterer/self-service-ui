@@ -50,6 +50,7 @@ export function jobBody(project, gpuClass, values) {
     if (values.mode === 'notebook') body.notebook = values.notebook.trim();
     else body.command = values.command.trim();
     if (values.workingDir?.trim()) body.working_dir = values.workingDir.trim();
+    if (values.llmProject) body.llm_project = values.llmProject;
     return body;
 }
 
@@ -66,7 +67,25 @@ export function jobCommandLine(project, gpuClass, values, maxHours, placeholder)
     if (values.name?.trim()) parts.push('--name', shellQuote(values.name.trim()));
     if (values.maxHours !== '' && Number(values.maxHours) > 0 && Number(values.maxHours) !== maxHours) parts.push('--max-hours', String(Number(values.maxHours)));
     if (values.workingDir?.trim()) parts.push('--workdir', shellQuote(values.workingDir.trim()));
+    if (values.llmProject) parts.push('--llm-project', shellQuote(values.llmProject));
     if (values.mode === 'notebook') parts.push('--notebook', values.notebook?.trim() ? shellQuote(values.notebook.trim()) : placeholder);
     else parts.push('--', values.command?.trim() ? shellQuote(values.command.trim()) : placeholder);
     return parts.join(' ');
+}
+
+// parentPath is the folder above path (relative to the home), or null at root, the top a person may see ('' = the home).
+export function parentPath(path, root) {
+    if (!path || path === root) return null;
+    const i = path.lastIndexOf('/');
+    const up = i < 0 ? '' : path.slice(0, i);
+    return root && !(up === root || up.startsWith(root + '/')) ? null : up;
+}
+
+// formatBytes is a file size for people (B, KB, MB, GB, binary steps).
+export function formatBytes(n) {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let i = 0;
+    let v = n || 0;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return i === 0 ? `${v} B` : `${v.toFixed(v < 10 ? 1 : 0)} ${units[i]}`;
 }

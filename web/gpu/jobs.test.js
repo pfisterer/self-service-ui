@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_JOB_MAX_HOURS, isActive, jobBody, jobCommandLine, jobErrors, jobMaxHours, jobProjects, MAX_JOB_HOURS, shellQuote } from '/gpu/jobs.js';
+import { DEFAULT_JOB_MAX_HOURS, formatBytes, isActive, jobBody, jobCommandLine, jobErrors, jobMaxHours, jobProjects, MAX_JOB_HOURS, parentPath, shellQuote } from '/gpu/jobs.js';
 
 const t = (key, vars) => (vars ? `${key} ${JSON.stringify(vars)}` : key);
 
@@ -56,5 +56,26 @@ describe('batch jobs', () => {
         expect(jobCommandLine('t-1', '', { ...v, command: 'nvidia-smi' }, 8, '<cmd>')).toBe('dhbw-cloud job submit --project t-1 -- nvidia-smi');
         expect(jobCommandLine('t-1', '', { ...v, command: ' ' }, 8, '<cmd>')).toBe('dhbw-cloud job submit --project t-1 -- <cmd>');
         expect(jobCommandLine('t-1', '', { ...v, mode: 'notebook', notebook: 'kurs/a.ipynb' }, 8, '<nb>')).toBe('dhbw-cloud job submit --project t-1 --notebook kurs/a.ipynb');
+    });
+});
+
+describe('job LLM and files', () => {
+    const v = { mode: 'command', command: 'python train.py', notebook: '', name: '', workingDir: '', maxHours: 8 };
+    it('sends the LLM project only when chosen, also on the command line', () => {
+        expect(jobBody('ml', '', v)).not.toHaveProperty('llm_project');
+        expect(jobBody('ml', '', { ...v, llmProject: 'none' }).llm_project).toBe('none');
+        expect(jobCommandLine('t-1', '', { ...v, llmProject: 't-llm' }, 8, '<cmd>')).toBe("dhbw-cloud job submit --project t-1 --llm-project t-llm -- 'python train.py'");
+    });
+    it('goes up to the root only', () => {
+        expect(parentPath('jobs/train/ckpt', '')).toBe('jobs/train');
+        expect(parentPath('jobs', '')).toBe('');
+        expect(parentPath('', '')).toBeNull();
+        expect(parentPath('jobs/train', 'jobs/train')).toBeNull();
+        expect(parentPath('jobs/train/a', 'jobs/train')).toBe('jobs/train');
+    });
+    it('formats sizes', () => {
+        expect(formatBytes(0)).toBe('0 B');
+        expect(formatBytes(2048)).toBe('2.0 KB');
+        expect(formatBytes(5 * 1024 ** 3)).toBe('5.0 GB');
     });
 });

@@ -8,7 +8,7 @@ import {
     deleteGpuPool, deleteWorkspaceProject, getGpuFleet, getMyWorkspaceUsage, getGpuHours, putGpuNode, putGpuPool, getProjectImageLog, getWorkspaceCatalog, getWorkspaceStorage, getWorkspaceUsage,
     getGpuServerProgress, getGpuStartOptions, listGpuServers, listWorkspaceProjects, startGpuServer, rebuildProjectImage, stopGpuServer, updateProjectImage, updateWorkspaceProject,
     deleteProjectCredential, listProjectCredentials, setProjectCredential,
-    cancelGpuJob, getGpuJob, getGpuJobLog, listGpuJobs, submitGpuJob,
+    cancelGpuJob, downloadGpuJobFile, getGpuJob, getGpuJobLog, listGpuJobFiles, listGpuJobs, submitGpuJob,
 } from '@dhbw-cloud/llm-client';
 
 function unwrap(res) {
@@ -66,6 +66,9 @@ export function useGpuApi() {
             // The end of a job's output: { log }, live while it runs, what was kept once it ended.
             jobLog: async (id, lines) => (await call(getGpuJobLog, { path: { id }, query: lines ? { lines } : undefined })) ?? { log: '' },
             cancelJob: (id) => call(cancelGpuJob, { path: { id } }),
+            // A job's files (todo job_files): a folder of the home it ran in ({ path, files, truncated }; without path the job's folder), and one file as a Blob. The service reads them through a short-lived pod, so the first request takes a few seconds.
+            jobFiles: (id, path) => call(listGpuJobFiles, { path: { id }, query: path ? { path } : undefined }),
+            jobFile: (id, path) => call(downloadGpuJobFile, { path: { id }, query: { path }, parseAs: 'blob' }),
         };
     }, [client]);
 }

@@ -12,5 +12,6 @@ export const gpuKeys = {
     jobs: (project) => (project ? ['gpu', 'jobs', project] : ['gpu', 'jobs']),
     job: (id) => ['gpu', 'job', id],
     jobLog: (id) => ['gpu', 'job', id, 'log'],
+    jobFiles: (id, path) => ['gpu', 'job', id, 'files', path ?? ''],
     gpuHours: (scope, period) => ['gpu', 'gpu-hours', scope, period.from, period.to],
 };
