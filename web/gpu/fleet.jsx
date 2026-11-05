@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Badge, Button, Container, Group, Paper, Select, Stack, Switch, Table, Text, TextInput, Title, Tooltip } from '@mantine/core';
+import { Alert, Badge, Button, Container, Group, NumberInput, Paper, Select, Stack, Switch, Table, Text, TextInput, Title, Tooltip } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { validPoolId } from '/gpu/pool-id.js';
 import { useTranslation } from 'react-i18next';
@@ -31,12 +31,13 @@ function Section({ title, hint, children }) {
 function NodeRow({ node, pools, tiers, models, tierModels, onSave, saving }) {
     const { t } = useTranslation();
     const a = node.assignment;
-    const initial = { pool: a?.pool ?? '', tier: a?.tier ?? node.suggested_tier, until: day(a?.available_until), model: a?.gap_model ?? '' };
+    const initial = { pool: a?.pool ?? '', tier: a?.tier ?? node.suggested_tier, until: day(a?.available_until), model: a?.gap_model ?? '', weight: a?.weight || 1 };
     const [draft, setDraft] = useState(initial);
-    const dirty = draft.pool !== initial.pool || (draft.pool && (draft.tier !== initial.tier || draft.model !== initial.model)) || draft.until !== initial.until;
+    const dirty = draft.pool !== initial.pool || (draft.pool && (draft.tier !== initial.tier || draft.model !== initial.model || draft.weight !== initial.weight)) || draft.until !== initial.until;
     const save = () => onSave(node.name, {
         pool: draft.pool, tier: draft.pool ? draft.tier : '',
         available_until: draft.pool && draft.until ? `${draft.until}T23:59:59Z` : undefined, gap_model: draft.pool ? draft.model : '',
+        weight: draft.pool ? draft.weight : undefined,
     });
     return (
         <Table.Tr>
@@ -70,6 +71,12 @@ function NodeRow({ node, pools, tiers, models, tierModels, onSave, saving }) {
                         { value: '-', label: t('gpu.fleet.gapNone') },
                     ]}
                     onChange={v => setDraft({ ...draft, model: v ?? '' })} />
+            </Table.Td>
+            <Table.Td>
+                <Tooltip multiline w={280} withArrow label={t('gpu.fleet.weightHint')}>
+                    <NumberInput size="xs" w={70} min={1} max={10} allowDecimal={false} clampBehavior="strict" disabled={!draft.pool || draft.model === '-'} value={draft.weight} aria-label={t('gpu.fleet.weight')}
+                        onChange={v => setDraft({ ...draft, weight: Number(v) || 1 })} />
+                </Tooltip>
             </Table.Td>
             <Table.Td>
                 <Button size="xs" disabled={!dirty} loading={saving} onClick={save}>{t('gpu.fleet.save')}</Button>
@@ -186,7 +193,7 @@ export function GpuFleet() {
                     {nodes.length === 0 ? <Text size="sm" c="dimmed">{t('gpu.fleet.noNodes')}</Text> : (
                         <Table>
                             <Table.Thead><Table.Tr>
-                                <Table.Th>{t('gpu.fleet.node')}</Table.Th><Table.Th>{t('gpu.fleet.state')}</Table.Th><Table.Th>{t('gpu.fleet.pool')}</Table.Th><Table.Th>{t('gpu.fleet.tier')}</Table.Th><Table.Th>{t('gpu.fleet.until')}</Table.Th><Table.Th>{t('gpu.fleet.gapModel')}</Table.Th><Table.Th />
+                                <Table.Th>{t('gpu.fleet.node')}</Table.Th><Table.Th>{t('gpu.fleet.state')}</Table.Th><Table.Th>{t('gpu.fleet.pool')}</Table.Th><Table.Th>{t('gpu.fleet.tier')}</Table.Th><Table.Th>{t('gpu.fleet.until')}</Table.Th><Table.Th>{t('gpu.fleet.gapModel')}</Table.Th><Table.Th>{t('gpu.fleet.weight')}</Table.Th><Table.Th />
                             </Table.Tr></Table.Thead>
                             <Table.Tbody>
                                 {nodes.map(n => (

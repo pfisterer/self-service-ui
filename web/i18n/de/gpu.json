@@ -290,6 +290,8 @@
         "gapModel": "Lückenfüller",
         "gapDefault": "Standard der Stufe ({{model}})",
         "gapNone": "keiner",
+        "weight": "Gewicht",
+        "weightHint": "Anteil der Anfragen, die die Modelle dieses Knotens in einem nach Gewicht verteilten Alias (chat-large) bekommen, im Verhältnis zu den anderen Knoten: 2 = doppelt so viele wie ein Knoten mit 1.",
         "lend": "verleiht freie GPUs",
         "poolKeptDefault": "gibt es immer",
         "poolKeptClasses": "nicht löschbar: hat {{classes}}",

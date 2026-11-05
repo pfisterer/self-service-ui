@@ -290,6 +290,8 @@
         "gapModel": "Gap filler",
         "gapDefault": "Tier default ({{model}})",
         "gapNone": "none",
+        "weight": "Weight",
+        "weightHint": "Share of requests the models on this node get in an alias routed by weight (chat-large), relative to the other nodes: 2 = twice as many as a node with 1.",
         "lend": "lends idle GPUs",
         "poolKeptDefault": "always exists",
         "poolKeptClasses": "cannot be deleted: has {{classes}}",
