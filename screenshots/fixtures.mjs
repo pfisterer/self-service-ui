@@ -62,7 +62,7 @@ const at = (h) => new Date(Date.UTC(2026, 10, 10, h, 0)).toISOString();
 
 const DEFAULTS = {
     'llm GET /v1/me': { email: ME, role: ['user'], workspace_projects: 2, llm_mtokens: 5, jupyter_url: 'https://jupyter.gpu.services.dhbw.cloud', api_url: 'https://api.llm.services.dhbw.cloud/v1', chat_url: 'https://chat.llm.services.dhbw.cloud' },
-    'llm GET /v1/gpu/start-options': { projects: [COURSE, OWN_IMAGE], profiles: PROFILES, llm_projects: [] },
+    'llm GET /v1/gpu/start-options': { projects: [{ ...COURSE, llm_default: COURSE.slug, llm_default_source: 'project' }, OWN_IMAGE], profiles: PROFILES, llm_projects: [{ slug: COURSE.slug, name: COURSE.name }] },
     'llm GET /v1/gpu/servers': [{ name: 'ml-grundlagen-wi24-1', project: COURSE.slug, profile: 'cpu-gpukernel', ready: true, url: '/user/x/ml-grundlagen-wi24-1/', started: at(7), last_activity: at(8) }],
     'llm GET /v1/workspaces/projects': [COURSE_PROJECT, RESEARCH_PROJECT],
     'llm GET /v1/workspaces/catalog': { profiles: PROFILES, bases: [{ id: 'python', name: 'Python' }, { id: 'pytorch', name: 'PyTorch' }, { id: 'tensorflow', name: 'TensorFlow' }] },

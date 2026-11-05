@@ -327,7 +327,7 @@ function ReleaseTimes({ draft, defaults }) {
 export function WorkspaceSettingsPanel({ draft }) {
     const { t } = useTranslation();
     const api = useGpuApi();
-    // A project's managers change only its description, members, environment, material and release times (within the budget's); profiles, limits and budgets are the admins' — the server keeps them as they are for anybody else, so they are shown, not offered for editing.
+    // A project's managers change only its description, members, environment, material, release times (within the budget's) and the LLM project of its workspaces; profiles, limits and budgets are the admins' — the server keeps them as they are for anybody else, so they are shown, not offered for editing.
     const { isAdmin } = useLlmMe();
     const locked = !isAdmin;
     const catalog = useQuery({ queryKey: gpuKeys.catalog(), queryFn: () => api.catalog(), staleTime: 10 * 60 * 1000 });
@@ -367,6 +367,8 @@ export function WorkspaceSettingsPanel({ draft }) {
                         <GitSource value={{ url: p.material_git_url, ref: p.material_git_ref }} refLabel={t('gpu.projects.material.ref')}
                             onChange={({ url, ref }) => draft.update(cur => ({ ...cur, material_git_url: url, material_git_ref: ref }))} />
                     </Box>
+
+                    <LlmProjectBox value={p.default_llm_project ?? ''} onChange={v => set('default_llm_project', v)} />
 
                     {draft.project?.slug && (
                         <Box title={t('gpu.projects.credentials.title')} hint={t('gpu.projects.credentials.hint')}>
@@ -424,6 +426,28 @@ export function WorkspaceSettingsPanel({ draft }) {
                 </Tabs.Panel>
             </Tabs>
         </Stack>
+    );
+}
+
+// llmProjectOptions are the choices of LlmProjectBox: automatic ("auto" stands for the empty value, a Select option needs a value of its own), the editor's LLM projects, a set one the editor does not have (by its short name), without LLM.
+export function llmProjectOptions(llm, value, t) {
+    const data = [{ value: 'auto', label: t('gpu.projects.llm.auto') }, ...llm.map(p => ({ value: p.slug, label: p.name || p.slug }))];
+    if (value && value !== 'none' && !llm.some(p => p.slug === value)) data.push({ value, label: value });
+    data.push({ value: 'none', label: t('gpu.projects.llm.none') });
+    return data;
+}
+
+// LlmProjectBox is whose LLM tokens the project's workspaces use when the start chooses nothing (default_llm_project, set by the project's managers): automatic (the project's own, else each person's first LLM project), one of the editor's LLM projects, or without LLM. A set project somebody is no member of gives them a workspace without LLM, never another project's tokens. A value the editor does not have stays, named by its short name.
+export function LlmProjectBox({ value, onChange }) {
+    const { t } = useTranslation();
+    const api = useGpuApi();
+    const options = useQuery({ queryKey: gpuKeys.startOptions(), queryFn: () => api.startOptions(), staleTime: 60 * 1000 });
+    const llm = options.data?.llm_projects ?? [];
+    return (
+        <Box title={t('gpu.projects.llm.title')} hint={t('gpu.projects.llm.hint')}>
+            <Select allowDeselect={false} maw={480} value={value || 'auto'} onChange={v => onChange(!v || v === 'auto' ? '' : v)} data={llmProjectOptions(llm, value, t)} aria-label={t('gpu.projects.llm.title')}
+                description={t(!value ? 'gpu.projects.llm.autoHint' : value === 'none' ? 'gpu.projects.llm.noneHint' : 'gpu.projects.llm.projectHint')} />
+        </Box>
     );
 }
 

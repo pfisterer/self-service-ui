@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import i18n from '/i18n/index.js';
 import { renderView } from '/test/render-harness.jsx';
 
@@ -118,5 +118,71 @@ describe('start page', () => {
         renderView(<GpuStart />);
         expect(await screen.findByText('Eigenes Image')).toBeTruthy();
         expect(screen.queryByText(i18n.t('gpu.start.splitNeedsBase'))).toBeNull();
+    });
+});
+
+// Whose LLM tokens the workspace's key draws from: what the service names as the project's default (its setting, its own tokens, the person's first LLM project), another LLM project or none only when chosen (in the form or the link).
+describe('start page: LLM', () => {
+    const ws = { slug: 'ws', name: 'Workspace-Testprojekt', profiles: ['cpu'], storage_gb: 15 };
+    function api(llmProjects, llm = {}) {
+        const started = [];
+        globalThis.__gpuApi = {
+            startOptions: async () => ({ projects: [{ ...ws, ...llm }], profiles: PROFILES, llm_projects: llmProjects }),
+            listServers: async () => [],
+            startServer: async (body) => { started.push(body); return { name: 'ws-cpu', project: 'ws' }; },
+            serverProgress: async () => ({ events: [], starting: true }),
+        };
+        globalThis.__nodesApi = nodesApi();
+        return started;
+    }
+    async function startAndGetBody(started) {
+        fireEvent.click(await screen.findByRole('button', { name: i18n.t('gpu.start.start') }));
+        await waitFor(() => expect(started.length).toBe(1));
+        return started[0];
+    }
+    const mark = (label) => `${label} (${i18n.t('gpu.start.llmDefaultMark')})`;
+    it('uses the project\'s own LLM tokens when it has them, sent as the default', async () => {
+        const started = api([{ slug: 'other', name: 'Anderes' }, { slug: 'ws', name: 'Workspace-Testprojekt' }], { llm_default: 'ws', llm_default_source: 'project' });
+        renderView(<GpuStart />);
+        expect(await screen.findByText(i18n.t('gpu.start.llmOwn'))).toBeTruthy();
+        expect(screen.getByDisplayValue(mark('Workspace-Testprojekt'))).toBeTruthy();
+        expect((await startAndGetBody(started)).llm_project).toBe('');
+    });
+    it('shows the project\'s setting', async () => {
+        api([{ slug: 'other', name: 'Anderes' }], { default_llm_project: 'other', llm_default: 'other', llm_default_source: 'preset' });
+        renderView(<GpuStart />);
+        expect(await screen.findByText(i18n.t('gpu.start.llmPreset', { project: 'Anderes' }))).toBeTruthy();
+    });
+    it('names the fallback to the person\'s first LLM project', async () => {
+        api([{ slug: 'other', name: 'Anderes' }], { llm_default: 'other', llm_default_source: 'fallback' });
+        renderView(<GpuStart />);
+        expect(await screen.findByText(i18n.t('gpu.start.llmFallback', { project: 'Anderes' }))).toBeTruthy();
+    });
+    it('says that the set LLM project is not available and starts without LLM', async () => {
+        const started = api([{ slug: 'other', name: 'Anderes' }], { default_llm_project: 'kurs-llm', llm_default: 'none', llm_default_source: 'preset', llm_default_unavailable: true });
+        renderView(<GpuStart />);
+        expect(await screen.findByText(i18n.t('gpu.start.llmPresetUnavailable', { project: 'kurs-llm' }))).toBeTruthy();
+        expect(screen.getByDisplayValue(mark(i18n.t('gpu.start.llmNone')))).toBeTruthy();
+        expect((await startAndGetBody(started)).llm_project).toBe('');
+    });
+    it('takes another LLM project or none from the link', async () => {
+        window.history.replaceState({}, '', '/workspaces/servers/start?project=ws&llm=none');
+        const started = api([{ slug: 'other', name: 'Anderes' }], { llm_default: 'other', llm_default_source: 'fallback' });
+        renderView(<GpuStart />);
+        expect(await screen.findByText(i18n.t('gpu.start.llmNoneHint'))).toBeTruthy();
+        expect((await startAndGetBody(started)).llm_project).toBe('none');
+    });
+    it('says that an LLM project from the link is not available and uses the default', async () => {
+        window.history.replaceState({}, '', '/workspaces/servers/start?project=ws&llm=fremd');
+        api([{ slug: 'ws', name: 'Workspace-Testprojekt' }], { llm_default: 'ws', llm_default_source: 'project' });
+        renderView(<GpuStart />);
+        expect(await screen.findByText(i18n.t('gpu.start.unknownLlm', { project: 'fremd' }))).toBeTruthy();
+        expect(screen.getByText(i18n.t('gpu.start.llmOwn'))).toBeTruthy();
+    });
+    it('without any LLM project says the workspace has none', async () => {
+        const started = api([], { llm_default: 'none', llm_default_source: 'none' });
+        renderView(<GpuStart />);
+        expect(await screen.findByText(i18n.t('gpu.start.llmNoProjects'))).toBeTruthy();
+        expect((await startAndGetBody(started)).llm_project).toBe('');
     });
 });

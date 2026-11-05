@@ -14,16 +14,36 @@ import { formatDuration } from '/helper/duration.js';
 import { kernelReleaseOf, oneDot, releaseOf, releaseText } from '/gpu/release.js';
 import { NoStartableProject } from '/gpu/start-empty.jsx';
 
-// Starting a server (Workspaces → Server → Server starten): the hub has no start form of its own any more, its start page leads here. The choice is in the URL (?project=<slug>&env=<profile>&gpu_class=<class>), so a link to this page with a project and an environment can go out to a course; the page offers only what the person's projects allow and starts through llm-management-api, where the hub checks the start as every start. While the server starts the page waits, then opens it in this tab.
+// Starting a server (Workspaces → Server → Server starten): the hub has no start form of its own any more, its start page leads here. The choice is in the URL (?project=<slug>&env=<profile>&gpu_class=<class>&llm=<slug>|none), so a link to this page with a project and an environment can go out to a course; the page offers only what the person's projects allow and starts through llm-management-api, where the hub checks the start as every start. While the server starts the page waits, then opens it in this tab.
 
 const SPLIT_PROFILE = 'cpu-gpukernel';
 
-// startLink is this page with a choice, for others to follow; with autostart the page starts it right away (or opens the one already running).
-export function startLink(base, { project, env, gpuClass, autostart }) {
+// NO_LLM is the choice llm_project that starts a workspace without an LLM key (the AI service's gpu.NoLLM).
+export const NO_LLM = 'none';
+
+// llmDefault is whose LLM tokens a workspace of the project uses when nothing is chosen, as the AI service answers it in the start options (llm_default: the project's setting, else its own tokens, else the person's first LLM project, else none).
+export function llmDefault(project) {
+    return project?.llm_default || NO_LLM;
+}
+
+// llmChoice is what the start uses: the wanted choice (from the form or the link) when it is one of the person's LLM projects or none, else the default.
+export function llmChoice(wanted, project, llmProjects) {
+    if (wanted === NO_LLM || llmProjects.some(p => p.slug === wanted)) return wanted;
+    return llmDefault(project);
+}
+
+// startBody is the start request of the choice; the default goes as an empty llm_project, so the service applies the project's rule itself (a set LLM project the person is no member of: without LLM, with the reason in the hub's log).
+export function startBody(project, profile, gpuClass, llm) {
+    return { project: project.slug, profile: profile.slug, gpu_class: profile.gpu ? gpuClass?.id ?? '' : '', llm_project: llm === llmDefault(project) ? '' : llm };
+}
+
+// startLink is this page with a choice, for others to follow; with autostart the page starts it right away (or opens the one already running). llm only when it differs from the default, so a link without it follows the project's setting for everybody.
+export function startLink(base, { project, env, gpuClass, llm, autostart }) {
     const q = new URLSearchParams();
     if (project) q.set('project', project);
     if (env) q.set('env', env);
     if (gpuClass) q.set('gpu_class', gpuClass);
+    if (llm) q.set('llm', llm);
     if (autostart) q.set('autostart', '1');
     const url = new URL(base);
     url.search = q.toString();
@@ -71,6 +91,8 @@ export function GpuStart() {
     const [projectSlug, setProjectSlug] = useState(params.get('project') || '');
     const [env, setEnv] = useState(params.get('env') || '');
     const [gpuClass, setGpuClass] = useState(params.get('gpu_class') || '');
+    const [llm, setLlm] = useState(params.get('llm') || '');
+    const llmProjects = options.data?.llm_projects ?? [];
 
     const project = projects.find(p => p.slug === projectSlug) ?? projects[0];
     const envs = envsOf(project, profiles);
@@ -82,6 +104,9 @@ export function GpuStart() {
     const linkedBlocked = !!linkedProject && blocked.find(p => p.slug === linkedProject);
     const unknownProject = !!linkedProject && !!options.data && !projects.some(p => p.slug === linkedProject) && !linkedBlocked;
     const unknownEnv = !unknownProject && !!params.get('env') && !!project && !envs.some(p => p.slug === params.get('env'));
+    // Whose LLM tokens the workspace's key draws from (VS Code's chat, the agents, OPENAI_API_KEY).
+    const chosenLlm = llmChoice(llm, project, llmProjects);
+    const unknownLlm = !!params.get('llm') && !!options.data && llm === params.get('llm') && chosenLlm !== llm;
 
     // startedAt: a server list from before the start must not count as "no longer there".
     const [startedAt, setStartedAt] = useState(0);
@@ -104,9 +129,9 @@ export function GpuStart() {
         if (live?.ready && live.url) window.location.assign(live.url);
     }, [live?.ready, live?.url]);
 
-    // Autostart, once: only exactly what the link names (no fallback to another project or environment), only once the environment is built; a workspace of that project and environment already running is opened instead of a second one.
+    // Autostart, once: only exactly what the link names (no fallback to another project, environment or LLM choice), only once the environment is built; a workspace of that project and environment already running is opened instead of a second one.
     const autostarted = useRef(false);
-    const exact = !!project && project.slug === params.get('project') && !!profile && profile.slug === params.get('env');
+    const exact = !!project && project.slug === params.get('project') && !!profile && profile.slug === params.get('env') && !unknownLlm;
     useEffect(() => {
         if (!autostart || autostarted.current || !exact || project.image_pending || !servers.data || start.isPending || started) return;
         autostarted.current = true;
@@ -114,14 +139,14 @@ export function GpuStart() {
         if (running?.ready && running.url) {
             window.location.assign(running.url);
         } else if (!running) {
-            start.mutate({ project: project.slug, profile: profile.slug, gpu_class: profile.gpu ? chosenClass?.id ?? '' : '' });
+            start.mutate(startBody(project, profile, chosenClass, chosenLlm));
         }
-    }, [autostart, exact, project, profile, chosenClass, servers.data, start, started]);
+    }, [autostart, exact, project, profile, chosenClass, chosenLlm, servers.data, start, started]);
 
     if (options.isPending) return <Container size="lg" py="md"><Loading /></Container>;
     if (options.isError) return <Container size="lg" py="md"><LoadError query={options} /></Container>;
 
-    const choice = { project: project?.slug, env: profile?.slug, gpuClass: classes.length > 1 ? chosenClass?.id : '', autostart: linkAutostart };
+    const choice = { project: project?.slug, env: profile?.slug, gpuClass: classes.length > 1 ? chosenClass?.id : '', llm: chosenLlm !== llmDefault(project) ? chosenLlm : '', autostart: linkAutostart };
     const link = startLink(window.location.href, choice);
 
     if (started) {
@@ -168,6 +193,7 @@ export function GpuStart() {
                     {unknownProject && <Alert color="orange" variant="light">{t('gpu.start.unknownProject', { project: linkedProject })}</Alert>}
                     {linkedBlocked && projects.length > 0 && <Alert color="orange" variant="light">{t('gpu.start.blockedProject', { project: linkedBlocked.name || linkedBlocked.slug })}</Alert>}
                     {unknownEnv && <Alert color="orange" variant="light">{t('gpu.start.unknownEnv', { env: profileLabel(params.get('env'), t) })}</Alert>}
+                    {unknownLlm && <Alert color="orange" variant="light">{t('gpu.start.unknownLlm', { project: params.get('llm') })}</Alert>}
                     {projects.length === 0 ? (
                         <NoStartableProject blocked={blocked} />
                     ) : (
@@ -239,12 +265,14 @@ export function GpuStart() {
                                 )}
                             </Stack>
 
+                            <LlmChoice project={project} llmProjects={llmProjects} value={chosenLlm} onChange={setLlm} />
+
                             {project.split_needs_base && <SplitNeedsBase />}
                             {project.image_pending && <BuildState project={project} />}
                             {start.isError && <Alert color="red" variant="light">{start.error?.message}</Alert>}
                             <Group gap="sm">
                                 <Button leftSection={<Play size={16} />} disabled={!profile || project.image_pending} loading={start.isPending}
-                                    onClick={() => start.mutate({ project: project.slug, profile: profile.slug, gpu_class: profile.gpu ? chosenClass?.id ?? '' : '' })}>
+                                    onClick={() => start.mutate(startBody(project, profile, chosenClass, chosenLlm))}>
                                     {t('gpu.start.start')}
                                 </Button>
                                 <Button variant="subtle" leftSection={<Copy size={16} />} disabled={!profile} onClick={() => clipboard.copy(link)}>
@@ -258,6 +286,38 @@ export function GpuStart() {
                 </Stack>
             </Paper>
         </Container>
+    );
+}
+
+// LlmChoice is whose LLM tokens the workspace's key draws from: one of the person's projects with LLM tokens, or none (no key, no DHBW models in VS Code and the agents). Preselected is what the project's rule gives (llm_default), marked as its default and explained by where it comes from (llm_default_source). Without any LLM project there is nothing to choose, only the note that the workspace has no LLM.
+export function LlmChoice({ project, llmProjects, value, onChange }) {
+    const { t } = useTranslation();
+    const def = llmDefault(project);
+    const unavailable = !!project.llm_default_unavailable && value === def;
+    if (llmProjects.length === 0) {
+        return (
+            <Stack gap={6}>
+                <Title order={5}>{t('gpu.start.llm')}</Title>
+                <Text size="xs" c="dimmed">{t(unavailable ? 'gpu.start.llmPresetUnavailable' : 'gpu.start.llmNoProjects', { project: project.default_llm_project })}</Text>
+            </Stack>
+        );
+    }
+    const name = (slug) => { const p = llmProjects.find(x => x.slug === slug); return p?.name || slug; };
+    const source = value === def ? project.llm_default_source : 'chosen';
+    let hint;
+    if (unavailable) hint = t('gpu.start.llmPresetUnavailable', { project: project.default_llm_project });
+    else if (value === NO_LLM) hint = t(source === 'preset' ? 'gpu.start.llmPresetNone' : 'gpu.start.llmNoneHint');
+    else if (value === project.slug) hint = t('gpu.start.llmOwn');
+    else if (source === 'preset') hint = t('gpu.start.llmPreset', { project: name(value) });
+    else if (source === 'fallback') hint = t('gpu.start.llmFallback', { project: name(value) });
+    else hint = t('gpu.start.llmOther', { project: name(value) });
+    const mark = (v, label) => (v === def ? `${label} (${t('gpu.start.llmDefaultMark')})` : label);
+    return (
+        <Stack gap={6}>
+            <Title order={5}>{t('gpu.start.llm')}</Title>
+            <Select allowDeselect={false} value={value} onChange={onChange} maw={480} description={hint} aria-label={t('gpu.start.llm')}
+                data={[...llmProjects.map(p => ({ value: p.slug, label: mark(p.slug, p.name || p.slug) })), { value: NO_LLM, label: mark(NO_LLM, t('gpu.start.llmNone')) }]} />
+        </Stack>
     );
 }
 
