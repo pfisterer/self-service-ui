@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@dhbw-cloud/dynamic-zones-client": "^0.8.14",
-    "@dhbw-cloud/llm-client": "^0.2.71",
+    "@dhbw-cloud/llm-client": "^0.2.73",
     "@dhbw-cloud/os-mgt-client": "^0.8.73",
     "@dhbw-cloud/role-provider-client": "^0.11.0",
     "@mantine/charts": "^9.5.2",
