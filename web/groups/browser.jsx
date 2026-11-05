@@ -164,7 +164,7 @@ function Row({ rowRef, depth, open, openable, onToggle, onClick, selected, icon,
             <Box c="dimmed" style={{ display: 'flex', flexShrink: 0 }}>{icon}</Box>
             <Box style={{ flex: 1, minWidth: 0 }}>
                 <Text size="sm" truncate fw={selected ? 600 : 400}>{label}</Text>
-                {sub && <Text size="xs" c="dimmed" truncate>{sub}</Text>}
+                {sub && <Text size="xs" c="dimmed" style={{ overflowWrap: 'anywhere' }}>{sub}</Text>}
             </Box>
             {badge}
             {count != null && <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>{count}</Text>}
