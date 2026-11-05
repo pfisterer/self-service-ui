@@ -440,6 +440,7 @@
         "evictions_one": "evicted {{count}} time",
         "evictions_other": "evicted {{count}} times",
         "exitCode": "Exit code {{code}}",
+        "result": "Result: {{result}}",
         "submittedAt": "submitted {{at}}",
         "startedAt": "started {{at}}",
         "ranFor": "ran {{duration}}",

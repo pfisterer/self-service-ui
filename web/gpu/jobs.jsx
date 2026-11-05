@@ -38,9 +38,10 @@ export function JobState({ job }) {
     );
 }
 
-// outcome is how a job ended: its exit code and the reason, where there are any.
+// outcome is how a job ended: what it reported as its result (a last output line "RESULT …"), its exit code and the reason, where there are any.
 function outcome(job, t) {
     const parts = [];
+    if (job.result) parts.push(t('gpu.jobs.result', { result: job.result }));
     if (job.exit_code !== undefined && job.exit_code !== null && !isActive(job) && job.state !== 'cancelled') parts.push(t('gpu.jobs.exitCode', { code: job.exit_code }));
     if (job.reason) parts.push(job.reason);
     return parts.join(' · ');

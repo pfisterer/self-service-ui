@@ -440,6 +440,7 @@
         "evictions_one": "{{count}}-mal verdrängt",
         "evictions_other": "{{count}}-mal verdrängt",
         "exitCode": "Exit-Code {{code}}",
+        "result": "Ergebnis: {{result}}",
         "submittedAt": "eingereicht {{at}}",
         "startedAt": "gestartet {{at}}",
         "ranFor": "lief {{duration}}",

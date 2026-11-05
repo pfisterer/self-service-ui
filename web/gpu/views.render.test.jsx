@@ -53,6 +53,7 @@ const PROJECTS = [
 const JOBS = [
     { id: 'j-1', name: 'training-1', person: 'dennis.pfisterer@dhbw.de', project: 'wwi23seb-ml', gpu_class: 'l4-3q', gpus: 1, max_hours: 4, state: 'queued', position: 2, submitted: '2026-10-31T10:00:00Z', command: 'python train.py' },
     { id: 'j-2', name: 'eval', person: 'b@dhbw.de', project: 'wwi23seb-ml', gpu_class: 'l4-3q', gpus: 1, max_hours: 2, state: 'failed', exit_code: 1, reason: 'Error', submitted: '2026-10-30T10:00:00Z', started: '2026-10-30T10:01:00Z', ended: '2026-10-30T10:31:00Z', gpu_hours: 0.5, evictions: 1, command: 'python eval.py' },
+    { id: 'j-3', name: 'training-0', person: 'dennis.pfisterer@dhbw.de', project: 'wwi23seb-ml', gpu_class: 'l4-3q', gpus: 1, max_hours: 4, state: 'succeeded', exit_code: 0, submitted: '2026-10-29T10:00:00Z', started: '2026-10-29T10:01:00Z', ended: '2026-10-29T11:01:00Z', gpu_hours: 1, evictions: 0, command: 'python train.py', result: 'accuracy 0.83' },
 ];
 const START_OPTIONS = { profiles: [], projects: [{ slug: 'wwi23seb-ml', name: 'Machine Learning WWI23SEB', gpu_classes: [{ id: 'l4-3q', name: 'L4 klein', hardware: 'L4-3Q · 3 GB' }, { id: 'l4-6q', name: 'L4 mittel' }] }, { slug: 'statistik', name: 'Statistik', gpu_classes: [] }] };
 const JOB_PROJECTS = PROJECTS.map(p => (p.slug === 'wwi23seb-ml' ? { ...p, limits: { ...p.limits, jobs_per_person: 2, job_max_hours: 8 } } : p));
@@ -175,6 +176,8 @@ describe('the GPU views render', () => {
         expect(await screen.findByText('training-1')).toBeTruthy();
         expect(screen.getByText(/(Platz 2 in der Warteschlange|Place 2 in the queue)/)).toBeTruthy();
         expect(screen.getByText(/(Exit-Code|Exit code) 1 · Error/)).toBeTruthy();
+        // What a job reported in its last line "RESULT …".
+        expect(screen.getByText(/(Ergebnis|Result): accuracy 0\.83 · (Exit-Code|Exit code) 0/)).toBeTruthy();
         // Another person's job (a manager's view) names the person.
         expect(screen.getByText('b@dhbw.de')).toBeTruthy();
         // Without a chosen project there is no project id to show.
