@@ -212,7 +212,7 @@ export function MyProjectsView({ area = 'cloud' }) {
                 opened={newProject !== null}
                 onClose={() => setNewProject(null)}
                 resources={resources}
-                openstackRoles={config.openstackRoles}
+                roles={config.roles}
                 myBudgets={myBudgets}
                 eligibleBudgets={eligibleBudgets}
                 myProjects={ownProjects}
@@ -226,7 +226,7 @@ export function MyProjectsView({ area = 'cloud' }) {
                 opened={dlg.is('change')}
                 onClose={dlg.close}
                 resources={resources}
-                openstackRoles={config.openstackRoles}
+                roles={config.roles}
                 node={dlg.node}
                 myBudgets={myBudgets}
                 eligibleBudgets={eligibleBudgets}

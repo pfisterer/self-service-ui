@@ -16,7 +16,7 @@ const CONFIG = {
         { id: 'llm-mtokens', name: 'LLM tokens', unit: 'M tokens', provider: 'aiaas', area: 'llm', kind: 'window', window: '30d', default: 0, min: 0, max: 1000 },
         { id: 'ws-vcpu-hours', name: 'Workspace CPU', unit: 'vCPU h', provider: 'aiaas', area: 'workspaces', kind: 'window', window: '30d', default: 0, min: 0, max: 100000 },
     ],
-    openstackRoles: ['member'],
+    roles: ['member'],
 };
 
 const budget = (id, name, extra) => ({

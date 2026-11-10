@@ -28,7 +28,7 @@ export function useProjectConfig() {
     return useContext(ProjectConfigContext);
 }
 
-const EMPTY_CONFIG = { resources: [], openstackRoles: [] };
+const EMPTY_CONFIG = { resources: [], roles: [] };
 
 // ProjectsShell gives the views of the budget tree what they share: /v1/config
 // (resource definitions, OpenStack roles) through ProjectConfigContext, the token

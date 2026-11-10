@@ -825,7 +825,7 @@ export function MyBudgetsView({ params }) {
                 onClose={dlg.close}
                 onDone={refresh}
                 resources={resources}
-                openstackRoles={config.openstackRoles}
+                roles={config.roles}
                 node={dlg.node}
                 myBudgets={myBudgets.items}
             />
@@ -839,7 +839,7 @@ export function MyBudgetsView({ params }) {
                 onClose={dlg.close}
                 onDone={refresh}
                 resources={resources}
-                openstackRoles={config.openstackRoles}
+                roles={config.roles}
                 node={dlg.node}
                 // The budget the project was opened under: its end and its
                 // maximum project term bound the new end date. A sub-budget

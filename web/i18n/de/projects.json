@@ -103,10 +103,7 @@
         "parent": "Übergeordnetes Budget",
         "moveHint": "Unter welchem Budget dieses steht. Verschieben wirkt sofort beim Speichern und braucht Verwaltungsrechte auf beiden Seiten.",
         "sub": {
-            "quota": "Kontingente",
-            "release": "Rückgabezeiten",
-            "storage": "Lokaler Speicher",
-            "jobs": "Batch-Jobs"
+            "quota": "Kontingente"
         }
     },
     "budgets": {
@@ -957,69 +954,94 @@
         "workspaces": "Workspace-Einstellungen",
         "workspacesHint": "Wie die Kontingente innerhalb des Projekts genutzt werden: Profile, Images, Grenzen und Anteile pro Person. Gilt sofort, ohne Genehmigung."
     },
-    "releaseMax": {
-        "title": "Rückgabezeiten (Höchstwerte)",
-        "hint": "Bis zu diesen Werten wählen die Projekte unter diesem Budget, wann ihre Workspaces zurückgegeben werden; gezählt wird Leerlauf, nicht Laufzeit. Leere Felder übernehmen den Wert der Budgets darüber, ohne Wert dort gilt der Standard des KI-Dienstes. Budgets darunter können die Werte nur verkürzen.",
-        "kinds": {
-            "cpu": "CPU – CPU-Workspaces und das Notebook bei „CPU + GPU-Kernel“",
-            "gpu": "GPU – GPU-Workspaces und GPU-Kernel"
-        },
-        "idleOpen": "Leerlauf mit offenem Tab (Min.)",
-        "idleClosed": "Leerlauf ohne Tab (Min.)",
-        "maxHours": "Obergrenze (Std.)",
-        "unlimited": "ohne Obergrenze",
+    "caps": {
         "standard": "Standard",
-        "standardMinutes": "Standard: {{value}}",
-        "standardHours": "Standard: {{value}} Std.",
+        "standardValue": "Standard: {{value}}",
         "fromAbove": "wie darüber: {{value}}",
-        "errMinutes": "Zwischen 1 und {{max}} Minuten.",
-        "errHours": "Zwischen 1 und {{max}} Stunden.",
-        "errAbove": "Höchstens {{value}}, mehr erlaubt das Budget darüber nicht.",
-        "errUnlimited": "Ohne Obergrenze nur bei GPU und nur, wenn das Budget darüber keine hat.",
-        "none": "keine eigenen",
-        "hoursValue": "{{value}} Std.",
-        "summaryKind": "{{kind}} {{open}}/{{closed}} Min., {{hours}}",
-        "historyChange": "Rückgabezeiten (Höchstwerte): {{from}} → {{to}}"
-    },
-    "workspaceScratch": {
-        "title": "Lokaler Speicher je Workspace",
-        "hint": "Wie viel ein Workspace oder GPU-Kernel der Projekte unter diesem Budget außerhalb des Homes schreiben darf: installierte Pakete in der Umgebung, /tmp, Logs. Dateien im Home und in project-shared zählen nicht (Workspace-Speicher des Projekts). Wird mehr geschrieben, beendet Kubernetes den Workspace. Leer übernimmt den Wert der Budgets darüber, ohne Wert dort gilt der Standard des KI-Dienstes (10 GB). Budgets darunter können den Wert nur verkleinern.",
-        "label": "Lokaler Speicher (GB)",
-        "standard": "Standard (10 GB)",
-        "fromAbove": "wie darüber: {{value}}",
-        "errRange": "Zwischen 1 und {{max}} GB.",
-        "errAbove": "Höchstens {{value}} GB, mehr erlaubt das Budget darüber nicht.",
-        "none": "kein eigener",
-        "gbValue": "{{value}} GB",
-        "historyChange": "Lokaler Speicher je Workspace: {{from}} → {{to}}"
-    },
-    "batchPriority": {
-        "title": "Priorität der Batch-Jobs",
-        "hint": "Wie Batch-Jobs der Projekte unter diesem Budget laufen. Verdrängbar: Braucht ein Workspace die GPU, wird der Job beendet und startet später erneut. Garantiert: Der Job wird nicht verdrängt und läuft mit derselben Priorität wie Workspaces. Leer übernimmt den Wert der Budgets darüber, ohne Wert dort sind Jobs verdrängbar. Budgets darunter können nur auf verdrängbar verschärfen.",
-        "label": "Priorität",
-        "preemptible": "verdrängbar",
-        "guaranteed": "garantiert",
-        "standard": "verdrängbar (Standard)",
-        "fromAbove": "wie darüber: {{value}}",
-        "errAbove": "Das Budget darüber macht Jobs verdrängbar, garantiert ist hier nicht möglich.",
-        "none": "kein eigener",
-        "historyChange": "Priorität der Batch-Jobs: {{from}} → {{to}}"
-    },
-    "batchJobs": {
-        "title": "Batch-Jobs",
-        "hint": "Ob die Projekte unter diesem Budget Batch-Jobs abschicken können (GPU-Jobs ohne Workspace), wie viele je Person gleichzeitig wartend und laufend und wie lange einer höchstens läuft. Eingeschaltet gilt das in jedem Projekt darunter ohne weitere Freischaltung; ausgeschaltet haben das Budget und alles darunter keine Batch-Jobs. Budgets darunter können Jobs nur mit gleichen oder kleineren Werten einschalten.",
-        "label": "Batch-Jobs erlauben",
+        "unbounded": "ohne Obergrenze",
+        "notSet": "nicht gesetzt",
+        "off": "aus",
+        "labelWithUnit": "{{name}} ({{unit}})",
+        "otherGroup": "Weitere Obergrenzen",
+        "allow": "Erlauben",
+        "inheritsGrant": "Erbt mit dem Kontingent auch diese Werte des Budgets darüber: {{value}}",
         "aboveHint": "Höchstens wie das Budget darüber: {{value}}",
         "rootHint": "Die Werte hier sind die Höchstwerte für alle Budgets darunter.",
-        "inherits": "Erbt mit dem Kontingent auch die Batch-Jobs des Budgets darüber: {{value}}",
-        "off": "keine",
-        "onValue_one": "{{count}} Job je Person, bis {{hours}} Std.",
-        "onValue_other": "{{count}} Jobs je Person, bis {{hours}} Std.",
-        "errPerPerson": "Mindestens 1 Job je Person.",
-        "errHours": "Zwischen 1 und {{max}} Stunden.",
-        "errNoneAbove": "Das Budget darüber hat keine Batch-Jobs.",
-        "errPerPersonAbove": "Höchstens {{value}} Jobs je Person, mehr erlaubt das Budget darüber nicht.",
-        "errHoursAbove": "Höchstens {{value}} Stunden, mehr erlaubt das Budget darüber nicht.",
-        "historyChange": "Batch-Jobs: {{from}} → {{to}}"
+        "errRange": "Zwischen {{min}} und {{max}}.",
+        "errRangeUnbounded": "Zwischen {{min}} und {{max}}, oder ohne Obergrenze.",
+        "errAbove": "Höchstens {{value}}, mehr erlaubt das Budget darüber nicht.",
+        "errNoneAbove": "Das Budget darüber hat das nicht eingeschaltet.",
+        "errTogether": "Entweder alle Werte dieses Blocks oder keinen.",
+        "historyChange": "{{name}}: {{from}} → {{to}}",
+        "group": {
+            "release-times-cpu": {
+                "title": "Rückgabezeiten CPU",
+                "hint": "Für CPU-Workspaces und das Notebook bei „CPU + GPU-Kernel“. Bis zu diesen Werten wählen die Projekte unter diesem Budget, wann ihre Workspaces zurückgegeben werden; gezählt wird Leerlauf, nicht Laufzeit. Leere Felder übernehmen den Wert der Budgets darüber, ohne Wert dort gilt der Standard des KI-Dienstes. Budgets darunter können die Werte nur verkürzen."
+            },
+            "release-times-gpu": {
+                "title": "Rückgabezeiten GPU",
+                "hint": "Für GPU-Workspaces und GPU-Kernel. Bis zu diesen Werten wählen die Projekte unter diesem Budget, wann ihre Workspaces zurückgegeben werden; gezählt wird Leerlauf, nicht Laufzeit. Leere Felder übernehmen den Wert der Budgets darüber, ohne Wert dort gilt der Standard des KI-Dienstes. Budgets darunter können die Werte nur verkürzen."
+            },
+            "workspaces": {
+                "title": "Je Workspace"
+            },
+            "batch-jobs": {
+                "title": "Batch-Jobs"
+            }
+        },
+        "together": {
+            "batch-jobs": {
+                "label": "Batch-Jobs erlauben",
+                "hint": "Ob die Projekte unter diesem Budget Batch-Jobs abschicken können (GPU-Jobs ohne Workspace), wie viele je Person gleichzeitig wartend und laufend und wie lange einer höchstens läuft. Eingeschaltet gilt das in jedem Projekt darunter ohne weitere Freischaltung; ausgeschaltet haben das Budget und alles darunter keine Batch-Jobs. Budgets darunter können Jobs nur mit gleichen oder kleineren Werten einschalten."
+            }
+        },
+        "release-cpu-idle-open": {
+            "name": "Leerlauf mit offenem Tab",
+            "unit": "Min."
+        },
+        "release-cpu-idle-closed": {
+            "name": "Leerlauf ohne Tab",
+            "unit": "Min."
+        },
+        "release-cpu-max-hours": {
+            "name": "Obergrenze",
+            "unit": "Std."
+        },
+        "release-gpu-idle-open": {
+            "name": "Leerlauf mit offenem Tab",
+            "unit": "Min."
+        },
+        "release-gpu-idle-closed": {
+            "name": "Leerlauf ohne Tab",
+            "unit": "Min."
+        },
+        "release-gpu-max-hours": {
+            "name": "Obergrenze",
+            "unit": "Std."
+        },
+        "workspace-scratch-gb": {
+            "name": "Lokaler Speicher je Workspace",
+            "unit": "GB",
+            "hint": "Wie viel ein Workspace oder GPU-Kernel der Projekte unter diesem Budget außerhalb des Homes schreiben darf: installierte Pakete in der Umgebung, /tmp, Logs. Dateien im Home und in project-shared zählen nicht (Workspace-Speicher des Projekts). Wird mehr geschrieben, beendet Kubernetes den Workspace. Leer übernimmt den Wert der Budgets darüber, ohne Wert dort gilt der Standard des KI-Dienstes (10 GB). Budgets darunter können den Wert nur verkleinern.",
+            "standard": "Standard (10 GB)"
+        },
+        "batch-priority": {
+            "name": "Priorität der Batch-Jobs",
+            "hint": "Wie Batch-Jobs der Projekte unter diesem Budget laufen. Verdrängbar: Braucht ein Workspace die GPU, wird der Job beendet und startet später erneut. Garantiert: Der Job wird nicht verdrängt und läuft mit derselben Priorität wie Workspaces. Leer übernimmt den Wert der Budgets darüber, ohne Wert dort sind Jobs verdrängbar. Budgets darunter können nur auf verdrängbar verschärfen.",
+            "standard": "verdrängbar (Standard)",
+            "choices": {
+                "preemptible": "verdrängbar",
+                "guaranteed": "garantiert"
+            }
+        },
+        "batch-jobs-per-person": {
+            "name": "Gleichzeitig je Person",
+            "hint": "wartend und laufend"
+        },
+        "batch-max-hours": {
+            "name": "Höchstlaufzeit eines Jobs",
+            "unit": "Std.",
+            "hint": "danach wird er beendet"
+        }
     }
 }

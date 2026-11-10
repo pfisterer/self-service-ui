@@ -36,12 +36,27 @@ export function testQueryClient() {
 
 const USER = { profile: { email: 'dennis.pfisterer@dhbw.de', name: 'Test User' }, access_token: 't' };
 
+// The caps the AI service declares (/v1/config caps), as os-mgt delivers them: what the budget dialog renders generically.
+export const CAPS = [
+    { id: 'release-cpu-idle-open', name: 'Idle with open tab', provider: 'aiaas', area: 'workspaces', group: 'Release times CPU', unit: 'min', min: 1, max: 1440 },
+    { id: 'release-cpu-idle-closed', name: 'Idle without tab', provider: 'aiaas', area: 'workspaces', group: 'Release times CPU', unit: 'min', min: 1, max: 1440 },
+    { id: 'release-cpu-max-hours', name: 'Upper bound', provider: 'aiaas', area: 'workspaces', group: 'Release times CPU', unit: 'h', min: 1, max: 720 },
+    { id: 'release-gpu-idle-open', name: 'Idle with open tab', provider: 'aiaas', area: 'workspaces', group: 'Release times GPU', unit: 'min', min: 1, max: 1440 },
+    { id: 'release-gpu-idle-closed', name: 'Idle without tab', provider: 'aiaas', area: 'workspaces', group: 'Release times GPU', unit: 'min', min: 1, max: 1440 },
+    { id: 'release-gpu-max-hours', name: 'Upper bound', provider: 'aiaas', area: 'workspaces', group: 'Release times GPU', unit: 'h', min: 1, max: 720, unbounded: true },
+    { id: 'workspace-scratch-gb', name: 'Local storage per workspace', provider: 'aiaas', area: 'workspaces', group: 'Workspaces', unit: 'GB', min: 1, max: 200 },
+    { id: 'batch-priority', name: 'Priority of batch jobs', provider: 'aiaas', area: 'workspaces', group: 'Batch jobs', min: 0, max: 1, choices: ['preemptible', 'guaranteed'] },
+    { id: 'batch-jobs-per-person', name: 'Jobs per person', provider: 'aiaas', area: 'workspaces', group: 'Batch jobs', min: 1, max: 100, grant: true, together: 'batch-jobs' },
+    { id: 'batch-max-hours', name: 'Longest run', provider: 'aiaas', area: 'workspaces', group: 'Batch jobs', unit: 'h', min: 1, max: 24, grant: true, together: 'batch-jobs' },
+];
+
 const CONFIG = {
     resources: [
         { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64 },
         { id: 'ram', name: 'RAM', unit: 'GB', default: 8, min: 1, max: 256 },
     ],
-    openstackRoles: ['member', 'reader'],
+    roles: ['member', 'reader'],
+    caps: CAPS,
 };
 
 export function renderView(ui, { config = CONFIG, user = USER } = {}) {
@@ -85,7 +100,7 @@ export function fixtureTree() {
         owner: 'user:dennis.pfisterer@dhbw.de',
         created_at: '2026-08-02T10:00:00Z',
         termination_date: '2027-03-31',
-        authorized_users: [{ token: 'user:someone@dhbw.de', openstack_role: 'member' }],
+        authorized_users: [{ token: 'user:someone@dhbw.de', role: 'member' }],
         history: [{ timestamp: '2026-08-02T10:00:00Z', event: 'created', actor: 'dennis.pfisterer@dhbw.de', status_to: 'pending' }],
         ...extra,
     });
@@ -100,8 +115,8 @@ export function fixtureTree() {
             limit: { cores: 8, ram: 16 },
             termination_date: '2027-09-30',
             authorized_users: [
-                { token: 'user:someone@dhbw.de', openstack_role: 'reader' },
-                { token: 'user:neu@dhbw.de', openstack_role: 'member' },
+                { token: 'user:someone@dhbw.de', role: 'reader' },
+                { token: 'user:neu@dhbw.de', role: 'member' },
             ],
         },
     });

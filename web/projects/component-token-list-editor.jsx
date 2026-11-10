@@ -140,13 +140,13 @@ export function TokenListEditor({ tokens, onChange, listAs = 'badges', ...props 
 }
 
 // MemberRoleEditor edits a project's members with their role (authorized_users:
-// [{ token, openstack_role }]): the role in OpenStack and, in the workspaces,
+// [{ token, role }]): the role in OpenStack and, in the workspaces,
 // whether the shared folder is writable (reader only reads). withRoles=false
 // hides the role picker; every entry still carries one (the one it had, else
 // defaultRole), because the API asks for it.
 export function MemberRoleEditor({ members, onChange, roles, defaultRole = 'member', withRoles = true, kinds, ...props }) {
     const { t } = useTranslation();
-    const roleOf = new Map((members || []).map(m => [m.token, m.openstack_role]));
+    const roleOf = new Map((members || []).map(m => [m.token, m.role]));
     return (
         <PrincipalListEditor
             emptyMessage={t('projects.memberEditor.empty')}
@@ -155,8 +155,8 @@ export function MemberRoleEditor({ members, onChange, roles, defaultRole = 'memb
             roles={withRoles ? (roles || []) : null}
             roleLabel={(role) => formatRoleLabel(role, kinds)}
             defaultRole={defaultRole}
-            entries={(members || []).map(m => ({ token: m.token, role: m.openstack_role }))}
-            onChange={(entries) => onChange(entries.map(e => ({ token: e.token, openstack_role: e.role || roleOf.get(e.token) || defaultRole })))}
+            entries={(members || []).map(m => ({ token: m.token, role: m.role }))}
+            onChange={(entries) => onChange(entries.map(e => ({ token: e.token, role: e.role || roleOf.get(e.token) || defaultRole })))}
         />
     );
 }

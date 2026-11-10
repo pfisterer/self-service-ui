@@ -12,10 +12,8 @@ import { formatDateTime } from '../format-date.js';
 import { UsagePanel } from './component-usage.jsx';
 import { AttributesView, hasAttributes } from './component-node-attributes.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
-import { releaseSummary } from './util-release-max.js';
-import { scratchSummary } from './util-workspace-scratch.js';
-import { batchPrioritySummary } from './util-batch-priority.js';
-import { batchJobsSummary } from './util-batch-jobs.js';
+import { capHistory } from './util-caps.js';
+import { useProjectConfig } from './projects.jsx';
 import { LlmLimitHints } from './component-llm-limits.jsx';
 
 dayjs.extend(relativeTime);
@@ -243,6 +241,8 @@ export function nodeExtraTabs(t, node, resources, activeTab) {
 // NodeHistoryPanel shows a node's lifecycle as a timeline, newest first.
 function NodeHistoryPanel({ node, resources }) {
     const { t } = useTranslation();
+    // The caps by their names, units and choices from the providers' catalogue; an id gone from it shows as itself.
+    const capCatalog = useProjectConfig()?.caps ?? [];
     const history = node.history || [];
 
     if (history.length === 0) {
@@ -306,29 +306,11 @@ function NodeHistoryPanel({ node, resources }) {
                             label={t('projects.inspect.changes')}
                         />
 
-                        {(h.release_max_from || h.release_max_to) && (
-                            <Text size="sm" mt="xs">
-                                {t('projects.releaseMax.historyChange', { from: releaseSummary(t, h.release_max_from), to: releaseSummary(t, h.release_max_to) })}
+                        {capHistory(t, capCatalog, h.caps_from, h.caps_to).map(c => (
+                            <Text key={c.id} size="sm" mt="xs">
+                                {t('projects.caps.historyChange', { name: c.label, from: c.from, to: c.to })}
                             </Text>
-                        )}
-
-                        {(h.workspace_scratch_gb_from || h.workspace_scratch_gb_to) && (
-                            <Text size="sm" mt="xs">
-                                {t('projects.workspaceScratch.historyChange', { from: scratchSummary(t, h.workspace_scratch_gb_from), to: scratchSummary(t, h.workspace_scratch_gb_to) })}
-                            </Text>
-                        )}
-
-                        {(h.batch_priority_from || h.batch_priority_to) && (
-                            <Text size="sm" mt="xs">
-                                {t('projects.batchPriority.historyChange', { from: batchPrioritySummary(t, h.batch_priority_from), to: batchPrioritySummary(t, h.batch_priority_to) })}
-                            </Text>
-                        )}
-
-                        {(h.batch_jobs_from || h.batch_jobs_to) && (
-                            <Text size="sm" mt="xs">
-                                {t('projects.batchJobs.historyChange', { from: batchJobsSummary(t, h.batch_jobs_from), to: batchJobsSummary(t, h.batch_jobs_to) })}
-                            </Text>
-                        )}
+                        ))}
 
                         {h.limit_to && !h.limit_from && (
                             <div style={{ marginTop: 8 }}>

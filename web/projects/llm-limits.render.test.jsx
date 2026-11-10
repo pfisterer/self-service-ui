@@ -89,7 +89,7 @@ describe('LLM hints render', () => {
     it('the form of a new LLM project shows the recommended values and warns while low values are entered', async () => {
         const tree = fixtureTree();
         const budget = { ...tree.roots[0], id: 'b_llm', name: 'LLM budget', available_resources: ['llm-mtokens', 'llm-rpm', 'llm-tpm'], limit: { 'llm-mtokens': 1000, 'llm-rpm': 1000, 'llm-tpm': 10000000 } };
-        renderView(<ProjectFormModal opened onClose={() => {}} resources={LLM} openstackRoles={['member']} myBudgets={[budget]} initialKind="llm" />);
+        renderView(<ProjectFormModal opened onClose={() => {}} resources={LLM} roles={['member']} myBudgets={[budget]} initialKind="llm" />);
         fireEvent.click(await screen.findByRole('tab', { name: /Resources|Ressourcen/ }));
         expect(await screen.findByText(/(Empfehlung zum Ausprobieren|Recommended to try things out): 10 M/)).toBeTruthy();
         // The default of 0 tokens: no access.

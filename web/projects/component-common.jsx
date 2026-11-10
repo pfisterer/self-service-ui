@@ -207,8 +207,8 @@ export function UserRoleBadgeList({ users, label, labelColor, size = 'sm', kinds
             {label && <Text size="xs" c={labelColor} fw={600} mb="xs">{label}</Text>}
             <Group gap="md" rowGap={2} wrap="wrap">
                 {users.map(u => (
-                    <PersonBadge key={`${u.token}:${u.openstack_role}`} email={tokenEmail(u.token)} size={size}>
-                        {u.token} <Text span inherit c="dimmed">({formatRoleLabel(u.openstack_role, kinds)})</Text>
+                    <PersonBadge key={`${u.token}:${u.role}`} email={tokenEmail(u.token)} size={size}>
+                        {u.token} <Text span inherit c="dimmed">({formatRoleLabel(u.role, kinds)})</Text>
                     </PersonBadge>
                 ))}
             </Group>
@@ -434,7 +434,7 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
                                         </Badge>
                                         <Text size="xs" c="dimmed">→</Text>
                                         <Badge size="sm" variant="outline" color="dark">
-                                            {formatRoleLabel(u.openstack_role)}
+                                            {formatRoleLabel(u.role)}
                                         </Badge>
                                     </Group>
                                 ))}

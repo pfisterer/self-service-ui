@@ -298,7 +298,7 @@ describe('limitDelta', () => {
 });
 
 describe('nodeChanges', () => {
-    const users = (...tokens) => tokens.map(t => ({ token: t, openstack_role: 'member' }));
+    const users = (...tokens) => tokens.map(t => ({ token: t, role: 'member' }));
 
     it('reports nothing when nothing moved', () => {
         const c = nodeChanges({
@@ -332,21 +332,21 @@ describe('nodeChanges', () => {
     it('splits members into added, removed and role-changed', () => {
         const c = nodeChanges({
             usersFrom: [
-                { token: 'user:keep', openstack_role: 'member' },
-                { token: 'user:gone', openstack_role: 'member' },
-                { token: 'user:promoted', openstack_role: 'member' },
+                { token: 'user:keep', role: 'member' },
+                { token: 'user:gone', role: 'member' },
+                { token: 'user:promoted', role: 'member' },
             ],
             usersTo: [
-                { token: 'user:keep', openstack_role: 'member' },
-                { token: 'user:new', openstack_role: 'member' },
-                { token: 'user:promoted', openstack_role: 'reader' },
+                { token: 'user:keep', role: 'member' },
+                { token: 'user:new', role: 'member' },
+                { token: 'user:promoted', role: 'reader' },
             ],
         });
         expect(c.added.map(u => u.token)).toEqual(['user:new']);
         expect(c.removed.map(u => u.token)).toEqual(['user:gone']);
         expect(c.roleChanged.map(u => u.token)).toEqual(['user:promoted']);
         // Both ends of the arrow, so the caller need not rebuild the lookup.
-        expect(c.roleChanged[0]).toMatchObject({ previous_role: 'member', openstack_role: 'reader' });
+        expect(c.roleChanged[0]).toMatchObject({ previous_role: 'member', role: 'reader' });
         expect(c.hasUserChanges).toBe(true);
     });
 

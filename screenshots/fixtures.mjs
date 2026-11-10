@@ -81,7 +81,7 @@ const DEFAULTS = {
     },
     'llm GET /v1/keys': [],
     'llm GET /v1/workspaces/projects/ml-grundlagen-wi24/credentials': [],
-    'projects GET /v1/config': { resources: RESOURCES, providers: ['aiaas'], openstackRoles: ['member'], provisioningEnabled: true, retirement: { delete: 'after-grace', deleteGraceDays: 30, aiaasDeleteGraceDays: 30, chargeReleased: true } },
+    'projects GET /v1/config': { resources: RESOURCES, providers: ['aiaas'], roles: ['member'], provisioningEnabled: true, retirement: { delete: 'after-grace', deleteGraceDays: 30, aiaasDeleteGraceDays: 30, chargeReleased: true } },
     'projects GET /config.json': {},
     'projects GET /v1/act-as': { actor: ME, may_act_as: false, effective_tokens: [`user:${ME}`] },
     'projects GET /v1/nodes/eligible-for-me': { items: [], total: 0 },

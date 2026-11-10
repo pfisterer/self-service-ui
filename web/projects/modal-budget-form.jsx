@@ -17,14 +17,10 @@ import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
 import { AttributesEditor, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
-import { ReleaseMaxInputs } from './component-release-max.jsx';
-import { effectiveRelease, isEmptyRelease, normalizeRelease, releaseErrors, sameRelease } from './util-release-max.js';
-import { WorkspaceScratchInput } from './component-workspace-scratch.jsx';
-import { effectiveScratch, normalizeScratch, scratchErrors } from './util-workspace-scratch.js';
-import { BatchPriorityInput } from './component-batch-priority.jsx';
-import { batchPriorityErrors, effectiveBatchPriority, normalizeBatchPriority } from './util-batch-priority.js';
-import { availableBatchJobs, BatchJobsInput } from './component-batch-jobs.jsx';
-import { batchJobsErrors, effectiveBatchJobs, normalizeBatchJobs, sameBatchJobs } from './util-batch-jobs.js';
+import { CapGroup } from './component-caps.jsx';
+import { capErrors, capGroups, capsForCreate, capsPatch, effectiveCaps, groupSlug, groupTitle, normalizeCaps } from './util-caps.js';
+import { useProjectConfig } from './projects.jsx';
+import { aiCapDefaults } from '/gpu/cap-defaults.js';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { llmEnabled } from '/features.js';
@@ -86,22 +82,27 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     };
     // Its maximum project term likewise: this one may only be shorter.
     const termOf = (parentId) => boundFor(parentId)?.max_project_term_days ?? null;
-    // The release maximums the budgets above allow: the server sends them with the node being edited; for a new one they are what applies at the budget it draws from. A budget may only tighten them.
-    const releaseAbove = (parentId) => isEdit ? (node?.inherited_release_max ?? null) : effectiveRelease(boundFor(parentId));
-    // The same for the local storage per workspace: what the budgets above allow, which this one may only lower.
-    const scratchAbove = (parentId) => isEdit ? normalizeScratch(node?.inherited_workspace_scratch_gb) : effectiveScratch(boundFor(parentId));
-    // And for the batch jobs: what the budgets above decide, which this one may only tighten.
-    const batchAbove = (parentId) => isEdit ? normalizeBatchPriority(node?.inherited_batch_priority) : effectiveBatchPriority(boundFor(parentId));
-    // Batch jobs are there or not, like a resource: what the budget above has of them is the most this one may have; the root has nothing above.
-    const jobsAbove = (parentId) => isEdit ? normalizeBatchJobs(node?.inherited_batch_jobs) : effectiveBatchJobs(boundFor(parentId));
+    // The caps the providers declare (/v1/config): upper bounds a budget sets for everything below it, not quantities.
+    const capCatalog = useProjectConfig()?.caps ?? [];
+    // What the budgets above allow: the server sends it with the node being edited; for a new one it is what applies at the budget it draws from. A budget may only tighten it.
+    const capsAbove = (parentId) => isEdit ? normalizeCaps(node?.inherited_caps) : effectiveCaps(boundFor(parentId), capCatalog);
     const isRoot = isEdit && !!node && !node.parent_id;
-    // Which resources tab holds the release maximums: the workspaces one, or the only one when the catalogue does not split by kind; undefined where the budget offers nothing of the workspaces (then they would decide nothing).
-    const releaseTabKind = (parentId) => {
+    // The kinds the budget offers resources of, one resources tab each where there are several (Cloud, Workspaces, LLM), as in the project dialog; [null] for one tab.
+    const kindsFor = (parentId) => {
         const scoped = visibleResources(resources, scopeFor(parentId));
-        if (!scoped.some(r => kindOfResource(r) === 'workspaces')) return undefined;
-        if (catalogKinds(resources).length < 2) return null;
-        return PROJECT_KINDS.filter(k => scoped.some(r => kindOfResource(r) === k)).length > 1 ? 'workspaces' : null;
+        const ks = catalogKinds(resources).length < 2 ? [] : PROJECT_KINDS.filter(k => scoped.some(r => kindOfResource(r) === k));
+        return ks.length > 1 ? ks : [null];
     };
+    // Which resources tab holds a cap: the one of its area (cap.area), else the first kind the budget offers resources of the cap's provider of; null for the only tab; undefined where the budget offers nothing of that area or provider (then its caps would decide nothing).
+    const capTabKind = (cap, parentId) => {
+        const scoped = visibleResources(resources, scopeFor(parentId)).filter(r => cap.area ? kindOfResource(r) === cap.area : (r.provider || 'openstack') === cap.provider);
+        const kind = cap.area ? (scoped.length > 0 ? cap.area : undefined) : PROJECT_KINDS.find(k => scoped.some(r => kindOfResource(r) === k));
+        if (!kind) return undefined;
+        const kinds = kindsFor(parentId);
+        return kinds.includes(kind) ? kind : null;
+    };
+    // The caps the form shows (on some tab) for the budget it draws from.
+    const shownCaps = (parentId) => capCatalog.filter(c => capTabKind(c, parentId) !== undefined);
 
     const [activeTab, setActiveTab] = useState(TAB_DETAILS);
     // Only when editing: a budget being created or requested has none yet.
@@ -128,10 +129,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 terminationDate: endDate(node.termination_date),
                 maxTermDays: node.max_project_term_days ?? null,
                 inheritsLimit: !!node.inherits_limit,
-                releaseMax: normalizeRelease(node.release_max),
-                workspaceScratchGb: normalizeScratch(node.workspace_scratch_gb),
-                batchPriority: normalizeBatchPriority(node.batch_priority),
-                batchJobs: normalizeBatchJobs(node.batch_jobs),
+                caps: normalizeCaps(node.caps),
             }
             : {
                 parentId: parent?.id ?? eligibleBudgets[0]?.id ?? null,
@@ -165,10 +163,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 maxTermDays: termOf(parent?.id ?? eligibleBudgets[0]?.id ?? null),
                 inheritsLimit: false,
                 // Nothing of its own: the budgets above decide until somebody tightens them here.
-                releaseMax: normalizeRelease(null),
-                workspaceScratchGb: null,
-                batchPriority: null,
-                batchJobs: null,
+                caps: {},
             },
         validate: (values) => ({
             name: (values.name || '').trim().length < 3
@@ -194,10 +189,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                     Object.entries(validateQuota(t, visibleResources(resources, scopeFor(values.parentId)), values.autoApproveQuota, { emptyIsZero: true }))
                         .map(([id, msg]) => [`autoApproveQuota.${id}`, msg]))
                 : {}),
-            ...(releaseTabKind(values.parentId) === undefined ? {} : releaseErrors(t, values.releaseMax, releaseAbove(values.parentId))),
-            ...(releaseTabKind(values.parentId) === undefined ? {} : scratchErrors(t, values.workspaceScratchGb, scratchAbove(values.parentId))),
-            ...(releaseTabKind(values.parentId) === undefined ? {} : batchPriorityErrors(t, values.batchPriority, batchAbove(values.parentId))),
-            ...(releaseTabKind(values.parentId) === undefined || values.inheritsLimit ? {} : batchJobsErrors(t, values.batchJobs, jobsAbove(values.parentId), isRoot)),
+            ...capErrors(t, shownCaps(values.parentId), values.caps, capsAbove(values.parentId), { isRoot, inheritsLimit: values.inheritsLimit }),
         }),
     });
 
@@ -205,18 +197,18 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     // The budget whose limit one that inherits passes on, by name where known.
     const inheritedFrom = isEdit ? node?.parent_name : parent?.name;
     const offered = visibleResources(resources, scopeFor(form.values.parentId));
-    // One resources tab per kind where the budget offers several (Cloud, Workspaces, LLM), as in the project dialog.
-    const resourceKinds = (() => {
-        const ks = catalogKinds(resources).length < 2 ? [] : PROJECT_KINDS.filter(k => offered.some(r => kindOfResource(r) === k));
-        return ks.length > 1 ? ks : [null];
-    })();
+    const resourceKinds = kindsFor(form.values.parentId);
     const resourceTabValue = (kind) => (kind ? `${TAB_RESOURCES}-${kind}` : TAB_RESOURCES);
     const ofKind = (kind) => (kind ? offered.filter(r => kindOfResource(r) === kind) : offered);
     const resourceById = Object.fromEntries((resources || []).map(r => [r.id, r]));
-    const releaseKind = releaseTabKind(form.values.parentId);
-    // The AI service's release times where no budget sets any, for the placeholders of the release maximums: its catalogue, only where the budget holds workspaces. Without access to it (no workspace project of one's own) the placeholders say only "default".
+    // The caps on each resources tab, by group (each group a sub-tab there).
+    const capKindOf = Object.fromEntries(capCatalog.map(c => [c.id, capTabKind(c, form.values.parentId)]));
+    const capGroupsOf = (kind) => capGroups(capCatalog.filter(c => capKindOf[c.id] === kind));
+    const hasCaps = capCatalog.some(c => capKindOf[c.id] !== undefined);
+    // The AI service's values where no budget sets one of its caps, for the placeholders (its release times from its catalogue), asked for only where the form shows caps. Without access to it (no workspace project of one's own) the placeholders say only "default".
     const gpuApi = useGpuApi();
-    const catalog = useQuery({ queryKey: gpuKeys.catalog(), queryFn: () => gpuApi.catalog(), staleTime: 10 * 60 * 1000, retry: false, enabled: llmEnabled && releaseKind !== undefined });
+    const catalog = useQuery({ queryKey: gpuKeys.catalog(), queryFn: () => gpuApi.catalog(), staleTime: 10 * 60 * 1000, retry: false, enabled: llmEnabled && hasCaps });
+    const capDefaults = hasCaps ? aiCapDefaults(catalog.data?.releaseDefaults) : {};
 
     // The budget the new one would draw from: the picked one when requesting,
     // the parent when a manager carves out a sub-budget directly. Editing shows
@@ -256,7 +248,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     const fieldsByTab = {
         [TAB_DETAILS]: (k) => ['name', 'reason', 'parentId', 'terminationDate', 'maxTermDays'].includes(k),
         ...Object.fromEntries(resourceKinds.map(kind => [resourceTabValue(kind),
-            (k) => (k.startsWith('quota.') && (!kind || kindOfResource(resourceById[k.slice(6)]) === kind)) || ((k.startsWith('releaseMax.') || k === 'workspaceScratchGb' || k === 'batchPriority' || k === 'batchJobs') && kind === releaseKind)])),
+            (k) => (k.startsWith('quota.') && (!kind || kindOfResource(resourceById[k.slice(6)]) === kind)) || (k.startsWith('caps.') && capKindOf[k.slice(5)] === kind)])),
         [TAB_ACCESS]: (k) => k === 'adminScope' || k === 'eligibleRequesters',
         [TAB_AUTO_APPROVE]: (k) => k.startsWith('autoApproveQuota.'),
     };
@@ -288,24 +280,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         if (values.autoApproveExtensions !== (node.auto_approve_extensions !== false)) {
             body.auto_approve_extensions = values.autoApproveExtensions;
         }
-        // Sent whole when changed; an empty object removes the budget's own.
-        if (!sameRelease(values.releaseMax, node.release_max)) body.release_max = normalizeRelease(values.releaseMax);
-        const scratch = normalizeScratch(values.workspaceScratchGb);
-        if (scratch !== normalizeScratch(node.workspace_scratch_gb)) {
-            if (scratch === null) body.workspace_scratch_gb = null;
-            else body.workspace_scratch_gb = scratch;
-        }
-        const batch = normalizeBatchPriority(values.batchPriority);
-        if (batch !== normalizeBatchPriority(node.batch_priority)) {
-            if (batch === null) body.batch_priority = null;
-            else body.batch_priority = batch;
-        }
-        // A budget that inherits its limit passes on the batch jobs above; switching that on drops its own on the server.
-        if (!values.inheritsLimit && !sameBatchJobs(values.batchJobs, node.batch_jobs)) {
-            const jobs = normalizeBatchJobs(values.batchJobs);
-            if (jobs === null) body.batch_jobs = null;
-            else body.batch_jobs = jobs;
-        }
+        // Only the caps that changed, null for one removed; a budget that inherits its limit passes on the grant caps above, switching that on drops its own on the server.
+        const caps = capsPatch(values.caps, node.caps, capCatalog, { inheritsLimit: values.inheritsLimit });
+        if (caps) body.caps = caps;
         if (values.maxTermDays !== (node.max_project_term_days ?? null)) {
             if (values.maxTermDays) body.max_project_term_days = values.maxTermDays;
             else body.max_project_term_days = null;
@@ -358,10 +335,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 auto_approve_extensions: values.autoApproveExtensions,
                 auto_approve: autoApprovePolicy(values),
                 max_project_term_days: values.maxTermDays,
-                ...(isEmptyRelease(values.releaseMax) ? {} : { release_max: normalizeRelease(values.releaseMax) }),
-                ...(normalizeScratch(values.workspaceScratchGb) === null ? {} : { workspace_scratch_gb: normalizeScratch(values.workspaceScratchGb) }),
-                ...(normalizeBatchPriority(values.batchPriority) === null ? {} : { batch_priority: normalizeBatchPriority(values.batchPriority) }),
-                ...(values.inheritsLimit || normalizeBatchJobs(values.batchJobs) === null ? {} : { batch_jobs: normalizeBatchJobs(values.batchJobs) }),
+                ...((c) => (c ? { caps: c } : {}))(capsForCreate(values.caps, shownCaps(values.parentId), { inheritsLimit: values.inheritsLimit })),
                 termination_date: endDay(values.terminationDate),
             });
         },
@@ -497,72 +471,42 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 )}
             </Stack>
         );
-        if (releaseKind === undefined || kind !== releaseKind) return quotaPart;
-        // Workspaces: the quantities and three rules that are no quantities (release times, local storage, batch jobs), each in a sub-tab of its own instead of one long page; a sub-tab with an error is marked, as the dialog's tabs are.
-        const hasError = (test) => Object.keys(form.errors).some(test);
+        const groups = capGroupsOf(kind);
+        if (groups.length === 0) return quotaPart;
+        // The quantities and the caps (rules that are no quantities: release times, local storage, batch jobs), each group in a sub-tab of its own instead of one long page; a sub-tab with an error is marked, as the dialog's tabs are.
+        const hasError = (test) => Object.keys(form.errors).some(k => form.errors[k] && test(k));
+        const groupHasError = (g) => (k) => g.blocks.some(b => b.caps.some(c => k === `caps.${c.id}`));
         const sub = (value, label, test) => (
-            <Tabs.Tab value={value}>
+            <Tabs.Tab key={value} value={value}>
                 <Indicator color="red" size={7} offset={-2} disabled={!hasError(test)}>{label}</Indicator>
             </Tabs.Tab>
         );
+        const subValue = (g) => `caps-${groupSlug(g.group) || 'other'}`;
         return (
             <Tabs defaultValue="quota" variant="pills" radius="md">
                 <Tabs.List mb="md">
                     {sub('quota', t('projects.budgetForm.sub.quota'), k => k.startsWith('quota.'))}
-                    {sub('release', t('projects.budgetForm.sub.release'), k => k.startsWith('releaseMax.'))}
-                    {sub('storage', t('projects.budgetForm.sub.storage'), k => k === 'workspaceScratchGb')}
-                    {sub('jobs', t('projects.budgetForm.sub.jobs'), k => k === 'batchPriority' || k === 'batchJobs')}
+                    {groups.map(g => sub(subValue(g), groupTitle(t, g.group), groupHasError(g)))}
                 </Tabs.List>
                 <Tabs.Panel value="quota">{quotaPart}</Tabs.Panel>
                 {/* Not quantities, so not part of the limit: shown also while the limit is inherited. */}
-                <Tabs.Panel value="release">
-                    <ReleaseMaxInputs
-                        value={form.values.releaseMax}
-                        inherited={releaseAbove(form.values.parentId)}
-                        defaults={catalog.data?.releaseDefaults}
-                        errors={form.errors}
-                        onChange={(k, field, v) => {
-                            const path = `releaseMax.${k}.${field}`;
-                            form.setFieldValue(path, v);
-                            form.clearFieldError(path);
-                        }}
-                    />
-                </Tabs.Panel>
-                <Tabs.Panel value="storage">
-                    <WorkspaceScratchInput
-                        value={form.values.workspaceScratchGb}
-                        inherited={scratchAbove(form.values.parentId)}
-                        error={form.errors.workspaceScratchGb}
-                        onChange={(v) => {
-                            form.setFieldValue('workspaceScratchGb', v);
-                            form.clearFieldError('workspaceScratchGb');
-                        }}
-                    />
-                </Tabs.Panel>
-                <Tabs.Panel value="jobs">
-                    <Stack gap="lg">
-                        {(inheritsLimit || availableBatchJobs(form.values.batchJobs, jobsAbove(form.values.parentId), isRoot)) && <BatchJobsInput
-                            value={form.values.batchJobs}
-                            inherited={jobsAbove(form.values.parentId)}
+                {groups.map(g => (
+                    <Tabs.Panel key={subValue(g)} value={subValue(g)}>
+                        <CapGroup
+                            group={g}
+                            value={form.values.caps}
+                            inherited={capsAbove(form.values.parentId)}
+                            defaults={capDefaults}
+                            errors={form.errors}
                             isRoot={isRoot}
                             inheritsLimit={inheritsLimit}
-                            error={form.errors.batchJobs}
-                            onChange={(v) => {
-                                form.setFieldValue('batchJobs', v);
-                                form.clearFieldError('batchJobs');
-                            }}
-                        />}
-                        <BatchPriorityInput
-                            value={form.values.batchPriority}
-                            inherited={batchAbove(form.values.parentId)}
-                            error={form.errors.batchPriority}
-                            onChange={(v) => {
-                                form.setFieldValue('batchPriority', v);
-                                form.clearFieldError('batchPriority');
+                            onChange={(id, v) => {
+                                form.setFieldValue('caps', { ...form.getValues().caps, [id]: v });
+                                form.clearFieldError(`caps.${id}`);
                             }}
                         />
-                    </Stack>
-                </Tabs.Panel>
+                    </Tabs.Panel>
+                ))}
             </Tabs>
         );
     };

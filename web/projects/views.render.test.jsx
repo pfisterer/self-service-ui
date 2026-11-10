@@ -286,7 +286,7 @@ describe('the cloud project views render', () => {
         const listMine = api.listMine;
         api.listMine = async () => {
             const page = await listMine();
-            const shared = { ...page.items[0], id: 'p_shared', name: 'Geteiltes Projekt', owner: 'user:someone@dhbw.de', admin_scope: [], viewer_relation: 'member', authorized_users: [{ token: 'user:dennis.pfisterer@dhbw.de', openstack_role: 'member' }] };
+            const shared = { ...page.items[0], id: 'p_shared', name: 'Geteiltes Projekt', owner: 'user:someone@dhbw.de', admin_scope: [], viewer_relation: 'member', authorized_users: [{ token: 'user:dennis.pfisterer@dhbw.de', role: 'member' }] };
             return { items: [shared], total: 1 };
         };
         renderView(<MyProjectsView />);

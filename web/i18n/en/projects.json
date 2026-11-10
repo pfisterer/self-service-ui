@@ -103,10 +103,7 @@
         "parent": "Parent budget",
         "moveHint": "The budget this one belongs to. Moving takes effect when saved and needs management rights on both sides.",
         "sub": {
-            "quota": "Quotas",
-            "release": "Release times",
-            "storage": "Local storage",
-            "jobs": "Batch jobs"
+            "quota": "Quotas"
         }
     },
     "budgets": {
@@ -957,69 +954,94 @@
         "workspaces": "Workspace settings",
         "workspacesHint": "How the quotas are used inside the project: profiles, images, limits and shares per person. Applies at once, without approval."
     },
-    "releaseMax": {
-        "title": "Release times (maximums)",
-        "hint": "Projects below this budget choose up to these values when their workspaces are released; idle time counts, not runtime. Empty fields take the value of the budgets above, without one there the AI service's default applies. Budgets below can only shorten them.",
-        "kinds": {
-            "cpu": "CPU – CPU workspaces and the notebook of “CPU + GPU kernel”",
-            "gpu": "GPU – GPU workspaces and GPU kernels"
-        },
-        "idleOpen": "Idle with open tab (min)",
-        "idleClosed": "Idle without tab (min)",
-        "maxHours": "Upper bound (h)",
-        "unlimited": "no upper bound",
+    "caps": {
         "standard": "default",
-        "standardMinutes": "Default: {{value}}",
-        "standardHours": "Default: {{value}} h",
+        "standardValue": "Default: {{value}}",
         "fromAbove": "as above: {{value}}",
-        "errMinutes": "Between 1 and {{max}} minutes.",
-        "errHours": "Between 1 and {{max}} hours.",
-        "errAbove": "At most {{value}}; the budget above allows no more.",
-        "errUnlimited": "No upper bound only for GPU, and only where the budget above has none.",
-        "none": "none of its own",
-        "hoursValue": "{{value}} h",
-        "summaryKind": "{{kind}} {{open}}/{{closed}} min, {{hours}}",
-        "historyChange": "Release times (maximums): {{from}} → {{to}}"
-    },
-    "workspaceScratch": {
-        "title": "Local storage per workspace",
-        "hint": "How much a workspace or GPU kernel of the projects below this budget may write outside its home: packages installed into the environment, /tmp, logs. Files in the home and in project-shared do not count (the project's workspace storage). Writing more makes Kubernetes end the workspace. Empty takes the value of the budgets above; without one there, the AI service's default applies (10 GB). Budgets below can only lower it.",
-        "label": "Local storage (GB)",
-        "standard": "Default (10 GB)",
-        "fromAbove": "as above: {{value}}",
-        "errRange": "Between 1 and {{max}} GB.",
-        "errAbove": "At most {{value}} GB; the budget above allows no more.",
-        "none": "none of its own",
-        "gbValue": "{{value}} GB",
-        "historyChange": "Local storage per workspace: {{from}} → {{to}}"
-    },
-    "batchPriority": {
-        "title": "Priority of batch jobs",
-        "hint": "How batch jobs of the projects below this budget run. Preemptible: when a workspace needs the GPU, the job is ended and starts again later. Guaranteed: the job is not evicted and runs with the same priority as workspaces. Empty takes the value of the budgets above; without one there, jobs are preemptible. Budgets below can only tighten it to preemptible.",
-        "label": "Priority",
-        "preemptible": "preemptible",
-        "guaranteed": "guaranteed",
-        "standard": "preemptible (default)",
-        "fromAbove": "as above: {{value}}",
-        "errAbove": "The budget above makes jobs preemptible; guaranteed is not possible here.",
-        "none": "none of its own",
-        "historyChange": "Priority of batch jobs: {{from}} → {{to}}"
-    },
-    "batchJobs": {
-        "title": "Batch jobs",
-        "hint": "Whether the projects below this budget can submit batch jobs (GPU jobs without a workspace), how many per person may wait and run at the same time and how long one may run at most. Switched on, this holds in every project below without enabling them there; switched off, the budget and everything below have no batch jobs. Budgets below can switch them on only with the same or smaller values.",
-        "label": "Allow batch jobs",
+        "unbounded": "no upper bound",
+        "notSet": "not set",
+        "off": "off",
+        "labelWithUnit": "{{name}} ({{unit}})",
+        "otherGroup": "Further caps",
+        "allow": "Allow",
+        "inheritsGrant": "Inherits these values of the budget above together with its limit: {{value}}",
         "aboveHint": "At most as the budget above: {{value}}",
         "rootHint": "The values here are the most any budget below can allow.",
-        "inherits": "Inherits the batch jobs of the budget above together with its limit: {{value}}",
-        "off": "none",
-        "onValue_one": "{{count}} job per person, up to {{hours}} h",
-        "onValue_other": "{{count}} jobs per person, up to {{hours}} h",
-        "errPerPerson": "At least 1 job per person.",
-        "errHours": "Between 1 and {{max}} hours.",
-        "errNoneAbove": "The budget above has no batch jobs.",
-        "errPerPersonAbove": "At most {{value}} jobs per person; the budget above allows no more.",
-        "errHoursAbove": "At most {{value}} hours; the budget above allows no more.",
-        "historyChange": "Batch jobs: {{from}} → {{to}}"
+        "errRange": "Between {{min}} and {{max}}.",
+        "errRangeUnbounded": "Between {{min}} and {{max}}, or no upper bound.",
+        "errAbove": "At most {{value}}; the budget above allows no more.",
+        "errNoneAbove": "The budget above has not switched this on.",
+        "errTogether": "Either all values of this block or none.",
+        "historyChange": "{{name}}: {{from}} → {{to}}",
+        "group": {
+            "release-times-cpu": {
+                "title": "Release times CPU",
+                "hint": "For CPU workspaces and the notebook of “CPU + GPU kernel”. Projects below this budget choose up to these values when their workspaces are released; idle time counts, not runtime. Empty fields take the value of the budgets above, without one there the AI service's default applies. Budgets below can only shorten them."
+            },
+            "release-times-gpu": {
+                "title": "Release times GPU",
+                "hint": "For GPU workspaces and GPU kernels. Projects below this budget choose up to these values when their workspaces are released; idle time counts, not runtime. Empty fields take the value of the budgets above, without one there the AI service's default applies. Budgets below can only shorten them."
+            },
+            "workspaces": {
+                "title": "Per workspace"
+            },
+            "batch-jobs": {
+                "title": "Batch jobs"
+            }
+        },
+        "together": {
+            "batch-jobs": {
+                "label": "Allow batch jobs",
+                "hint": "Whether the projects below this budget can submit batch jobs (GPU jobs without a workspace), how many per person may wait and run at the same time and how long one may run at most. Switched on, this holds in every project below without enabling them there; switched off, the budget and everything below have no batch jobs. Budgets below can switch them on only with the same or smaller values."
+            }
+        },
+        "release-cpu-idle-open": {
+            "name": "Idle with open tab",
+            "unit": "min"
+        },
+        "release-cpu-idle-closed": {
+            "name": "Idle without tab",
+            "unit": "min"
+        },
+        "release-cpu-max-hours": {
+            "name": "Upper bound",
+            "unit": "h"
+        },
+        "release-gpu-idle-open": {
+            "name": "Idle with open tab",
+            "unit": "min"
+        },
+        "release-gpu-idle-closed": {
+            "name": "Idle without tab",
+            "unit": "min"
+        },
+        "release-gpu-max-hours": {
+            "name": "Upper bound",
+            "unit": "h"
+        },
+        "workspace-scratch-gb": {
+            "name": "Local storage per workspace",
+            "unit": "GB",
+            "hint": "How much a workspace or GPU kernel of the projects below this budget may write outside its home: packages installed into the environment, /tmp, logs. Files in the home and in project-shared do not count (the project's workspace storage). Writing more makes Kubernetes end the workspace. Empty takes the value of the budgets above; without one there, the AI service's default applies (10 GB). Budgets below can only lower it.",
+            "standard": "Default (10 GB)"
+        },
+        "batch-priority": {
+            "name": "Priority of batch jobs",
+            "hint": "How batch jobs of the projects below this budget run. Preemptible: when a workspace needs the GPU, the job is ended and starts again later. Guaranteed: the job is not evicted and runs with the same priority as workspaces. Empty takes the value of the budgets above; without one there, jobs are preemptible. Budgets below can only tighten it to preemptible.",
+            "standard": "preemptible (default)",
+            "choices": {
+                "preemptible": "preemptible",
+                "guaranteed": "guaranteed"
+            }
+        },
+        "batch-jobs-per-person": {
+            "name": "At once per person",
+            "hint": "waiting and running"
+        },
+        "batch-max-hours": {
+            "name": "Maximum run time of a job",
+            "unit": "h",
+            "hint": "it is ended after that"
+        }
     }
 }

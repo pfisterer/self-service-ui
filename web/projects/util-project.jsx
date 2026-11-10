@@ -656,8 +656,8 @@ export function nodeChanges({ resources, limitFrom, limitTo, dateFrom, dateTo, u
     // "member → reader" arrow.
     const roleChanged = hasUserData ? to.flatMap(u => {
         const previous = fromMap.get(u.token);
-        return previous && previous.openstack_role !== u.openstack_role
-            ? [{ ...u, previous_role: previous.openstack_role }]
+        return previous && previous.role !== u.role
+            ? [{ ...u, previous_role: previous.role }]
             : [];
     }) : [];
 
