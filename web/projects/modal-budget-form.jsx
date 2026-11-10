@@ -292,23 +292,23 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         if (!sameRelease(values.releaseMax, node.release_max)) body.release_max = normalizeRelease(values.releaseMax);
         const scratch = normalizeScratch(values.workspaceScratchGb);
         if (scratch !== normalizeScratch(node.workspace_scratch_gb)) {
-            if (scratch === null) body.clear_workspace_scratch_gb = true;
+            if (scratch === null) body.workspace_scratch_gb = null;
             else body.workspace_scratch_gb = scratch;
         }
         const batch = normalizeBatchPriority(values.batchPriority);
         if (batch !== normalizeBatchPriority(node.batch_priority)) {
-            if (batch === null) body.clear_batch_priority = true;
+            if (batch === null) body.batch_priority = null;
             else body.batch_priority = batch;
         }
         // A budget that inherits its limit passes on the batch jobs above; switching that on drops its own on the server.
         if (!values.inheritsLimit && !sameBatchJobs(values.batchJobs, node.batch_jobs)) {
             const jobs = normalizeBatchJobs(values.batchJobs);
-            if (jobs === null) body.clear_batch_jobs = true;
+            if (jobs === null) body.batch_jobs = null;
             else body.batch_jobs = jobs;
         }
         if (values.maxTermDays !== (node.max_project_term_days ?? null)) {
             if (values.maxTermDays) body.max_project_term_days = values.maxTermDays;
-            else body.clear_max_project_term_days = true;
+            else body.max_project_term_days = null;
         }
         const policy = autoApprovePolicy(values);
         if (policy) {
@@ -317,7 +317,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 body.auto_approve = policy;
             }
         } else if (node.auto_approve) {
-            body.clear_auto_approve = true;
+            body.auto_approve = null;
         }
         // Inheriting, the limit is the parent's and not sent; switching it off
         // keeps the inherited values unless they were changed here.
@@ -327,9 +327,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         const prevDate = node.termination_date ? endDate(node.termination_date).getTime() : null;
         const nextDate = terminationDate ? terminationDate.getTime() : null;
         if (prevDate !== nextDate && nextDate) body.termination_date = endDay(terminationDate);
-        // Removing a date needs its own flag: an absent termination_date means
-        // "leave as is", so switching the end date off would otherwise be a no-op.
-        else if (prevDate && !nextDate) body.clear_termination_date = true;
+        // Absent means "leave as is"; null removes the end date (and the other fields above), since 10.11.2026 instead of clear_* flags.
+        else if (prevDate && !nextDate) body.termination_date = null;
         return body;
     };
 

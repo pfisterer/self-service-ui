@@ -269,7 +269,7 @@ describe('node dialogs', () => {
         fireEvent.click(toggle);
         fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.forms.saveChanges') }));
         await waitFor(() => expect(sent).toHaveLength(1));
-        expect(sent[0].clear_batch_jobs).toBe(true);
+        expect(sent[0]).toHaveProperty("batch_jobs", null);
         expect(fatal()).toEqual([]);
     });
 
