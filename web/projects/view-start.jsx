@@ -7,7 +7,7 @@ import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { useProjectConfig } from './projects.jsx';
-import { autoApproveHeadroom, defaultsWithin, isAvailability, kindOfResource, latestProjectEnd, PROJECT_KINDS, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
+import { autoApproveHeadroom, defaultsWithin, isAvailability, kindOfResource, latestProjectEnd, endDay, PROJECT_KINDS, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
 import { AREA_PROJECTS } from './start-link.js';
 
 // Where somebody comes who has no project with resources of a provider yet —
@@ -77,7 +77,7 @@ export function StartView() {
                     name: t('projects.start.projectName', { budget: o.budget.name }),
                     reason: t('projects.start.reason'),
                     limit: o.amounts,
-                    termination_date: end ? end.date.toISOString() : undefined,
+                    termination_date: end ? endDay(end.date) : undefined,
                 });
                 created.push(o.budget.name);
             } catch (e) {

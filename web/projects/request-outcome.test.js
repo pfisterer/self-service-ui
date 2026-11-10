@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autoApproveHeadroom, changeOutcome, isPoolAutoApprove, latestProjectEnd, requestOutcome } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, isPoolAutoApprove, latestProjectEnd, requestOutcome, endDate, endDay } from './util-project.jsx';
 
 const RESOURCES = [
     { id: 'cpu', name: 'Cores' },
@@ -166,5 +166,22 @@ describe('latestProjectEnd', () => {
     it('is the budget\'s end where that comes first', () => {
         expect(latestProjectEnd(budget({ max_project_term_days: 180, termination_date: '2026-11-30T00:00:00Z' }), now))
             .toEqual({ date: new Date('2026-11-30T00:00:00Z'), term: null });
+    });
+});
+
+describe('end dates as days (10.11.2026)', () => {
+    it('reads a stored day as local midnight and sends a picked date as its local day', () => {
+        const d = endDate('2026-12-31');
+        expect([d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()]).toEqual([2026, 11, 31, 0]);
+        expect(endDay(d)).toBe('2026-12-31');
+        expect(endDay(new Date(2027, 5, 30))).toBe('2027-06-30');
+        expect(endDate(null)).toBe(null);
+        expect(endDay(null)).toBe(null);
+        expect(endDate('2026-12-30T23:00:00.000Z').getTime()).toBe(Date.parse('2026-12-30T23:00:00.000Z'));
+    });
+    it('picking the stored day again is no change of the end', () => {
+        const node = { termination_date: '2026-12-31', limit: {} };
+        const picked = new Date(2026, 11, 31); // what the picker reports for 31 December
+        expect(changeOutcome({ node, budget: null, quota: {}, terminationDate: picked, resources: [] })).toBe('instant');
     });
 });

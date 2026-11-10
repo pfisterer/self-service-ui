@@ -535,8 +535,19 @@ export function requestOutcome({ budget, manages, quota, resources, myProjects }
 // what binds, so a form can say so. Null where neither exists — a project there
 // may run open-ended. Budgets carry the shortest term of their chain, so the
 // budget's own value is the one that applies.
+// endDate reads a stored end as the Date the date pickers work with. Since 10.11.2026 openstack-management-api stores an end as its day ("2026-12-31", counted in Europe/Berlin); new Date() would read that as midnight UTC, an hour or two after the picker's local midnight, so picking the same day again looked like an earlier end. A day is read as local midnight, an older timestamp as it is.
+export function endDate(s) {
+    if (!s) return null;
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? dayjs(s).toDate() : new Date(s);
+}
+
+// endDay is a picked Date as the server stores it: its local day, "2026-12-31". Sending the day rather than toISOString() keeps the time zone out of it.
+export function endDay(d) {
+    return d ? dayjs(d).format('YYYY-MM-DD') : null;
+}
+
 export function latestProjectEnd(budget, now = Date.now()) {
-    const end = budget?.termination_date ? new Date(budget.termination_date) : null;
+    const end = endDate(budget?.termination_date);
     const term = budget?.max_project_term_days;
     const byTerm = term ? new Date(now + term * 24 * 60 * 60 * 1000) : null;
     if (byTerm && (!end || byTerm < end)) return { date: byTerm, term };
@@ -549,7 +560,7 @@ export function changeOutcome({ node, budget, quota, terminationDate, resources,
     const grows = (resources || []).some(r => isAvailability(r)
         ? (quota?.[r.id] ?? 0) > 0 && (current[r.id] ?? 0) <= 0
         : (quota?.[r.id] ?? 0) > (current[r.id] ?? 0));
-    const endOf = (d) => (d ? new Date(d).getTime() : null);
+    const endOf = (d) => (d ? (d instanceof Date ? d : endDate(d)).getTime() : null);
     const currentEnd = endOf(node?.termination_date);
     const nextEnd = endOf(terminationDate);
     const extendsEnd = nextEnd !== null && currentEnd !== null && nextEnd > currentEnd;

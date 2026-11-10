@@ -19,7 +19,7 @@ import { PersonInput, personEmail } from './principal-search.jsx';
 import { AllocationSection, useAllocationDraft } from './component-allocation-section.jsx';
 import { WorkspaceSettingsPanel, useWorkspaceSettings } from '/gpu/workspace-settings.jsx';
 import { withCurrentParent } from './component-budget-select.jsx';
-import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds, PROJECT_KINDS, kindOfResource, isLab } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds, PROJECT_KINDS, kindOfResource, isLab, endDate, endDay } from './util-project.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
@@ -270,7 +270,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
                 reason: node.reason || '',
                 quota: { ...(node.pending?.limit || node.limit) },
                 terminationDate: (node.pending?.termination_date || node.termination_date)
-                    ? new Date(node.pending?.termination_date || node.termination_date)
+                    ? endDate(node.pending?.termination_date || node.termination_date)
                     : null,
                 authorizedUsers: node.pending?.authorized_users || node.authorized_users || [],
                 adminScope: node.admin_scope || [],
@@ -369,7 +369,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         const baseUsers = node.pending?.authorized_users || node.authorized_users || [];
         const nextDate = values.terminationDate?.getTime() ?? null;
         return (resources || []).some(r => (values.quota[r.id] ?? 0) !== (baseLimit[r.id] ?? 0))
-            || (baseDate ? new Date(baseDate).getTime() : null) !== nextDate
+            || (baseDate ? endDate(baseDate).getTime() : null) !== nextDate
             || JSON.stringify(baseUsers) !== JSON.stringify(values.authorizedUsers)
             || values.reason.trim() !== (node.reason || '').trim();
     };
@@ -394,7 +394,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, openstack
         onClose,
         mutationFn: async (values) => {
             // No end only where nothing bounds the project (see latestEndOf).
-            const iso = values.terminationDate ? values.terminationDate.toISOString() : null;
+            const iso = endDay(values.terminationDate);
             if (isAdopt) {
                 return api.adopt(node.id, {
                     new_parent_id: values.parentId,

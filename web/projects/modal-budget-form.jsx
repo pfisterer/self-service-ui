@@ -11,7 +11,7 @@ import { DIALOG_SIZE, FormModal, FormTabs, tabHasError as tabFlag, tabWithError 
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
 import { formatError } from '/helper/api-error.js';
-import { COLOR, catalogKinds, freeAmount, isAvailability, isPoolAutoApprove, kindOfResource, PROJECT_KINDS, UNLIMITED_QUOTA, visibleResources } from './util-project.jsx';
+import { COLOR, catalogKinds, freeAmount, isAvailability, isPoolAutoApprove, kindOfResource, PROJECT_KINDS, UNLIMITED_QUOTA, visibleResources, endDate, endDay } from './util-project.jsx';
 import { BudgetSelect, withCurrentParent } from './component-budget-select.jsx';
 import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
@@ -82,7 +82,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         : parent;
     const endOf = (parentId) => {
         const end = boundFor(parentId)?.termination_date;
-        return end ? new Date(end) : null;
+        return endDate(end);
     };
     // Its maximum project term likewise: this one may only be shorter.
     const termOf = (parentId) => boundFor(parentId)?.max_project_term_days ?? null;
@@ -125,7 +125,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 autoApproveEnabled: !!node.auto_approve,
                 autoApproveIndividual: !!node.auto_approve && !isPoolAutoApprove(node),
                 autoApproveQuota: { ...(node.auto_approve?.per_requester_limit || defaultQuota(resources)) },
-                terminationDate: node.termination_date ? new Date(node.termination_date) : null,
+                terminationDate: endDate(node.termination_date),
                 maxTermDays: node.max_project_term_days ?? null,
                 inheritsLimit: !!node.inherits_limit,
                 releaseMax: normalizeRelease(node.release_max),
@@ -265,7 +265,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     // Ending earlier — or at all, where the budget had no end — carries down to
     // whatever below it runs longer, so say so before it happens.
     const shortensSubtree = isEdit && node?.child_count > 0 && !!form.values.terminationDate
-        && (!node.termination_date || form.values.terminationDate < new Date(node.termination_date));
+        && (!node.termination_date || form.values.terminationDate < endDate(node.termination_date));
 
     const buildEditBody = (values) => {
         const {
@@ -324,9 +324,9 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         if (values.inheritsLimit !== !!node.inherits_limit) body.inherits_limit = values.inheritsLimit;
         const limitChanged = (resources || []).some(r => (quota[r.id] ?? 0) !== (node.limit?.[r.id] ?? 0));
         if (limitChanged && !values.inheritsLimit) body.limit = quota;
-        const prevDate = node.termination_date ? new Date(node.termination_date).getTime() : null;
+        const prevDate = node.termination_date ? endDate(node.termination_date).getTime() : null;
         const nextDate = terminationDate ? terminationDate.getTime() : null;
-        if (prevDate !== nextDate && nextDate) body.termination_date = terminationDate.toISOString();
+        if (prevDate !== nextDate && nextDate) body.termination_date = endDay(terminationDate);
         // Removing a date needs its own flag: an absent termination_date means
         // "leave as is", so switching the end date off would otherwise be a no-op.
         else if (prevDate && !nextDate) body.clear_termination_date = true;
@@ -363,7 +363,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 ...(normalizeScratch(values.workspaceScratchGb) === null ? {} : { workspace_scratch_gb: normalizeScratch(values.workspaceScratchGb) }),
                 ...(normalizeBatchPriority(values.batchPriority) === null ? {} : { batch_priority: normalizeBatchPriority(values.batchPriority) }),
                 ...(values.inheritsLimit || normalizeBatchJobs(values.batchJobs) === null ? {} : { batch_jobs: normalizeBatchJobs(values.batchJobs) }),
-                termination_date: values.terminationDate ? values.terminationDate.toISOString() : null,
+                termination_date: endDay(values.terminationDate),
             });
         },
     });
