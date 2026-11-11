@@ -4,7 +4,7 @@ import { cleanup, screen } from '@testing-library/react';
 import { CAPS, renderView } from '/test/render-harness.jsx';
 import i18n from '/i18n/index.js';
 import { CapsInputs } from '/projects/component-caps.jsx';
-import { aiCapDefaults } from '/gpu/cap-defaults.js';
+import { releaseCapDefaults } from '/gpu/release.js';
 import { ReleaseRow } from '/gpu/workspace-settings.jsx';
 
 afterEach(cleanup);
@@ -18,7 +18,7 @@ describe('release times show the AI service default with its value', () => {
     const value = (id, v) => i18n.t('projects.caps.standardValue', { value: `${v} ${i18n.t(`projects.caps.${id}.unit`)}` });
 
     it('in the budget dialog, where no budget above sets one', () => {
-        renderView(<CapsInputs catalog={RELEASE} value={{}} inherited={{ 'release-gpu-max-hours': 2 }} defaults={aiCapDefaults(DEFAULTS)} onChange={() => {}} />);
+        renderView(<CapsInputs catalog={RELEASE} value={{}} inherited={{ 'release-gpu-max-hours': 2 }} defaults={releaseCapDefaults(DEFAULTS)} onChange={() => {}} />);
         expect(screen.getByPlaceholderText(value('release-cpu-idle-open', 120))).toBeTruthy();
         expect(screen.getByPlaceholderText(value('release-cpu-idle-closed', 90))).toBeTruthy();
         expect(screen.getByPlaceholderText(value('release-cpu-max-hours', 12))).toBeTruthy();

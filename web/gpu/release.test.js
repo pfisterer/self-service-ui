@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { kernelReleaseOf, oneDot, releaseOf, releaseText } from './release.js';
+import { kernelReleaseOf, oneDot, releaseCapDefaults, releaseOf, releaseText } from './release.js';
 
 // Keys and values as the translation sees them, so the test checks what goes into the sentence.
 const t = (key, v = {}) => `${key}(${Object.entries(v).map(([k, x]) => `${k}=${x}`).join(',')})`;
@@ -25,5 +25,18 @@ describe('release times', () => {
         expect(oneDot('spätestens nach 8 Std..')).toBe('spätestens nach 8 Std.');
         expect(oneDot('nach 8 Std.. GPU-Kernel: nach 4 Std..')).toBe('nach 8 Std. GPU-Kernel: nach 4 Std.');
         expect(oneDot('after 8 hr.')).toBe('after 8 hr.');
+    });
+});
+
+describe('the AI service release times by cap id', () => {
+    it('carry the times of its catalogue', () => {
+        expect(releaseCapDefaults({ cpu: { idle_open_minutes: 120, idle_closed_minutes: 90, max_hours: 12 }, gpu: { idle_open_minutes: 5, max_hours: 0 } })).toEqual({
+            'release-cpu-idle-open': 120, 'release-cpu-idle-closed': 90, 'release-cpu-max-hours': 12,
+            'release-gpu-idle-open': 5, 'release-gpu-max-hours': 0,
+        });
+    });
+
+    it('are empty without the catalogue', () => {
+        expect(releaseCapDefaults(undefined)).toEqual({});
     });
 });

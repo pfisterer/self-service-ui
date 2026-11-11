@@ -20,7 +20,7 @@ import { nodeExtraTabs } from './modal-inspect.jsx';
 import { CapGroup } from './component-caps.jsx';
 import { capErrors, capGroups, capsForCreate, capsPatch, effectiveCaps, groupSlug, groupTitle, normalizeCaps } from './util-caps.js';
 import { useProjectConfig } from './projects.jsx';
-import { aiCapDefaults } from '/gpu/cap-defaults.js';
+import { releaseCapDefaults } from '/gpu/release.js';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { llmEnabled } from '/features.js';
@@ -31,6 +31,11 @@ const TAB_RESOURCES = 'resources';
 const TAB_ACCESS = 'access';
 const TAB_AUTO_APPROVE = 'auto-approve';
 const TAB_ATTRIBUTES = 'attributes';
+
+// purposeChanged reports whether the purpose in the form differs from the budget's, ignoring surrounding space (the server trims it).
+function purposeChanged(reason, node) {
+    return (reason || '').trim() !== (node?.reason || '').trim();
+}
 
 // BudgetFormModal covers the three ways a budget comes to life or changes:
 //
@@ -168,7 +173,8 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         validate: (values) => ({
             name: (values.name || '').trim().length < 3
                 ? t('projects.budgetForm.nameRequired') : null,
-            reason: isEdit ? null : reasonError(values.reason, t('projects.budgetForm.purposeRequired')),
+            // Checked as on creation once it is edited: an unchanged purpose (older ones may be shorter) blocks no other edit.
+            reason: isEdit && !purposeChanged(values.reason, node) ? null : reasonError(values.reason, t('projects.budgetForm.purposeRequired')),
             parentId: (isRequest && !values.parentId)
                 ? t('projects.budgetForm.requestFromRequired') : null,
             terminationDate: (() => {
@@ -208,7 +214,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     // The AI service's values where no budget sets one of its caps, for the placeholders (its release times from its catalogue), asked for only where the form shows caps. Without access to it (no workspace project of one's own) the placeholders say only "default".
     const gpuApi = useGpuApi();
     const catalog = useQuery({ queryKey: gpuKeys.catalog(), queryFn: () => gpuApi.catalog(), staleTime: 10 * 60 * 1000, retry: false, enabled: llmEnabled && hasCaps });
-    const capDefaults = hasCaps ? aiCapDefaults(catalog.data?.releaseDefaults) : {};
+    const capDefaults = hasCaps ? releaseCapDefaults(catalog.data?.releaseDefaults) : {};
 
     // The budget the new one would draw from: the picked one when requesting,
     // the parent when a manager carves out a sub-budget directly. Editing shows
@@ -267,6 +273,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
         // Diff against the current node: only send what changed (see note above).
         const body = {};
         if (name !== (node.name || '')) body.name = name;
+        if (purposeChanged(values.reason, node)) body.reason = values.reason.trim();
         const scopeChanged = JSON.stringify(adminScope) !== JSON.stringify(node.admin_scope || []);
         if (scopeChanged) body.admin_scope = adminScope;
         const eligibleChanged = JSON.stringify(eligibleRequesters) !== JSON.stringify(node.eligible_requesters || []);
@@ -401,13 +408,11 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 {...form.getInputProps('name')}
             />
 
-            {/* The purpose is the request's; an existing budget shows it but
-                keeps it (the API changes no reason in place). */}
+            {/* The purpose of the budget, editable by its managers later on (recorded in its history). */}
             <ReasonField
                 label={t('projects.budgetForm.purpose')}
-                description={isEdit ? undefined : t('projects.budgetForm.purposeHint')}
-                required={!isEdit}
-                disabled={isEdit}
+                description={t('projects.budgetForm.purposeHint')}
+                required
                 {...form.getInputProps('reason')}
             />
 

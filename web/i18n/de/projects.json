@@ -239,6 +239,7 @@
         "statusNew": "neu",
         "budgetChange": "Budget: {{from}} → {{to}}",
         "ownerChange": "Verantwortlich: {{from}} → {{to}}",
+        "purposeChange": "Zweck: {{from}} → {{to}}",
         "changes": "Änderungen",
         "grantedResources": "Gewährte Ressourcen:",
         "reason": "Begründung:",

@@ -110,12 +110,11 @@ export function capRangeOk(cap, v) {
     return n >= cap.min && n <= cap.max;
 }
 
-// grantStart is what switching a grant block on sets: per cap the stricter of the provider's default (defaults, by id) and what is allowed above; without either the inherited value or the cap's minimum.
-export function grantStart(block, inherited, defaults) {
+// grantStart is what switching a grant block on sets: per cap the stricter of its default (default in /v1/config caps, the provider's) and what is allowed above; without either the inherited value or the cap's minimum.
+export function grantStart(block, inherited) {
     return Object.fromEntries(block.caps.map(cap => {
         const above = inherited?.[cap.id];
-        const standard = defaults?.[cap.id];
-        let v = stricterCap(cap, standard, above);
+        let v = stricterCap(cap, cap.default, above);
         if (!isSet(v)) v = cap.choices?.length ? 0 : cap.min;
         return [cap.id, v];
     }));

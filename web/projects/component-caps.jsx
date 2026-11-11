@@ -2,7 +2,7 @@ import { Checkbox, NumberInput, Select, SimpleGrid, Stack, Switch, Text } from '
 import { useTranslation } from 'react-i18next';
 import { capGroups, capHint, capName, capsSummary, capUnit, choiceLabel, formatCapValue, grantAvailable, grantStart, groupHint, groupTitle, isGrantBlock, isLooser, isSet } from './util-caps.js';
 
-// CapsInputs edits a budget's own caps (caps in os-mgt, see util-caps.js) from the providers' catalogue, one section per group; groups: the groups to show (capGroups of the catalogue), all where left out. value: the budget's own caps by id; inherited: what the budgets above allow (inherited_caps, for a new budget what applies at the one it draws from); defaults: the provider's values where no budget sets one, by id, shown as placeholder where known; errors: by form path (caps.<id>); isRoot: nothing above, grant caps are set here; inheritsLimit: the budget passes on the grant caps above, shown, not edited. onChange(id, value) with null to clear.
+// CapsInputs edits a budget's own caps (caps in os-mgt, see util-caps.js) from the providers' catalogue, one section per group; groups: the groups to show (capGroups of the catalogue), all where left out. value: the budget's own caps by id; inherited: what the budgets above allow (inherited_caps, for a new budget what applies at the one it draws from); defaults: the provider's values that apply where no budget sets one, by id, shown as placeholder where known (the AI service's release times); a grant block switched on starts from each cap's default (/v1/config caps); errors: by form path (caps.<id>); isRoot: nothing above, grant caps are set here; inheritsLimit: the budget passes on the grant caps above, shown, not edited. onChange(id, value) with null to clear.
 export function CapsInputs({ catalog, groups, ...props }) {
     return (
         <Stack gap="lg">
@@ -44,7 +44,7 @@ function CapBlock({ block, value, inherited, defaults, errors = {}, onChange, di
 }
 
 // GrantBlock is grant caps switched on and off together ("Batch-Jobs erlauben"), with their values while on, each at most what the budget above allows. Below the root it is offered only where the budget above has them, or where the budget still has some of its own (so they can be switched off). A budget that inherits its limit passes on those above: shown, not edited.
-function GrantBlock({ block, value, inherited, defaults, errors = {}, onChange, isRoot = false, inheritsLimit = false, disabled = false }) {
+function GrantBlock({ block, value, inherited, errors = {}, onChange, isRoot = false, inheritsLimit = false, disabled = false }) {
     const { t } = useTranslation();
     const tag = block.together || block.caps[0].id;
     const label = block.together
@@ -65,7 +65,7 @@ function GrantBlock({ block, value, inherited, defaults, errors = {}, onChange, 
     if (!available && !on) return null;
     const blockError = block.caps.map(c => errors[`caps.${c.id}`]).find(Boolean);
     const toggle = (checked) => {
-        const start = checked ? grantStart(block, isRoot ? null : inherited, defaults) : {};
+        const start = checked ? grantStart(block, isRoot ? null : inherited) : {};
         for (const cap of block.caps) onChange(cap.id, checked ? start[cap.id] : null);
     };
     return (
@@ -75,7 +75,7 @@ function GrantBlock({ block, value, inherited, defaults, errors = {}, onChange, 
             {on && (
                 <SimpleGrid cols={{ base: 1, sm: Math.min(3, block.caps.length) }} spacing="xs" maw={block.caps.length > 1 ? 540 : 260}>
                     {block.caps.map(cap => (
-                        <CapField key={cap.id} cap={cap} value={value?.[cap.id]} above={above[cap.id]} standard={defaults?.[cap.id]} onChange={v => onChange(cap.id, v)} disabled={disabled} withHint={block.caps.length > 1} grant />
+                        <CapField key={cap.id} cap={cap} value={value?.[cap.id]} above={above[cap.id]} onChange={v => onChange(cap.id, v)} disabled={disabled} withHint={block.caps.length > 1} grant />
                     ))}
                 </SimpleGrid>
             )}

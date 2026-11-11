@@ -154,6 +154,42 @@ describe('node dialogs', () => {
         expect(fatal()).toEqual([]);
     });
 
+    it('the budget dialog in edit mode changes the purpose, and sends it only when changed', async () => {
+        const tree = fixtureTree();
+        const ma = { ...tree.children.b_root.items[0], parent_name: 'Organization Root', parent_path: [], reason: 'VL' };
+        const sent = [];
+        globalThis.__testApi.updateNode = async (id, body) => { sent.push(body); return { ...ma, ...body }; };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={RESOURCES} mode="edit" node={ma} parent={tree.roots[0]} />);
+        const purpose = await screen.findByLabelText(new RegExp(i18n.t('projects.budgetForm.purpose')));
+        expect(purpose.disabled).toBe(false);
+        // Left as it is, the purpose is not sent, and an older one shorter than a new one may be blocks no other edit.
+        fireEvent.change(screen.getByLabelText(new RegExp(i18n.t('projects.budgetForm.name'))), { target: { value: 'Mannheim neu' } });
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.forms.saveChanges') }));
+        await waitFor(() => expect(sent).toHaveLength(1));
+        expect(sent[0].reason).toBeUndefined();
+        cleanup();
+
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={RESOURCES} mode="edit" node={ma} parent={tree.roots[0]} />);
+        fireEvent.change(await screen.findByLabelText(new RegExp(i18n.t('projects.budgetForm.purpose'))), { target: { value: '  Lehre im Wintersemester  ' } });
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.forms.saveChanges') }));
+        await waitFor(() => expect(sent).toHaveLength(2));
+        expect(sent[1]).toEqual({ reason: 'Lehre im Wintersemester' });
+        expect(fatal()).toEqual([]);
+    });
+
+    it('the budget dialog in edit mode refuses a purpose too short', async () => {
+        const tree = fixtureTree();
+        const ma = { ...tree.children.b_root.items[0], parent_name: 'Organization Root', parent_path: [], reason: 'Lehre im Wintersemester' };
+        const sent = [];
+        globalThis.__testApi.updateNode = async (id, body) => { sent.push(body); return { ...ma, ...body }; };
+        renderView(<BudgetFormModal opened onClose={() => {}} resources={RESOURCES} mode="edit" node={ma} parent={tree.roots[0]} />);
+        fireEvent.change(await screen.findByLabelText(new RegExp(i18n.t('projects.budgetForm.purpose'))), { target: { value: 'x' } });
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.forms.saveChanges') }));
+        expect(await screen.findByText(i18n.t('projects.budgetForm.purposeRequired'))).toBeTruthy();
+        expect(sent).toHaveLength(0);
+        expect(fatal()).toEqual([]);
+    });
+
     it('the budget dialog of the root offers its caps by group, with the provider default as placeholder', async () => {
         const tree = fixtureTree();
         const root = { ...tree.roots[0], parent_id: null, caps: { 'release-gpu-max-hours': 4 } };
@@ -263,7 +299,7 @@ describe('node dialogs', () => {
         const toggle = await screen.findByRole('switch', { name: new RegExp(`^${i18n.t('projects.caps.together.batch-jobs.label')}`) });
         expect(toggle.checked).toBe(false);
 
-        // Switched on: the AI service's defaults within what is allowed above (2 per person, 4 hours).
+        // Switched on: the caps' defaults (default in /v1/config caps) within what is allowed above (2 per person, 4 hours).
         fireEvent.click(toggle);
         expect(await screen.findByDisplayValue('2')).toBeTruthy();
         expect(screen.getByDisplayValue('4')).toBeTruthy();
@@ -351,6 +387,13 @@ describe('node dialogs', () => {
         expect(await screen.findByText(line('release-gpu-max-hours', `4 ${i18n.t('projects.caps.release-gpu-max-hours.unit')}`, i18n.t('projects.caps.unbounded')))).toBeTruthy();
         expect(screen.getByText(line('batch-priority', i18n.t('projects.caps.notSet'), i18n.t('projects.caps.batch-priority.choices.guaranteed')))).toBeTruthy();
         expect(screen.getByText(line('gone-cap', '1', i18n.t('projects.caps.notSet')))).toBeTruthy();
+        expect(fatal()).toEqual([]);
+    });
+
+    it('the history shows a changed purpose', async () => {
+        const history = [{ timestamp: '2026-11-11T10:00:00Z', event: 'updated', actor: 'dennis.pfisterer@dhbw.de', reason_from: 'Lehre', reason_to: 'Lehre im Wintersemester' }];
+        renderView(<NodeInspectModal opened onClose={() => {}} resources={RESOURCES} node={project({ history })} initialTab="history" />);
+        expect(await screen.findByText(i18n.t('projects.inspect.purposeChange', { from: 'Lehre', to: 'Lehre im Wintersemester' }))).toBeTruthy();
         expect(fatal()).toEqual([]);
     });
 

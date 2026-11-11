@@ -7,8 +7,8 @@ const t = (key, opts = {}) => (opts.defaultValue !== undefined ? opts.defaultVal
 const MINUTES = { id: 'idle', name: 'Idle', provider: 'p', group: 'Release', unit: 'min', min: 1, max: 1440 };
 const HOURS = { id: 'hours', name: 'Hours', provider: 'p', group: 'Release', unit: 'h', min: 1, max: 720, unbounded: true };
 const PRIORITY = { id: 'prio', name: 'Priority', provider: 'p', group: 'Jobs', min: 0, max: 1, choices: ['preemptible', 'guaranteed'] };
-const PER_PERSON = { id: 'per', name: 'Per person', provider: 'p', group: 'Jobs', min: 1, max: 100, grant: true, together: 'jobs' };
-const RUN = { id: 'run', name: 'Run', provider: 'p', group: 'Jobs', unit: 'h', min: 1, max: 24, grant: true, together: 'jobs' };
+const PER_PERSON = { id: 'per', name: 'Per person', provider: 'p', group: 'Jobs', min: 1, max: 100, grant: true, together: 'jobs', default: 2 };
+const RUN = { id: 'run', name: 'Run', provider: 'p', group: 'Jobs', unit: 'h', min: 1, max: 24, grant: true, together: 'jobs', default: 4 };
 const CATALOG = [MINUTES, HOURS, PRIORITY, PER_PERSON, RUN];
 
 describe('caps', () => {
@@ -66,9 +66,14 @@ describe('caps', () => {
         expect(grantAvailable(block, {}, true)).toBe(true);
         expect(grantAvailable(block, { per: 3 }, false)).toBe(false);
         expect(grantAvailable(block, { per: 3, run: 8 }, false)).toBe(true);
-        expect(grantStart(block, { per: 3, run: 8 }, { per: 2, run: 4 })).toEqual({ per: 2, run: 4 });
-        expect(grantStart(block, { per: 1, run: 2 }, { per: 2, run: 4 })).toEqual({ per: 1, run: 2 });
-        expect(grantStart(block, null, {})).toEqual({ per: 1, run: 1 });
+        // The caps' defaults, within what is allowed above.
+        expect(grantStart(block, { per: 3, run: 8 })).toEqual({ per: 2, run: 4 });
+        expect(grantStart(block, { per: 1, run: 2 })).toEqual({ per: 1, run: 2 });
+        expect(grantStart(block, null)).toEqual({ per: 2, run: 4 });
+        // Without a default: what is allowed above, else the minimum.
+        const bare = { ...block, caps: block.caps.map(({ default: _, ...c }) => c) };
+        expect(grantStart(bare, { per: 3, run: 8 })).toEqual({ per: 3, run: 8 });
+        expect(grantStart(bare, null)).toEqual({ per: 1, run: 1 });
     });
 
     it('check a budget\'s own caps like the server', () => {

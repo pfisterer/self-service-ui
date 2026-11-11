@@ -29,3 +29,17 @@ export function releaseText(r, t, lang) {
     const idle = releaseIdle(r, t, lang);
     return oneDot(r.max > 0 ? t('gpu.release.withMax', { idle, max: formatDuration(r.max * 1000, lang) }) : t('gpu.release.noMax', { idle }));
 }
+
+const RELEASE_FIELDS = { 'idle-open': 'idle_open_minutes', 'idle-closed': 'idle_closed_minutes', 'max-hours': 'max_hours' };
+
+// releaseCapDefaults is the AI service's release times where no budget sets any (releaseDefaults of its catalogue, per kind) by the id of the cap in os-mgt (release-<kind>-<time>): what the budget dialog shows as placeholder of an empty release time. Empty without the catalogue. They depend on the AI service's profiles, which is why they are no Cap.Default.
+export function releaseCapDefaults(releaseDefaults) {
+    const out = {};
+    for (const [kind, times] of Object.entries(releaseDefaults || {})) {
+        for (const [suffix, field] of Object.entries(RELEASE_FIELDS)) {
+            const v = times?.[field];
+            if (v !== undefined && v !== null) out[`release-${kind}-${suffix}`] = v;
+        }
+    }
+    return out;
+}

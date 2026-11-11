@@ -239,6 +239,7 @@
         "statusNew": "new",
         "budgetChange": "Budget: {{from}} → {{to}}",
         "ownerChange": "Owner: {{from}} → {{to}}",
+        "purposeChange": "Purpose: {{from}} → {{to}}",
         "changes": "Changes",
         "grantedResources": "Granted resources:",
         "reason": "Reason:",

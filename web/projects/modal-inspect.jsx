@@ -297,6 +297,13 @@ function NodeHistoryPanel({ node, resources }) {
                             </Text>
                         )}
 
+                        {/* reason_from/reason_to: the budget's purpose was edited; reason below is the note of the entry. */}
+                        {h.reason_to !== undefined && h.reason_from !== h.reason_to && (
+                            <Text size="sm" mt="xs">
+                                {t('projects.inspect.purposeChange', { from: h.reason_from || '—', to: h.reason_to || '—' })}
+                            </Text>
+                        )}
+
                         <NodeChangesDiff
                             resources={resources}
                             limitFrom={h.limit_from}

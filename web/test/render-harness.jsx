@@ -46,8 +46,8 @@ export const CAPS = [
     { id: 'release-gpu-max-hours', name: 'Upper bound', provider: 'aiaas', area: 'workspaces', group: 'Release times GPU', unit: 'h', min: 1, max: 720, unbounded: true },
     { id: 'workspace-scratch-gb', name: 'Local storage per workspace', provider: 'aiaas', area: 'workspaces', group: 'Workspaces', unit: 'GB', min: 1, max: 200 },
     { id: 'batch-priority', name: 'Priority of batch jobs', provider: 'aiaas', area: 'workspaces', group: 'Batch jobs', min: 0, max: 1, choices: ['preemptible', 'guaranteed'] },
-    { id: 'batch-jobs-per-person', name: 'Jobs per person', provider: 'aiaas', area: 'workspaces', group: 'Batch jobs', min: 1, max: 100, grant: true, together: 'batch-jobs' },
-    { id: 'batch-max-hours', name: 'Longest run', provider: 'aiaas', area: 'workspaces', group: 'Batch jobs', unit: 'h', min: 1, max: 24, grant: true, together: 'batch-jobs' },
+    { id: 'batch-jobs-per-person', name: 'Jobs per person', provider: 'aiaas', area: 'workspaces', group: 'Batch jobs', min: 1, max: 100, grant: true, together: 'batch-jobs', default: 2 },
+    { id: 'batch-max-hours', name: 'Longest run', provider: 'aiaas', area: 'workspaces', group: 'Batch jobs', unit: 'h', min: 1, max: 24, grant: true, together: 'batch-jobs', default: 4 },
 ];
 
 const CONFIG = {
