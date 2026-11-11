@@ -968,6 +968,7 @@
         "inheritsGrant": "Erbt mit dem Kontingent auch diese Werte des Budgets darüber: {{value}}",
         "aboveHint": "Höchstens wie das Budget darüber: {{value}}",
         "rootHint": "Die Werte hier sind die Höchstwerte für alle Budgets darunter.",
+        "notGranted": "Im übergeordneten Budget nicht freigegeben. Erst dort einschalten.",
         "errRange": "Zwischen {{min}} und {{max}}.",
         "errRangeUnbounded": "Zwischen {{min}} und {{max}}, oder ohne Obergrenze.",
         "errAbove": "Höchstens {{value}}, mehr erlaubt das Budget darüber nicht.",
@@ -993,7 +994,8 @@
         "together": {
             "batch-jobs": {
                 "label": "Batch-Jobs erlauben",
-                "hint": "Ob die Projekte unter diesem Budget Batch-Jobs abschicken können (GPU-Jobs ohne Workspace), wie viele je Person gleichzeitig wartend und laufend und wie lange einer höchstens läuft. Eingeschaltet gilt das in jedem Projekt darunter ohne weitere Freischaltung; ausgeschaltet haben das Budget und alles darunter keine Batch-Jobs. Budgets darunter können Jobs nur mit gleichen oder kleineren Werten einschalten."
+                "hint": "Ob die Projekte unter diesem Budget Batch-Jobs abschicken können (GPU-Jobs ohne Workspace), wie viele je Person gleichzeitig wartend und laufend und wie lange einer höchstens läuft. Eingeschaltet gilt das in jedem Projekt darunter ohne weitere Freischaltung; ausgeschaltet haben das Budget und alles darunter keine Batch-Jobs. Budgets darunter können Jobs nur mit gleichen oder kleineren Werten einschalten.",
+                "notGranted": "Batch-Jobs sind im übergeordneten Budget nicht freigegeben. Erst dort einschalten."
             }
         },
         "release-cpu-idle-open": {

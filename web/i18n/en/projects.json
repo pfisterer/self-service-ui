@@ -968,6 +968,7 @@
         "inheritsGrant": "Inherits these values of the budget above together with its limit: {{value}}",
         "aboveHint": "At most as the budget above: {{value}}",
         "rootHint": "The values here are the most any budget below can allow.",
+        "notGranted": "Not enabled in the parent budget. Switch it on there first.",
         "errRange": "Between {{min}} and {{max}}.",
         "errRangeUnbounded": "Between {{min}} and {{max}}, or no upper bound.",
         "errAbove": "At most {{value}}; the budget above allows no more.",
@@ -993,7 +994,8 @@
         "together": {
             "batch-jobs": {
                 "label": "Allow batch jobs",
-                "hint": "Whether the projects below this budget can submit batch jobs (GPU jobs without a workspace), how many per person may wait and run at the same time and how long one may run at most. Switched on, this holds in every project below without enabling them there; switched off, the budget and everything below have no batch jobs. Budgets below can switch them on only with the same or smaller values."
+                "hint": "Whether the projects below this budget can submit batch jobs (GPU jobs without a workspace), how many per person may wait and run at the same time and how long one may run at most. Switched on, this holds in every project below without enabling them there; switched off, the budget and everything below have no batch jobs. Budgets below can switch them on only with the same or smaller values.",
+                "notGranted": "Batch jobs are not enabled in the parent budget. Switch them on there first."
             }
         },
         "release-cpu-idle-open": {

@@ -326,12 +326,15 @@ describe('node dialogs', () => {
         expect(fatal()).toEqual([]);
     });
 
-    it('the budget dialog does not offer batch jobs where the budget above has none, but the root sets them', async () => {
+    it('the budget dialog shows batch jobs disabled with the reason where the budget above has none, but the root sets them', async () => {
         const tree = fixtureTree();
         const ma = ws(tree.children.b_root.items[0]);
         renderView(<BudgetFormModal opened onClose={() => {}} resources={WS} mode="edit" node={ma} parent={ws(tree.roots[0])} />);
         await openCaps('Batch jobs');
-        expect(screen.queryByRole('switch', { name: new RegExp(`^${i18n.t('projects.caps.together.batch-jobs.label')}`) })).toBeNull();
+        const off = screen.getByRole('switch', { name: new RegExp(`^${i18n.t('projects.caps.together.batch-jobs.label')}`) });
+        expect(off.disabled).toBe(true);
+        expect(off.checked).toBe(false);
+        expect(screen.getByText(i18n.t('projects.caps.together.batch-jobs.notGranted'))).toBeTruthy();
         cleanup();
 
         const root = { ...tree.roots[0], parent_id: null };

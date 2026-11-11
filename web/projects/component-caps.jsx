@@ -43,7 +43,7 @@ function CapBlock({ block, value, inherited, defaults, errors = {}, onChange, di
     );
 }
 
-// GrantBlock is grant caps switched on and off together ("Batch-Jobs erlauben"), with their values while on, each at most what the budget above allows. Below the root it is offered only where the budget above has them, or where the budget still has some of its own (so they can be switched off). A budget that inherits its limit passes on those above: shown, not edited.
+// GrantBlock is grant caps switched on and off together ("Batch-Jobs erlauben"), with their values while on, each at most what the budget above allows. Below the root it can be switched on only where the budget above has them; elsewhere it is shown off and disabled with the reason, unless the budget still has some of its own (so they can be switched off). A budget that inherits its limit passes on those above: shown, not edited.
 function GrantBlock({ block, value, inherited, errors = {}, onChange, isRoot = false, inheritsLimit = false, disabled = false }) {
     const { t } = useTranslation();
     const tag = block.together || block.caps[0].id;
@@ -62,7 +62,16 @@ function GrantBlock({ block, value, inherited, errors = {}, onChange, isRoot = f
             </Stack>
         );
     }
-    if (!available && !on) return null;
+    // Not granted above and nothing of its own: shown switched off and disabled with the reason, so whoever looks for the switch finds it and learns where to switch it on.
+    if (!available && !on) {
+        const reason = t(`projects.caps.together.${tag}.notGranted`, { defaultValue: t('projects.caps.notGranted') });
+        return (
+            <Stack gap={4}>
+                <Switch label={label} description={hint || undefined} checked={false} disabled onChange={() => {}} />
+                <Text size="xs" c="dimmed">{reason}</Text>
+            </Stack>
+        );
+    }
     const blockError = block.caps.map(c => errors[`caps.${c.id}`]).find(Boolean);
     const toggle = (checked) => {
         const start = checked ? grantStart(block, isRoot ? null : inherited) : {};
