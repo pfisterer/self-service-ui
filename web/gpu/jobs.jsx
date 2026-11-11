@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useSearch } from 'wouter';
 import { useTranslation } from 'react-i18next';
-import { Alert, Anchor, Badge, Button, Code, Container, Group, Paper, Select, SimpleGrid, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
+import { Alert, Anchor, Badge, Button, Code, Container, Group, Pagination, Paper, Select, SimpleGrid, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
 import { ArrowLeft, ArrowUp, Download, Folder, Play, Square } from 'lucide-react';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -24,6 +24,8 @@ const REFRESH_MS = 10 * 1000;
 const LOG_REFRESH_MS = 5 * 1000;
 // How much of the output the detail view shows.
 const LOG_LINES = 300;
+// Jobs per page: the list keeps every job ever submitted, newest first, so it pages instead of growing (the AI service pages it, golib page).
+const JOBS_PAGE_SIZE = 50;
 
 export function JobState({ job }) {
     const { t } = useTranslation();
@@ -69,14 +71,21 @@ export function GpuJobs() {
     const params = new URLSearchParams(useSearch());
     const [, navigate] = useLocation();
     const project = params.get('project') || '';
+    // The page of the list, back to the first with another project.
+    const [paging, setPaging] = useState({ project, page: 1 });
+    const page = paging.project === project ? paging.page : 1;
+    const setPage = (p) => setPaging({ project, page: p });
 
     // The person's projects, for the filter and to name a job's project.
     const projects = useQuery({ queryKey: gpuKeys.projects(false), queryFn: () => api.listProjects(false) });
     const jobs = useQuery({
-        queryKey: gpuKeys.jobs(project),
-        queryFn: () => api.listJobs(project),
-        refetchInterval: (q) => ((q.state.data ?? []).some(isActive) ? REFRESH_MS : false),
+        queryKey: [...gpuKeys.jobs(project), 'page', page],
+        queryFn: () => api.listJobs(project, { limit: JOBS_PAGE_SIZE, offset: (page - 1) * JOBS_PAGE_SIZE }),
+        placeholderData: keepPreviousData,
+        refetchInterval: (q) => ((q.state.data?.items ?? []).some(isActive) ? REFRESH_MS : false),
     });
+    const jobList = jobs.data?.items ?? [];
+    const pages = Math.max(1, Math.ceil((jobs.data?.total ?? 0) / JOBS_PAGE_SIZE));
     const projectName = (slug) => projects.data?.find(p => p.slug === slug)?.name || slug;
     const withJobs = (projects.data ?? []).filter(projectHasJobs);
     const chosen = projects.data?.find(p => p.slug === project);
@@ -130,10 +139,10 @@ export function GpuJobs() {
                                 </Table.Tr>
                             </Table.Thead>
                             <Table.Tbody>
-                                {jobs.data.length === 0 && (
+                                {jobList.length === 0 && (
                                     <Table.Tr><Table.Td colSpan={6}><Text size="sm" c="dimmed">{t('gpu.jobs.none')}</Text></Table.Td></Table.Tr>
                                 )}
-                                {jobs.data.map(j => (
+                                {jobList.map(j => (
                                     <Table.Tr key={j.id}>
                                         <Table.Td>
                                             <Anchor component={Link} href={`/jobs/${encodeURIComponent(j.id)}`} size="sm" fw={500}>{j.name || j.id}</Anchor>
@@ -155,6 +164,11 @@ export function GpuJobs() {
                             </Table.Tbody>
                         </Table>
                     </Table.ScrollContainer>
+                )}
+                {jobs.isSuccess && pages > 1 && (
+                    <Group justify="center" mt="md">
+                        <Pagination size="sm" total={pages} value={Math.min(page, pages)} onChange={setPage} />
+                    </Group>
                 )}
             </Paper>
         </Container>

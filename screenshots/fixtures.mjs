@@ -63,14 +63,14 @@ const at = (h) => new Date(Date.UTC(2026, 10, 10, h, 0)).toISOString();
 const DEFAULTS = {
     'llm GET /v1/me': { email: ME, role: ['user'], workspace_projects: 2, llm_mtokens: 5, jupyter_url: 'https://jupyter.gpu.services.dhbw.cloud', api_url: 'https://api.llm.services.dhbw.cloud/v1', chat_url: 'https://chat.llm.services.dhbw.cloud' },
     'llm GET /v1/gpu/start-options': { projects: [{ ...COURSE, llm_default: COURSE.slug, llm_default_source: 'project' }, OWN_IMAGE], profiles: PROFILES, llm_projects: [{ slug: COURSE.slug, name: COURSE.name }] },
-    'llm GET /v1/gpu/servers': [{ name: 'ml-grundlagen-wi24-1', project: COURSE.slug, profile: 'cpu-gpukernel', ready: true, url: '/user/x/ml-grundlagen-wi24-1/', started: at(7), last_activity: at(8) }],
-    'llm GET /v1/workspaces/projects': [COURSE_PROJECT, RESEARCH_PROJECT],
+    'llm GET /v1/gpu/servers': page([{ name: 'ml-grundlagen-wi24-1', project: COURSE.slug, profile: 'cpu-gpukernel', ready: true, url: '/user/x/ml-grundlagen-wi24-1/', started: at(7), last_activity: at(8) }]),
+    'llm GET /v1/workspaces/projects': page([COURSE_PROJECT, RESEARCH_PROJECT]),
     'llm GET /v1/workspaces/catalog': { profiles: PROFILES, bases: [{ id: 'python', name: 'Python' }, { id: 'pytorch', name: 'PyTorch' }, { id: 'tensorflow', name: 'TensorFlow' }] },
-    'llm GET /v1/gpu/jobs': [
+    'llm GET /v1/gpu/jobs': page([
         { id: 'j7', name: 'segmentierung-training', project: 'bildanalyse', person: ME, state: 'running', gpu_class: 'general-medium', gpus: 1, max_hours: 12, submitted: at(5), admitted: at(5), started: at(5), gpu_hours: 3.4, command: 'python train.py --epochs 40', working_dir: 'projects/bildanalyse' },
         { id: 'j8', name: 'auswertung', project: 'bildanalyse', person: ME, state: 'queued', position: 2, gpu_class: 'general-medium', gpus: 1, max_hours: 2, submitted: at(8), notebook: 'auswertung.ipynb', working_dir: 'projects/bildanalyse' },
         { id: 'j6', name: 'vortraining', project: 'bildanalyse', person: ME, state: 'succeeded', exit_code: 0, gpu_class: 'general-medium', gpus: 1, max_hours: 12, submitted: '2026-11-09T18:00:00Z', started: '2026-11-09T18:01:00Z', ended: '2026-11-09T23:40:00Z', gpu_hours: 5.65, command: 'python pretrain.py', working_dir: 'projects/bildanalyse' },
-    ],
+    ]),
     'llm GET /v1/usage': {
         projects: [{ slug: 'bildanalyse', name: 'Bildanalyse', default: true, mtokens: 5, spend: 0.8, budget: 5, budget_duration: '30d', reset_at: '2026-11-30T00:00:00Z', models: ['chat-default', 'code-default', 'embedding-default'], rpm: 60, tpm: 100000 }],
         keys: [
@@ -79,8 +79,8 @@ const DEFAULTS = {
         ],
         own_keys: 1, max_keys: 5,
     },
-    'llm GET /v1/keys': [],
-    'llm GET /v1/workspaces/projects/ml-grundlagen-wi24/credentials': [],
+    'llm GET /v1/keys': page([]),
+    'llm GET /v1/workspaces/projects/ml-grundlagen-wi24/credentials': page([]),
     'projects GET /v1/config': { resources: RESOURCES, providers: ['aiaas'], roles: ['member'], provisioningEnabled: true, retirement: { delete: 'after-grace', deleteGraceDays: 30, aiaasDeleteGraceDays: 30, chargeReleased: true } },
     'projects GET /config.json': {},
     'projects GET /v1/act-as': { actor: ME, may_act_as: false, effective_tokens: [`user:${ME}`] },

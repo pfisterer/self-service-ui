@@ -86,7 +86,7 @@ beforeEach(() => {
         listProjects: async () => PROJECTS,
         catalog: async () => CATALOG,
         workspaceUsage: async () => USAGE,
-        listJobs: async () => JOBS,
+        listJobs: async () => ({ items: JOBS, total: JOBS.length, limit: 50, offset: 0 }),
         getJob: async (id) => JOBS.find(j => j.id === id),
         jobLog: async () => ({ log: 'epoch 1/10' }),
         cancelJob: async () => ({}),
@@ -182,6 +182,22 @@ describe('the GPU views render', () => {
         expect(screen.getByText('b@dhbw.de')).toBeTruthy();
         // Without a chosen project there is no project id to show.
         expect(screen.queryByText(/^(Projekt-ID|Project ID):$/)).toBeNull();
+        expectNoRenderFailure();
+    });
+
+    it('Batch jobs page through a long list', async () => {
+        globalThis.__gpuApi.listProjects = async () => JOB_PROJECTS;
+        const asked = [];
+        globalThis.__gpuApi.listJobs = async (_project, page) => {
+            asked.push(page);
+            return { items: page.offset === 0 ? JOBS : [{ ...JOBS[0], id: 'j-old', name: 'old-training' }], total: 120, limit: page.limit, offset: page.offset };
+        };
+        renderView(<GpuJobs />);
+        expect(await screen.findByText('training-1')).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: '2' }));
+        expect(await screen.findByText('old-training')).toBeTruthy();
+        expect(asked.map(p => p.offset)).toEqual([0, 50]);
+        expect(screen.getByRole('button', { name: '3' })).toBeTruthy();
         expectNoRenderFailure();
     });
 

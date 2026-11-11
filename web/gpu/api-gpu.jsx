@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { apiError, apiErrorMessage } from '/helper/api-error.js';
+import { allPages, asPage } from '/helper/pages.js';
 import { useClient } from '/providers/client.jsx';
 // The GPU part lives in llm-management-api (same service, same client and base
 // URL as the LLM section), under /v1/gpu. Named imports, as in llm/api-llm.jsx:
@@ -24,7 +25,8 @@ export function useGpuApi() {
     return useMemo(() => {
         const call = async (op, opts = {}) => unwrap(await op({ client, ...opts }));
         return {
-            listServers: async () => (await call(listGpuServers)) ?? [],
+            // The lists of the AI service are paged ({ items, total, limit, offset }); where a screen needs a whole list, allPages loads every page.
+            listServers: () => allPages((page) => call(listGpuServers, { query: page })),
             // Starting from the self-service UI: what the person's projects allow, and the start (project, profile, gpu_class).
             startOptions: () => call(getGpuStartOptions),
             startServer: (body) => call(startGpuServer, { body, headers: JSON_HEADERS }),
@@ -36,7 +38,7 @@ export function useGpuApi() {
             myWorkspaceUsage: (period) => call(getMyWorkspaceUsage, { query: period }),
             workspaceUsage: (period, project) => call(getWorkspaceUsage, { query: project ? { ...period, project } : period }),
             // Projects (W2): own projects, or all for admins.
-            listProjects: async (all) => (await call(listWorkspaceProjects, all ? { query: { all: true } } : {})) ?? [],
+            listProjects: (all) => allPages((page) => call(listWorkspaceProjects, { query: all ? { all: true, ...page } : page })),
             catalog: () => call(getWorkspaceCatalog),
             updateProject: (p) => call(updateWorkspaceProject, { path: { slug: p.slug }, body: p, headers: JSON_HEADERS }),
             deleteProject: (slug) => call(deleteWorkspaceProject, { path: { slug } }),
@@ -45,7 +47,7 @@ export function useGpuApi() {
             // A finished image runs at its digest; this takes the newer one its tag points at now (image_update).
             updateProjectImage: (slug) => call(updateProjectImage, { path: { slug } }),
             // A project's access to private repositories and registries: per host the user name, never the token. Setting one answers with the new list.
-            listCredentials: async (slug) => (await call(listProjectCredentials, { path: { slug } })) ?? [],
+            listCredentials: (slug) => allPages((page) => call(listProjectCredentials, { path: { slug }, query: page })),
             setCredential: (slug, body) => call(setProjectCredential, { path: { slug }, body, headers: JSON_HEADERS }),
             deleteCredential: (slug, host) => call(deleteProjectCredential, { path: { slug, host } }),
             // The build's log and what its pod is doing: { log, state, since }.
@@ -59,8 +61,8 @@ export function useGpuApi() {
             deletePool: (id) => call(deleteGpuPool, { path: { id } }),
             // GPU use per hour; period = { from, to }, project for a project's managers.
             gpuHours: (period, project) => call(getGpuHours, { query: project ? { ...period, project } : period }),
-            // Batch jobs: without project the caller's own, with project the caller's there, or all of it for its managers and admins. A refused submit is a 409 with a message for people.
-            listJobs: async (project) => (await call(listGpuJobs, project ? { query: { project } } : {})) ?? [],
+            // Batch jobs: without project the caller's own, with project the caller's there, or all of it for its managers and admins; one page of them ({ items, total, limit, offset }), newest first. A refused submit is a 409 with a message for people.
+            listJobs: async (project, page = {}) => asPage(await call(listGpuJobs, { query: { ...(project ? { project } : {}), ...page } })),
             submitJob: (body) => call(submitGpuJob, { body, headers: JSON_HEADERS }),
             getJob: (id) => call(getGpuJob, { path: { id } }),
             // The end of a job's output: { log }, live while it runs, what was kept once it ended.

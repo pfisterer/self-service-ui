@@ -8,15 +8,19 @@ const MAX_DAYS = 3 * 366;
 
 const isoDay = (d) => d.toISOString().slice(0, 10);
 
+// berlinDay is the calendar day an instant falls on in Europe/Berlin, as midnight UTC of that date: the services count usage in Berlin days (golib calendar), so "yesterday" ends at midnight in Berlin, not at midnight UTC.
+const BERLIN = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' });
+const berlinDay = (d) => new Date(`${BERLIN.format(d)}T00:00:00Z`);
+
 // periodRange turns a period key into the API's from/to, both days included.
-// Today is not collected yet, so every period ends yesterday.
+// Today is not collected yet, so every period ends yesterday (in Berlin).
 export function periodRange(key, now = new Date(), createdAt = null) {
-    const to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
+    const to = new Date(berlinDay(now).getTime() - 86400000);
     let days = Number(key);
     if (key === 'lifetime') {
         const start = createdAt ? new Date(createdAt) : null;
         days = start && !Number.isNaN(start.getTime())
-            ? Math.floor((to - Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate())) / 86400000) + 1
+            ? Math.floor((to - berlinDay(start)) / 86400000) + 1
             : MAX_DAYS;
     }
     days = Math.min(Math.max(days || 30, 1), MAX_DAYS);

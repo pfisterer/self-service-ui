@@ -12,6 +12,15 @@ describe('periodRange', () => {
     it('caps the lifetime of an old or unknown project', () => {
         expect(periodRange('lifetime', now).from).toBe('2023-10-05');
     });
+    it('counts days in Berlin: after midnight there, yesterday is the day that just ended', () => {
+        // 00:30 on 12 November in Berlin (CET) is 23:30 UTC on the 11th.
+        expect(periodRange('30', new Date('2026-11-11T23:30:00Z')).to).toBe('2026-11-11');
+        expect(periodRange('30', new Date('2026-11-11T22:59:00Z')).to).toBe('2026-11-10');
+        // Summer time (CEST): midnight in Berlin is 22:00 UTC.
+        expect(periodRange('30', new Date('2026-07-01T22:00:00Z')).to).toBe('2026-07-01');
+        // A project created at 00:30 in Berlin, still the day before in UTC, began on its Berlin day.
+        expect(periodRange('lifetime', new Date('2026-11-20T12:00:00Z'), '2026-11-11T23:30:00Z').from).toBe('2026-11-12');
+    });
 });
 
 describe('groupProjects', () => {

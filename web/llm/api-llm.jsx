@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { apiError, apiErrorMessage } from '/helper/api-error.js';
+import { allPages } from '/helper/pages.js';
 import { useClient } from '/providers/client.jsx';
 // Named imports for the same reason as in dyndns/api-zones.jsx: an operation
 // missing from the client fails the build, not the browser.
@@ -32,7 +33,11 @@ export function useLlmApi() {
             setDefaultProject: (project) => call(setDefaultProject, { body: { project }, headers: JSON_HEADERS }),
             deleteKey: (id) => call(deleteKey, { path: { id } }),
             // Personal API tokens (aiaas_…) for the management API — scripts, CI, notebooks. Not the LLM keys above: those are for the OpenAI-compatible API. ttlHours as the API defines it: 0 means the configured default. The created token comes back directly (201), with its secret in token_string, as from os-mgt-api.
-            listApiTokens: async () => (await call(listApiTokens))?.tokens ?? [],
+            // Paged like every list of the AI service; a service from before paging answered { tokens }.
+            listApiTokens: () => allPages(async (page) => {
+                const res = await call(listApiTokens, { query: page });
+                return res?.tokens ?? res;
+            }),
             createApiToken: ({ readOnly = false, description = '', ttlHours = 0 } = {}) =>
                 call(createApiToken, { body: { read_only: readOnly, description, ttl_hours: ttlHours }, headers: JSON_HEADERS }),
             deleteApiToken: (id) => call(deleteApiToken, { path: { id } }),
