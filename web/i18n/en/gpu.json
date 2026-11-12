@@ -513,6 +513,26 @@
             "empty": "Empty.",
             "download": "Download",
             "truncated": "The folder has more entries; the first ones are shown."
+        },
+        "upload": {
+            "open": "Upload files",
+            "title": "Upload a file for batch jobs",
+            "intro": "Puts a script or data into your home in the project, where your jobs run, or into the project's shared folder, without a workspace. An existing file of the same name is replaced. The first upload takes a few seconds.",
+            "target": "Where to",
+            "home": "My home (~)",
+            "shared": "Shared folder (~/{{dir}})",
+            "readerHomeOnly": "Into your home only: with the role reader the shared folder ~/{{dir}} is read-only.",
+            "folder": "Folder (optional)",
+            "folderHint": "Relative to the target, missing folders are created; empty for the top.",
+            "drop": "Drop a file here or click to choose one",
+            "dropHint": "One file, at most 5 GB.",
+            "writesTo": "Writes to",
+            "fileRequired": "Choose a file.",
+            "tooLarge": "The file has {{size}}; at most 5 GB per file.",
+            "badFolder": "A folder below the target, without . or .. and without empty parts.",
+            "done": "Uploaded: {{path}}",
+            "close": "Close",
+            "submit": "Upload"
         }
     }
 }

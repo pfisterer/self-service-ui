@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderView } from '/test/render-harness.jsx';
 
 // Does each GPU view render at all, with data in it? Same question as llm/views.render.test.jsx.
@@ -213,6 +213,44 @@ describe('the GPU views render', () => {
         } finally {
             window.history.replaceState(null, '', '/');
         }
+        expectNoRenderFailure();
+    });
+
+    it('Batch jobs upload a file into the home or the shared folder of the filtered project', async () => {
+        globalThis.__gpuApi.listProjects = async () => JOB_PROJECTS;
+        const sent = [];
+        globalThis.__gpuApi.uploadFile = async (project, path, file) => { sent.push({ project, path, name: file.name }); return { name: file.name, path, type: 'file', size: file.size }; };
+        window.history.replaceState(null, '', '/jobs?project=wwi23seb-ml');
+        try {
+            renderView(<GpuJobs />);
+            expect(await screen.findByText('training-1')).toBeTruthy();
+            fireEvent.click(screen.getByRole('button', { name: /^(Dateien hochladen|Upload files)$/ }));
+            const submit = await screen.findByRole('button', { name: /^(Hochladen|Upload)$/ });
+            expect(submit.disabled).toBe(true);
+            const input = document.querySelector('input[type=file]');
+            fireEvent.change(input, { target: { files: [new File(['print(1)'], 'train.py')] } });
+            fireEvent.click(screen.getByText(/(Gemeinsamer Ordner|Shared folder)/));
+            fireEvent.change(screen.getByLabelText(/(Ordner|Folder) \(optional\)/), { target: { value: 'kurs/' } });
+            expect(await screen.findByText('~/project-shared/kurs/train.py')).toBeTruthy();
+            await waitFor(() => expect(screen.getByRole('button', { name: /^(Hochladen|Upload)$/ }).disabled).toBe(false));
+            fireEvent.click(screen.getByRole('button', { name: /^(Hochladen|Upload)$/ }));
+            expect(await screen.findByText(/(Hochgeladen|Uploaded): ~\/project-shared\/kurs\/train\.py/)).toBeTruthy();
+            expect(sent).toEqual([{ project: 'wwi23seb-ml', path: 'project-shared/kurs/train.py', name: 'train.py' }]);
+            fireEvent.click(screen.getByRole('button', { name: /^(Schließen|Close)$/ }));
+            await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        } finally {
+            window.history.replaceState(null, '', '/');
+        }
+        expectNoRenderFailure();
+    });
+
+    it('Batch jobs do not offer a reader the shared folder for uploads', async () => {
+        globalThis.__gpuApi.listProjects = async () => JOB_PROJECTS.map(p => ({ ...p, role: 'reader' }));
+        renderView(<GpuJobs />);
+        expect(await screen.findByText('training-1')).toBeTruthy();
+        fireEvent.click(await screen.findByRole('button', { name: /^(Dateien hochladen|Upload files)$/ }));
+        expect(await screen.findByText(/(Nur ins eigene Home|Into your home only)/)).toBeTruthy();
+        expect(screen.queryByText(/(Gemeinsamer Ordner|Shared folder) \(/)).toBeNull();
         expectNoRenderFailure();
     });
 

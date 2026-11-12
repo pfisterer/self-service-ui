@@ -513,6 +513,26 @@
             "empty": "Leer.",
             "download": "Herunterladen",
             "truncated": "Der Ordner hat mehr Einträge; angezeigt werden die ersten."
+        },
+        "upload": {
+            "open": "Dateien hochladen",
+            "title": "Datei für Batch-Jobs hochladen",
+            "intro": "Legt ein Skript oder Daten ohne Workspace in das eigene Home im Projekt, wo die eigenen Jobs laufen, oder in den gemeinsamen Ordner des Projekts. Eine vorhandene Datei gleichen Namens wird ersetzt. Das erste Hochladen dauert einige Sekunden.",
+            "target": "Wohin",
+            "home": "Mein Home (~)",
+            "shared": "Gemeinsamer Ordner (~/{{dir}})",
+            "readerHomeOnly": "Nur ins eigene Home: Mit der Rolle „Lesend“ ist der gemeinsame Ordner ~/{{dir}} nur lesbar.",
+            "folder": "Ordner (optional)",
+            "folderHint": "Relativ zum Ziel, fehlende Ordner werden angelegt; leer für die oberste Ebene.",
+            "drop": "Datei hierher ziehen oder klicken, um eine auszuwählen",
+            "dropHint": "Eine Datei, höchstens 5 GB.",
+            "writesTo": "Schreibt nach",
+            "fileRequired": "Eine Datei auswählen.",
+            "tooLarge": "Die Datei hat {{size}}; höchstens 5 GB je Datei.",
+            "badFolder": "Ein Ordner unterhalb des Ziels, ohne . oder .. und ohne leere Teile.",
+            "done": "Hochgeladen: {{path}}",
+            "close": "Schließen",
+            "submit": "Hochladen"
         }
     }
 }

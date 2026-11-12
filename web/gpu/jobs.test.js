@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_JOB_MAX_HOURS, formatBytes, isActive, jobBody, jobCommandLine, jobErrors, jobMaxHours, jobProjects, MAX_JOB_HOURS, parentPath, shellQuote } from '/gpu/jobs.js';
+import { canWriteShared, DEFAULT_JOB_MAX_HOURS, formatBytes, isActive, JOB_FILE_MAX_BYTES, jobBody, jobCommandLine, jobErrors, jobMaxHours, jobProjects, MAX_JOB_HOURS, parentPath, shellQuote, uploadErrors, uploadFolder, uploadPath } from '/gpu/jobs.js';
 
 const t = (key, vars) => (vars ? `${key} ${JSON.stringify(vars)}` : key);
 
@@ -77,5 +77,40 @@ describe('job LLM and files', () => {
         expect(formatBytes(0)).toBe('0 B');
         expect(formatBytes(2048)).toBe('2.0 KB');
         expect(formatBytes(5 * 1024 ** 3)).toBe('5.0 GB');
+    });
+});
+
+describe('uploading files for jobs', () => {
+    it('reads the folder as a plain path below the target', () => {
+        expect(uploadFolder('')).toBe('');
+        expect(uploadFolder(undefined)).toBe('');
+        expect(uploadFolder('  jobs/training-1/ ')).toBe('jobs/training-1');
+        expect(uploadFolder('~/data')).toBe('data');
+        expect(uploadFolder('/data//')).toBe('data');
+        expect(uploadFolder('~')).toBe('');
+        expect(uploadFolder('~x')).toBe('~x');
+        for (const bad of ['..', '../x', 'a/../b', 'a/./b', 'a//b', 'a\nb']) expect(uploadFolder(bad), bad).toBeNull();
+    });
+
+    it('puts the file into the home or under project-shared/', () => {
+        expect(uploadPath('home', '', 'train.py')).toBe('train.py');
+        expect(uploadPath('home', 'jobs/t1', 'train.py')).toBe('jobs/t1/train.py');
+        expect(uploadPath('shared', '', 'data.csv')).toBe('project-shared/data.csv');
+        expect(uploadPath('shared', '/daten/', 'data.csv')).toBe('project-shared/daten/data.csv');
+        expect(uploadPath('home', '..', 'x')).toBeNull();
+        expect(uploadPath('home', 'a', '')).toBeNull();
+    });
+
+    it('checks file and folder like the service', () => {
+        expect(uploadErrors(t, { file: null, folder: '' })).toEqual({ file: 'gpu.jobs.upload.fileRequired' });
+        expect(uploadErrors(t, { file: { size: 10 }, folder: 'a' })).toEqual({});
+        expect(uploadErrors(t, { file: { size: JOB_FILE_MAX_BYTES }, folder: '' })).toEqual({});
+        expect(Object.keys(uploadErrors(t, { file: { size: JOB_FILE_MAX_BYTES + 1 }, folder: '../x' }))).toEqual(['file', 'folder']);
+    });
+
+    it('offers the shared folder to everyone but a reader', () => {
+        expect(canWriteShared({ role: 'member' })).toBe(true);
+        expect(canWriteShared({ role: 'manager' })).toBe(true);
+        expect(canWriteShared({ role: 'reader' })).toBe(false);
     });
 });

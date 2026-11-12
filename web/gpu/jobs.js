@@ -89,3 +89,37 @@ export function formatBytes(n) {
     while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
     return i === 0 ? `${v} B` : `${v.toFixed(v < 10 ? 1 : 0)} ${units[i]}`;
 }
+
+// Uploading files for jobs (todo job_files): PUT /v1/gpu/files writes one file into the person's home in the project or, under project-shared/, into the project's shared folder (not for the role reader). The bounds are the AI service's (gpu/jobfiles.go).
+export const JOB_FILE_MAX_BYTES = 5 * 1024 ** 3;
+export const SHARED_DIR = 'project-shared';
+
+// canWriteShared: the role reader only reads the project's shared folder, as in a workspace.
+export function canWriteShared(project) {
+    return project?.role !== 'reader';
+}
+
+// uploadFolder is the folder a file goes into, relative to the home or the shared folder: trimmed, without a leading ~/ or / and trailing slashes, empty for the top. null where it is no plain folder ('.' or '..' segments, empty segments, control characters): the service would refuse a path leaving the home, and a path it cleans up is a guess.
+export function uploadFolder(folder) {
+    let f = (folder ?? '').trim().replace(/^~(?=\/|$)/, '').replace(/^\/+/, '').replace(/\/+$/, '');
+    if (f === '') return '';
+    // eslint-disable-next-line no-control-regex
+    if (/[\u0000-\u001f\u007f]/.test(f)) return null;
+    return f.split('/').every(s => s !== '' && s !== '.' && s !== '..') ? f : null;
+}
+
+// uploadPath is the path the service is asked to write: relative to the home, under project-shared/ for the shared folder. null without a file name or with a folder uploadFolder refuses.
+export function uploadPath(target, folder, fileName) {
+    const f = uploadFolder(folder);
+    if (f === null || !fileName) return null;
+    return [target === 'shared' ? SHARED_DIR : '', f, fileName].filter(Boolean).join('/');
+}
+
+// uploadErrors checks the upload form like the service does, keyed by field: a file of at most 5 GB, a plain folder.
+export function uploadErrors(t, { file, folder }) {
+    const errors = {};
+    if (!file) errors.file = t('gpu.jobs.upload.fileRequired');
+    else if (file.size > JOB_FILE_MAX_BYTES) errors.file = t('gpu.jobs.upload.tooLarge', { size: formatBytes(file.size) });
+    if (uploadFolder(folder) === null) errors.folder = t('gpu.jobs.upload.badFolder');
+    return errors;
+}

@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useSearch } from 'wouter';
 import { useTranslation } from 'react-i18next';
 import { Alert, Anchor, Badge, Button, Code, Container, Group, Pagination, Paper, Select, SimpleGrid, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
-import { ArrowLeft, ArrowUp, Download, Folder, Play, Square } from 'lucide-react';
+import { ArrowLeft, ArrowUp, Download, Folder, Play, Square, Upload } from 'lucide-react';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
@@ -12,6 +12,7 @@ import { gpuKeys } from '/gpu/query-keys.js';
 import { formatBytes, isActive, parentPath, projectHasJobs } from '/gpu/jobs.js';
 import { ProjectId } from '/gpu/project-id.jsx';
 import { JobSettingsModal } from '/gpu/job-settings.jsx';
+import { JobUploadModal } from '/gpu/job-upload.jsx';
 import { formatDateTime } from '/format-date.js';
 import { formatDuration } from '/helper/duration.js';
 
@@ -68,6 +69,9 @@ export function GpuJobs() {
     const api = useGpuApi();
     const { me, isAdmin } = useLlmMe();
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [uploadOpen, setUploadOpen] = useState(false);
+    // Counts the openings of the upload dialog: each one starts with an empty form.
+    const [uploads, setUploads] = useState(0);
     const params = new URLSearchParams(useSearch());
     const [, navigate] = useLocation();
     const project = params.get('project') || '';
@@ -100,11 +104,19 @@ export function GpuJobs() {
                         <Title order={3}>{t('gpu.jobs.title')}</Title>
                         <Text size="sm" c="dimmed" mt={4}>{t('gpu.jobs.intro')}</Text>
                     </div>
-                    <Button size="xs" component={Link} href={project ? `/jobs/new?project=${encodeURIComponent(project)}` : '/jobs/new'} variant="light" leftSection={<Play size={14} />}
-                        disabled={projects.isSuccess && withJobs.length === 0}>
-                        {t('gpu.jobs.submitJob')}
-                    </Button>
+                    <Group gap="xs">
+                        {/* Script and data for a job without a workspace (todo job_files): into the own home or the project's shared folder. */}
+                        <Button size="xs" variant="default" leftSection={<Upload size={14} />} disabled={withJobs.length === 0} onClick={() => { setUploads(n => n + 1); setUploadOpen(true); }}>
+                            {t('gpu.jobs.upload.open')}
+                        </Button>
+                        <Button size="xs" component={Link} href={project ? `/jobs/new?project=${encodeURIComponent(project)}` : '/jobs/new'} variant="light" leftSection={<Play size={14} />}
+                            disabled={projects.isSuccess && withJobs.length === 0}>
+                            {t('gpu.jobs.submitJob')}
+                        </Button>
+                    </Group>
                 </Group>
+                {/* Remounted per opening and project, so the form starts empty with the filtered project; mounted while closed, so the modal closes itself instead of vanishing with its overlay. */}
+                <JobUploadModal key={`${project}-${uploads}`} projects={withJobs} project={projectHasJobs(chosen) ? project : ''} opened={uploadOpen} onClose={() => setUploadOpen(false)} />
                 <Group mt="md" gap="sm" align="flex-end">
                     <Select size="xs" w={320} clearable label={t('gpu.jobs.project')} placeholder={t('gpu.jobs.allOwn')} value={project || null}
                         data={(projects.data ?? []).map(p => ({ value: p.slug, label: p.name || p.slug }))}

@@ -13,5 +13,7 @@ export const gpuKeys = {
     job: (id) => ['gpu', 'job', id],
     jobLog: (id) => ['gpu', 'job', id, 'log'],
     jobFiles: (id, path) => ['gpu', 'job', id, 'files', path ?? ''],
+    // The prefix of every single job and its log and files: an upload can change what any job's file list shows.
+    anyJob: () => ['gpu', 'job'],
     gpuHours: (scope, period) => ['gpu', 'gpu-hours', scope, period.from, period.to],
 };
