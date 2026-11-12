@@ -31,7 +31,8 @@
         "clearFilter": "Filter zurücksetzen",
         "noMatch": "Keine Zone passt zum Filter.",
         "addSubzone": "Subzone unter {{zone}} anlegen",
-        "inactive": "nicht aktiv"
+        "inactive": "nicht aktiv",
+        "group": "{{name}} – Gruppe der Zonen darunter, keine eigene Zone"
     },
     "subzone": {
         "title": "Subzone anlegen",

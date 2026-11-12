@@ -6,19 +6,27 @@ import { memoryLocation } from 'wouter/memory-location';
 import { renderView } from '/test/render-harness.jsx';
 import i18n from '/i18n/index.js';
 
-// The zones page as tree and detail: the tree nests subzones under their zone, a click shows the zone on the right and puts it in the URL, a zone that allows subzones offers one in its row and in its header, and from six zones on a filter stands above the tree.
+// The zones page as tree and detail: the tree is built from the zone names label by label, with group rows for names above zones that are no zone themselves (opened and closed by a click, never selected) and each row only with its new labels; a click on a zone shows the zone on the right and puts it in the URL, a zone that allows subzones offers one in its row and in its header, and from six zones on a filter stands above the tree.
 
 vi.mock('/dyndns/api-zones.jsx', () => ({ useZonesApi: () => globalThis.__zonesApi }));
 
 const ME = 'dennis.pfisterer@dhbw.de';
-const BASE = 'dennis-pfisterer.users.dhbw.site';
+// The user's real zones: a base zone with subzones, subzones under groups that are no zone (dhbw.site, users, pfisterer, dhbw.cloud), one zone not active and one shared.
+const BASE = 'dennis-pfisterer-at-dhbw-de.users.dhbw.site';
 const ZONES = [
-    { name: 'wi24a.lehre.dhbw.cloud', exists: false, can_join: false },
     { name: BASE, exists: true, owners: [ME], allow_subdomains: true },
-    { name: `api.${BASE}`, parent: BASE, exists: true, owners: [ME, 'tom@dhbw.de'], allow_subdomains: true },
-    { name: `staging.api.${BASE}`, parent: `api.${BASE}`, exists: true, owners: [ME] },
-    { name: `web.${BASE}`, parent: BASE, exists: true, owners: [ME] },
-    { name: 'bildanalyse.projects.dhbw.cloud', exists: true, owners: [ME] },
+    { name: `data-eng-wdski24a.${BASE}`, parent: BASE, exists: true, owners: [ME, 'tom@dhbw.de'], allow_subdomains: true },
+    { name: `gridflex.${BASE}`, parent: BASE, exists: true, owners: [ME] },
+    { name: `iot.${BASE}`, parent: BASE, exists: true, owners: [ME] },
+    { name: 'test.pfisterer.users.dhbw.site', exists: true, owners: [ME] },
+    { name: 'bigdata.pfisterer.users.dhbw.site', exists: true, owners: [ME], allow_subdomains: true },
+    { name: 'ws2627.bigdata.pfisterer.users.dhbw.site', parent: 'bigdata.pfisterer.users.dhbw.site', exists: true, owners: [ME] },
+    { name: 'wi-ma.dhbw.site', exists: false, can_join: false },
+    { name: 'crm.wi-ma.dhbw.site', parent: 'wi-ma.dhbw.site', exists: true, owners: [ME] },
+    { name: 'services.dhbw.cloud', exists: true, owners: [ME], allow_subdomains: true },
+    ...['gpu', 'itlabs', 'llm', 'mail', 'workflow-auth'].map(l => ({ name: `${l}.services.dhbw.cloud`, parent: 'services.dhbw.cloud', exists: true, owners: [ME] })),
+    { name: 'staging.gpu.services.dhbw.cloud', parent: 'gpu.services.dhbw.cloud', exists: true, owners: [ME] },
+    { name: 'staging.llm.services.dhbw.cloud', parent: 'llm.services.dhbw.cloud', exists: true, owners: [ME] },
 ];
 const detail = (name) => ({ owners: ZONES.find(z => z.name === name)?.owners ?? [ME], creator: ME, zoneData: { zone: name, zone_keys: [] } });
 
@@ -49,37 +57,57 @@ function renderAt(path) {
     return memory;
 }
 
-const row = (label) => screen.getAllByRole('treeitem').find(r => r.querySelector('p')?.textContent === label);
+const rows = () => screen.getAllByRole('treeitem').map(r => [r.querySelector('p').textContent, r.getAttribute('aria-level')]);
+const row = (label, level) => screen.getAllByRole('treeitem').find(r => r.querySelector('p')?.textContent === label && (!level || r.getAttribute('aria-level') === String(level)));
 const heading = () => screen.findByRole('heading', { level: 3 });
 
 describe('the zones page', () => {
-    it('nests subzones under their zone with short labels and opens on the own base zone', async () => {
+    it('builds the tree from the labels with group rows and short labels, and opens on the own base zone', async () => {
         const memory = renderAt('/');
         await screen.findByRole('tree');
-        expect(screen.getAllByRole('treeitem').map(r => [r.querySelector('p').textContent, r.getAttribute('aria-level')])).toEqual([
-            ['wi24a.lehre.dhbw.cloud', '1'], [BASE, '1'], ['api', '2'], ['staging', '3'], ['web', '2'], ['bildanalyse.projects.dhbw.cloud', '1'],
+        expect(rows()).toEqual([
+            ['dhbw.site', '1'], ['users', '2'], ['dennis-pfisterer-at-dhbw-de', '3'], ['data-eng-wdski24a', '4'], ['gridflex', '4'], ['iot', '4'],
+            ['pfisterer', '3'], ['bigdata', '4'], ['ws2627', '5'], ['test', '4'],
+            ['wi-ma', '2'], ['crm', '3'],
+            ['dhbw.cloud', '1'], ['services', '2'], ['gpu', '3'], ['staging', '4'], ['itlabs', '3'], ['llm', '3'], ['staging', '4'], ['mail', '3'], ['workflow-auth', '3'],
         ]);
         await waitFor(() => expect(memory.history.at(-1)).toBe(`/zone/${BASE}`));
-        expect(row(BASE).getAttribute('aria-selected')).toBe('true');
+        expect(row('dennis-pfisterer-at-dhbw-de').getAttribute('aria-selected')).toBe('true');
         expect((await heading()).textContent).toBe(BASE);
-        // Shared: a small badge with the number of owners instead of the addresses; not yet active: a badge too.
-        expect(within(row('api')).getByLabelText(i18n.t('dyndns.zoneList.sharedWith', { owners: `${ME}, tom@dhbw.de` })).textContent).toBe('2');
-        expect(within(row('wi24a.lehre.dhbw.cloud')).getByText(i18n.t('dyndns.zoneList.inactive'))).toBeTruthy();
+        // Group rows are not selectable, have no actions and are dimmed.
+        expect(row('users').hasAttribute('aria-selected')).toBe(false);
+        expect(row('users').getAttribute('aria-expanded')).toBe('true');
+        expect(within(row('users')).queryAllByRole('button').map(b => b.getAttribute('aria-label'))).toEqual([i18n.t('projects.tree.collapse')]);
+        // Shared: a small sign with the number of owners; not yet active: dimmed with a small sign, no text badge.
+        expect(within(row('data-eng-wdski24a')).getByLabelText(i18n.t('dyndns.zoneList.sharedWith', { owners: `${ME}, tom@dhbw.de` })).textContent).toBe('2');
+        expect(within(row('wi-ma')).getByRole('img', { name: i18n.t('dyndns.zoneList.inactive') })).toBeTruthy();
+        expect(within(row('wi-ma')).queryByText(i18n.t('dyndns.zoneList.inactive'))).toBeNull();
+    });
+
+    it('a click on a group row opens and closes it instead of selecting', async () => {
+        const memory = renderAt(`/zone/${BASE}`);
+        await heading();
+        fireEvent.click(row('pfisterer').querySelector('p'));
+        expect(row('pfisterer').getAttribute('aria-expanded')).toBe('false');
+        expect(row('test')).toBeUndefined();
+        expect(memory.history.at(-1)).toBe(`/zone/${BASE}`);
+        fireEvent.click(row('pfisterer').querySelector('p'));
+        expect(row('test')).toBeTruthy();
     });
 
     it('shows the zone clicked in the tree and keeps it in the URL', async () => {
         const memory = renderAt(`/zone/${BASE}`);
         await heading();
-        fireEvent.click(screen.getByText('staging'));
-        await waitFor(() => expect(memory.history.at(-1)).toBe(`/zone/staging.api.${BASE}`));
-        await waitFor(async () => expect((await heading()).textContent).toBe(`staging.api.${BASE}`));
-        expect(calls).toContain(`staging.api.${BASE}`);
+        fireEvent.click(row('staging', 4));
+        await waitFor(() => expect(memory.history.at(-1)).toBe('/zone/staging.gpu.services.dhbw.cloud'));
+        await waitFor(async () => expect((await heading()).textContent).toBe('staging.gpu.services.dhbw.cloud'));
+        expect(calls).toContain('staging.gpu.services.dhbw.cloud');
         expect(row('staging').getAttribute('aria-selected')).toBe('true');
     });
 
     it('a zone not yet active shows its name and the way to activate it', async () => {
-        renderAt('/zone/wi24a.lehre.dhbw.cloud');
-        expect((await heading()).textContent).toBe('wi24a.lehre.dhbw.cloud');
+        renderAt('/zone/wi-ma.dhbw.site');
+        expect((await heading()).textContent).toBe('wi-ma.dhbw.site');
         expect(screen.getByRole('button', { name: i18n.t('dyndns.zoneDetail.activate') })).toBeTruthy();
     });
 
@@ -87,10 +115,10 @@ describe('the zones page', () => {
         renderAt(`/zone/${BASE}`);
         await heading();
         // Only zones that allow subzones have the row action.
-        expect(screen.queryByRole('button', { name: i18n.t('dyndns.zoneList.addSubzone', { zone: `web.${BASE}` }) })).toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: i18n.t('dyndns.zoneList.addSubzone', { zone: `api.${BASE}` }) }));
+        expect(screen.queryByRole('button', { name: i18n.t('dyndns.zoneList.addSubzone', { zone: `iot.${BASE}` }) })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('dyndns.zoneList.addSubzone', { zone: `data-eng-wdski24a.${BASE}` }) }));
         const dialog = await screen.findByRole('dialog');
-        expect(dialog.textContent).toContain(`api.${BASE}`);
+        expect(dialog.textContent).toContain(`data-eng-wdski24a.${BASE}`);
         fireEvent.click(within(dialog).getByRole('button', { name: i18n.t('dyndns.actions.cancel') }));
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
@@ -98,19 +126,21 @@ describe('the zones page', () => {
         expect((await screen.findByRole('dialog')).textContent).toContain(BASE);
     });
 
-    it('filters the tree from six zones on, keeping the way down to a match', async () => {
+    it('filters on the full name, keeping the way down to a match with its group rows', async () => {
         renderAt(`/zone/${BASE}`);
         await screen.findByRole('tree');
-        fireEvent.change(screen.getByLabelText(i18n.t('dyndns.zoneList.filter')), { target: { value: 'stag' } });
-        expect(screen.getAllByRole('treeitem').map(r => r.querySelector('p').textContent)).toEqual([BASE, 'api', 'staging']);
+        fireEvent.change(screen.getByLabelText(i18n.t('dyndns.zoneList.filter')), { target: { value: 'ws2627.bigdata' } });
+        expect(rows()).toEqual([['dhbw.site', '1'], ['users', '2'], ['pfisterer', '3'], ['bigdata', '4'], ['ws2627', '5']]);
         fireEvent.change(screen.getByLabelText(i18n.t('dyndns.zoneList.filter')), { target: { value: 'nothing-like-it' } });
         expect(screen.getByText(i18n.t('dyndns.zoneList.noMatch'))).toBeTruthy();
     });
 
-    it('opens the branch above a zone selected by link', async () => {
-        localStorage.setItem('self-service.dyndns-zones.collapsed', JSON.stringify([BASE]));
-        renderAt(`/zone/web.${BASE}`);
-        await waitFor(() => expect(row('web')).toBeTruthy());
-        expect(row(BASE).getAttribute('aria-expanded')).toBe('true');
+    it('opens the branches above a zone selected by link, group rows included', async () => {
+        localStorage.setItem('self-service.dyndns-zones.collapsed', JSON.stringify(['group:dhbw.site', 'group:pfisterer.users.dhbw.site', 'zone:bigdata.pfisterer.users.dhbw.site', 'zone:services.dhbw.cloud']));
+        renderAt('/zone/ws2627.bigdata.pfisterer.users.dhbw.site');
+        await waitFor(() => expect(row('ws2627')).toBeTruthy());
+        for (const label of ['dhbw.site', 'pfisterer', 'bigdata']) expect(row(label).getAttribute('aria-expanded')).toBe('true');
+        // Other branches closed by hand stay closed.
+        expect(row('services').getAttribute('aria-expanded')).toBe('false');
     });
 });

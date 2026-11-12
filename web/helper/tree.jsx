@@ -49,8 +49,8 @@ export function Tree({ label, children, ...props }) {
     return <Box ref={ref} role="tree" aria-label={label} onKeyDown={onKeyDown} {...props}>{children}</Box>;
 }
 
-// TreeRow: one line. The arrow opens and closes; the line itself does onClick (select, or open where a node has nothing to show). `label` is shortened to one line, `title` (the long form) shows as its tooltip, `sub` is a second line. `badge` and `count` sit at the end, `action` is always shown, `hoverAction` only on hover, focus and selection.
-export function TreeRow({ rowRef, depth = 0, open, openable, onToggle, onClick, selected, icon, label, title, sub, count, badge, action, hoverAction }) {
+// TreeRow: one line. The arrow opens and closes; the line itself does onClick (select, or open where a node has nothing to show). `label` is shortened to one line, `title` (the long form) shows as its tooltip, `sub` is a second line. `badge` and `count` sit at the end, `action` is always shown, `hoverAction` only on hover, focus and selection. `muted` dims the label (a node that only groups others, or one not in use); a row with `selectable={false}` is never selected (no aria-selected), its onClick then is usually onToggle.
+export function TreeRow({ rowRef, depth = 0, open, openable, onToggle, onClick, selected, selectable = true, muted, icon, label, title, sub, count, badge, action, hoverAction }) {
     const { t } = useTranslation();
     const onKeyDown = (e) => {
         if (e.target !== e.currentTarget) return;
@@ -74,10 +74,10 @@ export function TreeRow({ rowRef, depth = 0, open, openable, onToggle, onClick, 
             }
         }
     };
-    const text = <Text size="sm" truncate fw={selected ? 600 : 400}>{label}</Text>;
+    const text = <Text size="sm" truncate fw={selected ? 600 : 400} c={muted ? 'dimmed' : undefined}>{label}</Text>;
     return (
-        <Group ref={rowRef} className="tree-row" role="treeitem" aria-level={depth + 1} aria-selected={!!selected} aria-expanded={openable ? !!open : undefined}
-            tabIndex={selected ? 0 : -1} onKeyDown={onKeyDown}
+        <Group ref={rowRef} className="tree-row" role="treeitem" aria-level={depth + 1} aria-selected={selectable ? !!selected : undefined} aria-expanded={openable ? !!open : undefined}
+            tabIndex={selectable && selected ? 0 : -1} onKeyDown={onKeyDown}
             gap={4} wrap="nowrap" pl={depth * 18} pr={6} py={3} onClick={onClick}
             style={{ cursor: 'pointer', borderRadius: 'var(--mantine-radius-sm)' }}>
             {openable
@@ -129,8 +129,8 @@ export function filterTree(roots, getId, getChildren, matches) {
     return keep;
 }
 
-// ItemTree: a tree of data that is all there (roots and getChildren). `row(item, {depth, selected, open})` returns the TreeRow props that depend on the item (icon, label, title, sub, badge, count, action, hoverAction). With a `query`, only the items `matches` and their way down are shown, all open, and `noMatch` when there is none.
-export function ItemTree({ label, roots, getId, getChildren, row, selectedId, onSelect, isOpen, toggle, query, matches, noMatch }) {
+// ItemTree: a tree of data that is all there (roots and getChildren). `row(item, {depth, selected, open})` returns the TreeRow props that depend on the item (icon, label, title, muted, sub, badge, count, action, hoverAction). Items for which `isSelectable` says no (by default all are selectable) only group the ones below: a click opens and closes them. With a `query`, only the items `matches` and their way down are shown, all open, and `noMatch` when there is none.
+export function ItemTree({ label, roots, getId, getChildren, row, selectedId, onSelect, isSelectable = () => true, isOpen, toggle, query, matches, noMatch }) {
     const visible = query ? filterTree(roots, getId, getChildren, (it) => matches(it, query)) : null;
     const render = (item, depth, seen) => {
         const id = getId(item);
@@ -138,11 +138,12 @@ export function ItemTree({ label, roots, getId, getChildren, row, selectedId, on
         const children = getChildren(item);
         const openable = !visible && children.length > 0;
         const open = visible ? true : isOpen(id);
-        const selected = id === selectedId;
+        const selectable = isSelectable(item);
+        const selected = selectable && id === selectedId;
         const inner = new Set([...seen, id]);
         return (
             <Fragment key={id}>
-                <TreeRow depth={depth} open={open} openable={openable} onToggle={() => toggle(id)} onClick={() => onSelect(item)} selected={selected}
+                <TreeRow depth={depth} open={open} openable={openable} onToggle={() => toggle(id)} onClick={selectable ? () => onSelect(item) : () => openable && toggle(id)} selected={selected} selectable={selectable}
                     {...row(item, { depth, selected, open })} />
                 {open && children.map(child => render(child, depth + 1, inner))}
             </Fragment>

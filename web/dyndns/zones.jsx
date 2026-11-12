@@ -13,13 +13,13 @@ import { DynamicDns } from '/dyndns/zones/dynamic-dns.jsx';
 import { DnsRecordsList } from '/dyndns/zones/dns-record-list.jsx';
 import { TlsCertificates } from '/dyndns/zones/tls-certificates.jsx';
 import { Title, Paper, Stack, Tabs, Button, Text, Alert, Group, TextInput, Modal, Box, Tooltip, Badge, ActionIcon } from '@mantine/core';
-import { AlertCircle, Globe, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
+import { AlertCircle, CircleDashed, Globe, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
 import { subzoneLabelError, wildcardCnRemaining, WILDCARD_CN_MAX } from '/helper/dns-validation.js';
 import { CopyableText } from '/helper/copyable-text.jsx';
 import { MasterDetail } from '/helper/master-detail.jsx';
 import { ItemTree, TreeFilter, useTreeExpansion } from '/helper/tree.jsx';
 import { useZoneEvents, ZoneEventIndicator, ZoneEventsBanner } from '/dyndns/zones/zone-events-banner.jsx';
-import { defaultZone, zoneAncestors, zoneLabel, zoneTree } from '/dyndns/zone-tree.js';
+import { defaultZone, zoneMatches, zoneRowId, zoneTree } from '/dyndns/zone-tree.js';
 import { zoneAuthority } from '/dyndns/zone-authority.js';
 import { useDnsMeQuery } from '/dyndns/use-dns-me.jsx';
 
@@ -54,8 +54,10 @@ export function DynDnsZones() {
     const eventsByZone = useZoneEvents();
 
     const zones = zonesQuery.data ?? [];
-    // A zone selected by link or reload below a closed branch: the branch opens.
-    const ancestors = activeZoneName ? zoneAncestors(zones, activeZoneName) : [];
+    // The tree from the zone names (dyndns/zone-tree.js): group rows for names above zones that are no zone, each row only with the labels new below the row above.
+    const { roots, children, ancestors: ancestorsOf } = zoneTree(zones);
+    // A zone selected by link or reload below a closed branch: the branch opens, group rows included.
+    const ancestors = activeZoneName ? ancestorsOf(activeZoneName) : [];
     const closedAbove = ancestors.filter(a => !isOpen(a)).join(' ');
     useEffect(() => {
         if (closedAbove) expand(closedAbove.split(' '));
@@ -64,42 +66,55 @@ export function DynDnsZones() {
     if (!api || zonesQuery.isPending) return <Loading />;
     if (zonesQuery.isError) return <LoadError query={zonesQuery} title={t('dyndns.zoneList.loadError')} />;
 
-    const { roots, children } = zoneTree(zones);
     const canAddSubzone = (z) => z.allow_subdomains && z.exists;
-    const q = filter.trim().toLowerCase();
+    const q = filter.trim();
 
     const tree = zones.length === 0
         ? <Text p="xs" c="dimmed">{t('dyndns.zoneList.empty')}</Text>
         : (
-            <ItemTree label={t('dyndns.zoneList.title')} roots={roots} getId={z => z.name} getChildren={children}
-                selectedId={activeZoneName} onSelect={z => navigate(`/zone/${z.name}`)} isOpen={isOpen} toggle={toggle}
-                query={q} matches={(z, s) => z.name.toLowerCase().includes(s)} noMatch={t('dyndns.zoneList.noMatch')}
-                row={(z) => ({
-                    icon: z.parent ? null : <Globe size={14} />,
-                    label: zoneLabel(z),
-                    title: zoneLabel(z) !== z.name ? z.name : null,
-                    badge: (
-                        <>
-                            <ZoneEventIndicator events={eventsByZone[z.name]} />
-                            {z.owners?.length > 1 && (
-                                <Tooltip multiline maw={320} label={t('dyndns.zoneList.sharedWith', { owners: z.owners.join(', ') })}>
-                                    <Badge size="xs" variant="light" color="gray" leftSection={<Users size={10} />} style={{ flexShrink: 0 }}
-                                        aria-label={t('dyndns.zoneList.sharedWith', { owners: z.owners.join(', ') })}>
-                                        {z.owners.length}
-                                    </Badge>
-                                </Tooltip>
-                            )}
-                            {!z.exists && <Badge size="xs" variant="outline" color="gray" style={{ flexShrink: 0 }}>{t('dyndns.zoneList.inactive')}</Badge>}
-                        </>
-                    ),
-                    hoverAction: canAddSubzone(z) ? (
-                        <Tooltip label={t('dyndns.zoneList.addSubzone', { zone: z.name })}>
-                            <ActionIcon size="sm" variant="subtle" aria-label={t('dyndns.zoneList.addSubzone', { zone: z.name })} onClick={() => setSubzoneParent(z.name)}>
-                                <Plus size={14} />
-                            </ActionIcon>
-                        </Tooltip>
-                    ) : null,
-                })} />
+            <ItemTree label={t('dyndns.zoneList.title')} roots={roots} getId={r => r.id} getChildren={children}
+                selectedId={activeZoneName ? zoneRowId(activeZoneName) : null} onSelect={r => navigate(`/zone/${r.zone.name}`)}
+                isSelectable={r => !!r.zone} isOpen={isOpen} toggle={toggle}
+                query={q} matches={zoneMatches} noMatch={t('dyndns.zoneList.noMatch')}
+                row={(r, { depth }) => {
+                    const z = r.zone;
+                    // A group row: muted, no badges, no actions; its tooltip says what it is.
+                    if (!z) return { icon: depth === 0 ? <Globe size={14} /> : null, label: r.label, title: t('dyndns.zoneList.group', { name: r.name }), muted: true };
+                    const owners = z.owners?.length > 1 ? t('dyndns.zoneList.sharedWith', { owners: z.owners.join(', ') }) : null;
+                    return {
+                        icon: depth === 0 ? <Globe size={14} /> : null,
+                        label: r.label,
+                        title: r.name,
+                        // Not in use: the name dimmed and a small sign, instead of a wide text badge.
+                        muted: !z.exists,
+                        badge: (
+                            <>
+                                <ZoneEventIndicator events={eventsByZone[z.name]} />
+                                {owners && (
+                                    <Tooltip multiline maw={320} label={owners}>
+                                        <Group component="span" role="img" aria-label={owners} gap={2} wrap="nowrap" c="dimmed" fz="xs" style={{ flexShrink: 0 }}>
+                                            <Users size={12} aria-hidden />{z.owners.length}
+                                        </Group>
+                                    </Tooltip>
+                                )}
+                                {!z.exists && (
+                                    <Tooltip label={t('dyndns.zoneList.inactive')}>
+                                        <Box component="span" role="img" aria-label={t('dyndns.zoneList.inactive')} c="dimmed" style={{ display: 'flex', flexShrink: 0 }}>
+                                            <CircleDashed size={12} aria-hidden />
+                                        </Box>
+                                    </Tooltip>
+                                )}
+                            </>
+                        ),
+                        hoverAction: canAddSubzone(z) ? (
+                            <Tooltip label={t('dyndns.zoneList.addSubzone', { zone: z.name })}>
+                                <ActionIcon size="sm" variant="subtle" aria-label={t('dyndns.zoneList.addSubzone', { zone: z.name })} onClick={() => setSubzoneParent(z.name)}>
+                                    <Plus size={14} />
+                                </ActionIcon>
+                            </Tooltip>
+                        ) : null,
+                    };
+                }} />
         );
 
     return (
