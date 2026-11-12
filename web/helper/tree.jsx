@@ -10,7 +10,7 @@ import './tree.css';
 // A node is { id, value?, label, title?, sub?, icon?, muted?, badge?, count?, action?, section?, caption?, selectable?, children?, hasChildren?, loading?, error?, more? }:
 // - id names the node's place (unique in the tree, the key of its expansion); value (by default the id) is what selectedId is compared with, so an item shown in several places (a group in two groups) is selected in all of them.
 // - label is the line, shortened to fit; title its tooltip (the long form), sub a second line, icon before it; badge (signs) and count sit at the right end, action after them (a button that does not select the row); muted dims the label.
-// - section: a header row (the groups' sources, the zones' domains) that is never selected and opens and closes by click, Enter and Space; caption sets it as a small dimmed caption with space above all but the first. The rows right below a section get no guide lines.
+// - section: a header row (the groups' sources, the zones' domains) that is never selected and opens and closes by click, Enter and Space; caption sets it as a small dimmed caption with space above all but the first. The rows below a section hang from it with guide lines, like the children of a budget.
 // - selectable false: a row that is never selected; a click opens and closes it.
 // - children are the loaded children; hasChildren says there are children not loaded yet (the row has an arrow, and opening it calls onLoadChildren); loading and error are the page's own state of loading them (a spinner instead of the arrow, a warning sign).
 // - more: the paging row at the end of a list, { onLoad?, loaded?, total? }: with onLoad a "show more" button (loaded/total beside it), else only its label, dimmed.
@@ -166,12 +166,8 @@ export function NavTree({ label, nodes, expansion, selectedId, onSelect = noop, 
         tree.initialize(data);
     }, [shape]); // eslint-disable-line react-hooks/exhaustive-deps -- the shape says when; the controller and the data are new every render
 
-    // Rows: Mantine's flat rows, the rows right below a section without guide lines.
-    const underSection = (id) => !!index.get(ancestorsOf(index, id).at(-1))?.node.section;
-    const flat = flattenTreeData(data, expandedState).map(item => {
-        if (item.level < 2 || !underSection(item.node.value)) return item;
-        return { ...item, linesPath: ['none', ...item.linesPath.slice(1)], noTick: item.level === 2 };
-    });
+    // Rows: Mantine's flat rows, with guide lines from a section to its rows too, as from a budget to its children: without them a row below a section that has no children of its own (no arrow) hung in the air.
+    const flat = flattenTreeData(data, expandedState);
 
     // Selected and linked: open the rows above it, once per item selected, and scroll it into view.
     const revealed = useRef(null);
@@ -259,7 +255,7 @@ export function NavTree({ label, nodes, expansion, selectedId, onSelect = noop, 
                     <FlatTreeNode key={item.node.value} node={item.node} level={item.level} parent={item.parent} hasChildren={item.hasChildren} expanded={item.expanded}
                         tree={tree} expandOnClick={false} expandOnSpace={false} renderNode={renderNode} linesPath={item.linesPath}
                         tabIndex={item.node.value === tabbable ? 0 : -1}
-                        style={{ ...(item.noTick ? { '--nav-tree-tick': 'none' } : {}), ...(spaced ? { marginTop: 'var(--mantine-spacing-sm)' } : {}) }} />
+                        style={spaced ? { marginTop: 'var(--mantine-spacing-sm)' } : undefined} />
                 );
             })}
         </Box>

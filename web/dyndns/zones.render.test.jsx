@@ -115,15 +115,15 @@ describe('the zones page', () => {
         expect(within(row('gpu')).queryByRole('img')).toBeNull();
         expect(within(row('iot')).queryByRole('img')).toBeNull();
         expect(within(row('dennis-pfisterer-at-dhbw-de')).queryByRole('img')).toBeNull();
-        // Guide lines (Mantine's flat line markers) join the subzones, not the roots or the headings; the last subzone's line ends there.
+        // Guide lines (Mantine's flat line markers) join the roots to their heading and the subzones to their zone, so a root without subzones does not hang in the air; the headings have none; the last subzone's line ends there.
         const lines = (r) => [...r.querySelectorAll('span[aria-hidden][style*="--flat-line-column"]')];
         expect(screen.getByRole('tree').hasAttribute('data-with-lines')).toBe(true);
-        expect(lines(row('services'))).toEqual([]);
-        expect(row('services').style.getPropertyValue('--nav-tree-tick')).toBe('none');
         expect(lines(row('dhbw.cloud'))).toEqual([]);
-        expect(lines(row('workflow-auth')).length).toBe(1);
-        expect(lines(row('workflow-auth'))[0].classList.length).toBe(2);
-        expect(lines(row('itlabs'))[0].classList.length).toBe(1);
+        expect(lines(row('services')).length).toBe(1);
+        expect(lines(row('test.pfisterer')).length).toBe(1);
+        expect(lines(row('workflow-auth')).length).toBe(2);
+        expect(lines(row('workflow-auth'))[1].classList.length).toBe(2);
+        expect(lines(row('itlabs'))[1].classList.length).toBe(1);
     });
 
     it('closes and opens a heading by its row, its arrow and the keyboard, remembered, also the heading of the selected zone', async () => {

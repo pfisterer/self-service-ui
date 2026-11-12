@@ -17,7 +17,3 @@
     outline: 2px solid var(--mantine-primary-color-filled);
     outline-offset: -2px;
 }
-
-.nav-tree [role="treeitem"][data-level]::before {
-    display: var(--nav-tree-tick, block);
-}

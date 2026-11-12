@@ -212,17 +212,17 @@ describe('NavTree with sections and lines', () => {
         expect(rows()).toEqual([['Later', '1'], ['cake', '2']]);
     });
 
-    it('draws Mantine\'s guide lines below the nodes right under a section, through the levels whose line goes on', () => {
+    it('draws Mantine\'s guide lines from a section to its rows and below, through the levels whose line goes on', () => {
         renderView(<Harness nodes={SECTIONS} withLines />);
         expect(screen.getByRole('tree').hasAttribute('data-with-lines')).toBe(true);
         // Mantine's flat line markers: one per level below the second, the row's own marked closing where it is the last child.
         const lines = (name) => [...item(name).querySelectorAll('span[aria-hidden]')].map(l => [l.style.getPropertyValue('--flat-line-column'), l.classList.length > 1]);
-        expect(lines('fruit')).toEqual([]);
-        expect(item('fruit').style.getPropertyValue('--nav-tree-tick')).toBe('none');
-        expect(lines('apple')).toEqual([['3', false]]);
-        expect(lines('boskoop')).toEqual([['3', false], ['4', true]]);
-        expect(lines('pear')).toEqual([['3', true]]);
-        expect(item('apple').style.getPropertyValue('--nav-tree-tick')).toBe('');
+        // A row right below a section hangs from it too (a childless one hung in the air without), the last one of a section closing the line.
+        expect(lines('fruit')).toEqual([['2', false]]);
+        expect(lines('cake')).toEqual([['2', true]]);
+        expect(lines('apple')).toEqual([['2', false], ['3', false]]);
+        expect(lines('boskoop')).toEqual([['2', false], ['3', false], ['4', true]]);
+        expect(lines('pear')).toEqual([['2', false], ['3', true]]);
     });
 });
 
