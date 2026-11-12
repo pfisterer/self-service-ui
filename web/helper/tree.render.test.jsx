@@ -5,6 +5,7 @@ import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { renderView } from '/test/render-harness.jsx';
 import { filterTree, ItemTree, TreeFilter, TreeRow, Tree, useTreeExpansion } from '/helper/tree.jsx';
 import { MasterDetail } from '/helper/master-detail.jsx';
+import i18n from '/i18n/index.js';
 
 // The generic tree and master-detail layout, without any page's data: nesting, opening and closing, selection, the keyboard, the filter and the row actions.
 
@@ -167,6 +168,29 @@ describe('ItemTree with sections', () => {
         renderView(<SectionHarness sections={[SECTIONS[0], SECTIONS[1]]} />);
         expect(levels()[0]).toEqual(['fruit', '1']);
         expect(screen.queryByText('Now')).toBeNull();
+    });
+
+    it('opens and closes all branches with the button beside the filter, hidden while filtering', () => {
+        function AllHarness() {
+            const [q, setQ] = useState('');
+            const { isOpen, toggle, expandAll, collapseAll, allOpen } = useTreeExpansion({ storageKey: 'test.all', defaultOpen: (path) => path !== 'section:later' });
+            const branches = ['section:now', 'section:later', 'fruit', 'apple', 'veg'];
+            return (
+                <>
+                    <TreeFilter value={q} onChange={setQ} label="Filter" clearLabel="Clear" allOpen={allOpen(branches)} onToggleAll={() => (allOpen(branches) ? collapseAll : expandAll)(branches)} />
+                    <ItemTree label="Things" sections={SECTIONS} getId={n => n.id} getChildren={kids} onSelect={() => {}} isOpen={isOpen} toggle={toggle} query={q} matches={(n, s) => n.id.includes(s)} noMatch="Nothing" row={(n) => ({ label: n.id })} />
+                </>
+            );
+        }
+        renderView(<AllHarness />);
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.tree.expandAll') }));
+        expect(levels().map(l => l[0])).toEqual(['Now', 'fruit', 'apple', 'boskoop', 'pear', 'veg', 'leek', 'Later', 'cake']);
+        const collapse = screen.getByRole('button', { name: i18n.t('projects.tree.collapseAll') });
+        expect(collapse.getAttribute('aria-pressed')).toBe('true');
+        fireEvent.click(collapse);
+        expect(levels().map(l => l[0])).toEqual(['Now', 'Later']);
+        fireEvent.change(screen.getByLabelText('Filter'), { target: { value: 'cak' } });
+        expect(screen.queryByRole('button', { name: i18n.t('projects.tree.expandAll') })).toBeNull();
     });
 
     it('keeps the header of a lone section where asked to', () => {

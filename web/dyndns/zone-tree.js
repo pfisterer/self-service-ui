@@ -2,7 +2,7 @@
 //
 // Heading of a root zone: the zone it was given out of, the API's `zone_soa` (the governing rule's SOA: users.dhbw.site for a personal zone, dhbw.cloud for services.dhbw.cloud); without one (an older API, a zone no rule governs) the name without its first label. A subzone stands under its root zone's heading, so a zone and its subzones stay together; own, shared and not created zones are not separated.
 //
-// A zone's parent is the API's `parent` where that zone is listed, else the closest listed zone whose name the zone's name ends in (a policy zone below another, such as x.lehre.example below lehre.example), never labels alone; a zone not created yet takes no zone below it. Headings stand in the order their first zone appears in the API (normally the person's own personal zone first); below, zones in use by label, then the ones not created yet by label.
+// A zone's parent is the API's `parent` where that zone is listed, else the closest listed zone whose name the zone's name ends in (a policy zone below another, such as x.lehre.example below lehre.example), never labels alone; a zone not created yet takes no zone below it. Headings stand in the order their first zone appears in the API (normally the person's own personal zone first); below, the person's own zone first (the first root zone in use the API lists, as defaultZone), then zones in use by label, then the ones not created yet by label.
 //
 // A row is { id, name, label, zone, children, heading }: name is the full zone name, label the part below the heading (a root) or below the parent zone (a subzone). Ids are prefixed ("zone:…", headings "heading:…") so the expansion stored per browser cannot mix a heading up with a zone.
 
@@ -72,7 +72,9 @@ export function zoneTree(zones) {
         walk(root, heading);
     }
     const sections = [...headings.values()];
-    for (const s of sections) s.roots.sort(byLabel);
+    const own = defaultZone(zones);
+    const ownFirst = (a, b) => (b.zone === own ? 1 : 0) - (a.zone === own ? 1 : 0) || byLabel(a, b);
+    for (const s of sections) s.roots.sort(ownFirst);
 
     return {
         sections,
@@ -88,6 +90,8 @@ export function zoneTree(zones) {
             return out;
         },
         row: (id) => byId.get(id) ?? null,
+        // Every id that opens and closes: the headings and the zones with subzones (for expand all and collapse all).
+        branches: [...sections.map(s => s.id), ...[...byId.values()].filter(r => r.children.length > 0).map(r => r.id)],
         parent: (row) => parentRow.get(row.id) ?? null,
     };
 }

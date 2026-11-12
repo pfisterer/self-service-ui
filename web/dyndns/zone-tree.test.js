@@ -42,9 +42,10 @@ describe('zoneHeading', () => {
 describe('zoneTree', () => {
     it('puts the zones under the domain they were given out of, each a tree by the zone hierarchy, own and shared together', () => {
         expect(headingShapes(REAL_ZONES)).toEqual([
+            // The own personal zone first, then by label.
             ['users.dhbw.site', [
-                ['bigdata.pfisterer', ['ws2627']],
                 ['dennis-pfisterer-at-dhbw-de', ['data-eng-wdski24a', 'gridflex', 'iot']],
+                ['bigdata.pfisterer', ['ws2627']],
                 'test.pfisterer',
             ]],
             ['dhbw.site', [['wi-ma', ['crm']]]],
@@ -59,7 +60,7 @@ describe('zoneTree', () => {
 
     it('labels a root below its heading and a subzone below its parent, keeping the full name, prefixed ids and the zone', () => {
         const { sections } = zoneTree(REAL_ZONES);
-        const base = sections[0].roots[1];
+        const base = sections[0].roots[0];
         expect(base).toMatchObject({ id: `zone:${BASE}`, name: BASE, label: 'dennis-pfisterer-at-dhbw-de', zone: REAL_ZONES[0], heading: 'users.dhbw.site' });
         expect(base.children[0]).toMatchObject({ id: `zone:data-eng-wdski24a.${BASE}`, name: `data-eng-wdski24a.${BASE}`, label: 'data-eng-wdski24a', heading: 'users.dhbw.site' });
         // Without zone_soa (an older API): the name without its first label.
@@ -83,6 +84,23 @@ describe('zoneTree', () => {
             { name: 'a.b.example', zone_soa: 'b.example', exists: false },
         ];
         expect(headingShapes(zones)).toEqual([['b.example', ['y', 'a', 'z']], ['a.example', ['m']]]);
+    });
+
+    it('puts the own zone (the first root zone in use the API lists) first within its heading', () => {
+        const zones = [
+            { name: 'x.c.example', zone_soa: 'c.example', exists: false },
+            { name: 'zz.b.example', zone_soa: 'b.example', exists: true },
+            { name: 'aa.b.example', zone_soa: 'b.example', exists: true },
+            { name: 'sub.zz.b.example', parent: 'zz.b.example', exists: true },
+        ];
+        expect(headingShapes(zones)).toEqual([['c.example', ['x']], ['b.example', [['zz', ['sub']], 'aa']]]);
+    });
+
+    it('names every branch that opens and closes: headings and zones with subzones', () => {
+        expect(zoneTree(REAL_ZONES).branches).toEqual([
+            'heading:users.dhbw.site', 'heading:dhbw.site', 'heading:dhbw.cloud',
+            `zone:${BASE}`, 'zone:bigdata.pfisterer.users.dhbw.site', 'zone:wi-ma.dhbw.site', 'zone:services.dhbw.cloud', 'zone:gpu.services.dhbw.cloud', 'zone:llm.services.dhbw.cloud',
+        ]);
     });
 
     it('lists the rows above a zone and its heading', () => {

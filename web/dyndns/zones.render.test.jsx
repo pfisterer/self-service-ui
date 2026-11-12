@@ -71,8 +71,8 @@ const heading = () => screen.findByRole('heading', { level: 3 });
 
 const REAL_ROWS = [
     ['users.dhbw.site', '', '1'],
-    ['bigdata.pfisterer', '', '2'], ['ws2627', '', '3'],
     ['dennis-pfisterer-at-dhbw-de', '', '2'], ['data-eng-wdski24a', '', '3'], ['gridflex', '', '3'], ['iot', '', '3'],
+    ['bigdata.pfisterer', '', '2'], ['ws2627', '', '3'],
     ['test.pfisterer', '', '2'],
     ['dhbw.site', '', '1'],
     ['wi-ma', '', '2'], ['crm', '', '3'],
@@ -119,6 +119,41 @@ describe('the zones page', () => {
         expect(row('services').querySelector('.tree-line')).toBeNull();
         expect(row('dhbw.cloud').querySelector('.tree-line')).toBeNull();
         expect(row('workflow-auth').querySelector('.tree-line[data-last]')).toBeTruthy();
+    });
+
+    it('closes and opens a heading by its row, its arrow and the keyboard, remembered, also the heading of the selected zone', async () => {
+        renderAt(`/zone/${BASE}`);
+        await heading();
+        const users = () => row('users.dhbw.site');
+        fireEvent.click(users().querySelector('p'));
+        expect(users().getAttribute('aria-expanded')).toBe('false');
+        expect(row('dennis-pfisterer-at-dhbw-de')).toBeUndefined();
+        expect(JSON.parse(localStorage.getItem('self-service.dyndns-zones.collapsed'))).toContain('heading:users.dhbw.site');
+        fireEvent.click(within(users()).getByRole('button', { name: i18n.t('projects.tree.expand') }));
+        expect(users().getAttribute('aria-expanded')).toBe('true');
+        users().focus();
+        fireEvent.keyDown(users(), { key: 'Enter' });
+        expect(users().getAttribute('aria-expanded')).toBe('false');
+        fireEvent.keyDown(users(), { key: ' ' });
+        expect(users().getAttribute('aria-expanded')).toBe('true');
+        // Other headings close the same way.
+        fireEvent.click(row('dhbw.site').querySelector('p'));
+        expect(row('wi-ma')).toBeUndefined();
+    });
+
+    it('opens and closes everything with the button beside the filter', async () => {
+        localStorage.setItem('self-service.dyndns-zones.collapsed', JSON.stringify(['zone:services.dhbw.cloud']));
+        renderAt(`/zone/${BASE}`);
+        await heading();
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.tree.expandAll') }));
+        expect(rows()).toEqual(REAL_ROWS);
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.tree.collapseAll') }));
+        expect(rows()).toEqual([['users.dhbw.site', '', '1'], ['dhbw.site', '', '1'], ['dhbw.cloud', '', '1']]);
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.tree.expandAll') }));
+        expect(rows()).toEqual(REAL_ROWS);
+        // Not while the filter shows its matches.
+        fireEvent.change(screen.getByLabelText(i18n.t('dyndns.zoneList.filter')), { target: { value: 'gpu' } });
+        expect(screen.queryByRole('button', { name: i18n.t('projects.tree.collapseAll') })).toBeNull();
     });
 
     it('marks a subzone shared only where its owners differ from the zone above', async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import { Route, Switch, useRoute, useLocation, Redirect } from 'wouter';
@@ -42,7 +42,7 @@ export function DynDnsZones() {
     const [, navigate] = useLocation();
     const activeZoneName = match ? params.name : null;
     // Everything starts open (a person has a handful of zones, rarely a deep tree); what is stored per browser are the branches closed by hand.
-    const { isOpen, toggle, expand } = useTreeExpansion({ storageKey: 'self-service.dyndns-zones.collapsed', defaultOpen: true });
+    const { isOpen, toggle, expand, expandAll, collapseAll, allOpen } = useTreeExpansion({ storageKey: 'self-service.dyndns-zones.collapsed', defaultOpen: true });
 
     const zonesQuery = useQuery({
         queryKey: dyndnsKeys.zones(),
@@ -56,13 +56,16 @@ export function DynDnsZones() {
 
     const zones = zonesQuery.data ?? [];
     // The tree (dyndns/zone-tree.js): a heading per domain the zones were given out of (users.dhbw.site, dhbw.cloud), below it the zones with their subzones.
-    const { sections, children, ancestors: ancestorsOf, parent } = zoneTree(zones);
-    // A zone selected by link or reload below a closed branch or heading: they open.
+    const { sections, children, ancestors: ancestorsOf, parent, branches } = zoneTree(zones);
+    // A zone selected by link or reload below a closed branch or heading: they open, once per zone selected, so a branch above it can be closed again by hand afterwards (opening it on every change kept a heading from closing).
     const ancestors = activeZoneName ? ancestorsOf(activeZoneName) : [];
-    const closedAbove = ancestors.filter(a => !isOpen(a)).join(' ');
+    const revealed = useRef(null);
     useEffect(() => {
-        if (closedAbove) expand(closedAbove.split(' '));
-    }, [activeZoneName, closedAbove]); // eslint-disable-line react-hooks/exhaustive-deps -- expand is a new function every render; the names say when to run
+        if (!activeZoneName || ancestors.length === 0 || revealed.current === activeZoneName) return;
+        revealed.current = activeZoneName;
+        const closed = ancestors.filter(a => !isOpen(a));
+        if (closed.length) expand(closed);
+    }, [activeZoneName, ancestors.length]); // eslint-disable-line react-hooks/exhaustive-deps -- isOpen and expand are new functions every render; the zone and whether the tree knows it say when to run
 
     if (!api || zonesQuery.isPending) return <Loading />;
     if (zonesQuery.isError) return <LoadError query={zonesQuery} title={t('dyndns.zoneList.loadError')} />;
@@ -74,7 +77,7 @@ export function DynDnsZones() {
         ? <Text p="xs" c="dimmed">{t('dyndns.zoneList.empty')}</Text>
         : (
             <ItemTree label={t('dyndns.zoneList.title')} withLines loneSectionHeader getId={r => r.id} getChildren={children}
-                sections={sections.map(s => ({ id: s.id, label: s.soa, muted: true, title: t('dyndns.zoneList.headingTitle', { domain: s.soa }), roots: s.roots }))}
+                sections={sections.map(s => ({ id: s.id, label: s.soa, caption: true, title: t('dyndns.zoneList.headingTitle', { domain: s.soa }), roots: s.roots }))}
                 selectedId={activeZoneName ? zoneRowId(activeZoneName) : null} onSelect={r => navigate(`/zone/${r.zone.name}`)}
                 isOpen={isOpen} toggle={toggle}
                 query={q} matches={zoneMatches} noMatch={t('dyndns.zoneList.noMatch')}
@@ -108,7 +111,8 @@ export function DynDnsZones() {
     return (
         <MasterDetail
             header={<Title order={2} mb="md">{t('dyndns.zoneList.title')}</Title>}
-            filter={zones.length >= FILTER_FROM ? <TreeFilter value={filter} onChange={setFilter} label={t('dyndns.zoneList.filter')} clearLabel={t('dyndns.zoneList.clearFilter')} /> : null}
+            filter={zones.length >= FILTER_FROM ? <TreeFilter value={filter} onChange={setFilter} label={t('dyndns.zoneList.filter')} clearLabel={t('dyndns.zoneList.clearFilter')}
+                allOpen={allOpen(branches)} onToggleAll={() => (allOpen(branches) ? collapseAll : expandAll)(branches)} /> : null}
             master={tree}
             // Zone names are short in the tree, and the DNS records beside it want the room.
             masterSpan={{ base: 12, md: 4, lg: 3 }}
