@@ -107,11 +107,56 @@ const DEFAULTS = {
     'dyndns GET /v1/zone-events/': [],
 };
 
+// The groups the role provider maintains, for the groups shot: a local source (maintained here) and two imported ones (read-only), nested a level or two. Other shots answer /v1/manage/me with nothing to maintain, so the section stays out of their menu.
+const grp = (id, description, source, childGroups = 0) => ({ id, token: `group:${id}`, display_name: id, description, source_name: source, editable: source === 'lokal', child_groups: childGroups });
+const GROUP_SOURCES = [
+    { name: 'lokal', type: 'local', local: true, groups: 3 },
+    { name: 'dualis', type: 'csv', local: false, groups: 6, last_synced_at: '2026-11-10T06:00:00Z', last_sync_status: 'ok' },
+    { name: 'zwr', type: 'csv', local: false, groups: 2, last_synced_at: '2026-11-10T06:00:00Z', last_sync_status: 'ok' },
+];
+const TOP_GROUPS = {
+    lokal: [grp('kurs-wi24a', 'Kurs WI24A · Wirtschaftsinformatik', 'lokal', 1), grp('lehrende-wi', 'Lehrende · Wirtschaftsinformatik', 'lokal'), grp('tutoren', 'Tutorinnen und Tutoren', 'lokal')],
+    dualis: [grp('dualis-standort-mannheim', 'DHBW Mannheim · alle Kurse', 'dualis', 2), grp('dualis-standort-stuttgart', 'DHBW Stuttgart · alle Kurse', 'dualis', 1)],
+    zwr: [grp('zwr-fakultaet-wirtschaft', 'Fakultät Wirtschaft · DHBW Mannheim', 'zwr', 1)],
+};
+const CHILD_GROUPS = {
+    'kurs-wi24a': [grp('kurs-wi24a-tutorium', 'Tutorium WI24A', 'lokal')],
+    'dualis-standort-mannheim': [grp('dualis-mannheim-technik', 'Fakultät Technik · DHBW Mannheim', 'dualis', 2), grp('dualis-mannheim-wirtschaft', 'Fakultät Wirtschaft · DHBW Mannheim', 'dualis')],
+    'dualis-mannheim-technik': [grp('kurs-tinf24ai1', 'Kurs TINF24AI1 · Informatik', 'dualis'), grp('kurs-tmb24a', 'Kurs TMB24A · Maschinenbau', 'dualis')],
+    'dualis-standort-stuttgart': [grp('kurs-wwi24a', 'Kurs WWI24A · Wirtschaftsinformatik', 'dualis')],
+    'zwr-fakultaet-wirtschaft': [grp('kurs-wwi24a', 'Kurs WWI24A · Wirtschaftsinformatik', 'dualis')],
+};
+const ALL_GROUPS = [...Object.values(TOP_GROUPS).flat(), ...Object.values(CHILD_GROUPS).flat()];
+function groupsAnswer(path, query, shot) {
+    if (path === '/v1/manage/me') return shot.groups ? { actor: ME, admin: true, manages_any: true, may_act_as: false, relations: ['member', 'dozent'], source_name: 'lokal' } : { actor: ME, admin: false, manages_any: false };
+    if (path === '/v1/manage/sources') return GROUP_SOURCES;
+    if (path === '/v1/manage/groups') {
+        if (query.get('q')) return page(ALL_GROUPS.filter(g => g.id.includes(query.get('q'))));
+        if (query.get('parent')) return page(CHILD_GROUPS[query.get('parent')] ?? []);
+        if (query.get('source')) return page(TOP_GROUPS[query.get('source')] ?? []);
+    }
+    const m = path.match(/^\/v1\/manage\/groups\/([^/]+)(\/[a-z]+)?$/);
+    if (m) {
+        const g = ALL_GROUPS.find(x => x.id === m[1]);
+        if (!g) return undefined;
+        if (!m[2]) return { group: g, editable: g.editable, may_delete: false, managers: [`user:${ME}`], memberships: [
+            { member: 'group:kurs-wi24a-tutorium', relation: 'member', created_at: '2026-10-01T10:00:00Z' },
+            { member: 'user:tom.beispiel@dhbw.example', relation: 'member', created_at: '2026-10-01T10:00:00Z' },
+            { member: 'user:mia.beispiel@dhbw.example', relation: 'member', created_at: '2026-10-01T10:00:00Z', expires_at: '2027-03-31T00:00:00Z' },
+            { member: 'user:lea.muster@dhbw.example', relation: 'dozent', created_at: '2026-10-01T10:00:00Z' },
+        ] };
+        if (m[2] === '/effective') return ['user:tom.beispiel@dhbw.example', 'user:mia.beispiel@dhbw.example', 'user:jan.beispiel@dhbw.example'];
+        if (m[2] === '/history' || m[2] === '/managers') return [];
+    }
+    return undefined;
+}
+
 export function answer(api, method, path, query, shot) {
     const key = `${api} ${method} ${path}`;
     const own = shot.fixtures ?? {};
     if (key in own) return typeof own[key] === 'function' ? own[key](query) : own[key];
     if (key in DEFAULTS) return DEFAULTS[key];
+    if (api === 'groups' && method === 'GET') return groupsAnswer(path, query, shot);
     // The tree: one node, and a node's children (budgets or projects, as asked).
     if (api === 'projects' && method === 'GET') {
         const m = path.match(/^\/v1\/nodes\/([^/]+)(\/children)?$/);

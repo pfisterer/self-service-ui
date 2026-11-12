@@ -9,7 +9,7 @@ DOCKER_PLATFORMS ?= linux/amd64,linux/arm64
 
 # --- Targets ---
 .DEFAULT_GOAL := docker-build
-.PHONY: publish screenshots all check clean docker-build multi-arch-build docker-login help dev helm-update bump version-check
+.PHONY: publish screenshots readme-screenshots all check clean docker-build multi-arch-build docker-login help dev helm-update bump version-check
 
 # Alias for the primary build target
 all: docker-build
@@ -148,3 +148,10 @@ screenshots:
 	node screenshots/take.mjs "$$out" $(ONLY); \
 	if git -C "$$out" rev-parse >/dev/null 2>&1; then changed=$$(git -C "$$out" status --porcelain -- .); \
 	if [ -n "$$changed" ]; then echo "🖼️  changed on the homepage — commit and publish it:"; echo "$$changed"; else echo "🖼️  no picture changed"; fi; fi
+
+# The pictures in this README (docs/img): the same made-up data in English, one per entry of README_SHOTS in screenshots/shots.mjs, as lossless WebP (needs cwebp). ONLY=name,name takes just those.
+readme-screenshots:
+	@echo "📸 README screenshots → docs/img"; \
+	node screenshots/take.mjs --readme tmp/readme-screenshots $(ONLY) && \
+	for f in tmp/readme-screenshots/*.png; do cwebp -quiet -lossless -z 9 "$$f" -o "docs/img/$$(basename "$$f" .png).webp" || exit 1; done; \
+	git status --porcelain -- docs/img

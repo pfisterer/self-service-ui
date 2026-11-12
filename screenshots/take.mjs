@@ -1,22 +1,25 @@
-// Screenshots of the UI for the guides on dhbw.cloud: starts the Vite dev server, answers every API call with the made-up data in fixtures.mjs (no real person, project or address) and writes one PNG per shot in shots.mjs. Run again whenever a view in a guide changes: `make screenshots OUT=<homepage>/frontend/public/img/anleitungen`.
+// Screenshots of the UI for the guides on dhbw.cloud: starts the Vite dev server, answers every API call with the made-up data in fixtures.mjs (no real person, project or address) and writes one PNG per shot in shots.mjs. Run again whenever a view in a guide changes: `make screenshots OUT=<homepage>/frontend/public/img/anleitungen`. With --readme first it takes README_SHOTS instead, the English pictures of this repo's README (`make readme-screenshots`).
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import { ME, SHOWN_AS, answer } from './fixtures.mjs';
-import { SHOTS } from './shots.mjs';
+import { README_SHOTS, SHOTS } from './shots.mjs';
 
 const PORT = 8094;
 const BASE = `http://localhost:${PORT}`;
-const out = path.resolve(process.argv[2] || 'screenshots/out');
-const only = process.argv[3] ? new Set(process.argv[3].split(',')) : null;
+const args = process.argv.slice(2);
+const readme = args[0] === '--readme' && Boolean(args.shift());
+const out = path.resolve(args[0] || 'screenshots/out');
+const only = args[1] ? new Set(args[1].split(',')) : null;
 mkdirSync(out, { recursive: true });
 
-// The app's config as the container would write it, with all three APIs on this origin under /mock/, where the routes below answer them.
+// The app's config as the container would write it, with all four APIs on this origin under /mock/, where the routes below answer them.
 const CONFIG = `window.appconfig = ${JSON.stringify({
     dynamicZonesBaseUrl: `${BASE}/mock/dyndns/`,
     cloudResourcesBaseUrl: `${BASE}/mock/projects/`,
     llmBaseUrl: `${BASE}/mock/llm/`,
+    groupsBaseUrl: `${BASE}/mock/groups`,
     cloudResourcesMcpUrl: '', dynamicZonesMcpUrl: '',
     acmeServer: 'https://certificates.dhbw.cloud',
     dummyAuth: true,
@@ -38,19 +41,21 @@ let failed = false;
 try {
     await waitForServer();
     const browser = await chromium.launch();
-    for (const shot of SHOTS) {
+    for (const shot of readme ? README_SHOTS : SHOTS) {
         if (only && !only.has(shot.name)) continue;
-        const context = await browser.newContext({ viewport: shot.viewport ?? { width: 1100, height: 1000 }, deviceScaleFactor: 2, locale: 'de-DE', timezoneId: 'Europe/Berlin', colorScheme: 'light' });
+        // German for the guides, English for the README (shot.lang); the UI keeps the choice under dhbw-cloud.lang (i18n/index.js).
+        const lang = shot.lang ?? 'de';
+        const context = await browser.newContext({ viewport: shot.viewport ?? { width: 1100, height: 1000 }, deviceScaleFactor: 2, locale: lang === 'de' ? 'de-DE' : 'en-GB', timezoneId: 'Europe/Berlin', colorScheme: 'light' });
         // A fixed day, so dates and remaining times read the same on every run.
-        await context.addInitScript(() => {
+        await context.addInitScript((lang) => {
             const fixed = new Date('2026-11-10T09:30:00+01:00').valueOf();
             const RealDate = Date;
             globalThis.Date = class extends RealDate {
                 constructor(...a) { super(...(a.length ? a : [fixed])); }
                 static now() { return fixed; }
             };
-            try { localStorage.setItem('i18nextLng', 'de'); } catch { /* none */ }
-        });
+            try { localStorage.setItem('dhbw-cloud.lang', lang); } catch { /* none */ }
+        }, lang);
         const page = await context.newPage();
         await page.route('**/config.js', r => r.fulfill({ contentType: 'application/javascript', body: CONFIG }));
         await page.route(`${BASE}/mock/**`, async (r) => {
