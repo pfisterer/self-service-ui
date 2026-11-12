@@ -178,6 +178,16 @@ describe('the zones page', () => {
         expect(row('staging').getAttribute('aria-selected')).toBe('true');
     });
 
+    it('a student whose only zone is not created yet lands on it, with the way to activate it', async () => {
+        globalThis.__zones = [{ name: 's190000-at-student-dhbw-mannheim-de.users.dhbw.site', zone_soa: 'users.dhbw.site', exists: false, can_join: false, owners: [], allow_subdomains: true }];
+        // Coming from a zone of somebody else (an admin switching to act on the student's behalf keeps the URL of their own zone).
+        const memory = renderAt('/zone/dennis-pfisterer-at-dhbw-de.users.dhbw.site');
+        await screen.findByRole('tree');
+        await waitFor(() => expect(memory.history.at(-1)).toBe('/zone/s190000-at-student-dhbw-mannheim-de.users.dhbw.site'));
+        expect((await heading()).textContent).toBe('s190000-at-student-dhbw-mannheim-de.users.dhbw.site');
+        expect(screen.getByRole('button', { name: i18n.t('dyndns.zoneDetail.activate') })).toBeTruthy();
+    });
+
     it('a zone not created yet is selected by link and keeps the way to activate it', async () => {
         renderAt('/zone/some-project.dhbw.cloud');
         expect((await heading()).textContent).toBe('some-project.dhbw.cloud');

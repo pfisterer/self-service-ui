@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
 import { Route, Switch, useRoute, useLocation, Redirect } from 'wouter';
@@ -124,8 +124,7 @@ export function DynDnsZones() {
                         <Route path="/zone/:name" nest>
                             {param => {
                                 const zone = zones.find(z => z.name === param.name);
-                                // Unknown zone in the URL (e.g. after deleting/leaving it, or a stale
-                                // link) -> send the user back to the zone overview instead of a dead end.
+                                // Unknown zone in the URL (after deleting or leaving it, a stale link, or an admin switching to act on someone's behalf with their own zone still in the URL) -> on to the default zone. Not a <Redirect>: inside this nested route "/" means "/zone/<name>/", where the page stayed without a zone.
                                 return zone ?
                                     <AvailableDomain
                                         key={zone.name}
@@ -133,7 +132,7 @@ export function DynDnsZones() {
                                         onDeleted={() => navigate('/')}
                                         onAddSubzone={canAddSubzone(zone) ? () => setSubzoneParent(zone.name) : null}
                                     /> :
-                                    <Redirect to="/" replace />;
+                                    <GoTo navigate={navigate} to={`/zone/${defaultZone(zones).name}`} />;
                             }}
                         </Route>
 
@@ -221,6 +220,12 @@ export function SubzoneModal({ parent, onClose, onCreated }) {
             </Stack>
         </Modal>
     );
+}
+
+// GoTo replaces the location through the page's own navigate (relative to the zones page, not to the route it is rendered in).
+function GoTo({ navigate, to }) {
+    useEffect(() => { navigate(to, { replace: true }); }, [navigate, to]);
+    return null;
 }
 
 // ----------------------------------------
