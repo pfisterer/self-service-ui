@@ -276,3 +276,15 @@ describe('filterTree', () => {
         expect([...filterTree(NODES, n => n.id, n => n.children ?? [], n => n.id === 'leek')].sort()).toEqual(['leek', 'veg']);
     });
 });
+
+describe('NavTree wrapping long names', () => {
+    it('wraps a label with wrap set at its dots instead of cutting it off', () => {
+        const nodes = [{ id: 'z', label: 's190000-at-student-dhbw-mannheim-de.users.dhbw.site', wrap: true }, { id: 'y', label: 'short.name' }];
+        renderView(<NavTree label="Zones" nodes={nodes} />);
+        const [wrapped, plain] = screen.getAllByRole('treeitem').map(r => r.querySelector('p'));
+        expect(wrapped.textContent).toBe('s190000-at-student-dhbw-mannheim-de.users.dhbw.site');
+        expect(wrapped.querySelectorAll('wbr').length).toBe(3);
+        expect(wrapped.style.overflowWrap).toBe('anywhere');
+        expect(plain.querySelectorAll('wbr').length).toBe(0);
+    });
+});

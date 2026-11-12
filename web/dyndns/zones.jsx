@@ -61,7 +61,7 @@ export function DynDnsZones() {
             const shared = sharedOwners(r, parent(r));
             const owners = shared ? t('dyndns.zoneList.sharedWith', { owners: shared.join(', ') }) : null;
             return {
-                id: r.id, name: r.name, zone: z, label: r.label,
+                id: r.id, name: r.name, zone: z, label: r.label, wrap: true,
                 title: z.exists ? r.name : `${r.name} (${t('dyndns.zoneList.inactive')})`,
                 muted: !z.exists,
                 badge: (
@@ -80,7 +80,7 @@ export function DynDnsZones() {
                 children: r.children.map(toNode),
             };
         };
-        return sections.map(s => ({ id: s.id, label: s.soa, section: true, caption: true, icon: <Globe size={14} />, title: t('dyndns.zoneList.headingTitle', { domain: s.soa }), children: s.roots.map(toNode) }));
+        return sections.map(s => ({ id: s.id, label: s.soa, section: true, caption: true, wrap: true, icon: <Globe size={14} />, title: t('dyndns.zoneList.headingTitle', { domain: s.soa }), children: s.roots.map(toNode) }));
     }, [zones, eventsByZone, t]);
     // Everything starts open (a person has a handful of zones, rarely a deep tree); what is stored per browser are the branches closed by hand. A zone selected by link or reload below a closed branch or caption has them opened by the tree, once per zone selected.
     const expansion = useTreeExpansion({ storageKey: 'self-service.dyndns-zones.collapsed', defaultOpen: true });

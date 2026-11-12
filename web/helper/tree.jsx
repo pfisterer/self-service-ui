@@ -9,7 +9,7 @@ import './tree.css';
 //
 // A node is { id, value?, label, title?, sub?, icon?, muted?, badge?, count?, action?, section?, caption?, selectable?, children?, hasChildren?, loading?, error?, more? }:
 // - id names the node's place (unique in the tree, the key of its expansion); value (by default the id) is what selectedId is compared with, so an item shown in several places (a group in two groups) is selected in all of them.
-// - label is the line, shortened to fit; title its tooltip (the long form), sub a second line, icon before it; badge (signs) and count sit at the right end, action after them (a button that does not select the row); muted dims the label.
+// - label is the line, shortened to fit, or with wrap set wrapped onto further lines at its dots and hyphens (DNS names); title its tooltip (the long form), sub a second line, icon before it; badge (signs) and count sit at the right end, action after them (a button that does not select the row); muted dims the label.
 // - section: a header row (the groups' sources, the zones' domains) that is never selected and opens and closes by click, Enter and Space; caption sets it as a small dimmed caption with space above all but the first. The rows below a section hang from it with guide lines, like the children of a budget.
 // - selectable false: a row that is never selected; a click opens and closes it.
 // - children are the loaded children; hasChildren says there are children not loaded yet (the row has an arrow, and opening it calls onLoadChildren); loading and error are the page's own state of loading them (a spinner instead of the arrow, a warning sign).
@@ -262,6 +262,12 @@ export function NavTree({ label, nodes, expansion, selectedId, onSelect = noop, 
     );
 }
 
+// breakable puts a line-break opportunity after every dot of a name (after a hyphen the browser breaks by itself), so a long DNS name wraps at its own joints and only a single overlong label breaks inside (overflowWrap anywhere).
+function breakable(text) {
+    if (typeof text !== 'string' || !text.includes('.')) return text;
+    return text.split('.').flatMap((part, i, all) => (i < all.length - 1 ? [part, '.', <wbr key={i} />] : [part]));
+}
+
 // NavRow: one row's content inside Mantine's row (its label element, which carries the indentation).
 function NavRow({ node, payload, filtering, selected, onClick, onToggle }) {
     const { t } = useTranslation();
@@ -269,9 +275,11 @@ function NavRow({ node, payload, filtering, selected, onClick, onToggle }) {
     if (node.more) return <MoreRow node={node} elementProps={elementProps} />;
     const loading = isLoading || node.loading;
     const error = loadError || node.error;
+    const label = node.wrap ? breakable(node.label) : node.label;
+    const wrapProps = node.wrap ? { style: { overflowWrap: 'anywhere', flex: 1, minWidth: 0 } } : { truncate: true };
     const text = node.caption
-        ? <Text size="xs" truncate fw={600} c="dimmed" lts="0.04em">{node.label}</Text>
-        : <Text size="sm" truncate fw={selected ? 600 : 400} c={node.muted ? 'dimmed' : undefined}>{node.label}</Text>;
+        ? <Text size="xs" {...wrapProps} fw={600} c="dimmed" lts="0.04em">{label}</Text>
+        : <Text size="sm" {...wrapProps} fw={selected ? 600 : 400} c={node.muted ? 'dimmed' : undefined}>{label}</Text>;
     return (
         <Group {...elementProps} className={`${elementProps.className} nav-tree-row`} data-selected={selected || undefined} gap={4} wrap="nowrap" pr={6} py={3} onClick={onClick}>
             {loading
