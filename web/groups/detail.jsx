@@ -53,7 +53,10 @@ export function GroupDetail({ params, embedded = false }) {
     if (detail.isPending) return <Frame><Loading /></Frame>;
     if (detail.isError) return <Frame><LoadError query={detail} /></Frame>;
 
-    const { group, memberships = [], managers = [], may_delete: mayDelete, editable } = detail.data;
+    // ?? rather than defaults: a default only covers a missing field, and older role providers answered "managers": null for a group nobody maintains.
+    const { group, may_delete: mayDelete, editable } = detail.data;
+    const memberships = detail.data.memberships ?? [];
+    const managers = detail.data.managers ?? [];
     const readOnly = !editable;
 
     async function onDelete() {
@@ -294,7 +297,7 @@ function ExpiryModal({ id, entry, onClose }) {
 function Effective({ id }) {
     const { t } = useTranslation();
     const api = useGroupsApi();
-    const members = useQuery({ queryKey: groupsKeys.effective(id), queryFn: () => api.effectiveMembers(id) });
+    const members = useQuery({ queryKey: groupsKeys.effective(id), queryFn: async () => (await api.effectiveMembers(id)) ?? [] });
     if (members.isPending) return <Loading />;
     if (members.isError) return <LoadError query={members} />;
     return (
@@ -376,7 +379,7 @@ function Managers({ id, managers, readOnly }) {
 function History({ id }) {
     const { t } = useTranslation();
     const api = useGroupsApi();
-    const history = useQuery({ queryKey: groupsKeys.history(id), queryFn: () => api.history(id) });
+    const history = useQuery({ queryKey: groupsKeys.history(id), queryFn: async () => (await api.history(id)) ?? [] });
     if (history.isPending) return <Loading />;
     if (history.isError) return <LoadError query={history} />;
     return (

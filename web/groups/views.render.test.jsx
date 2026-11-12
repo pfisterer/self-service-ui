@@ -44,7 +44,8 @@ const DUALIS_DETAIL = {
     editable: false,
     may_delete: false,
     memberships: [{ member: 'group:dualis-orga-ma-t-mb', relation: 'studierende', created_at: '2026-11-04T10:00:00Z' }],
-    managers: [],
+    // null as role providers before b2689b9 answered for a group nobody maintains; the detail page crashed on it.
+    managers: null,
 };
 const SOURCES = [
     { name: 'ZWR', type: 'local', local: true, groups: 1 },
