@@ -13,18 +13,22 @@ import { DynamicDns } from '/dyndns/zones/dynamic-dns.jsx';
 import { DnsRecordsList } from '/dyndns/zones/dns-record-list.jsx';
 import { TlsCertificates } from '/dyndns/zones/tls-certificates.jsx';
 import { Title, Paper, Stack, Tabs, Button, Text, Alert, Group, TextInput, Modal, Box, Tooltip, Badge, ActionIcon } from '@mantine/core';
-import { AlertCircle, CircleDashed, Globe, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
+import { AlertCircle, CircleDashed, Plus, User, Users, RefreshCw, LogOut } from 'lucide-react';
 import { subzoneLabelError, wildcardCnRemaining, WILDCARD_CN_MAX } from '/helper/dns-validation.js';
 import { CopyableText } from '/helper/copyable-text.jsx';
 import { MasterDetail } from '/helper/master-detail.jsx';
 import { ItemTree, TreeFilter, useTreeExpansion } from '/helper/tree.jsx';
 import { useZoneEvents, ZoneEventIndicator, ZoneEventsBanner } from '/dyndns/zones/zone-events-banner.jsx';
-import { defaultZone, zoneMatches, zoneRowId, zoneTree } from '/dyndns/zone-tree.js';
+import { defaultZone, nameParts, sectionId, zoneMatches, zoneRowId, zoneTree } from '/dyndns/zone-tree.js';
 import { zoneAuthority } from '/dyndns/zone-authority.js';
 import { useDnsMeQuery } from '/dyndns/use-dns-me.jsx';
 
 // From this many zones on, a filter box stands above the tree.
 const FILTER_FROM = 6;
+
+// The sections of the tree (dyndns/zone-tree.js) with their header's icon; "available" starts closed, the zones in use open.
+const SECTION_ICONS = { own: <User size={14} />, shared: <Users size={14} />, available: <CircleDashed size={14} /> };
+const startsOpen = (path) => path !== sectionId('available');
 
 // ----------------------------------------
 // DynDnsZones — the zones as a tree on the left (helper/tree.jsx), the selected one on the right (helper/master-detail.jsx). The selection is the URL (/zone/<name>/<tab>), so a reload and a link keep it; without one the page opens on the person's own base zone.
@@ -40,8 +44,8 @@ export function DynDnsZones() {
     // so navigate('/') returns to the zone overview.
     const [, navigate] = useLocation();
     const activeZoneName = match ? params.name : null;
-    // Everything starts open (a person has a handful of zones, rarely a deep tree); what is stored per browser are the branches closed by hand.
-    const { isOpen, toggle, expand } = useTreeExpansion({ storageKey: 'self-service.dyndns-zones.collapsed', defaultOpen: true });
+    // Everything but the section of zones not in use starts open (a person has a handful of zones, rarely a deep tree); what is stored per browser are the branches flipped by hand.
+    const { isOpen, toggle, expand } = useTreeExpansion({ storageKey: 'self-service.dyndns-zones.collapsed', defaultOpen: startsOpen });
 
     const zonesQuery = useQuery({
         queryKey: dyndnsKeys.zones(),
@@ -54,9 +58,9 @@ export function DynDnsZones() {
     const eventsByZone = useZoneEvents();
 
     const zones = zonesQuery.data ?? [];
-    // The tree from the zone names (dyndns/zone-tree.js): group rows for names above zones that are no zone, each row only with the labels new below the row above.
-    const { roots, children, ancestors: ancestorsOf } = zoneTree(zones);
-    // A zone selected by link or reload below a closed branch: the branch opens, group rows included.
+    // The tree (dyndns/zone-tree.js): sections for own, shared and not yet created zones, in each the zones with their subzones.
+    const { sections, children, ancestors: ancestorsOf } = zoneTree(zones);
+    // A zone selected by link or reload below a closed branch or in a closed section: they open.
     const ancestors = activeZoneName ? ancestorsOf(activeZoneName) : [];
     const closedAbove = ancestors.filter(a => !isOpen(a)).join(' ');
     useEffect(() => {
@@ -72,18 +76,21 @@ export function DynDnsZones() {
     const tree = zones.length === 0
         ? <Text p="xs" c="dimmed">{t('dyndns.zoneList.empty')}</Text>
         : (
-            <ItemTree label={t('dyndns.zoneList.title')} roots={roots} getId={r => r.id} getChildren={children}
+            <ItemTree label={t('dyndns.zoneList.title')} withLines getId={r => r.id} getChildren={children}
+                sections={sections.map(s => ({ id: s.id, label: t(`dyndns.zoneList.sections.${s.key}`), icon: SECTION_ICONS[s.key], count: s.count, roots: s.roots }))}
                 selectedId={activeZoneName ? zoneRowId(activeZoneName) : null} onSelect={r => navigate(`/zone/${r.zone.name}`)}
-                isSelectable={r => !!r.zone} isOpen={isOpen} toggle={toggle}
+                isOpen={isOpen} toggle={toggle}
                 query={q} matches={zoneMatches} noMatch={t('dyndns.zoneList.noMatch')}
-                row={(r, { depth }) => {
+                row={(r) => {
                     const z = r.zone;
-                    // A group row: muted, no badges, no actions; its tooltip says what it is.
-                    if (!z) return { icon: depth === 0 ? <Globe size={14} /> : null, label: r.label, title: t('dyndns.zoneList.group', { name: r.name }), muted: true };
                     const owners = z.owners?.length > 1 ? t('dyndns.zoneList.sharedWith', { owners: z.owners.join(', ') }) : null;
+                    // A root in two lines, never cut: its first label bold, the rest small below; a subzone only with its own label.
+                    const [first, rest] = r.label === r.name ? nameParts(r.name) : [r.label, ''];
                     return {
-                        icon: depth === 0 ? <Globe size={14} /> : null,
-                        label: r.label,
+                        label: first,
+                        sub: rest || null,
+                        strong: !!rest,
+                        wrap: true,
                         title: r.name,
                         // Not in use: the name dimmed and a small sign, instead of a wide text badge.
                         muted: !z.exists,

@@ -1,97 +1,104 @@
 import { describe, expect, it } from 'vitest';
-import { defaultZone, zoneMatches, zoneTree } from './zone-tree.js';
+import { defaultZone, nameParts, zoneMatches, zoneTree } from './zone-tree.js';
 import { filterTree } from '/helper/tree.jsx';
 
-// The user's own zones, in the order the API lists them (own base zone first).
+// The user's real zones, in the order the API lists them (own base zone first): personal ones alone, two shared trees with three owners each, and one zone not created yet.
+const ME = 'dennis.pfisterer@dhbw.de';
+const THREE = [ME, 'a@dhbw.de', 'b@dhbw.de'];
 const BASE = 'dennis-pfisterer-at-dhbw-de.users.dhbw.site';
-const NAMES = [
-    BASE,
-    `data-eng-wdski24a.${BASE}`,
-    `gridflex.${BASE}`,
-    `iot.${BASE}`,
-    'test.pfisterer.users.dhbw.site',
-    'bigdata.pfisterer.users.dhbw.site',
-    'ws2627.bigdata.pfisterer.users.dhbw.site',
-    'wi-ma.dhbw.site',
-    'crm.wi-ma.dhbw.site',
-    'services.dhbw.cloud',
-    'gpu.services.dhbw.cloud',
-    'staging.gpu.services.dhbw.cloud',
-    'itlabs.services.dhbw.cloud',
-    'llm.services.dhbw.cloud',
-    'staging.llm.services.dhbw.cloud',
-    'mail.services.dhbw.cloud',
-    'workflow-auth.services.dhbw.cloud',
+const sub = (label, parent, owners = [ME]) => ({ name: `${label}.${parent}`, parent, exists: true, owners });
+const REAL_ZONES = [
+    { name: BASE, exists: true, owners: [ME], allow_subdomains: true },
+    sub('data-eng-wdski24a', BASE),
+    sub('gridflex', BASE),
+    sub('iot', BASE),
+    { name: 'test.pfisterer.users.dhbw.site', exists: true, owners: [ME] },
+    { name: 'bigdata.pfisterer.users.dhbw.site', exists: true, owners: [ME], allow_subdomains: true },
+    sub('ws2627', 'bigdata.pfisterer.users.dhbw.site'),
+    { name: 'wi-ma.dhbw.site', exists: true, owners: THREE, allow_subdomains: true },
+    sub('crm', 'wi-ma.dhbw.site', THREE),
+    { name: 'services.dhbw.cloud', exists: true, owners: THREE, allow_subdomains: true },
+    ...['gpu', 'itlabs', 'llm', 'mail', 'workflow-auth'].map(l => sub(l, 'services.dhbw.cloud', THREE)),
+    sub('staging', 'gpu.services.dhbw.cloud', THREE),
+    sub('staging', 'llm.services.dhbw.cloud', THREE),
+    { name: 'wi24a.lehre.dhbw.cloud', exists: false, can_join: false },
 ];
-const ZONES = NAMES.map(name => ({ name }));
 
-// The tree as nested [label, children] (a group's label in brackets), for comparing shapes.
-const shape = (rows) => rows.map(r => {
-    const label = r.zone ? r.label : `[${r.label}]`;
-    return r.children.length ? [label, shape(r.children)] : label;
-});
+// A section's trees as nested [label, children], for comparing shapes.
+const shape = (rows) => rows.map(r => (r.children.length ? [r.label, shape(r.children)] : r.label));
+const sectionShapes = (zones) => Object.fromEntries(zoneTree(zones).sections.map(s => [s.key, shape(s.roots)]));
 
 describe('zoneTree', () => {
-    it('builds the tree from the labels, groups for names above zones, chains merged', () => {
-        expect(shape(zoneTree(ZONES).roots)).toEqual([
-            ['[dhbw.site]', [
-                ['[users]', [
-                    ['dennis-pfisterer-at-dhbw-de', ['data-eng-wdski24a', 'gridflex', 'iot']],
-                    ['[pfisterer]', [['bigdata', ['ws2627']], 'test']],
-                ]],
-                ['wi-ma', ['crm']],
-            ]],
-            ['[dhbw.cloud]', [
-                ['services', [['gpu', ['staging']], 'itlabs', ['llm', ['staging']], 'mail', 'workflow-auth']],
-            ]],
-        ]);
+    it('sorts the zones into own, shared and available, each a tree by the zone hierarchy', () => {
+        expect(sectionShapes(REAL_ZONES)).toEqual({
+            own: [
+                [BASE, ['data-eng-wdski24a', 'gridflex', 'iot']],
+                'test.pfisterer.users.dhbw.site',
+                ['bigdata.pfisterer.users.dhbw.site', ['ws2627']],
+            ],
+            shared: [
+                ['wi-ma.dhbw.site', ['crm']],
+                ['services.dhbw.cloud', [['gpu', ['staging']], 'itlabs', ['llm', ['staging']], 'mail', 'workflow-auth']],
+            ],
+            available: ['wi24a.lehre.dhbw.cloud'],
+        });
+        expect(zoneTree(REAL_ZONES).sections.map(s => [s.id, s.count])).toEqual([['section:own', 7], ['section:shared', 10], ['section:available', 1]]);
+    });
+
+    it('keeps a subzone in its root section, whoever else owns it', () => {
+        const { sections } = zoneTree([{ name: 'me.x', exists: true, owners: [ME] }, { name: 'team.me.x', parent: 'me.x', exists: true, owners: THREE }]);
+        expect(sections.map(s => s.key)).toEqual(['own']);
+        expect(shape(sections[0].roots)).toEqual([['me.x', ['team']]]);
+    });
+
+    it('nests by the parent or the closest zone the name ends in, never by labels alone', () => {
+        // lehre.example is a zone, so x.y.lehre.example sits below it with the label x.y; nothing is made of the labels in between.
+        expect(sectionShapes([{ name: 'lehre.example', exists: true, owners: [ME] }, { name: 'x.y.lehre.example', exists: true, owners: [ME] }, { name: 'other.example', exists: true, owners: [ME] }]))
+            .toEqual({ own: [['lehre.example', ['x.y']], 'other.example'] });
+        // A zone not in use does not take zones in use below it.
+        expect(sectionShapes([{ name: 'lehre.example', exists: false }, { name: 'a.lehre.example', exists: true, owners: [ME] }]))
+            .toEqual({ own: ['a.lehre.example'], available: ['lehre.example'] });
     });
 
     it('keeps the full name, prefixed ids and the zone on every row', () => {
-        const { roots } = zoneTree(ZONES);
-        const users = roots[0].children[0];
-        expect(users).toMatchObject({ id: 'group:users.dhbw.site', name: 'users.dhbw.site', label: 'users', zone: null });
-        expect(users.children[0]).toMatchObject({ id: `zone:${BASE}`, name: BASE, label: 'dennis-pfisterer-at-dhbw-de', zone: ZONES[0] });
+        const { sections } = zoneTree(REAL_ZONES);
+        const base = sections[0].roots[0];
+        expect(base).toMatchObject({ id: `zone:${BASE}`, name: BASE, label: BASE, zone: REAL_ZONES[0], section: 'own' });
+        expect(base.children[0]).toMatchObject({ id: `zone:data-eng-wdski24a.${BASE}`, label: 'data-eng-wdski24a', section: 'own' });
     });
 
-    it('shows a lone zone in full instead of one row per label', () => {
-        expect(shape(zoneTree([{ name: 'x.y.example.org' }]).roots)).toEqual(['x.y.example.org']);
-        expect(shape(zoneTree([{ name: 'a.x.y.example.org' }, { name: 'b.x.y.example.org' }]).roots)).toEqual([['[example.org]', [['[x.y]', ['a', 'b']]]]]);
-        // A group with a single branch below it is merged into it, the zones keep their own labels.
-        expect(shape(zoneTree([{ name: 'wi24a.lehre.dhbw.cloud' }, { name: 'bildanalyse.projects.dhbw.cloud' }]).roots)).toEqual([['[dhbw.cloud]', ['bildanalyse.projects', 'wi24a.lehre']]]);
+    it('orders roots as the API lists them, subzones by label', () => {
+        expect(shape(zoneTree(REAL_ZONES.slice().reverse()).sections[0].roots).map(r => (Array.isArray(r) ? r[0] : r)))
+            .toEqual(['bigdata.pfisterer.users.dhbw.site', 'test.pfisterer.users.dhbw.site', BASE]);
     });
 
-    it('keeps a zone that is itself a domain or has subzones selectable and openable', () => {
-        const { roots } = zoneTree([{ name: 'example.org' }, { name: 'www.example.org' }]);
-        expect(shape(roots)).toEqual([['example.org', ['www']]]);
-        expect(roots[0].id).toBe('zone:example.org');
-    });
-
-    it('orders the top as the API lists the zones, below by label', () => {
-        expect(zoneTree(ZONES.slice().reverse()).roots.map(r => r.name)).toEqual(['dhbw.cloud', 'dhbw.site']);
-    });
-
-    it('lists the rows above a zone, groups included, nearest first', () => {
-        const { ancestors } = zoneTree(ZONES);
-        expect(ancestors('ws2627.bigdata.pfisterer.users.dhbw.site')).toEqual(['zone:bigdata.pfisterer.users.dhbw.site', 'group:pfisterer.users.dhbw.site', 'group:users.dhbw.site', 'group:dhbw.site']);
-        expect(ancestors('services.dhbw.cloud')).toEqual(['group:dhbw.cloud']);
+    it('lists the rows above a zone and its section, the section only where there are headers', () => {
+        const { ancestors } = zoneTree(REAL_ZONES);
+        expect(ancestors('staging.gpu.services.dhbw.cloud')).toEqual(['zone:gpu.services.dhbw.cloud', 'zone:services.dhbw.cloud', 'section:shared']);
+        expect(ancestors('wi24a.lehre.dhbw.cloud')).toEqual(['section:available']);
         expect(ancestors('unknown.example')).toEqual([]);
+        expect(zoneTree([{ name: 'me.x', exists: true, owners: [ME] }, { name: 'a.me.x', parent: 'me.x', exists: true, owners: [ME] }]).ancestors('a.me.x')).toEqual(['zone:me.x']);
+    });
+});
+
+describe('nameParts', () => {
+    it('splits a name into its first label and the rest for a two-line row', () => {
+        expect(nameParts(BASE)).toEqual(['dennis-pfisterer-at-dhbw-de', '.users.dhbw.site']);
+        expect(nameParts('localhost')).toEqual(['localhost', '']);
     });
 });
 
 describe('zoneMatches', () => {
-    it('matches zones by their full name and shows the groups on the way down', () => {
-        const { roots, children } = zoneTree(ZONES);
-        const visible = filterTree(roots, r => r.id, children, r => zoneMatches(r, 'ws26'));
-        expect([...visible].sort()).toEqual(['group:dhbw.site', 'group:pfisterer.users.dhbw.site', 'group:users.dhbw.site', 'zone:bigdata.pfisterer.users.dhbw.site', 'zone:ws2627.bigdata.pfisterer.users.dhbw.site']);
-        // The full name, not only the label: "pfisterer.users" finds every zone below the group.
-        expect(zoneMatches(roots[0].children[0].children[1].children[1], 'Pfisterer.users')).toBe(true);
-        expect(zoneMatches(roots[0], 'dhbw.site')).toBe(false);
+    it('matches by the full name and keeps the way down to a match', () => {
+        const { roots, children } = zoneTree(REAL_ZONES);
+        const visible = filterTree(roots, r => r.id, children, r => zoneMatches(r, 'staging.GPU'));
+        expect([...visible].sort()).toEqual(['zone:gpu.services.dhbw.cloud', 'zone:services.dhbw.cloud', 'zone:staging.gpu.services.dhbw.cloud']);
+        expect(zoneMatches(roots[0].children[1], 'gridflex.dennis')).toBe(true);
     });
 });
 
 describe('defaultZone', () => {
-    it('opens on the first base zone in use', () => {
+    it('opens on the first base zone in use, the only zone of a person with one', () => {
         expect(defaultZone([{ name: 'x.lehre', exists: false }, { name: 'sub.me', parent: 'me', exists: true }, { name: 'me', exists: true }]).name).toBe('me');
         expect(defaultZone([{ name: 'x.lehre', exists: false }]).name).toBe('x.lehre');
         expect(defaultZone([])).toBeNull();

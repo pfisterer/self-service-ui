@@ -32,7 +32,11 @@
         "noMatch": "No zone matches the filter.",
         "addSubzone": "Create subzone under {{zone}}",
         "inactive": "not active",
-        "group": "{{name}} – groups the zones below, not a zone itself"
+        "sections": {
+            "own": "My zones",
+            "shared": "Shared",
+            "available": "Available, not created yet"
+        }
     },
     "subzone": {
         "title": "Create subzone",

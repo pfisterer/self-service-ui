@@ -6,7 +6,7 @@ import { useDebouncedValue } from '@mantine/hooks';
 import { ActionIcon, Badge, Box, Button, Group, Loader, Paper, Table, Text, Title, Tooltip } from '@mantine/core';
 import { Database, ListTree, Plus, Users } from 'lucide-react';
 import { MasterDetail } from '/helper/master-detail.jsx';
-import { Tree, TreeFilter, TreeRow as Row, useTreeExpansion } from '/helper/tree.jsx';
+import { Tree, TREE_INDENT, TreeFilter, TreeRow as Row, TreeSection, useTreeExpansion } from '/helper/tree.jsx';
 import { formatDateTime } from '/format-date.js';
 import { LoadError, Loading } from '/helper/query-state.jsx';
 import { useGroupsApi } from '/groups/api-groups.jsx';
@@ -80,37 +80,37 @@ function SourceNode({ source, isOpen, toggle, selectedId, onSelect, revealed }) 
     const path = `source:${source.name}`;
     const opened = isOpen(path);
     return (
-        <>
-            <Row depth={0} open={opened} openable={source.groups > 0} onToggle={() => toggle(path)} onClick={() => toggle(path)}
-                icon={<Database size={14} />} label={source.name} count={source.groups}
-                badge={source.local ? null : <Badge size="xs" variant="light" color="gray">{source.type}</Badge>} />
-            {opened && <Children params={{ source: source.name, limit: LIMIT }} path={path} depth={1} sourceName={source.name}
-                isOpen={isOpen} toggle={toggle} selectedId={selectedId} onSelect={onSelect} revealed={revealed} />}
-        </>
+        <TreeSection open={opened} openable={source.groups > 0} onToggle={() => toggle(path)}
+            icon={<Database size={14} />} label={source.name} count={source.groups}
+            badge={source.local ? null : <Badge size="xs" variant="light" color="gray">{source.type}</Badge>}>
+            <Children params={{ source: source.name, limit: LIMIT }} path={path} depth={1} sourceName={source.name}
+                isOpen={isOpen} toggle={toggle} selectedId={selectedId} onSelect={onSelect} revealed={revealed} />
+        </TreeSection>
     );
 }
 
-// Children: the groups under a source or a group, fetched when the branch opens.
-function Children({ params, path, depth, sourceName, isOpen, toggle, selectedId, onSelect, revealed }) {
+// Children: the groups under a source or a group, fetched when the branch opens. `through` is null for a source's top groups, which get no guide lines, else the levels above whose lines pass by (TreeRow's lines).
+function Children({ params, path, depth, through = null, sourceName, isOpen, toggle, selectedId, onSelect, revealed }) {
     const api = useGroupsApi();
     const { t } = useTranslation();
     const children = useQuery({ queryKey: groupsKeys.list(params), queryFn: () => api.listGroups(params) });
-    if (children.isPending) return <Box pl={depth * 18 + 24} py={4}><Loader size="xs" /></Box>;
-    if (children.isError) return <Box pl={depth * 18 + 24}><LoadError query={children} /></Box>;
+    if (children.isPending) return <Box pl={depth * TREE_INDENT + 24} py={4}><Loader size="xs" /></Box>;
+    if (children.isError) return <Box pl={depth * TREE_INDENT + 24}><LoadError query={children} /></Box>;
     return (
         <>
-            {children.data.items.map(g => (
+            {children.data.items.map((g, i, list) => (
                 <GroupNode key={g.id} group={g} path={`${path}/${g.id}`} depth={depth} sourceName={sourceName}
+                    lines={through ? { through, last: i === list.length - 1 } : null}
                     isOpen={isOpen} toggle={toggle} selectedId={selectedId} onSelect={onSelect} revealed={revealed} />
             ))}
             {children.data.total > children.data.items.length && (
-                <Text size="xs" c="dimmed" pl={depth * 18 + 24}>{t('groups.browser.more', { count: children.data.total - children.data.items.length })}</Text>
+                <Text size="xs" c="dimmed" pl={depth * TREE_INDENT + 24}>{t('groups.browser.more', { count: children.data.total - children.data.items.length })}</Text>
             )}
         </>
     );
 }
 
-function GroupNode({ group, path, depth, sourceName, isOpen, toggle, selectedId, onSelect, revealed }) {
+function GroupNode({ group, path, depth, lines, sourceName, isOpen, toggle, selectedId, onSelect, revealed }) {
     const opened = isOpen(path);
     const row = useRef(null);
     useEffect(() => {
@@ -120,12 +120,12 @@ function GroupNode({ group, path, depth, sourceName, isOpen, toggle, selectedId,
     const foreign = group.source_name && group.source_name !== sourceName;
     return (
         <>
-            <Row rowRef={row} depth={depth} open={opened} openable={group.child_groups > 0} onToggle={() => toggle(path)}
+            <Row rowRef={row} depth={depth} lines={lines} open={opened} openable={group.child_groups > 0} onToggle={() => toggle(path)}
                 onClick={() => { onSelect(group.id); if (group.child_groups > 0 && !opened) toggle(path); }}
                 selected={group.id === selectedId} icon={<Users size={14} />} label={group.id} sub={shortDescription(group)}
                 count={group.child_groups || null}
                 badge={foreign ? <Badge size="xs" variant="light" color="gray">{group.source_name}</Badge> : null} />
-            {opened && <Children params={{ parent: group.id, limit: LIMIT }} path={path} depth={depth + 1} sourceName={group.source_name}
+            {opened && <Children params={{ parent: group.id, limit: LIMIT }} path={path} depth={depth + 1} through={lines ? [...lines.through, !lines.last] : []} sourceName={group.source_name}
                 isOpen={isOpen} toggle={toggle} selectedId={selectedId} onSelect={onSelect} revealed={revealed} />}
         </>
     );

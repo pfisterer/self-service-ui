@@ -1,91 +1,105 @@
-// The zone tree on the zones page is built from the names alone, label by label from the right, like a trie (dennis-pfisterer-at-dhbw-de.users.dhbw.site: site › dhbw › users › dennis-pfisterer-at-dhbw-de), so that every row only needs the labels that are new below the row above it and long base zones no longer stand in full in the narrow column. The API's `parent` is not needed for this: the closest zone above a zone is also the closest zone its name ends in.
+// The zone tree on the zones page: the zones in three sections, each a tree by the zones' own hierarchy.
 //
-// Which trie nodes become rows (deterministic, from the names only):
-// - The top level are the registered domains, taken as the last two labels (dhbw.site, dhbw.cloud; no public suffix list, the platform's domains have plain two-label suffixes; a name of one or two labels is its own top). Such a domain is a row when it is a zone itself or holds at least two zones; a domain with a single zone below it does not branch, and that zone stands at the top with its full name (x.y.example.org as one row, not four).
-// - Below the top, a node is a row when it is a zone or when it branches (two or more children). A node that is neither is merged into its only child, whose label then carries both parts with a dot (lehre.dhbw.cloud with only wi24a below: one row wi24a.lehre).
-// - Rows that are not zones are group rows: they only hold the zones below them.
-// Order: top-level rows as the API lists their first zone (normally the person's own first), rows below by label.
+// Sections, decided from the zone list of the API:
+// - own: zones in use (exists) that the person manages alone,
+// - shared: zones in use with co-owners (more than one owner),
+// - available: zones the rules allow but that are not the person's yet (exists false: not created, to join, or taken).
+// A subzone sits in the section of its root zone (the topmost zone above it in use), so a zone and its subzones stay together; zones not in use form their own trees in "available".
 //
-// A row is { id, name, label, zone, children }: name is the full domain, label the part new below the row above, zone the API's zone or null for a group. Ids are prefixed ("zone:…", "group:…") so the expansion stored per browser cannot mix a group up with a zone of the same name.
+// Within a section a zone's parent is the API's `parent` where that zone is in the same section, else the closest zone of the section whose name the zone's name ends in (a policy zone below another, such as x.lehre.example below lehre.example). Roots stand in the order the API lists them (normally the person's own first), subzones by their label.
+//
+// A row is { id, name, label, zone, children, section }: name is the full zone name, label the part before the parent's name (the full name for a root). Ids are prefixed ("zone:…", sections "section:…") so the expansion stored per browser cannot mix a section up with a zone.
 
-const labelsOf = (name) => name.replace(/\.+$/, '').split('.').filter(Boolean);
+export const SECTIONS = ['own', 'shared', 'available'];
 
 export const zoneRowId = (name) => `zone:${name}`;
-const groupRowId = (name) => `group:${name}`;
+export const sectionId = (key) => `section:${key}`;
 
-export function zoneTree(zones) {
-    const byName = new Map();
-    for (const z of zones) if (!byName.has(z.name)) byName.set(z.name, z);
+const trim = (name) => name.replace(/\.+$/, '');
 
-    // The trie: one node per name that is a zone or lies above one, keyed by its full name.
-    const nodes = new Map();
-    const node = (name) => {
-        if (!nodes.has(name)) nodes.set(name, { name, kids: new Set(), zones: 0 });
-        return nodes.get(name);
+// nameParts splits a name for a two-line row: the first label, and the rest with its leading dot (dennis-pfisterer-at-dhbw-de | .users.dhbw.site); a name of one label has no rest.
+export function nameParts(name) {
+    const i = name.indexOf('.');
+    return i < 0 ? [name, ''] : [name.slice(0, i), name.slice(i)];
+}
+
+// Builds the hierarchy of one group of zones (in use, or not), returning the root rows in list order.
+function forest(zones) {
+    const byName = new Map(zones.map(z => [trim(z.name), z]));
+    const parentOf = (z) => {
+        const name = trim(z.name);
+        if (z.parent && byName.has(trim(z.parent)) && trim(z.parent) !== name) return trim(z.parent);
+        const labels = name.split('.');
+        for (let i = 1; i < labels.length; i++) {
+            const above = labels.slice(i).join('.');
+            if (byName.has(above)) return above;
+        }
+        return null;
     };
-    const tops = [];
-    for (const z of byName.values()) {
-        const labels = labelsOf(z.name);
-        if (labels.length === 0) continue;
-        const top = labels.slice(-2).join('.');
-        if (!tops.includes(top)) tops.push(top);
-        node(top).zones++;
-        for (let i = labels.length - 3; i >= 0; i--) {
-            const name = labels.slice(i).join('.');
-            node(labels.slice(i + 1).join('.')).kids.add(name);
-            node(name).zones++;
+    const rows = new Map();
+    for (const [name, zone] of byName) rows.set(name, { id: zoneRowId(name), name, label: name, zone, children: [], section: null });
+    const roots = [];
+    for (const [name, zone] of byName) {
+        const row = rows.get(name);
+        const parent = parentOf(zone);
+        if (parent) {
+            row.label = name.slice(0, -(parent.length + 1));
+            rows.get(parent).children.push(row);
+        } else {
+            roots.push(row);
         }
     }
+    for (const row of rows.values()) row.children.sort((a, b) => a.label.localeCompare(b.label));
+    return roots;
+}
 
-    const isRow = (n, atTop) => byName.has(n.name) || (atTop ? n.zones >= 2 : n.kids.size >= 2);
-    // The row for a node: follows a chain of nodes that are no row down to the first that is.
-    const rowFrom = (name, above, atTop) => {
-        let n = nodes.get(name);
-        while (!isRow(n, atTop)) {
-            n = nodes.get([...n.kids][0]);
-            atTop = false;
-        }
-        const zone = byName.get(n.name) ?? null;
-        const row = {
-            id: zone ? zoneRowId(n.name) : groupRowId(n.name),
-            name: n.name,
-            label: above ? n.name.slice(0, -(above.length + 1)) : n.name,
-            zone,
-            children: [],
-        };
-        row.children = [...n.kids].map(k => rowFrom(k, n.name, false)).sort((a, b) => a.label.localeCompare(b.label));
-        return row;
-    };
-    const roots = tops.map(top => rowFrom(top, null, true));
+export function zoneTree(zones) {
+    const seen = new Set();
+    const unique = zones.filter(z => !seen.has(z.name) && seen.add(z.name));
+    const roots = [...forest(unique.filter(z => z.exists)), ...forest(unique.filter(z => !z.exists))];
 
-    const parentOf = new Map();
     const byId = new Map();
-    const walk = (row, parent) => {
+    const parentOf = new Map();
+    const bySection = Object.fromEntries(SECTIONS.map(k => [k, { roots: [], count: 0 }]));
+    const walk = (row, parent, section) => {
+        row.section = section;
         byId.set(row.id, row);
         if (parent) parentOf.set(row.id, parent.id);
-        row.children.forEach(c => walk(c, row));
+        bySection[section].count++;
+        row.children.forEach(c => walk(c, row, section));
     };
-    roots.forEach(r => walk(r, null));
+    for (const root of roots) {
+        const z = root.zone;
+        const section = !z.exists ? 'available' : (z.owners?.length > 1 ? 'shared' : 'own');
+        bySection[section].roots.push(root);
+        walk(root, null, section);
+    }
+    // Only sections with zones; with a single one the page shows its zones without a header.
+    const sections = SECTIONS.filter(k => bySection[k].roots.length > 0).map(k => ({ key: k, id: sectionId(k), ...bySection[k] }));
 
     return {
-        roots,
+        sections,
+        roots: sections.flatMap(s => s.roots),
         children: (row) => row.children,
-        // The rows above a zone's row, nearest first, group rows included, so a link to it can open the way down.
+        // The rows above a zone's row, nearest first, and the section's header where there are headers, so a link to it can open the way down.
         ancestors: (zoneName) => {
+            const row = byId.get(zoneRowId(zoneName));
+            if (!row) return [];
             const out = [];
-            for (let id = parentOf.get(zoneRowId(zoneName)); id; id = parentOf.get(id)) out.push(id);
+            for (let id = parentOf.get(row.id); id; id = parentOf.get(id)) out.push(id);
+            if (sections.length > 1) out.push(sectionId(row.section));
             return out;
         },
         row: (id) => byId.get(id) ?? null,
     };
 }
 
-// zoneMatches: whether a row matches the filter text — zones by their full name; a group row is shown only as the way down to a zone that matches.
+// zoneMatches: whether a row matches the filter text, by its full name.
 export function zoneMatches(row, query) {
-    return !!row.zone && row.name.toLowerCase().includes(query.trim().toLowerCase());
+    return row.name.toLowerCase().includes(query.trim().toLowerCase());
 }
 
-// defaultZone is the zone the page opens on without one in the URL: the first base zone already in use (normally the person's own), else the first one listed.
+// defaultZone is the zone the page opens on without one in the URL: the first base zone already in use (normally the person's own; a person with one zone gets that one), else the first one listed.
 export function defaultZone(zones) {
     return zones.find(z => !z.parent && z.exists) ?? zones[0] ?? null;
 }

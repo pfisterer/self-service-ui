@@ -133,6 +133,61 @@ describe('ItemTree in MasterDetail', () => {
     });
 });
 
+function SectionHarness({ sections }) {
+    const [selected, setSelected] = useState(null);
+    const [q, setQ] = useState('');
+    const { isOpen, toggle } = useTreeExpansion({ storageKey: 'test.sections', defaultOpen: (path) => path !== 'section:later' });
+    return (
+        <>
+            <TreeFilter value={q} onChange={setQ} label="Filter" clearLabel="Clear" />
+            <ItemTree label="Things" withLines sections={sections} getId={n => n.id} getChildren={kids} selectedId={selected} onSelect={n => setSelected(n.id)}
+                isOpen={isOpen} toggle={toggle} query={q} matches={(n, s) => n.id.includes(s)} noMatch="Nothing" row={(n) => ({ label: n.id })} />
+        </>
+    );
+}
+const SECTIONS = [
+    { id: 'section:now', label: 'Now', count: 6, roots: DATA },
+    { id: 'section:empty', label: 'Empty', roots: [] },
+    { id: 'section:later', label: 'Later', count: 1, roots: [{ id: 'cake', kids: [] }] },
+];
+const levels = () => screen.getAllByRole('treeitem').map(r => [r.querySelector('p').textContent, r.getAttribute('aria-level')]);
+
+describe('ItemTree with sections', () => {
+    it('puts the roots under headers that open and close, leaves out empty sections and starts one closed where asked to', () => {
+        renderView(<SectionHarness sections={SECTIONS} />);
+        expect(levels()).toEqual([['Now', '1'], ['fruit', '2'], ['apple', '3'], ['boskoop', '4'], ['pear', '3'], ['veg', '2'], ['leek', '3'], ['Later', '1']]);
+        expect(item('Now').hasAttribute('aria-selected')).toBe(false);
+        fireEvent.click(screen.getByText('Later'));
+        expect(screen.getByText('cake')).toBeTruthy();
+        fireEvent.click(screen.getByText('Now'));
+        expect(levels()).toEqual([['Now', '1'], ['Later', '1'], ['cake', '2']]);
+    });
+
+    it('shows a lone section without its header', () => {
+        renderView(<SectionHarness sections={[SECTIONS[0], SECTIONS[1]]} />);
+        expect(levels()[0]).toEqual(['fruit', '1']);
+        expect(screen.queryByText('Now')).toBeNull();
+    });
+
+    it('filters into the sections with a match, open', () => {
+        renderView(<SectionHarness sections={SECTIONS} />);
+        fireEvent.change(screen.getByLabelText('Filter'), { target: { value: 'cak' } });
+        expect(levels()).toEqual([['Later', '1'], ['cake', '2']]);
+    });
+
+    it('draws guide lines below the roots: through the levels whose line goes on, ending at the last child', () => {
+        renderView(<SectionHarness sections={SECTIONS} />);
+        const lines = (name) => [...item(name).querySelectorAll('.tree-line')].map(l => [l.style.left, l.hasAttribute('data-last')]);
+        expect(item('fruit').querySelector('.tree-line')).toBeNull();
+        expect(item('Now').querySelector('.tree-line')).toBeNull();
+        // apple: not the last under fruit; boskoop: last under apple, with fruit's line passing (apple has pear below it).
+        expect(lines('apple')).toEqual([['30px', false]]);
+        expect(lines('boskoop')).toEqual([['30px', false], ['50px', true]]);
+        expect(lines('pear')).toEqual([['30px', true]]);
+        expect(item('pear').querySelectorAll('.tree-line-tick').length).toBe(1);
+    });
+});
+
 describe('TreeRow and Tree by hand', () => {
     it('shows label, second line, count and an action always there', () => {
         const onClick = vi.fn();

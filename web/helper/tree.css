@@ -1,4 +1,33 @@
 /* A tree row (helper/tree.jsx): the actions that only matter for the row at hand appear on hover, on keyboard focus and on the selected row; on touch screens, which know no hover, they are always there. */
+.tree-row {
+    position: relative;
+}
+
+/* Guide lines (TreeRow's lines), drawn like Mantine's Tree withLines: gray, one pixel, the tick at the row's first line. */
+.tree-line,
+.tree-line-tick {
+    position: absolute;
+    pointer-events: none;
+    --tree-line: calc(0.0625rem * var(--mantine-scale)) solid var(--mantine-color-default-border);
+}
+
+.tree-line {
+    top: 0;
+    bottom: 0;
+    border-inline-start: var(--tree-line);
+}
+
+.tree-line[data-last] {
+    bottom: auto;
+    height: calc(0.8125rem * var(--mantine-scale));
+}
+
+.tree-line-tick {
+    top: calc(0.8125rem * var(--mantine-scale));
+    height: 0;
+    border-top: var(--tree-line);
+}
+
 .tree-row:hover {
     background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
 }
