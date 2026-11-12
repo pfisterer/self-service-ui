@@ -517,6 +517,7 @@
         "collapse": "Zuklappen",
         "expandAll": "Alle aufklappen",
         "collapseAll": "Alle zuklappen",
+        "loadError": "Inhalt konnte nicht geladen werden",
         "statusTooltip": "{{status}} — {{description}}",
         "requestOnly": "Aus diesem Budget darf angefragt werden, verwaltet wird es aber von anderen — daher nur lesbar.",
         "autoApprove": "Automatisch: kleine Anfragen werden ohne Nachfrage genehmigt.",

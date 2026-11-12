@@ -17,7 +17,7 @@ import { AlertCircle, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
 import { subzoneLabelError, wildcardCnRemaining, WILDCARD_CN_MAX } from '/helper/dns-validation.js';
 import { CopyableText } from '/helper/copyable-text.jsx';
 import { MasterDetail } from '/helper/master-detail.jsx';
-import { ItemTree, TreeFilter, useTreeExpansion } from '/helper/tree.jsx';
+import { ItemTree, TreeFilter, usePathExpansion as useTreeExpansion } from '/helper/tree.jsx';
 import { useZoneEvents, ZoneEventIndicator, ZoneEventsBanner } from '/dyndns/zones/zone-events-banner.jsx';
 import { defaultZone, sharedOwners, zoneMatches, zoneRowId, zoneTree } from '/dyndns/zone-tree.js';
 import { zoneAuthority } from '/dyndns/zone-authority.js';
@@ -112,7 +112,7 @@ export function DynDnsZones() {
         <MasterDetail
             header={<Title order={2} mb="md">{t('dyndns.zoneList.title')}</Title>}
             filter={zones.length >= FILTER_FROM ? <TreeFilter value={filter} onChange={setFilter} label={t('dyndns.zoneList.filter')} clearLabel={t('dyndns.zoneList.clearFilter')}
-                allOpen={allOpen(branches)} onToggleAll={() => (allOpen(branches) ? collapseAll : expandAll)(branches)} /> : null}
+                expansion={{ allOpen: allOpen(branches), toggleAll: () => (allOpen(branches) ? collapseAll : expandAll)(branches) }} /> : null}
             master={tree}
             // Zone names are short in the tree, and the DNS records beside it want the room.
             masterSpan={{ base: 12, md: 4, lg: 3 }}

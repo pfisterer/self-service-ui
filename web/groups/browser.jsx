@@ -6,7 +6,7 @@ import { useDebouncedValue } from '@mantine/hooks';
 import { ActionIcon, Badge, Box, Button, Group, Loader, Paper, Table, Text, Title, Tooltip } from '@mantine/core';
 import { Database, ListTree, Plus, Users } from 'lucide-react';
 import { MasterDetail } from '/helper/master-detail.jsx';
-import { Tree, TREE_INDENT, TreeFilter, TreeRow as Row, TreeSection, useTreeExpansion } from '/helper/tree.jsx';
+import { Tree, TREE_INDENT, TreeFilter, TreeRow as Row, TreeSection, usePathExpansion as useTreeExpansion } from '/helper/tree.jsx';
 import { formatDateTime } from '/format-date.js';
 import { LoadError, Loading } from '/helper/query-state.jsx';
 import { useGroupsApi } from '/groups/api-groups.jsx';

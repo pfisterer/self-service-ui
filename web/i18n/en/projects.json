@@ -517,6 +517,7 @@
         "collapse": "Collapse",
         "expandAll": "Expand all",
         "collapseAll": "Collapse all",
+        "loadError": "Could not load contents",
         "statusTooltip": "{{status}} — {{description}}",
         "requestOnly": "You can request from this budget, but you don't manage it — shown read-only.",
         "autoApprove": "Auto-approve: small requests are approved automatically.",

@@ -58,3 +58,27 @@
         opacity: 1;
     }
 }
+
+/* NavTree (helper/tree.jsx) on Mantine's flat Tree rows: the row's look, the focus ring inside the row (the tree's column hides what sticks out), the tick of the guide lines left out below a section. */
+.nav-tree-row {
+    border-radius: var(--mantine-radius-sm);
+    cursor: pointer;
+}
+
+.nav-tree-row:hover {
+    background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.nav-tree-row[data-selected] {
+    background-color: var(--mantine-color-blue-light);
+}
+
+.nav-tree [role="treeitem"]:focus-visible > .nav-tree-row,
+.nav-tree [role="treeitem"][data-focus-ring]:focus > .nav-tree-row {
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: -2px;
+}
+
+.nav-tree [role="treeitem"][data-level]::before {
+    display: var(--nav-tree-tick, block);
+}
