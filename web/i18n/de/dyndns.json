@@ -25,11 +25,13 @@
     "zoneList": {
         "title": "Zonenverwaltung",
         "loadError": "Zonen konnten nicht geladen werden",
-        "availableZones": "Verfügbare Zonen ({{zones}})",
-        "subzone": "Subzone",
         "sharedWith": "Geteilt mit: {{owners}}",
         "empty": "Keine Zonen verfügbar.",
-        "selectPrompt": "⬆️ Oben eine Zone auswählen, um ihre DNS-Einträge zu verwalten."
+        "filter": "Zonen filtern",
+        "clearFilter": "Filter zurücksetzen",
+        "noMatch": "Keine Zone passt zum Filter.",
+        "addSubzone": "Subzone unter {{zone}} anlegen",
+        "inactive": "nicht aktiv"
     },
     "subzone": {
         "title": "Subzone anlegen",
@@ -47,7 +49,6 @@
         "activate": "Aktivieren",
         "loadError": "{{zone}} konnte nicht geladen werden",
         "corrupted": "Zonendaten sind beschädigt.",
-        "zoneLabel": "Zone:",
         "managedBy": "Verwaltet von: {{owners}}",
         "share": "Zone teilen",
         "rotate": "Schlüssel erneuern",

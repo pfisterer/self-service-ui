@@ -372,8 +372,8 @@ export function DnsRecordsList({ zone, tsigKey }) {
                             </Table.Th>
                             <Table.Th w="28%">{t('dyndns.records.colName')}</Table.Th>
                             <Table.Th w="32%">{t('dyndns.records.colValue')}</Table.Th>
-                            <Table.Th w={110}>{t('dyndns.records.colType')}</Table.Th>
-                            <Table.Th w={90}>{t('dyndns.records.colTtl')}</Table.Th>
+                            <Table.Th w={110} miw={110}>{t('dyndns.records.colType')}</Table.Th>
+                            <Table.Th w={90} miw={90}>{t('dyndns.records.colTtl')}</Table.Th>
                             <Table.Th>{t('dyndns.records.colActions')}</Table.Th>
                         </Table.Tr>
                     </Table.Thead>

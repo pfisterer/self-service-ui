@@ -1,0 +1,31 @@
+/* A tree row (helper/tree.jsx): the actions that only matter for the row at hand appear on hover, on keyboard focus and on the selected row; on touch screens, which know no hover, they are always there. */
+.tree-row:hover {
+    background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6));
+}
+
+.tree-row[aria-selected="true"] {
+    background-color: var(--mantine-color-blue-light);
+}
+
+.tree-row:focus-visible {
+    outline: 2px solid var(--mantine-primary-color-filled);
+    outline-offset: -2px;
+}
+
+.tree-row-hover-action {
+    display: flex;
+    flex-shrink: 0;
+    opacity: 0;
+}
+
+.tree-row:hover .tree-row-hover-action,
+.tree-row:focus-within .tree-row-hover-action,
+.tree-row[aria-selected="true"] .tree-row-hover-action {
+    opacity: 1;
+}
+
+@media (hover: none) {
+    .tree-row-hover-action {
+        opacity: 1;
+    }
+}

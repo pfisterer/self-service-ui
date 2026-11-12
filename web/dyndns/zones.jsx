@@ -1,7 +1,7 @@
-import { useState, Fragment } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
-import { Route, Switch, Link, useRoute, useLocation, Redirect } from 'wouter';
+import { Route, Switch, useRoute, useLocation, Redirect } from 'wouter';
 import { useZonesApi } from '/dyndns/api-zones.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
 import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
@@ -12,29 +12,36 @@ import { DynamicDnsKubernetes } from '/dyndns/zones/dynamic-dns-kubernetes.jsx';
 import { DynamicDns } from '/dyndns/zones/dynamic-dns.jsx';
 import { DnsRecordsList } from '/dyndns/zones/dns-record-list.jsx';
 import { TlsCertificates } from '/dyndns/zones/tls-certificates.jsx';
-import { Container, Title, Paper, Stack, NavLink, Tabs, Button, Text, Loader, Alert, Group, TextInput, Modal, Box, Flex, Tooltip, Badge } from '@mantine/core';
-import { AlertCircle, Globe, CornerDownRight, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
+import { Title, Paper, Stack, Tabs, Button, Text, Alert, Group, TextInput, Modal, Box, Tooltip, Badge, ActionIcon } from '@mantine/core';
+import { AlertCircle, Globe, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
 import { subzoneLabelError, wildcardCnRemaining, WILDCARD_CN_MAX } from '/helper/dns-validation.js';
 import { CopyableText } from '/helper/copyable-text.jsx';
+import { MasterDetail } from '/helper/master-detail.jsx';
+import { ItemTree, TreeFilter, useTreeExpansion } from '/helper/tree.jsx';
 import { useZoneEvents, ZoneEventIndicator, ZoneEventsBanner } from '/dyndns/zones/zone-events-banner.jsx';
-import { subzonesUnder } from '/dyndns/zone-tree.js';
+import { defaultZone, zoneAncestors, zoneLabel, zoneTree } from '/dyndns/zone-tree.js';
 import { zoneAuthority } from '/dyndns/zone-authority.js';
 import { useDnsMeQuery } from '/dyndns/use-dns-me.jsx';
 
+// From this many zones on, a filter box stands above the tree.
+const FILTER_FROM = 6;
 
 // ----------------------------------------
-// DynDnsZones
+// DynDnsZones — the zones as a tree on the left (helper/tree.jsx), the selected one on the right (helper/master-detail.jsx). The selection is the URL (/zone/<name>/<tab>), so a reload and a link keep it; without one the page opens on the person's own base zone.
 // ----------------------------------------
 export function DynDnsZones() {
     const { t } = useTranslation();
     const api = useZonesApi();
     // Parent zone whose "create subzone" modal is currently open (null = closed).
     const [subzoneParent, setSubzoneParent] = useState(null);
+    const [filter, setFilter] = useState('');
     const [match, params] = useRoute("/zone/:name/*?");
     // navigate() here is relative to this component's router base (/dyndns/zones),
     // so navigate('/') returns to the zone overview.
     const [, navigate] = useLocation();
     const activeZoneName = match ? params.name : null;
+    // Everything starts open (a person has a handful of zones, rarely a deep tree); what is stored per browser are the branches closed by hand.
+    const { isOpen, toggle, expand } = useTreeExpansion({ storageKey: 'self-service.dyndns-zones.collapsed', defaultOpen: true });
 
     const zonesQuery = useQuery({
         queryKey: dyndnsKeys.zones(),
@@ -46,120 +53,106 @@ export function DynDnsZones() {
     // context for the list (small indicator per affected zone).
     const eventsByZone = useZoneEvents();
 
+    const zones = zonesQuery.data ?? [];
+    // A zone selected by link or reload below a closed branch: the branch opens.
+    const ancestors = activeZoneName ? zoneAncestors(zones, activeZoneName) : [];
+    const closedAbove = ancestors.filter(a => !isOpen(a)).join(' ');
+    useEffect(() => {
+        if (closedAbove) expand(closedAbove.split(' '));
+    }, [activeZoneName, closedAbove]); // eslint-disable-line react-hooks/exhaustive-deps -- expand is a new function every render; the names say when to run
+
     if (!api || zonesQuery.isPending) return <Loading />;
     if (zonesQuery.isError) return <LoadError query={zonesQuery} title={t('dyndns.zoneList.loadError')} />;
 
-    const zones = zonesQuery.data ?? [];
+    const { roots, children } = zoneTree(zones);
+    const canAddSubzone = (z) => z.allow_subdomains && z.exists;
+    const q = filter.trim().toLowerCase();
 
-    // Group zones: policy base zones (no parent) plus the user's created subzones
-    // under their base zone, at any depth (shown indented by label depth).
-    const baseZones = zones.filter(z => !z.parent);
+    const tree = zones.length === 0
+        ? <Text p="xs" c="dimmed">{t('dyndns.zoneList.empty')}</Text>
+        : (
+            <ItemTree label={t('dyndns.zoneList.title')} roots={roots} getId={z => z.name} getChildren={children}
+                selectedId={activeZoneName} onSelect={z => navigate(`/zone/${z.name}`)} isOpen={isOpen} toggle={toggle}
+                query={q} matches={(z, s) => z.name.toLowerCase().includes(s)} noMatch={t('dyndns.zoneList.noMatch')}
+                row={(z) => ({
+                    icon: z.parent ? null : <Globe size={14} />,
+                    label: zoneLabel(z),
+                    title: zoneLabel(z) !== z.name ? z.name : null,
+                    badge: (
+                        <>
+                            <ZoneEventIndicator events={eventsByZone[z.name]} />
+                            {z.owners?.length > 1 && (
+                                <Tooltip multiline maw={320} label={t('dyndns.zoneList.sharedWith', { owners: z.owners.join(', ') })}>
+                                    <Badge size="xs" variant="light" color="gray" leftSection={<Users size={10} />} style={{ flexShrink: 0 }}
+                                        aria-label={t('dyndns.zoneList.sharedWith', { owners: z.owners.join(', ') })}>
+                                        {z.owners.length}
+                                    </Badge>
+                                </Tooltip>
+                            )}
+                            {!z.exists && <Badge size="xs" variant="outline" color="gray" style={{ flexShrink: 0 }}>{t('dyndns.zoneList.inactive')}</Badge>}
+                        </>
+                    ),
+                    hoverAction: canAddSubzone(z) ? (
+                        <Tooltip label={t('dyndns.zoneList.addSubzone', { zone: z.name })}>
+                            <ActionIcon size="sm" variant="subtle" aria-label={t('dyndns.zoneList.addSubzone', { zone: z.name })} onClick={() => setSubzoneParent(z.name)}>
+                                <Plus size={14} />
+                            </ActionIcon>
+                        </Tooltip>
+                    ) : null,
+                })} />
+        );
 
     return (
-        <Container size="xl" py="md">
-            <Stack gap="lg">
-                <Title order={2}>{t('dyndns.zoneList.title')}</Title>
+        <MasterDetail
+            header={<Title order={2} mb="md">{t('dyndns.zoneList.title')}</Title>}
+            filter={zones.length >= FILTER_FROM ? <TreeFilter value={filter} onChange={setFilter} label={t('dyndns.zoneList.filter')} clearLabel={t('dyndns.zoneList.clearFilter')} /> : null}
+            master={tree}
+            // Zone names are short in the tree, and the DNS records beside it want the room.
+            masterSpan={{ base: 12, md: 4, lg: 3 }}
+            scrollKey={activeZoneName}
+            detail={(
+                <>
+                    <SubzoneModal
+                        // Remounting per parent resets the field: React's own way of
+                        // saying "this is a different form now", instead of an effect
+                        // that writes state on every open.
+                        key={subzoneParent}
+                        parent={subzoneParent}
+                        onClose={() => setSubzoneParent(null)}
+                        onCreated={() => setSubzoneParent(null)}
+                    />
+                    <Switch>
+                        <Route path="/zone/:name" nest>
+                            {param => {
+                                const zone = zones.find(z => z.name === param.name);
+                                // Unknown zone in the URL (e.g. after deleting/leaving it, or a stale
+                                // link) -> send the user back to the zone overview instead of a dead end.
+                                return zone ?
+                                    <AvailableDomain
+                                        key={zone.name}
+                                        zone={zone}
+                                        onDeleted={() => navigate('/')}
+                                        onAddSubzone={canAddSubzone(zone) ? () => setSubzoneParent(zone.name) : null}
+                                    /> :
+                                    <Redirect to="/" replace />;
+                            }}
+                        </Route>
 
-                <Paper shadow="sm" radius="md" withBorder>
-                    <Paper p="md" withBorder style={{ backgroundColor: '#f8f9fa' }}>
-                        <Text fw={600}>{t('dyndns.zoneList.availableZones', { zones: zones.length })}</Text>
-                    </Paper>
-
-                    <Stack gap={0}>
-                        {baseZones.map(base => (
-                            <Fragment key={base.name}>
-                                <NavLink
-                                    component={Link}
-                                    to={"/zone/" + base.name}
-                                    label={<Group gap={6} wrap="nowrap">{base.name}<ZoneEventIndicator events={eventsByZone[base.name]} /></Group>}
-                                    description={base.owners?.length > 1 ? t('dyndns.zoneList.sharedWith', { owners: base.owners.join(', ') }) : undefined}
-                                    leftSection={<Globe size="16" />}
-                                    active={activeZoneName === base.name}
-                                    rightSection={base.allow_subdomains && base.exists ? (
-                                        <Button
-                                            size="compact-xs"
-                                            variant="light"
-                                            leftSection={<Plus size="12" />}
-                                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSubzoneParent(base.name); }}
-                                        >
-                                            {t('dyndns.zoneList.subzone')}
-                                        </Button>
-                                    ) : null}
-                                />
-                                {subzonesUnder(zones, base.name).map(sz => (
-                                    <NavLink
-                                        key={sz.name}
-                                        component={Link}
-                                        to={"/zone/" + sz.name}
-                                        label={<Group gap={6} wrap="nowrap">{sz.name}<ZoneEventIndicator events={eventsByZone[sz.name]} /></Group>}
-                                        description={sz.owners?.length > 1 ? t('dyndns.zoneList.sharedWith', { owners: sz.owners.join(', ') }) : undefined}
-                                        leftSection={<CornerDownRight size="14" />}
-                                        active={activeZoneName === sz.name}
-                                        style={{ paddingLeft: `${12 + subzoneDepth(sz.name, base.name) * 22}px` }}
-                                        rightSection={sz.allow_subdomains && sz.exists ? (
-                                            <Button
-                                                size="compact-xs"
-                                                variant="light"
-                                                leftSection={<Plus size="12" />}
-                                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSubzoneParent(sz.name); }}
-                                            >
-                                                {t('dyndns.zoneList.subzone')}
-                                            </Button>
-                                        ) : null}
-                                    />
-                                ))}
-                            </Fragment>
-                        ))}
-                        {zones.length === 0 && (
-                            <Text p="md" c="dimmed">{t('dyndns.zoneList.empty')}</Text>
-                        )}
-                    </Stack>
-                </Paper>
-
-                <SubzoneModal
-                    // Remounting per parent resets the field: React's own way of
-                    // saying "this is a different form now", instead of an effect
-                    // that writes state on every open.
-                    key={subzoneParent}
-                    parent={subzoneParent}
-                    onClose={() => setSubzoneParent(null)}
-                    onCreated={() => setSubzoneParent(null)}
-                />
-
-                <Switch>
-                    <Route path="/zone/:name" nest>
-                        {param => {
-                            const zone = zones.find(z => z.name === param.name)
-                            // Unknown zone in the URL (e.g. after deleting/leaving it, or a stale
-                            // link) -> send the user back to the zone overview instead of a dead end.
-                            return zone ?
-                                <AvailableDomain
-                                    zone={zone}
-                                    onDeleted={() => navigate('/')}
-                                /> :
-                                <Redirect to="/" replace />
-                        }}
-                    </Route>
-
-                    <Route path="/">
-                        {() => zones.length > 0 ? (
-                            <Redirect to={`/zone/${zones[0].name}`} replace />
-                        ) : (
-                            <Paper p="xl" withBorder>
-                                <Text ta="center" size="lg">{t('dyndns.zoneList.selectPrompt')}</Text>
-                            </Paper>
-                        )}
-                    </Route>
-                </Switch>
-            </Stack>
-        </Container>
+                        <Route path="/">
+                            {() => zones.length > 0 ? (
+                                <Redirect to={`/zone/${defaultZone(zones).name}`} replace />
+                            ) : (
+                                <Paper p="xl" withBorder>
+                                    <Text ta="center" size="lg">{t('dyndns.zoneList.empty')}</Text>
+                                </Paper>
+                            )}
+                        </Route>
+                    </Switch>
+                </>
+            )} />
     );
 }
 
-// Number of labels a subzone has beyond its base zone (used for indentation).
-function subzoneDepth(name, base) {
-    return name.split('.').length - base.split('.').length;
-}
 
 // ----------------------------------------
 // Subzone Modal — create a delegated subzone under a parent that allows it.
@@ -234,26 +227,45 @@ export function SubzoneModal({ parent, onClose, onCreated }) {
 // ----------------------------------------
 // Available Domain List
 // ----------------------------------------
-function AvailableDomain({ zone, onDeleted }) {
+function AvailableDomain({ zone, onDeleted, onAddSubzone }) {
     const { t } = useTranslation();
     let response;
 
     // No onChange prop any more: activating, joining and leaving all invalidate
     // the zone list through their mutation, so nothing has to be told to reload.
-    if (zone.already_taken_by_someone_else) {
-        response = (<Alert icon={<AlertCircle size="16" />} color="red">{t('dyndns.zoneDetail.takenByOther')}</Alert>)
-    } else if (zone.exists) {
-        response = (<ActiveDomain zone={zone.name} onDeleted={onDeleted} />)
-    } else if (zone.can_join) {
-        response = (<Paper p="md"><JoinZone zone={zone.name} owners={zone.owners} /></Paper>)
+    if (zone.exists && !zone.already_taken_by_someone_else) {
+        response = (<ActiveDomain zone={zone.name} onDeleted={onDeleted} onAddSubzone={onAddSubzone} />)
     } else {
-        response = (<Paper p="md"><ActivateZone zone={zone.name} /></Paper>)
+        // A zone not (yet) the caller's: its name on top, then what can be done with it.
+        let body;
+        if (zone.already_taken_by_someone_else) {
+            body = (<Alert icon={<AlertCircle size="16" />} color="red">{t('dyndns.zoneDetail.takenByOther')}</Alert>)
+        } else if (zone.can_join) {
+            body = (<JoinZone zone={zone.name} owners={zone.owners} />)
+        } else {
+            body = (<ActivateZone zone={zone.name} />)
+        }
+        response = (
+            <Stack gap="md" p="md">
+                <ZoneName name={zone.name} />
+                {body}
+            </Stack>
+        );
     }
 
     return (
         <Paper shadow="sm" radius="md" withBorder>
             {response}
         </Paper>
+    );
+}
+
+// ZoneName: the full name of the selected zone as the detail's heading, a click copies it.
+function ZoneName({ name }) {
+    return (
+        <Title order={3} style={{ wordBreak: 'break-word' }}>
+            <CopyableText value={name}>{name}</CopyableText>
+        </Title>
     );
 }
 
@@ -299,7 +311,7 @@ function JoinZone({ zone, owners }) {
 // ----------------------------------------
 // Active Domain Tabs
 // ----------------------------------------
-function ActiveDomain({ zone: zoneName, onDeleted }) {
+function ActiveDomain({ zone: zoneName, onDeleted, onAddSubzone }) {
     const { t } = useTranslation();
     const api = useZonesApi();
     const [currentLocation, navigate] = useLocation()
@@ -407,14 +419,10 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
     return (
         <Stack gap="md">
             <Paper p="md" withBorder bg="light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-6))">
-                {/* Responsive: stack the title over the actions on mobile, row on >=sm.
-                    Long zone/owner names wrap instead of overflowing. */}
-                <Flex direction={{ base: 'column', sm: 'row' }} justify="space-between" align={{ base: 'stretch', sm: 'center' }} gap="sm">
+                {/* The name and who manages the zone above, the actions below: beside the tree the column is too narrow to put a long zone name and four buttons in one row. Long zone/owner names wrap instead of overflowing. */}
+                <Stack gap="sm">
                     <div style={{ minWidth: 0 }}>
-                        <Text fw={600} style={{ wordBreak: 'break-word' }}>
-                            {t('dyndns.zoneDetail.zoneLabel')}{' '}
-                            <CopyableText value={zone.zoneData.zone}>{zone.zoneData.zone}</CopyableText>
-                        </Text>
+                        <ZoneName name={zone.zoneData.zone} />
                         {zone.owners?.length > 0 && (
                             <Text size="sm" c="dimmed" style={{ wordBreak: 'break-word' }}>
                                 {t('dyndns.zoneDetail.managedBy', { owners: zone.owners.join(', ') })}
@@ -427,6 +435,11 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
                         )}
                     </div>
                     <Group gap="sm" wrap="wrap">
+                        {onAddSubzone && (
+                            <Button variant="light" size="sm" leftSection={<Plus size={16} />} onClick={onAddSubzone}>
+                                {t('dyndns.subzone.title')}
+                            </Button>
+                        )}
                         {zone.sharing_allowed && (
                             <Button variant="light" size="sm" leftSection={<Users size={16} />} onClick={() => setShareOpen(true)}>
                                 {t('dyndns.zoneDetail.share')}
@@ -448,7 +461,7 @@ function ActiveDomain({ zone: zoneName, onDeleted }) {
                             <Button color="red" size="sm" onClick={handleDeleteClick} loading={deleteZone.isPending}>{t('dyndns.zoneDetail.delete')}</Button>
                         )}
                     </Group>
-                </Flex>
+                </Stack>
             </Paper>
 
             <ShareZoneModal

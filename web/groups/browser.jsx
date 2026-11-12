@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useDebouncedValue, useLocalStorage } from '@mantine/hooks';
-import { ActionIcon, Badge, Box, Button, CloseButton, Container, Grid, Group, Loader, Paper, Stack, Table, Text, TextInput, Title, Tooltip, UnstyledButton } from '@mantine/core';
-import { ChevronRight, Database, ListTree, Plus, Search, Users } from 'lucide-react';
+import { useDebouncedValue } from '@mantine/hooks';
+import { ActionIcon, Badge, Box, Button, Group, Loader, Paper, Table, Text, Title, Tooltip } from '@mantine/core';
+import { Database, ListTree, Plus, Users } from 'lucide-react';
+import { MasterDetail } from '/helper/master-detail.jsx';
+import { Tree, TreeFilter, TreeRow as Row, useTreeExpansion } from '/helper/tree.jsx';
 import { formatDateTime } from '/format-date.js';
 import { LoadError, Loading } from '/helper/query-state.jsx';
 import { useGroupsApi } from '/groups/api-groups.jsx';
@@ -27,9 +29,7 @@ export function GroupsBrowser({ params }) {
     const [search, setSearch] = useState('');
     const [q] = useDebouncedValue(search.trim(), 250);
     // Branches the viewer opened, remembered per browser, by their path from the source (a group can sit in several places).
-    const [expanded, setExpanded] = useLocalStorage({ key: 'self-service.groups-tree.expanded', defaultValue: [], getInitialValueInEffect: false });
-    const open = new Set(expanded);
-    const toggle = (path) => setExpanded(prev => (prev.includes(path) ? prev.filter(p => p !== path && !p.startsWith(`${path}/`)) : [...prev, path]));
+    const { isOpen, toggle, expand } = useTreeExpansion({ storageKey: 'self-service.groups-tree.expanded' });
     const select = (id) => navigate(`/${encodeURIComponent(id)}`);
     const queryClient = useQueryClient();
     // The tree path last revealed: its row scrolls into view once its branch has loaded.
@@ -43,7 +43,7 @@ export function GroupsBrowser({ params }) {
         const source = way.items[0]?.source_name;
         if (!source) return;
         const paths = ids.map((_, i) => ['source:' + source, ...ids.slice(0, i + 1)].join('/'));
-        setExpanded(prev => [...new Set([...prev, 'source:' + source, ...paths.slice(0, -1)])]);
+        expand(['source:' + source, ...paths.slice(0, -1)]);
         setRevealed(paths.at(-1));
         setSearch('');
         select(id);
@@ -57,57 +57,41 @@ export function GroupsBrowser({ params }) {
     const sources = useQuery({ queryKey: groupsKeys.sources(), queryFn: () => api.listSources() });
 
     return (
-        <Container size="xl" py="md">
-            <Grid gutter="md">
-                <Grid.Col span={{ base: 12, md: 4 }}>
-                    <Paper p="sm" radius="md" withBorder>
-                        <TextInput leftSection={<Search size={14} />} value={search} mb="sm"
-                            placeholder={t('groups.browser.search')} aria-label={t('groups.browser.search')}
-                            onChange={e => setSearch(e.currentTarget.value)}
-                            onKeyDown={e => e.key === 'Escape' && clearSearch()}
-                            rightSection={search ? <CloseButton size="sm" aria-label={t('groups.browser.clear')} onClick={clearSearch} /> : null} />
-                        {/* Only up and down: a scroll area that also scrolls sideways grows to the longest row, and then nothing is shortened and the buttons at the end slide out of view. */}
-                        <Box style={{ maxHeight: 'calc(100vh - 220px)', overflowY: 'auto', overflowX: 'hidden' }}>
-                            {q
-                                ? <SearchResults q={q} selectedId={selectedId} onSelect={select} onReveal={(id) => reveal(id).catch(() => {})} />
-                                : (
-                                    <>
-                                        {sources.isPending && <Loading />}
-                                        {sources.isError && <LoadError query={sources} />}
-                                        {sources.data?.map(src => (
-                                            <SourceNode key={src.name} source={src} open={open} toggle={toggle} selectedId={selectedId} onSelect={select} revealed={revealed} />
-                                        ))}
-                                    </>
-                                )}
-                        </Box>
-                    </Paper>
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, md: 8 }}>
-                    {selectedId
-                        ? <GroupDetail key={selectedId} params={{ id: selectedId }} embedded />
-                        : <SourcesOverview sources={sources} />}
-                </Grid.Col>
-            </Grid>
-        </Container>
+        <MasterDetail
+            filter={<TreeFilter value={search} onChange={setSearch} onClear={clearSearch} label={t('groups.browser.search')} clearLabel={t('groups.browser.clear')} />}
+            master={q
+                ? <SearchResults q={q} selectedId={selectedId} onSelect={select} onReveal={(id) => reveal(id).catch(() => {})} />
+                : (
+                    <Tree label={t('groups.list.title')}>
+                        {sources.isPending && <Loading />}
+                        {sources.isError && <LoadError query={sources} />}
+                        {sources.data?.map(src => (
+                            <SourceNode key={src.name} source={src} isOpen={isOpen} toggle={toggle} selectedId={selectedId} onSelect={select} revealed={revealed} />
+                        ))}
+                    </Tree>
+                )}
+            detail={selectedId
+                ? <GroupDetail key={selectedId} params={{ id: selectedId }} embedded />
+                : <SourcesOverview sources={sources} />} />
     );
 }
 
-function SourceNode({ source, open, toggle, selectedId, onSelect, revealed }) {
+function SourceNode({ source, isOpen, toggle, selectedId, onSelect, revealed }) {
     const path = `source:${source.name}`;
-    const isOpen = open.has(path);
+    const opened = isOpen(path);
     return (
         <>
-            <Row depth={0} open={isOpen} openable={source.groups > 0} onToggle={() => toggle(path)} onClick={() => toggle(path)}
+            <Row depth={0} open={opened} openable={source.groups > 0} onToggle={() => toggle(path)} onClick={() => toggle(path)}
                 icon={<Database size={14} />} label={source.name} count={source.groups}
                 badge={source.local ? null : <Badge size="xs" variant="light" color="gray">{source.type}</Badge>} />
-            {isOpen && <Children params={{ source: source.name, limit: LIMIT }} path={path} depth={1} sourceName={source.name}
-                open={open} toggle={toggle} selectedId={selectedId} onSelect={onSelect} revealed={revealed} />}
+            {opened && <Children params={{ source: source.name, limit: LIMIT }} path={path} depth={1} sourceName={source.name}
+                isOpen={isOpen} toggle={toggle} selectedId={selectedId} onSelect={onSelect} revealed={revealed} />}
         </>
     );
 }
 
 // Children: the groups under a source or a group, fetched when the branch opens.
-function Children({ params, path, depth, sourceName, open, toggle, selectedId, onSelect, revealed }) {
+function Children({ params, path, depth, sourceName, isOpen, toggle, selectedId, onSelect, revealed }) {
     const api = useGroupsApi();
     const { t } = useTranslation();
     const children = useQuery({ queryKey: groupsKeys.list(params), queryFn: () => api.listGroups(params) });
@@ -117,7 +101,7 @@ function Children({ params, path, depth, sourceName, open, toggle, selectedId, o
         <>
             {children.data.items.map(g => (
                 <GroupNode key={g.id} group={g} path={`${path}/${g.id}`} depth={depth} sourceName={sourceName}
-                    open={open} toggle={toggle} selectedId={selectedId} onSelect={onSelect} revealed={revealed} />
+                    isOpen={isOpen} toggle={toggle} selectedId={selectedId} onSelect={onSelect} revealed={revealed} />
             ))}
             {children.data.total > children.data.items.length && (
                 <Text size="xs" c="dimmed" pl={depth * 18 + 24}>{t('groups.browser.more', { count: children.data.total - children.data.items.length })}</Text>
@@ -126,8 +110,8 @@ function Children({ params, path, depth, sourceName, open, toggle, selectedId, o
     );
 }
 
-function GroupNode({ group, path, depth, sourceName, open, toggle, selectedId, onSelect, revealed }) {
-    const isOpen = open.has(path);
+function GroupNode({ group, path, depth, sourceName, isOpen, toggle, selectedId, onSelect, revealed }) {
+    const opened = isOpen(path);
     const row = useRef(null);
     useEffect(() => {
         if (revealed === path) row.current?.scrollIntoView?.({ block: 'center' });
@@ -136,40 +120,14 @@ function GroupNode({ group, path, depth, sourceName, open, toggle, selectedId, o
     const foreign = group.source_name && group.source_name !== sourceName;
     return (
         <>
-            <Row rowRef={row} depth={depth} open={isOpen} openable={group.child_groups > 0} onToggle={() => toggle(path)}
-                onClick={() => { onSelect(group.id); if (group.child_groups > 0 && !isOpen) toggle(path); }}
+            <Row rowRef={row} depth={depth} open={opened} openable={group.child_groups > 0} onToggle={() => toggle(path)}
+                onClick={() => { onSelect(group.id); if (group.child_groups > 0 && !opened) toggle(path); }}
                 selected={group.id === selectedId} icon={<Users size={14} />} label={group.id} sub={shortDescription(group)}
                 count={group.child_groups || null}
                 badge={foreign ? <Badge size="xs" variant="light" color="gray">{group.source_name}</Badge> : null} />
-            {isOpen && <Children params={{ parent: group.id, limit: LIMIT }} path={path} depth={depth + 1} sourceName={group.source_name}
-                open={open} toggle={toggle} selectedId={selectedId} onSelect={onSelect} revealed={revealed} />}
+            {opened && <Children params={{ parent: group.id, limit: LIMIT }} path={path} depth={depth + 1} sourceName={group.source_name}
+                isOpen={isOpen} toggle={toggle} selectedId={selectedId} onSelect={onSelect} revealed={revealed} />}
         </>
-    );
-}
-
-// Row: one line of the tree. The arrow opens and closes; the line itself selects (a group) or opens (a source).
-function Row({ rowRef, depth, open, openable, onToggle, onClick, selected, icon, label, sub, count, badge, action }) {
-    const { t } = useTranslation();
-    return (
-        <Group ref={rowRef} gap={4} wrap="nowrap" pl={depth * 18} pr={6} py={3} onClick={onClick}
-            style={{ cursor: 'pointer', borderRadius: 'var(--mantine-radius-sm)', background: selected ? 'var(--mantine-color-blue-light)' : undefined }}>
-            {openable
-                ? (
-                    <UnstyledButton aria-label={t(open ? 'projects.tree.collapse' : 'projects.tree.expand')}
-                        onClick={(e) => { e.stopPropagation(); onToggle(); }} style={{ display: 'flex' }}>
-                        <ChevronRight size={14} style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }} />
-                    </UnstyledButton>
-                )
-                : <Box w={14} style={{ flexShrink: 0 }} />}
-            <Box c="dimmed" style={{ display: 'flex', flexShrink: 0 }}>{icon}</Box>
-            <Box style={{ flex: 1, minWidth: 0 }}>
-                <Text size="sm" truncate fw={selected ? 600 : 400}>{label}</Text>
-                {sub && <Text size="xs" c="dimmed" style={{ overflowWrap: 'anywhere' }}>{sub}</Text>}
-            </Box>
-            {badge}
-            {count != null && <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>{count}</Text>}
-            {action}
-        </Group>
     );
 }
 
@@ -183,7 +141,7 @@ function SearchResults({ q, selectedId, onSelect, onReveal }) {
     if (results.isError) return <LoadError query={results} />;
     if (results.data.items.length === 0) return <Text size="sm" c="dimmed" p="xs">{t('groups.list.noMatch')}</Text>;
     return (
-        <Stack gap={0}>
+        <Tree label={t('groups.browser.search')}>
             {results.data.items.map(g => (
                 <Row key={g.id} depth={0} onClick={() => onSelect(g.id)} selected={g.id === selectedId} icon={<Users size={14} />}
                     label={g.id} sub={shortDescription(g)} badge={<Badge size="xs" variant="light" color="gray">{g.source_name}</Badge>}
@@ -199,7 +157,7 @@ function SearchResults({ q, selectedId, onSelect, onReveal }) {
             {results.data.total > results.data.items.length && (
                 <Text size="xs" c="dimmed" p="xs">{t('groups.browser.more', { count: results.data.total - results.data.items.length })}</Text>
             )}
-        </Stack>
+        </Tree>
     );
 }
 
