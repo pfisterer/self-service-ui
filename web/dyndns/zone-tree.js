@@ -76,22 +76,10 @@ export function zoneTree(zones) {
     const ownFirst = (a, b) => (b.zone === own ? 1 : 0) - (a.zone === own ? 1 : 0) || byLabel(a, b);
     for (const s of sections) s.roots.sort(ownFirst);
 
+    // The tree (helper/tree.jsx's NavTree) opens the rows above a selected zone and knows the branches for expand-all itself; here only the rows and the way up a row, for the shared sign.
     return {
         sections,
-        roots: sections.flatMap(s => s.roots),
-        children: (row) => row.children,
-        // The rows above a zone's row, nearest first, and its heading, so a link to it can open the way down.
-        ancestors: (zoneName) => {
-            const row = byId.get(zoneRowId(trim(zoneName)));
-            if (!row) return [];
-            const out = [];
-            for (let p = parentRow.get(row.id); p; p = parentRow.get(p.id)) out.push(p.id);
-            out.push(headingId(row.heading));
-            return out;
-        },
         row: (id) => byId.get(id) ?? null,
-        // Every id that opens and closes: the headings and the zones with subzones (for expand all and collapse all).
-        branches: [...sections.map(s => s.id), ...[...byId.values()].filter(r => r.children.length > 0).map(r => r.id)],
         parent: (row) => parentRow.get(row.id) ?? null,
     };
 }

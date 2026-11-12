@@ -95,20 +95,6 @@ describe('zoneTree', () => {
         ];
         expect(headingShapes(zones)).toEqual([['c.example', ['x']], ['b.example', [['zz', ['sub']], 'aa']]]);
     });
-
-    it('names every branch that opens and closes: headings and zones with subzones', () => {
-        expect(zoneTree(REAL_ZONES).branches).toEqual([
-            'heading:users.dhbw.site', 'heading:dhbw.site', 'heading:dhbw.cloud',
-            `zone:${BASE}`, 'zone:bigdata.pfisterer.users.dhbw.site', 'zone:wi-ma.dhbw.site', 'zone:services.dhbw.cloud', 'zone:gpu.services.dhbw.cloud', 'zone:llm.services.dhbw.cloud',
-        ]);
-    });
-
-    it('lists the rows above a zone and its heading', () => {
-        const { ancestors } = zoneTree(REAL_ZONES);
-        expect(ancestors('staging.gpu.services.dhbw.cloud')).toEqual(['zone:gpu.services.dhbw.cloud', 'zone:services.dhbw.cloud', 'heading:dhbw.cloud']);
-        expect(ancestors('some-project.dhbw.cloud')).toEqual(['heading:dhbw.cloud']);
-        expect(ancestors('unknown.example')).toEqual([]);
-    });
 });
 
 describe('sharedOwners', () => {
@@ -136,7 +122,8 @@ describe('sharedOwners', () => {
 
 describe('zoneMatches', () => {
     it('matches by the full name and keeps the way down to a match', () => {
-        const { roots, children } = zoneTree(REAL_ZONES);
+        const roots = zoneTree(REAL_ZONES).sections.flatMap(s => s.roots);
+        const children = (r) => r.children;
         const visible = filterTree(roots, r => r.id, children, r => zoneMatches(r, 'staging.GPU'));
         expect([...visible].sort()).toEqual(['zone:gpu.services.dhbw.cloud', 'zone:services.dhbw.cloud', 'zone:staging.gpu.services.dhbw.cloud']);
         // The heading's part of the name matches too.

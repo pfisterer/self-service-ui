@@ -115,10 +115,15 @@ describe('the zones page', () => {
         expect(within(row('gpu')).queryByRole('img')).toBeNull();
         expect(within(row('iot')).queryByRole('img')).toBeNull();
         expect(within(row('dennis-pfisterer-at-dhbw-de')).queryByRole('img')).toBeNull();
-        // Guide lines join the subzones, not the roots or the headings.
-        expect(row('services').querySelector('.tree-line')).toBeNull();
-        expect(row('dhbw.cloud').querySelector('.tree-line')).toBeNull();
-        expect(row('workflow-auth').querySelector('.tree-line[data-last]')).toBeTruthy();
+        // Guide lines (Mantine's flat line markers) join the subzones, not the roots or the headings; the last subzone's line ends there.
+        const lines = (r) => [...r.querySelectorAll('span[aria-hidden][style*="--flat-line-column"]')];
+        expect(screen.getByRole('tree').hasAttribute('data-with-lines')).toBe(true);
+        expect(lines(row('services'))).toEqual([]);
+        expect(row('services').style.getPropertyValue('--nav-tree-tick')).toBe('none');
+        expect(lines(row('dhbw.cloud'))).toEqual([]);
+        expect(lines(row('workflow-auth')).length).toBe(1);
+        expect(lines(row('workflow-auth'))[0].classList.length).toBe(2);
+        expect(lines(row('itlabs'))[0].classList.length).toBe(1);
     });
 
     it('closes and opens a heading by its row, its arrow and the keyboard, remembered, also the heading of the selected zone', async () => {
@@ -166,7 +171,7 @@ describe('the zones page', () => {
     it('shows the zone clicked in the tree and keeps it in the URL', async () => {
         const memory = renderAt(`/zone/${BASE}`);
         await heading();
-        fireEvent.click(row('staging', 4));
+        fireEvent.click(row('staging', 4).querySelector('p'));
         await waitFor(() => expect(memory.history.at(-1)).toBe('/zone/staging.gpu.services.dhbw.cloud'));
         await waitFor(async () => expect((await heading()).textContent).toBe('staging.gpu.services.dhbw.cloud'));
         expect(calls).toContain('staging.gpu.services.dhbw.cloud');
@@ -219,11 +224,11 @@ describe('the zones page', () => {
         await heading();
         const base = row('dennis-pfisterer-at-dhbw-de');
         base.focus();
-        fireEvent.keyDown(base, { key: 'ArrowLeft' });
+        fireEvent.keyDown(base, { key: 'ArrowLeft', code: 'ArrowLeft' });
         expect(document.activeElement.getAttribute('aria-expanded')).toBe('false');
-        fireEvent.keyDown(document.activeElement, { key: 'ArrowRight' });
-        fireEvent.keyDown(document.activeElement, { key: 'ArrowLeft' });
-        fireEvent.keyDown(document.activeElement, { key: 'ArrowLeft' });
+        fireEvent.keyDown(document.activeElement, { key: 'ArrowRight', code: 'ArrowRight' });
+        fireEvent.keyDown(document.activeElement, { key: 'ArrowLeft', code: 'ArrowLeft' });
+        fireEvent.keyDown(document.activeElement, { key: 'ArrowLeft', code: 'ArrowLeft' });
         expect(document.activeElement).toBe(row('users.dhbw.site'));
         fireEvent.keyDown(document.activeElement, { key: 'End' });
         expect(document.activeElement).toBe(row('some-project'));
