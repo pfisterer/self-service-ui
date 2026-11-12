@@ -4,7 +4,7 @@ import i18n from '/i18n/index.js';
 // The real English resources, so a renamed key fails here rather than showing
 // the key itself on the screen.
 const t = i18n.getFixedT('en');
-import { resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, usageState, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds } from './util-project.jsx';
+import { endDate, resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, usageState, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds } from './util-project.jsx';
 
 const RESOURCES = [
     { id: 'cpu', name: 'vCPUs' },
@@ -322,6 +322,11 @@ describe('nodeChanges', () => {
         expect(nodeChanges({ dateFrom: '2027-01-01T00:00:00Z', dateTo: '2027-01-01T00:00:00.000Z' })
             .hasDateChange).toBe(false);
         expect(nodeChanges({ dateFrom: '2027-01-01', dateTo: '2027-06-01' }).hasDateChange).toBe(true);
+    });
+
+    it('sees no change between a stored day and the form\'s Date at local midnight of that day', () => {
+        expect(nodeChanges({ dateFrom: '2027-01-10', dateTo: endDate('2027-01-10') }).hasDateChange).toBe(false);
+        expect(nodeChanges({ dateFrom: '2027-01-10', dateTo: endDate('2027-01-11') }).hasDateChange).toBe(true);
     });
 
     it('sees an end given where there was none', () => {

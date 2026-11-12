@@ -641,8 +641,9 @@ export function nodeChanges({ resources, limitFrom, limitTo, dateFrom, dateTo, u
         resources.some(r => (limitFrom[r.id] ?? 0) !== (limitTo[r.id] ?? 0)));
     // An end given to something that had none is a change too — it is what a
     // budget receiving an end does to everything below it.
+    // Both through endDate: a stored end is a day ("2027-01-10"), the form's a Date at local midnight; new Date() on the day would read midnight UTC and see a change of an hour or two where there is none (12.11.2026).
     const hasDateChange = Boolean(dateTo &&
-        (!dateFrom || new Date(dateFrom).getTime() !== new Date(dateTo).getTime()));
+        (!dateFrom || endDate(dateFrom).getTime() !== endDate(dateTo).getTime()));
 
     const hasUserData = usersTo !== undefined && usersTo !== null;
     const from = usersFrom || [];

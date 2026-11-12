@@ -6,7 +6,7 @@ import { ActionIcon, Anchor, Badge, Box, Button, Checkbox, Group, NumberInput, P
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { COLOR, UNLIMITED_QUOTA, formatRoleLabel, isAvailability, limitDelta, nodeChanges, resourceBarSegments, usageState, statusDescription, statusLabel, statusStyle, resourceLabel } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, endDate, formatRoleLabel, isAvailability, limitDelta, nodeChanges, resourceBarSegments, usageState, statusDescription, statusLabel, statusStyle, resourceLabel } from './util-project.jsx';
 import { tokenDisplay, tokenEmail, useTokenLabels } from './token-labels.jsx';
 import { formatDate } from '../format-date.js';
 
@@ -408,8 +408,8 @@ export function NodeChangesDiff({ resources, limitFrom, limitTo, dateFrom, dateT
                                 <Table.Td>{formatDate(dateFrom)}</Table.Td>
                                 <Table.Td>{formatDate(dateTo)}</Table.Td>
                                 {dateFrom ? (
-                                    <Table.Td c={new Date(dateTo) - new Date(dateFrom) >= 0 ? 'green' : 'red'}>
-                                        {new Date(dateTo) > new Date(dateFrom) ? '+' : ''}{dayjs(dateTo).from(dayjs(dateFrom), true)}
+                                    <Table.Td c={endDate(dateTo) - endDate(dateFrom) >= 0 ? 'green' : 'red'}>
+                                        {endDate(dateTo) > endDate(dateFrom) ? '+' : ''}{dayjs(endDate(dateTo)).from(dayjs(endDate(dateFrom)), true)}
                                     </Table.Td>
                                 ) : <Table.Td />}
                             </Table.Tr>
