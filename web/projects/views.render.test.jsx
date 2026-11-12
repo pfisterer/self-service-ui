@@ -64,6 +64,8 @@ vi.mock('/features.js', async (importOriginal) => {
 const { MyBudgetsView } = await import('/projects/view-my-budgets.jsx');
 const { MyProjectsView } = await import('/projects/view-my-projects.jsx');
 const { RootAdminView } = await import('/projects/root-admin-view.jsx');
+const { budgetResultsToTreeData } = await import('/projects/component-budget-tree.jsx');
+const { NavTree } = await import('/helper/tree.jsx');
 
 // React reports a render loop by throwing, and jsdom prints the component stack
 // through console.error. Both have to fail the test, or the very defect these
@@ -230,6 +232,84 @@ describe('the cloud project views render', () => {
         expect(document.activeElement.textContent).toContain('Mannheim');
         fireEvent.keyDown(document.activeElement, { key: 'Enter', code: 'Enter' });
         expect(await within(await screen.findByRole('table')).findByText('Mein Projekt')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    // Search hits are a flat NavTree: each row with its funding budget below, the next page by "show more" with how many are loaded, a hit selected by click.
+    it('lists the search hits flat, with their budget and a show-more row', async () => {
+        const api = fakeNodesApi(fixtureTree());
+        const hit = (id, name) => ({ id, kind: 'project', status: 'approved', name, parent_id: 'b_ma', parent_name: 'Mannheim', parent_path: [{ id: 'b_root', name: 'Organization Root' }, { id: 'b_ma', name: 'Mannheim' }], limit: { cores: 4, ram: 8 }, created_at: '2026-08-02T10:00:00Z' });
+        const hits = [hit('p_a', 'Treffer A'), hit('p_b', 'Treffer B'), hit('p_c', 'Treffer C')];
+        api.searchNodes = vi.fn(async (q, { offset = 0 } = {}) => ({ items: offset ? hits.slice(2) : hits.slice(0, 2), total: 3 }));
+        globalThis.__testApi = api;
+        renderView(<MyBudgetsView />);
+        await screen.findAllByText('Mannheim');
+
+        fireEvent.change(screen.getByRole('textbox', { name: i18n.t('projects.budgets.searchLabel') }), { target: { value: 'Treffer' } });
+        const list = () => within(screen.getByRole('tree', { name: i18n.t('projects.budgets.searchLabel') }));
+        await waitFor(() => expect(list().getByText('Treffer A')).toBeTruthy(), { timeout: 2000 });
+        expect(list().getAllByText(i18n.t('projects.tree.inBudget', { name: 'Organization Root › Mannheim' }))).toHaveLength(2);
+        expect(list().getByText('(2/3)', { exact: false })).toBeTruthy();
+
+        fireEvent.click(list().getByText(i18n.t('projects.actions.showMore')));
+        await waitFor(() => expect(list().getByText('Treffer C')).toBeTruthy());
+        expect(api.searchNodes).toHaveBeenLastCalledWith('Treffer', { offset: 2 });
+        expect(list().queryByText(i18n.t('projects.actions.showMore'))).toBeNull();
+
+        fireEvent.click(list().getByText('Treffer B'));
+        await waitFor(() => expect(list().getByText('Treffer B').closest('[role="treeitem"]').getAttribute('aria-selected')).toBe('true'));
+        expectNoRenderFailure();
+    });
+
+    it('says so while searching and where a search finds nothing', async () => {
+        renderView(<MyBudgetsView />);
+        await screen.findAllByText('Mannheim');
+        fireEvent.change(screen.getByRole('textbox', { name: i18n.t('projects.budgets.searchLabel') }), { target: { value: 'nichts' } });
+        expect(screen.getByText(i18n.t('projects.budgets.searching'))).toBeTruthy();
+        expect(await screen.findByText(i18n.t('projects.budgets.noMatches'), {}, { timeout: 2000 })).toBeTruthy();
+        expect(screen.queryByRole('tree')).toBeNull();
+        expectNoRenderFailure();
+    });
+
+    // The requests waiting for a decision are the same flat list, worked through by keyboard as the tree is.
+    it('lists what is waiting flat and selects a row by keyboard', async () => {
+        const api = fakeNodesApi(fixtureTree());
+        const waiting = ['Antrag Eins', 'Antrag Zwei'].map((name, i) => ({ id: `p_w${i}`, kind: 'project', status: 'pending', name, parent_id: 'b_ma', parent_name: 'Mannheim', limit: { cores: 2, ram: 4 }, owner: 'user:someone@dhbw.de', created_at: '2026-08-02T10:00:00Z' }));
+        api.listToManage = async () => ({ items: waiting, total: waiting.length });
+        api.getNode = async (id) => waiting.find(n => n.id === id) ?? null;
+        globalThis.__testApi = api;
+        renderView(<MyBudgetsView />);
+        await screen.findAllByText('Mannheim');
+
+        fireEvent.click(screen.getByText(i18n.t('projects.budgets.filterWaiting')));
+        const list = () => within(screen.getByRole('tree', { name: i18n.t('projects.budgets.filterWaiting') }));
+        await waitFor(() => expect(list().getAllByRole('treeitem')).toHaveLength(2));
+        expect(list().getAllByText(i18n.t('projects.tree.inBudget', { name: 'Mannheim' }))).toHaveLength(2);
+
+        const first = list().getAllByRole('treeitem')[0];
+        first.focus();
+        fireEvent.keyDown(first, { key: 'ArrowDown', code: 'ArrowDown' });
+        expect(document.activeElement.textContent).toContain('Antrag Zwei');
+        fireEvent.keyDown(document.activeElement, { key: 'Enter', code: 'Enter' });
+        await waitFor(() => expect(list().getByText('Antrag Zwei').closest('[role="treeitem"]').getAttribute('aria-selected')).toBe('true'));
+        expect(screen.getAllByText('Antrag Zwei').length).toBeGreaterThan(1);
+        expectNoRenderFailure();
+    });
+
+    // Without a way to the next page the list only counts what it shows.
+    it('ends a list that cannot page in the count alone', () => {
+        const nodes = [{ id: 'p_a', kind: 'project', status: 'approved', name: 'Eins' }, { id: 'p_b', kind: 'project', status: 'approved', name: 'Zwei' }];
+        renderView(<NavTree label="hits" nodes={budgetResultsToTreeData(i18n.t, nodes, { total: 5 })} />);
+        expect(screen.getAllByRole('treeitem')).toHaveLength(3);
+        expect(screen.getByText('2/5')).toBeTruthy();
+        expect(screen.queryByText(i18n.t('projects.actions.showMore'))).toBeNull();
+    });
+
+    it('says so where nothing is waiting', async () => {
+        renderView(<MyBudgetsView />);
+        await screen.findAllByText('Mannheim');
+        fireEvent.click(screen.getByText(i18n.t('projects.budgets.filterWaiting')));
+        expect(await screen.findByText(i18n.t('projects.budgets.nothingWaiting'))).toBeTruthy();
         expectNoRenderFailure();
     });
 

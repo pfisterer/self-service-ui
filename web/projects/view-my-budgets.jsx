@@ -7,12 +7,12 @@ import { useConfirm } from '/providers/confirm.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDebouncedValue } from '@mantine/hooks';
-import { TreeFilter, useExpandAll, useTreeExpansion } from '/helper/tree.jsx';
+import { NavTree, TreeFilter, useExpandAll, useTreeExpansion } from '/helper/tree.jsx';
 import { PAGE_SIZE, useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { BudgetCard } from './card-budget.jsx';
 import { ProjectCard } from './card-project.jsx';
-import { BudgetTree, NodeResultList, budgetsToTreeData, budgetChildCount } from './component-budget-tree.jsx';
+import { BudgetTree, budgetResultsToTreeData, budgetsToTreeData, budgetChildCount } from './component-budget-tree.jsx';
 import { BudgetProjectsTable } from './component-budget-projects.jsx';
 import { RetireModal } from './modal-retire.jsx';
 import { DecisionModal } from './modal-decide.jsx';
@@ -602,27 +602,18 @@ export function MyBudgetsView({ params }) {
                                     expandAll={filtering ? null : expandAll} expandAllLabel={t('projects.budgets.expandAll')} collapseAllLabel={t('projects.budgets.collapseAll')} />
                             </Box>
 
-                            {/* Searching and filtering each replace the tree with a
-                                flat list — see the note on this component. */}
+                            {/* Searching and filtering each replace the tree with a flat NavTree, see budgetResultsToTreeData. */}
                             {/* No height of its own: a long tree scrolls with the
                                 page instead of in a box with a second scrollbar. */}
                             <div>
                                 {searching ? (
-                                    <NodeResultList
-                                        nodes={results?.items}
-                                        total={results?.total}
-                                        onMore={loadMoreResults}
-                                        selectedId={selected?.id}
-                                        onSelect={select}
-                                        emptyText={searchBusy ? t('projects.budgets.searching') : t('projects.budgets.noMatches')}
-                                    />
+                                    <NavTree label={t('projects.budgets.searchLabel')} nodes={budgetResultsToTreeData(t, results?.items, { total: results?.total, onMore: loadMoreResults })}
+                                        selectedId={selected?.id} onSelect={(n) => select(n.node)}
+                                        empty={<Text size="sm" c="dimmed" ta="center" py="md">{searchBusy ? t('projects.budgets.searching') : t('projects.budgets.noMatches')}</Text>} />
                                 ) : filtering ? (
-                                    <NodeResultList
-                                        nodes={waitingList}
-                                        selectedId={selected?.id}
-                                        onSelect={select}
-                                        emptyText={t('projects.budgets.nothingWaiting')}
-                                    />
+                                    <NavTree label={t('projects.budgets.filterWaiting')} nodes={budgetResultsToTreeData(t, waitingList)}
+                                        selectedId={selected?.id} onSelect={(n) => select(n.node)}
+                                        empty={<Text size="sm" c="dimmed" ta="center" py="md">{t('projects.budgets.nothingWaiting')}</Text>} />
                                 ) : (
                                     <BudgetTree
                                         data={treeData}

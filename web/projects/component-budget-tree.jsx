@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CloudDownload, CornerLeftUp, Eye, FileText, Folder, Zap } from 'lucide-react';
-import { Box, Group, Text, Tooltip, UnstyledButton } from '@mantine/core';
+import { Box, Text, Tooltip } from '@mantine/core';
 import { NavTree } from '/helper/tree.jsx';
 import { COLOR, isBudget, isImported, nodeTitle, statusDescription, statusLabel, statusStyle } from './util-project.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
@@ -82,8 +81,7 @@ function StatusDot({ status }) {
     );
 }
 
-// The markers to the right of a row's title, shared by the tree and the flat
-// result lists: what auto-approves, and what is not plainly active.
+// The markers to the right of a row's title, shared by the tree and the flat result lists: what auto-approves, and what is not plainly active.
 function NodeMarkers({ node }) {
     const { t } = useTranslation();
     return (
@@ -120,16 +118,6 @@ function NodeIcon({ node, size = '15' }) {
     return <Icon size={size} color={color} style={{ flexShrink: 0 }} />;
 }
 
-// Row styling shared by the tree and the flat lists, so a selected search hit
-// looks exactly like a selected tree row.
-function rowStyle(selected) {
-    return {
-        borderRadius: 'var(--mantine-radius-sm)',
-        backgroundColor: selected ? 'var(--mantine-color-blue-light)' : undefined,
-        cursor: 'pointer',
-    };
-}
-
 // BudgetTree: the budgets as NavTree. A click on a row selects it and opens it, but never closes it: looking at a budget's details used to close it, and the tree remembered it closed. Only the arrow closes a branch.
 export function BudgetTree({ data, expansion, selectedId, onSelect, onLoadChildren }) {
     const { t } = useTranslation();
@@ -139,60 +127,20 @@ export function BudgetTree({ data, expansion, selectedId, onSelect, onLoadChildr
     );
 }
 
-// NodeResultList shows nodes outside their place in the tree: search hits and
-// the requests waiting for a decision. Both answer "which ones", not "where" —
-// and unfolding a paginated tree down to a handful of matches would be both
-// slow and harder to read. The funding budget is named on each row instead.
-export function NodeResultList({ nodes, selectedId, onSelect, total, onMore, emptyText }) {
-    const { t } = useTranslation();
-    const [loading, setLoading] = useState(false);
-
-    if (!nodes || nodes.length === 0) {
-        return <Text size="sm" c="dimmed" ta="center" py="md">{emptyText}</Text>;
+// budgetResultsToTreeData: nodes outside their place in the tree as a flat NavTree, the search hits and the requests waiting for a decision. Both answer "which ones", not "where", and unfolding a paginated tree down to a handful of matches would be both slow and harder to read: the funding budget is named on each row instead. With `total` beyond what is loaded the list ends in the paging row, "show more" with loaded/total where `onMore` fetches the next page, else only the count.
+export function budgetResultsToTreeData(t, nodes, { total, onMore } = {}) {
+    const rows = (nodes ?? []).map(node => ({
+        id: node.id,
+        label: nodeTitle(node),
+        node,
+        icon: <NodeIcon node={node} />,
+        sub: node.parent_name ? t('projects.tree.inBudget', { name: budgetPathText(node.parent_path, node.parent_name) }) : undefined,
+        badge: <NodeMarkers node={node} />,
+    }));
+    if (typeof total === 'number' && rows.length < total) {
+        rows.push(onMore
+            ? { id: MORE_SUFFIX, label: t('projects.actions.showMore'), more: { loaded: rows.length, total, onLoad: onMore } }
+            : { id: MORE_SUFFIX, label: `${rows.length}/${total}`, more: {} });
     }
-
-    const loadMore = async () => {
-        setLoading(true);
-        try {
-            await onMore();
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <Box>
-            {nodes.map(node => {
-                const isSelected = node.id === selectedId;
-                return (
-                    <Group key={node.id} gap="6" wrap="nowrap" px="6" py="4"
-                        onClick={() => onSelect(node)}
-                        style={rowStyle(isSelected)}>
-                        <NodeIcon node={node} />
-                        <Box style={{ flex: 1, minWidth: 0 }}>
-                            <Text size="sm" truncate fw={isSelected ? 600 : 400}>{nodeTitle(node)}</Text>
-                            {node.parent_name && (
-                                <Text size="xs" c="dimmed" truncate>{t('projects.tree.inBudget', { name: budgetPathText(node.parent_path, node.parent_name) })}</Text>
-                            )}
-                        </Box>
-                        <NodeMarkers node={node} />
-                    </Group>
-                );
-            })}
-            {typeof total === 'number' && nodes.length < total && (
-                <Group justify="center" py="xs">
-                    {onMore ? (
-                        <UnstyledButton onClick={loadMore} disabled={loading}>
-                            <Text size="xs" c={COLOR.info} fw={500}>
-                                {loading ? t('projects.actions.loading') : t('projects.actions.showMore')}
-                                <Text span size="xs" c="dimmed" fw={400}>{` (${nodes.length}/${total})`}</Text>
-                            </Text>
-                        </UnstyledButton>
-                    ) : (
-                        <Text size="xs" c="dimmed">{`${nodes.length}/${total}`}</Text>
-                    )}
-                </Group>
-            )}
-        </Box>
-    );
+    return rows;
 }
