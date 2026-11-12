@@ -66,12 +66,23 @@ export function subzoneLabelError(label, parent, t) {
     const s = (label || '').trim().replace(/\.+$/, '');
     if (!s) return t('helper.dnsValidation.subzoneRequired');
     for (const l of s.split('.')) {
-        if (l.length > 63) return t('helper.dnsValidation.labelTooLong');
+        if (l.length > 63) return t('helper.dnsValidation.labelTooLong', { length: l.length });
         if (!LABEL_RE_LOWER.test(l)) return t('helper.dnsValidation.lowercaseOnly');
         if (l.startsWith('-') || l.endsWith('-')) return t('helper.dnsValidation.hyphenEdge');
     }
-    if (`${s}.${parent}`.replace(/\.$/, '').length > 253) return t('helper.dnsValidation.nameTooLong');
+    const full = `${s}.${parent}`.replace(/\.$/, '');
+    if (full.length > 253) return t('helper.dnsValidation.nameTooLong', { length: full.length });
     return null;
+}
+
+// X.509 limits a certificate's commonName to 64 characters (RFC 5280, ub-common-name), and Let's Encrypt refuses longer ones. A wildcard certificate that carries `*.<zone>` as its commonName therefore needs `*.` + zone ≤ 64; names only in the SAN have no such limit, so this is a warning, not a DNS error.
+export const WILDCARD_CN_MAX = 64;
+
+// wildcardCnRemaining is how many characters are left for `*.<label>.<parent>` within WILDCARD_CN_MAX; negative when the subzone is too long for a wildcard commonName. With an empty label it is the room the label has (its separating dot counted). The fixed parent (e.g. `<user>.users.dhbw.site`) differs per person, which is why the form shows this number live.
+export function wildcardCnRemaining(label, parent) {
+    const s = (label || '').trim().replace(/\.+$/, '');
+    const p = (parent || '').trim().replace(/\.+$/, '');
+    return WILDCARD_CN_MAX - ('*.'.length + s.length + 1 + p.length);
 }
 
 // Client-side validation of a record's NAME (the relative name entered in the

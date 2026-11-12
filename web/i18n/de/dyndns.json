@@ -36,7 +36,11 @@
         "intro": "Eine delegierte Subzone unter <1>{{parent}}</1> anlegen.",
         "labelField": "Label der Subzone",
         "fullNameLabel": "Vollständiger Name:",
-        "submit": "Subzone anlegen"
+        "submit": "Subzone anlegen",
+        "wildcardRemaining_one": "Noch {{count}} Zeichen frei für ein Wildcard-Zertifikat (*.{{zone}} darf als commonName höchstens {{max}} Zeichen haben).",
+        "wildcardRemaining_other": "Noch {{count}} Zeichen frei für ein Wildcard-Zertifikat (*.{{zone}} darf als commonName höchstens {{max}} Zeichen haben).",
+        "wildcardTooLong_one": "*.{{zone}} ist {{count}} Zeichen länger als die {{max}}, die der commonName eines Zertifikats erlaubt. Wildcard-Zertifikate mit commonName sind für diese Zone nicht möglich (Let's Encrypt lehnt längere Namen ab); Zertifikate, die den Namen nur als SAN tragen, funktionieren weiter. Wer eines braucht, wählt einen kürzeren Namen.",
+        "wildcardTooLong_other": "*.{{zone}} ist {{count}} Zeichen länger als die {{max}}, die der commonName eines Zertifikats erlaubt. Wildcard-Zertifikate mit commonName sind für diese Zone nicht möglich (Let's Encrypt lehnt längere Namen ab); Zertifikate, die den Namen nur als SAN tragen, funktionieren weiter. Wer eines braucht, wählt einen kürzeren Namen."
     },
     "zoneDetail": {
         "takenByOther": "Diese Zone ist bereits von jemand anderem belegt.",

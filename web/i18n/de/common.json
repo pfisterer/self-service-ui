@@ -68,10 +68,10 @@
         },
         "dnsValidation": {
             "subzoneRequired": "Ein Name für die Subzone ist nötig.",
-            "labelTooLong": "Jeder Namensteil darf höchstens 63 Zeichen lang sein.",
+            "labelTooLong": "Jeder Namensteil darf höchstens 63 Zeichen lang sein, dieser hat {{length}}.",
             "lowercaseOnly": "Erlaubt sind nur Kleinbuchstaben, Ziffern und Bindestriche.",
             "hyphenEdge": "Ein Namensteil darf nicht mit einem Bindestrich beginnen oder enden.",
-            "nameTooLong": "Der vollständige Name ist zu lang (höchstens 253 Zeichen).",
+            "nameTooLong": "Der vollständige Name hat {{length}} Zeichen, erlaubt sind höchstens 253.",
             "labelLength": "Jeder Namensteil muss 1 bis 63 Zeichen lang sein.",
             "nameCharacters": "Erlaubt sind nur Buchstaben, Ziffern, Bindestrich und Unterstrich.",
             "valueRequired": "Ein Wert ist nötig.",

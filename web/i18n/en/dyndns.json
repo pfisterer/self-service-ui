@@ -36,7 +36,11 @@
         "intro": "Create a delegated subzone under <1>{{parent}}</1>.",
         "labelField": "Subzone label",
         "fullNameLabel": "Full name:",
-        "submit": "Create subzone"
+        "submit": "Create subzone",
+        "wildcardRemaining_one": "{{count}} character left for a wildcard certificate (*.{{zone}} has at most {{max}} characters as commonName).",
+        "wildcardRemaining_other": "{{count}} characters left for a wildcard certificate (*.{{zone}} has at most {{max}} characters as commonName).",
+        "wildcardTooLong_one": "*.{{zone}} is {{count}} character over the {{max}} that a certificate's commonName allows. Wildcard certificates with a commonName are not possible for this zone (Let's Encrypt refuses longer names); certificates that carry the name only as a SAN still work. Choose a shorter name if you need one.",
+        "wildcardTooLong_other": "*.{{zone}} is {{count}} characters over the {{max}} that a certificate's commonName allows. Wildcard certificates with a commonName are not possible for this zone (Let's Encrypt refuses longer names); certificates that carry the name only as a SAN still work. Choose a shorter name if you need one."
     },
     "zoneDetail": {
         "takenByOther": "This zone is already taken by someone else.",

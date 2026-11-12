@@ -68,10 +68,10 @@
         },
         "dnsValidation": {
             "subzoneRequired": "Enter a subzone name.",
-            "labelTooLong": "Each label may be at most 63 characters.",
+            "labelTooLong": "Each label may be at most 63 characters, this one has {{length}}.",
             "lowercaseOnly": "Only lowercase letters, digits and hyphens are allowed.",
             "hyphenEdge": "A label must not start or end with a hyphen.",
-            "nameTooLong": "The full name is too long (max 253 characters).",
+            "nameTooLong": "The full name has {{length}} characters, at most 253 are allowed.",
             "labelLength": "Each label must be 1–63 characters.",
             "nameCharacters": "Only letters, digits, hyphen and underscore are allowed.",
             "valueRequired": "Value is required.",

@@ -7,6 +7,8 @@ import {
     isValidUserFilter,
     zoneWithinAnySuffix,
     subzoneLabelError,
+    wildcardCnRemaining,
+    WILDCARD_CN_MAX,
     recordNameError,
     recordValueError,
 } from './dns-validation.js';
@@ -109,12 +111,12 @@ describe('subzoneLabelError', () => {
         expect(subzoneLabelError('', parent, t)).toBe('Enter a subzone name.');
         expect(subzoneLabelError('DEV', parent, t)).toBe('Only lowercase letters, digits and hyphens are allowed.');
         expect(subzoneLabelError('-dev', parent, t)).toBe('A label must not start or end with a hyphen.');
-        expect(subzoneLabelError('a'.repeat(64), parent, t)).toBe('Each label may be at most 63 characters.');
+        expect(subzoneLabelError('a'.repeat(64), parent, t)).toBe('Each label may be at most 63 characters, this one has 64.');
     });
 
     it('rejects a full name longer than 253 characters', () => {
         const long = Array.from({ length: 5 }, () => 'a'.repeat(50)).join('.'); // 254 chars
-        expect(subzoneLabelError(long, parent, t)).toBe('The full name is too long (max 253 characters).');
+        expect(subzoneLabelError(long, parent, t)).toBe(`The full name has ${long.length + 1 + parent.length} characters, at most 253 are allowed.`);
     });
 });
 
@@ -194,5 +196,30 @@ describe('zoneWithinAnySuffix', () => {
         expect(zoneWithinAnySuffix('a.example.org', undefined)).toBe(false);
         expect(zoneWithinAnySuffix('a.example.org', [''])).toBe(false);
         expect(zoneWithinAnySuffix('', ['example.org'])).toBe(false);
+    });
+});
+
+describe('zone name length (todo d3)', () => {
+    const parent = 'dennis-pfisterer-at-dhbw-de.users.dhbw.site';
+
+    it('refuses a label over 63 characters and a name over 253, naming the length', () => {
+        expect(subzoneLabelError('a'.repeat(63), parent, t)).toBeNull();
+        expect(subzoneLabelError('a'.repeat(64), parent, t)).toBe(t('helper.dnsValidation.labelTooLong', { length: 64 }));
+        expect(t('helper.dnsValidation.labelTooLong', { length: 64 })).toContain('64');
+        // 3×(63+1) + 61 + 1 + parent: well over 253 with valid labels only
+        const long = `${'a'.repeat(63)}.${'b'.repeat(63)}.${'c'.repeat(63)}.${'d'.repeat(61)}`;
+        const err = subzoneLabelError(long, parent, t);
+        expect(err).toBe(t('helper.dnsValidation.nameTooLong', { length: long.length + 1 + parent.length }));
+    });
+
+    it('counts the room left for *.<label>.<parent> within 64 characters', () => {
+        expect(WILDCARD_CN_MAX).toBe(64);
+        // The zone that triggered the todo: *.data-eng-wdski24a.<parent> has 63 characters.
+        expect(wildcardCnRemaining('data-eng-wdski24a', parent)).toBe(1);
+        expect(wildcardCnRemaining('data-eng-wdski24ab', parent)).toBe(0);
+        expect(wildcardCnRemaining('data-eng-wdski24abc', parent)).toBe(-1);
+        // Empty: what the label may use, its dot already counted; spaces and trailing dots do not count.
+        expect(wildcardCnRemaining('', parent)).toBe(64 - 2 - 1 - parent.length);
+        expect(wildcardCnRemaining(' web. ', 'example.com.')).toBe(64 - '*.web.example.com'.length);
     });
 });
