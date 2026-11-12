@@ -150,20 +150,20 @@ export function filterTree(roots, getId, getChildren, matches) {
     return keep;
 }
 
-// TreeSection: a top-level header that only opens and closes the rows below it (`children`, one level deeper), never selected: the data sources in the groups browser, the kinds of zones on the zones page. `count` and `badge` sit at its end as in a row.
-export function TreeSection({ label, icon, count, badge, title, open, openable = true, onToggle, children }) {
+// TreeSection: a top-level header that only opens and closes the rows below it (`children`, one level deeper), never selected: the data sources in the groups browser, the kinds of zones on the zones page. `count` and `badge` sit at its end as in a row; `muted` dims its label, for headers that should stay quiet beside the rows they hold.
+export function TreeSection({ label, icon, count, badge, title, muted, open, openable = true, onToggle, children }) {
     return (
         <>
             <TreeRow depth={0} open={open} openable={openable} onToggle={onToggle} onClick={() => openable && onToggle()} selectable={false}
-                icon={icon} label={label} title={title} count={count} badge={badge} />
+                icon={icon} label={label} title={title} muted={muted} count={count} badge={badge} />
             {open && children}
         </>
     );
 }
 
 // ItemTree: a tree of data that is all there (roots and getChildren). With `withLines`, guide lines join every item below the roots to its parent (TreeRow's `lines`); roots and section headers have none. `row(item, {depth, selected, open})` returns the TreeRow props that depend on the item (icon, label, title, muted, strong, wrap, sub, badge, count, action, hoverAction). Items for which `isSelectable` says no (by default all are selectable) only group the ones below: a click opens and closes them. With a `query`, only the items `matches` and their way down are shown, all open, and `noMatch` when there is none.
-// Instead of `roots`, `sections` ([{ id, label, icon, count, roots }]) puts the roots under TreeSection headers, opened and closed through isOpen and toggle like the items (so their ids must not collide with the items'). Sections without roots are left out, and a lone section shows its rows without a header. With a query, only sections with a match are shown, open.
-export function ItemTree({ label, roots, sections, withLines = false, getId, getChildren, row, selectedId, onSelect, isSelectable = () => true, isOpen, toggle, query, matches, noMatch }) {
+// Instead of `roots`, `sections` ([{ id, label, icon, count, title, muted, roots }]) puts the roots under TreeSection headers, opened and closed through isOpen and toggle like the items (so their ids must not collide with the items'). Sections without roots are left out, and a lone section shows its rows without a header unless `loneSectionHeader` (where the header says something about its rows, such as the domain the zones below lie in). With a query, only sections with a match are shown, open.
+export function ItemTree({ label, roots, sections, loneSectionHeader = false, withLines = false, getId, getChildren, row, selectedId, onSelect, isSelectable = () => true, isOpen, toggle, query, matches, noMatch }) {
     const filled = sections?.filter(s => s.roots.length > 0);
     const all = filled ? filled.flatMap(s => s.roots) : roots;
     const visible = query ? filterTree(all, getId, getChildren, (it) => matches(it, query)) : null;
@@ -187,11 +187,11 @@ export function ItemTree({ label, roots, sections, withLines = false, getId, get
         );
     };
     if (visible && visible.size === 0) return <Text size="sm" c="dimmed" p="xs">{noMatch}</Text>;
-    if (!filled || filled.length < 2) return <Tree label={label}>{all.map(r => render(r, 0, new Set()))}</Tree>;
+    if (!filled || filled.length < (loneSectionHeader ? 1 : 2)) return <Tree label={label}>{all.map(r => render(r, 0, new Set()))}</Tree>;
     return (
         <Tree label={label}>
             {filled.filter(s => !visible || s.roots.some(r => visible.has(getId(r)))).map(s => (
-                <TreeSection key={s.id} label={s.label} icon={s.icon} count={s.count} title={s.title}
+                <TreeSection key={s.id} label={s.label} icon={s.icon} count={s.count} title={s.title} muted={s.muted}
                     open={visible ? true : isOpen(s.id)} openable={!visible} onToggle={() => toggle(s.id)}>
                     {s.roots.map(r => render(r, 1, new Set()))}
                 </TreeSection>

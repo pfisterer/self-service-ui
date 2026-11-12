@@ -12,23 +12,20 @@ import { DynamicDnsKubernetes } from '/dyndns/zones/dynamic-dns-kubernetes.jsx';
 import { DynamicDns } from '/dyndns/zones/dynamic-dns.jsx';
 import { DnsRecordsList } from '/dyndns/zones/dns-record-list.jsx';
 import { TlsCertificates } from '/dyndns/zones/tls-certificates.jsx';
-import { Title, Paper, Stack, Tabs, Button, Text, Alert, Group, TextInput, Modal, Box, Tooltip, Badge, ActionIcon } from '@mantine/core';
-import { AlertCircle, CircleDashed, Plus, User, Users, RefreshCw, LogOut } from 'lucide-react';
+import { Title, Paper, Stack, Tabs, Button, Text, Alert, Group, TextInput, Modal, Box, Tooltip, Badge, ActionIcon, VisuallyHidden } from '@mantine/core';
+import { AlertCircle, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
 import { subzoneLabelError, wildcardCnRemaining, WILDCARD_CN_MAX } from '/helper/dns-validation.js';
 import { CopyableText } from '/helper/copyable-text.jsx';
 import { MasterDetail } from '/helper/master-detail.jsx';
 import { ItemTree, TreeFilter, useTreeExpansion } from '/helper/tree.jsx';
 import { useZoneEvents, ZoneEventIndicator, ZoneEventsBanner } from '/dyndns/zones/zone-events-banner.jsx';
-import { defaultZone, nameParts, sectionId, zoneMatches, zoneRowId, zoneTree } from '/dyndns/zone-tree.js';
+import { defaultZone, sharedOwners, zoneMatches, zoneRowId, zoneTree } from '/dyndns/zone-tree.js';
 import { zoneAuthority } from '/dyndns/zone-authority.js';
 import { useDnsMeQuery } from '/dyndns/use-dns-me.jsx';
 
 // From this many zones on, a filter box stands above the tree.
 const FILTER_FROM = 6;
 
-// The sections of the tree (dyndns/zone-tree.js) with their header's icon; "available" starts closed, the zones in use open.
-const SECTION_ICONS = { own: <User size={14} />, shared: <Users size={14} />, available: <CircleDashed size={14} /> };
-const startsOpen = (path) => path !== sectionId('available');
 
 // ----------------------------------------
 // DynDnsZones — the zones as a tree on the left (helper/tree.jsx), the selected one on the right (helper/master-detail.jsx). The selection is the URL (/zone/<name>/<tab>), so a reload and a link keep it; without one the page opens on the person's own base zone.
@@ -44,8 +41,8 @@ export function DynDnsZones() {
     // so navigate('/') returns to the zone overview.
     const [, navigate] = useLocation();
     const activeZoneName = match ? params.name : null;
-    // Everything but the section of zones not in use starts open (a person has a handful of zones, rarely a deep tree); what is stored per browser are the branches flipped by hand.
-    const { isOpen, toggle, expand } = useTreeExpansion({ storageKey: 'self-service.dyndns-zones.collapsed', defaultOpen: startsOpen });
+    // Everything starts open (a person has a handful of zones, rarely a deep tree); what is stored per browser are the branches closed by hand.
+    const { isOpen, toggle, expand } = useTreeExpansion({ storageKey: 'self-service.dyndns-zones.collapsed', defaultOpen: true });
 
     const zonesQuery = useQuery({
         queryKey: dyndnsKeys.zones(),
@@ -58,9 +55,9 @@ export function DynDnsZones() {
     const eventsByZone = useZoneEvents();
 
     const zones = zonesQuery.data ?? [];
-    // The tree (dyndns/zone-tree.js): sections for own, shared and not yet created zones, in each the zones with their subzones.
-    const { sections, children, ancestors: ancestorsOf } = zoneTree(zones);
-    // A zone selected by link or reload below a closed branch or in a closed section: they open.
+    // The tree (dyndns/zone-tree.js): a heading per domain the zones were given out of (users.dhbw.site, dhbw.cloud), below it the zones with their subzones.
+    const { sections, children, ancestors: ancestorsOf, parent } = zoneTree(zones);
+    // A zone selected by link or reload below a closed branch or heading: they open.
     const ancestors = activeZoneName ? ancestorsOf(activeZoneName) : [];
     const closedAbove = ancestors.filter(a => !isOpen(a)).join(' ');
     useEffect(() => {
@@ -76,50 +73,34 @@ export function DynDnsZones() {
     const tree = zones.length === 0
         ? <Text p="xs" c="dimmed">{t('dyndns.zoneList.empty')}</Text>
         : (
-            <ItemTree label={t('dyndns.zoneList.title')} withLines getId={r => r.id} getChildren={children}
-                sections={sections.map(s => ({ id: s.id, label: t(`dyndns.zoneList.sections.${s.key}`), icon: SECTION_ICONS[s.key], count: s.count, roots: s.roots }))}
+            <ItemTree label={t('dyndns.zoneList.title')} withLines loneSectionHeader getId={r => r.id} getChildren={children}
+                sections={sections.map(s => ({ id: s.id, label: s.soa, muted: true, title: t('dyndns.zoneList.headingTitle', { domain: s.soa }), roots: s.roots }))}
                 selectedId={activeZoneName ? zoneRowId(activeZoneName) : null} onSelect={r => navigate(`/zone/${r.zone.name}`)}
                 isOpen={isOpen} toggle={toggle}
                 query={q} matches={zoneMatches} noMatch={t('dyndns.zoneList.noMatch')}
                 row={(r) => {
                     const z = r.zone;
-                    const owners = z.owners?.length > 1 ? t('dyndns.zoneList.sharedWith', { owners: z.owners.join(', ') }) : null;
-                    // A root in two lines, never cut: its first label bold, the rest small below; a subzone only with its own label.
-                    const [first, rest] = r.label === r.name ? nameParts(r.name) : [r.label, ''];
+                    // Shared: on the root zone, on a subzone only where its owners differ from the zone above.
+                    const shared = sharedOwners(r, parent(r));
+                    const owners = shared ? t('dyndns.zoneList.sharedWith', { owners: shared.join(', ') }) : null;
+                    // One line: the part of the name below the heading or the zone above, the full name as tooltip. No signs but the one for shared, always in the same column at the end, so the right edge stays calm; a zone not in use is only dimmed (and says so in its tooltip and to a screen reader).
                     return {
-                        label: first,
-                        sub: rest || null,
-                        strong: !!rest,
-                        wrap: true,
-                        title: r.name,
-                        // Not in use: the name dimmed and a small sign, instead of a wide text badge.
+                        label: r.label,
+                        title: z.exists ? r.name : `${r.name} (${t('dyndns.zoneList.inactive')})`,
                         muted: !z.exists,
                         badge: (
                             <>
                                 <ZoneEventIndicator events={eventsByZone[z.name]} />
+                                {!z.exists && <VisuallyHidden>{t('dyndns.zoneList.inactive')}</VisuallyHidden>}
                                 {owners && (
                                     <Tooltip multiline maw={320} label={owners}>
-                                        <Group component="span" role="img" aria-label={owners} gap={2} wrap="nowrap" c="dimmed" fz="xs" style={{ flexShrink: 0 }}>
-                                            <Users size={12} aria-hidden />{z.owners.length}
-                                        </Group>
-                                    </Tooltip>
-                                )}
-                                {!z.exists && (
-                                    <Tooltip label={t('dyndns.zoneList.inactive')}>
-                                        <Box component="span" role="img" aria-label={t('dyndns.zoneList.inactive')} c="dimmed" style={{ display: 'flex', flexShrink: 0 }}>
-                                            <CircleDashed size={12} aria-hidden />
+                                        <Box component="span" role="img" aria-label={owners} c="dimmed" w={14} style={{ display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                                            <Users size={12} aria-hidden />
                                         </Box>
                                     </Tooltip>
                                 )}
                             </>
                         ),
-                        hoverAction: canAddSubzone(z) ? (
-                            <Tooltip label={t('dyndns.zoneList.addSubzone', { zone: z.name })}>
-                                <ActionIcon size="sm" variant="subtle" aria-label={t('dyndns.zoneList.addSubzone', { zone: z.name })} onClick={() => setSubzoneParent(z.name)}>
-                                    <Plus size={14} />
-                                </ActionIcon>
-                            </Tooltip>
-                        ) : null,
                     };
                 }} />
         );

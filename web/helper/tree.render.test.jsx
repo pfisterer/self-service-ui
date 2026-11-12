@@ -133,14 +133,14 @@ describe('ItemTree in MasterDetail', () => {
     });
 });
 
-function SectionHarness({ sections }) {
+function SectionHarness({ sections, loneSectionHeader }) {
     const [selected, setSelected] = useState(null);
     const [q, setQ] = useState('');
     const { isOpen, toggle } = useTreeExpansion({ storageKey: 'test.sections', defaultOpen: (path) => path !== 'section:later' });
     return (
         <>
             <TreeFilter value={q} onChange={setQ} label="Filter" clearLabel="Clear" />
-            <ItemTree label="Things" withLines sections={sections} getId={n => n.id} getChildren={kids} selectedId={selected} onSelect={n => setSelected(n.id)}
+            <ItemTree label="Things" withLines sections={sections} loneSectionHeader={loneSectionHeader} getId={n => n.id} getChildren={kids} selectedId={selected} onSelect={n => setSelected(n.id)}
                 isOpen={isOpen} toggle={toggle} query={q} matches={(n, s) => n.id.includes(s)} noMatch="Nothing" row={(n) => ({ label: n.id })} />
         </>
     );
@@ -167,6 +167,11 @@ describe('ItemTree with sections', () => {
         renderView(<SectionHarness sections={[SECTIONS[0], SECTIONS[1]]} />);
         expect(levels()[0]).toEqual(['fruit', '1']);
         expect(screen.queryByText('Now')).toBeNull();
+    });
+
+    it('keeps the header of a lone section where asked to', () => {
+        renderView(<SectionHarness sections={[SECTIONS[0], SECTIONS[1]]} loneSectionHeader />);
+        expect(levels().slice(0, 2)).toEqual([['Now', '1'], ['fruit', '2']]);
     });
 
     it('filters into the sections with a match, open', () => {

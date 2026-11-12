@@ -100,9 +100,9 @@ const DEFAULTS = {
         { zone: 'lea-muster.user.dhbw.cloud', name: 'jupyter.lea-muster.user.dhbw.cloud.', type: 'AAAA', ttl: 60, value: '2001:db8:1::11' },
     ] },
     'dyndns GET /v1/zones/': { zones: [
-        { name: 'lea-muster.user.dhbw.cloud', exists: true, owners: [ME], creator: ME, allow_subdomains: true },
-        { name: 'bildanalyse.projects.dhbw.cloud', exists: true, owners: [ME, 'tom.beispiel@dhbw.example'], creator: ME, sharing_allowed: true },
-        { name: 'wi24a.lehre.dhbw.cloud', exists: false, can_join: false },
+        { name: 'lea-muster.user.dhbw.cloud', zone_soa: 'user.dhbw.cloud', exists: true, owners: [ME], creator: ME, allow_subdomains: true },
+        { name: 'bildanalyse.projects.dhbw.cloud', zone_soa: 'projects.dhbw.cloud', exists: true, owners: [ME, 'tom.beispiel@dhbw.example'], creator: ME, sharing_allowed: true },
+        { name: 'wi24a.lehre.dhbw.cloud', zone_soa: 'lehre.dhbw.cloud', exists: false, can_join: false },
     ] },
     'dyndns GET /v1/zone-events/': [],
 };

@@ -30,13 +30,8 @@
         "filter": "Zonen filtern",
         "clearFilter": "Filter zurücksetzen",
         "noMatch": "Keine Zone passt zum Filter.",
-        "addSubzone": "Subzone unter {{zone}} anlegen",
         "inactive": "nicht aktiv",
-        "sections": {
-            "own": "Meine Zonen",
-            "shared": "Geteilt",
-            "available": "Verfügbar, noch nicht angelegt"
-        }
+        "headingTitle": "Zonen unter {{domain}}"
     },
     "subzone": {
         "title": "Subzone anlegen",
