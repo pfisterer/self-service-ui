@@ -13,7 +13,7 @@ import { DynamicDns } from '/dyndns/zones/dynamic-dns.jsx';
 import { DnsRecordsList } from '/dyndns/zones/dns-record-list.jsx';
 import { TlsCertificates } from '/dyndns/zones/tls-certificates.jsx';
 import { Title, Paper, Stack, Tabs, Button, Text, Alert, Group, TextInput, Modal, Box, Tooltip, Badge, ActionIcon, VisuallyHidden } from '@mantine/core';
-import { AlertCircle, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
+import { AlertCircle, Globe, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
 import { subzoneLabelError, wildcardCnRemaining, WILDCARD_CN_MAX } from '/helper/dns-validation.js';
 import { CopyableText } from '/helper/copyable-text.jsx';
 import { MasterDetail } from '/helper/master-detail.jsx';
@@ -52,7 +52,7 @@ export function DynDnsZones() {
     const eventsByZone = useZoneEvents();
 
     const zones = useMemo(() => zonesQuery.data ?? [], [zonesQuery.data]);
-    // The tree (dyndns/zone-tree.js): a caption per domain the zones were given out of (users.dhbw.site, dhbw.cloud), below it the zones with their subzones, one line each: the part of the name below the caption or the zone above, the full name as tooltip. No signs but the one for shared, always in the same column at the end, so the right edge stays calm; a zone not in use is only dimmed (and says so in its tooltip and to a screen reader).
+    // The tree (dyndns/zone-tree.js): a caption per domain the zones were given out of (users.dhbw.site, dhbw.cloud), below it the zones with their subzones, one line each: the part of the name below the caption or the zone above, the full name as tooltip. A globe on each caption (the domain, like the source icons in groups), the zones themselves without one; no signs but the one for shared, always in the same column at the end, so the right edge stays calm; a zone not in use is only dimmed (and says so in its tooltip and to a screen reader).
     const nodes = useMemo(() => {
         const { sections, parent } = zoneTree(zones);
         const toNode = (r) => {
@@ -80,7 +80,7 @@ export function DynDnsZones() {
                 children: r.children.map(toNode),
             };
         };
-        return sections.map(s => ({ id: s.id, label: s.soa, section: true, caption: true, title: t('dyndns.zoneList.headingTitle', { domain: s.soa }), children: s.roots.map(toNode) }));
+        return sections.map(s => ({ id: s.id, label: s.soa, section: true, caption: true, icon: <Globe size={14} />, title: t('dyndns.zoneList.headingTitle', { domain: s.soa }), children: s.roots.map(toNode) }));
     }, [zones, eventsByZone, t]);
     // Everything starts open (a person has a handful of zones, rarely a deep tree); what is stored per browser are the branches closed by hand. A zone selected by link or reload below a closed branch or caption has them opened by the tree, once per zone selected.
     const expansion = useTreeExpansion({ storageKey: 'self-service.dyndns-zones.collapsed', defaultOpen: true });
