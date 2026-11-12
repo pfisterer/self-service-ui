@@ -10,7 +10,7 @@ import { isEmail, useForm } from '@mantine/form';
 import { formatTerm, NodeChangesDiff, TerminationDatePicker, TokenBadgeList } from './component-common.jsx';
 import { formatDate } from '../format-date.js';
 import { DIALOG_SIZE, FormModal, FormTabs, tabHasError as tabFlag, tabWithError } from './component-form-modal.jsx';
-import { QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
+import { QuotaInputs, validateQuota, withUnsetAsZero } from './component-quota-inputs.jsx';
 import { MemberRoleEditor, TokenListEditor } from './component-token-list-editor.jsx';
 import { BudgetSelect } from './component-budget-select.jsx';
 import { ReasonField, reasonError } from './component-reason-field.jsx';
@@ -258,7 +258,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
                 name: nodeTitle(node),
                 reason: t('projects.adopt.reasonDefault', { name: openstackSide(node).external_name || nodeTitle(node) }),
                 // What OpenStack grants it today, until someone decides otherwise.
-                quota: { ...(node.limit || {}) },
+                quota: withUnsetAsZero(offeredFor(null), node.limit),
                 terminationDate: defaultEnd,
                 authorizedUsers: node.authorized_users || [],
                 adminScope: [],
@@ -268,7 +268,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
                 parentId: null,
                 name: node.name || '',
                 reason: node.reason || '',
-                quota: { ...(node.pending?.limit || node.limit) },
+                quota: withUnsetAsZero(offeredFor(null), node.pending?.limit || node.limit),
                 terminationDate: (node.pending?.termination_date || node.termination_date)
                     ? endDate(node.pending?.termination_date || node.termination_date)
                     : null,

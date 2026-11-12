@@ -298,6 +298,16 @@ export function defaultQuota(resources) {
     return Object.fromEntries((resources || []).map(r => [r.id, r.default ?? 0]));
 }
 
+// withUnsetAsZero fills the quantities a stored project limit does not carry with 0, what the services read for them: a resource added to the catalogue later (ws-storage-gb) is missing from every older project, and its empty field failed the range check on opening, so the project could not be saved at all (12.11.2026). Availabilities stay absent (not granted), a rate with a provider default stays empty (showsDefault).
+export function withUnsetAsZero(resources, quota) {
+    const out = { ...(quota || {}) };
+    (resources || []).forEach(r => {
+        if (isAvailability(r) || showsDefault(r)) return;
+        if (out[r.id] === undefined || out[r.id] === null) out[r.id] = 0;
+    });
+    return out;
+}
+
 // Validates a quota map against the resource definitions; returns an error map
 // (empty when valid). Unlimited (-1) entries are always valid for budget
 // QUANTITIES.

@@ -6,7 +6,7 @@ import '/test/jsdom-stubs.js';
 // The form and the validator both speak through i18next, so the instance has to
 // exist before either is used; the assertions below are its English values.
 import i18n from '/i18n/index.js';
-import { QuotaInputs, defaultQuota, validateQuota } from './component-quota-inputs.jsx';
+import { QuotaInputs, defaultQuota, validateQuota, withUnsetAsZero } from './component-quota-inputs.jsx';
 
 const t = (key, options) => i18n.t(key, options);
 
@@ -180,5 +180,25 @@ describe('validateQuota and rates with a default', () => {
 
     it('still wants a number for an OpenStack quantity', () => {
         expect(Object.keys(validateQuota(t, [cores], {}))).toEqual(['cores']);
+    });
+});
+
+describe('withUnsetAsZero', () => {
+    const storage = { id: 'ws-storage-gb', name: 'Workspace storage', provider: 'aiaas', default: 0, min: 0, max: 10000 };
+    const rpm = { id: 'llm-rpm', name: 'LLM requests per minute', provider: 'aiaas', default: 60, min: 0, max: 100000 };
+    const gpu = { id: 'gpu-avail', name: 'GPU', kind: 'bool', provider: 'aiaas', min: 0, max: 0 };
+    const t = (k) => k;
+
+    it('fills a quantity an older project does not carry with 0, so the untouched form validates', () => {
+        const q = withUnsetAsZero([storage, rpm, gpu], { 'llm-rpm': 30 });
+        expect(q).toEqual({ 'llm-rpm': 30, 'ws-storage-gb': 0 });
+        expect(validateQuota(t, [storage, rpm, gpu], q, { providerDefaults: true })).toEqual({});
+    });
+
+    it('keeps what is set and leaves the input alone', () => {
+        const stored = { 'ws-storage-gb': 50 };
+        expect(withUnsetAsZero([storage], stored)).toEqual({ 'ws-storage-gb': 50 });
+        expect(withUnsetAsZero([storage], undefined)).toEqual({ 'ws-storage-gb': 0 });
+        expect(stored).toEqual({ 'ws-storage-gb': 50 });
     });
 });
