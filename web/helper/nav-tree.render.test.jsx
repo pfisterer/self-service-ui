@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderView } from '/test/render-harness.jsx';
-import { filterTree, NavTree, TreeFilter, useTreeExpansion } from '/helper/tree.jsx';
+import { filterTree, NavTree, TreeFilter, useExpandAll, useTreeExpansion } from '/helper/tree.jsx';
 import { MasterDetail } from '/helper/master-detail.jsx';
 import i18n from '/i18n/index.js';
 
@@ -22,11 +22,12 @@ const SECTIONS = [
 function Harness({ nodes = NODES, defaultOpen = true, initial = null, withLines = false, openOnSelect = false, keepOpen, storageKey = 'test.tree' }) {
     const [selected, setSelected] = useState(initial);
     const [q, setQ] = useState('');
-    const expansion = useTreeExpansion({ storageKey, nodes, defaultOpen, keepOpen });
+    const expansion = useTreeExpansion({ storageKey, defaultOpen });
+    const expandAll = useExpandAll(expansion, nodes, { keepOpen });
     return (
         <MasterDetail
             scrollKey={selected}
-            filter={<TreeFilter value={q} onChange={setQ} label="Filter" clearLabel="Clear" expansion={expansion} />}
+            filter={<TreeFilter value={q} onChange={setQ} label="Filter" clearLabel="Clear" expandAll={expandAll} />}
             master={<NavTree label="Things" nodes={nodes} expansion={expansion} withLines={withLines} openOnSelect={openOnSelect} selectedId={selected} onSelect={n => setSelected(n.value ?? n.id)} query={q} matches={(n, s) => n.id.includes(s)} noMatch="Nothing" />}
             detail={<div data-testid="detail">{selected ?? 'none'}</div>} />
     );
@@ -222,7 +223,7 @@ describe('NavTree loading as it opens', () => {
         const nodes = useMemo(() => [
             { id: 'root', label: 'root', hasChildren: true, children: loaded.root && [...loaded.root.slice(0, 2 + extra).map(id => ({ id, label: id })), ...(2 + extra < loaded.root.length ? [{ id: 'root::more', label: 'Show more', more: { loaded: 2 + extra, total: loaded.root.length, onLoad: async () => setExtra(e => e + 1) } }] : [])] },
         ], [loaded, extra]);
-        const expansion = useTreeExpansion({ storageKey: 'test.lazy', nodes });
+        const expansion = useTreeExpansion({ storageKey: 'test.lazy' });
         return <NavTree label="Lazy" nodes={nodes} expansion={expansion} withLines onLoadChildren={async (id) => { const kids = await load(id); setLoaded(p => ({ ...p, [id]: kids })); }} />;
     }
 

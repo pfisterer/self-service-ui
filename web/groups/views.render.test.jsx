@@ -178,4 +178,22 @@ describe('the groups views render', () => {
         await waitFor(() => expect(input.value).toBe(''));
         expectNoRenderFailure();
     });
+
+    // The tree of the zones and budgets: expand-all opens every source and loads its groups level by level, the keyboard opens a source and moves into it.
+    it('opens everything with the button beside the search, and works by keyboard', async () => {
+        renderView(<GroupsBrowser params={{}} />);
+        await screen.findAllByText('dualis');
+        fireEvent.click(screen.getByRole('button', { name: /Alle aufklappen|Expand all/ }));
+        expect(await screen.findByText('dualis-mannheim-fakultaet-technik')).toBeTruthy();
+        expect(calls.some(c => c.parent === 'dualis-standort-mannheim')).toBe(true);
+        fireEvent.click(screen.getByRole('button', { name: /Alle zuklappen|Collapse all/ }));
+        await waitFor(() => expect(screen.queryByText('dualis-standort-mannheim')).toBeNull());
+        const zwr = screen.getAllByRole('treeitem')[0];
+        zwr.focus();
+        fireEvent.keyDown(zwr, { key: 'ArrowRight', code: 'ArrowRight' });
+        expect(await screen.findByText('wwi23seb')).toBeTruthy();
+        fireEvent.keyDown(zwr, { key: 'ArrowDown', code: 'ArrowDown' });
+        expect(document.activeElement.querySelector('p').textContent).toBe('wwi23seb');
+        expectNoRenderFailure();
+    });
 });

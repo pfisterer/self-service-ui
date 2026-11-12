@@ -17,7 +17,7 @@ import { AlertCircle, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
 import { subzoneLabelError, wildcardCnRemaining, WILDCARD_CN_MAX } from '/helper/dns-validation.js';
 import { CopyableText } from '/helper/copyable-text.jsx';
 import { MasterDetail } from '/helper/master-detail.jsx';
-import { NavTree, TreeFilter, useTreeExpansion } from '/helper/tree.jsx';
+import { NavTree, TreeFilter, useExpandAll, useTreeExpansion } from '/helper/tree.jsx';
 import { useZoneEvents, ZoneEventIndicator, ZoneEventsBanner } from '/dyndns/zones/zone-events-banner.jsx';
 import { defaultZone, sharedOwners, zoneMatches, zoneRowId, zoneTree } from '/dyndns/zone-tree.js';
 import { zoneAuthority } from '/dyndns/zone-authority.js';
@@ -83,7 +83,8 @@ export function DynDnsZones() {
         return sections.map(s => ({ id: s.id, label: s.soa, section: true, caption: true, title: t('dyndns.zoneList.headingTitle', { domain: s.soa }), children: s.roots.map(toNode) }));
     }, [zones, eventsByZone, t]);
     // Everything starts open (a person has a handful of zones, rarely a deep tree); what is stored per browser are the branches closed by hand. A zone selected by link or reload below a closed branch or caption has them opened by the tree, once per zone selected.
-    const expansion = useTreeExpansion({ storageKey: 'self-service.dyndns-zones.collapsed', nodes, defaultOpen: true });
+    const expansion = useTreeExpansion({ storageKey: 'self-service.dyndns-zones.collapsed', defaultOpen: true });
+    const expandAll = useExpandAll(expansion, nodes);
 
     if (!api || zonesQuery.isPending) return <Loading />;
     if (zonesQuery.isError) return <LoadError query={zonesQuery} title={t('dyndns.zoneList.loadError')} />;
@@ -103,7 +104,7 @@ export function DynDnsZones() {
         <MasterDetail
             header={<Title order={2} mb="md">{t('dyndns.zoneList.title')}</Title>}
             filter={zones.length >= FILTER_FROM ? <TreeFilter value={filter} onChange={setFilter} label={t('dyndns.zoneList.filter')} clearLabel={t('dyndns.zoneList.clearFilter')}
-                expansion={expansion} /> : null}
+                expandAll={expandAll} /> : null}
             master={tree}
             // Zone names are short in the tree, and the DNS records beside it want the room.
             masterSpan={{ base: 12, md: 4, lg: 3 }}

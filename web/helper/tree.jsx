@@ -45,12 +45,10 @@ function ancestorsOf(index, id) {
     return out;
 }
 
-// useTreeExpansion: which branches are open, remembered per browser under storageKey. `defaultOpen` says how a branch starts (true or false for all, or a function of its id, such as the budget tree's first level), and what is stored are the branches flipped from that, so a tree whose branches start open stores the ones closed by hand and the other way round. Closing a branch keeps what is open below it, for when it opens again.
-// `nodes` are the tree's nodes as far as loaded; they name the branches that expand-all and collapse-all reach. expand-all is a mode remembered beside the branches: while it is on, a branch that arrives later (loaded as its parent opened) opens too, so a tree that loads lazily opens level by level; closing a branch by hand ends it. collapse-all closes every branch but the ones `keepOpen` names (the budget tree keeps its first level open).
-export function useTreeExpansion({ storageKey, nodes, defaultOpen = false, keepOpen }) {
+// useTreeExpansion: which branches are open, remembered per browser under storageKey. `defaultOpen` says how a branch starts (true or false for all, or a function of its id, such as the budget tree's first level), and what is stored are the branches flipped from that, so a tree whose branches start open stores the ones closed by hand and the other way round. Closing a branch keeps what is open below it, for when it opens again. Beside the branches it remembers whether expand-all is on (useExpandAll); closing a branch by hand ends it.
+export function useTreeExpansion({ storageKey, defaultOpen = false }) {
     const [flipped, setFlipped] = useLocalStorage({ key: storageKey, defaultValue: [], getInitialValueInEffect: false });
     const [allMode, setAllMode] = useLocalStorage({ key: `${storageKey}.all`, defaultValue: false, getInitialValueInEffect: false });
-    const index = useMemo(() => indexNodes(nodes), [nodes]);
     const startsOpen = (id) => (typeof defaultOpen === 'function' ? !!defaultOpen(id) : !!defaultOpen);
     const set = new Set(flipped);
     const isOpen = (id) => startsOpen(id) !== set.has(id);
@@ -62,10 +60,31 @@ export function useTreeExpansion({ storageKey, nodes, defaultOpen = false, keepO
         }
         return [...next];
     });
+    const open = (id) => setOpen([id], true);
+    const close = (id) => {
+        setOpen([id], false);
+        setAllMode(false);
+    };
+    return {
+        isOpen, open, close,
+        // The ids stored open (in a tree whose branches start closed: every branch opened, also those below a closed one).
+        opened: flipped.filter(isOpen),
+        toggle: (id) => (isOpen(id) ? close(id) : open(id)),
+        // Opens every id given (the way down to a revealed or linked item), whether its node is loaded or not.
+        expand: (ids) => setOpen(ids, true),
+        // For useExpandAll.
+        startsOpen, setOpen, setFlipped, allMode, setAllMode,
+    };
+}
+
+// useExpandAll: the expand-all and collapse-all toggle beside a tree's filter (TreeFilter's expandAll), over the branches among `nodes` (the tree's nodes as far as loaded). Expand-all is a mode, remembered: while it is on, a branch that arrives later (loaded as its parent opened) opens too, so a tree that loads lazily opens level by level. Collapse-all closes every branch but the ones `keepOpen` names (the budget tree keeps its first level open). `allOpen` is whether the mode is on or every branch is open.
+export function useExpandAll(expansion, nodes, { keepOpen } = {}) {
+    const { isOpen, startsOpen, setOpen, setFlipped, allMode, setAllMode } = expansion;
+    const index = useMemo(() => indexNodes(nodes), [nodes]);
     const branches = [...index.values()].filter(e => isBranch(e.node)).map(e => e.node.id);
     const allOpen = allMode || (branches.length > 0 && branches.every(isOpen));
 
-    // While expand-all is on, every branch seen for the first time opens; each only once, so one closed again by hand is not reopened by the next pass.
+    // While the mode is on, every branch seen for the first time opens; each only once, so one closed again by hand is not reopened by the next pass.
     const seen = useRef(new Set());
     useEffect(() => {
         if (!allMode) {
@@ -78,12 +97,7 @@ export function useTreeExpansion({ storageKey, nodes, defaultOpen = false, keepO
         if (closed.length) setOpen(closed, true);
     }, [allMode, index]); // eslint-disable-line react-hooks/exhaustive-deps -- the mode and the nodes known say when to run; isOpen and setOpen are new every render
 
-    const open = (id) => setOpen([id], true);
-    const close = (id) => {
-        setOpen([id], false);
-        setAllMode(false);
-    };
-    const toggleAll = () => {
+    const toggle = () => {
         if (allOpen) {
             setAllMode(false);
             // Every known branch closes but those kept open; of the branches not loaded only the ones stored closed stay stored.
@@ -97,8 +111,7 @@ export function useTreeExpansion({ storageKey, nodes, defaultOpen = false, keepO
             setOpen(branches, true);
         }
     };
-    // expand opens every id given (the way down to a revealed or linked item), whether its node is loaded or not.
-    return { isOpen, open, close, toggle: (id) => (isOpen(id) ? close(id) : open(id)), expand: (ids) => setOpen(ids, true), allOpen, toggleAll };
+    return { allOpen, toggle };
 }
 
 // filterTree: the ids to show for a filter — every node that matches and the way down to it.
@@ -328,8 +341,8 @@ function MoreRow({ node, elementProps }) {
     );
 }
 
-// TreeFilter: the search box above a tree; Escape and the x clear it (onClear, by default emptying it). With `expansion` (useTreeExpansion), a small button beside it opens every branch, or closes them all where all are open, hidden while the box holds a search. `busy` shows a spinner in place of the magnifier (a search on the server under way); `placeholder` and the toggle's labels default to `label` and "Expand all"/"Collapse all".
-export function TreeFilter({ value, onChange, onClear, label, placeholder, clearLabel, busy, expansion, expandAllLabel, collapseAllLabel, size, ...props }) {
+// TreeFilter: the search box above a tree; Escape and the x clear it (onClear, by default emptying it). With `expandAll` (useExpandAll), a small button beside it opens every branch, or closes them all where all are open, hidden while the box holds a search. `busy` shows a spinner in place of the magnifier (a search on the server under way); `placeholder` and the toggle's labels default to `label` and "Expand all"/"Collapse all".
+export function TreeFilter({ value, onChange, onClear, label, placeholder, clearLabel, busy, expandAll, expandAllLabel, collapseAllLabel, size, ...props }) {
     const { t } = useTranslation();
     const clear = onClear ?? (() => onChange(''));
     const input = (
@@ -338,15 +351,15 @@ export function TreeFilter({ value, onChange, onClear, label, placeholder, clear
             onKeyDown={e => e.key === 'Escape' && clear()}
             rightSection={value ? <CloseButton size={size === 'xs' ? 'xs' : 'sm'} aria-label={clearLabel} onClick={clear} /> : null} {...props} />
     );
-    if (!expansion) return input;
-    const allOpen = expansion.allOpen;
+    if (!expandAll) return input;
+    const allOpen = expandAll.allOpen;
     const toggleLabel = allOpen ? (collapseAllLabel ?? t('projects.tree.collapseAll')) : (expandAllLabel ?? t('projects.tree.expandAll'));
     return (
         <Group gap="xs" wrap="nowrap">
             <Box style={{ flex: 1 }}>{input}</Box>
             {!value.trim() && (
                 <Tooltip label={toggleLabel}>
-                    <ActionIcon size="sm" variant={allOpen ? 'light' : 'subtle'} color="gray" aria-label={toggleLabel} aria-pressed={!!allOpen} onClick={() => expansion.toggleAll()}>
+                    <ActionIcon size="sm" variant={allOpen ? 'light' : 'subtle'} color="gray" aria-label={toggleLabel} aria-pressed={!!allOpen} onClick={() => expandAll.toggle()}>
                         {allOpen ? <ChevronsDownUp size={14} /> : <ChevronsUpDown size={14} />}
                     </ActionIcon>
                 </Tooltip>
