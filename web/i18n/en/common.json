@@ -82,6 +82,16 @@
             "placeholder": "Group or email address, e.g. wwi24 or doe@",
             "syntax": "Finds groups by id, name and description, and people by part of their email address – people only once they are in some group. Several words must all occur; OR joins alternatives (mannheim OR karlsruhe). \"…\" finds exactly that phrase, * stands for any characters. Groups with roles also appear as group#role, e.g. standort-ma#beschaeftigte: only the people holding that role.",
             "unreachable": "The group directory is not reachable — no suggestions. You can still type a token by hand."
+        },
+        "upload": {
+            "label": "Upload progress",
+            "percent": "{{percent}}%",
+            "transferred": "{{loaded}} of {{total}}",
+            "speed": "{{speed}}/s",
+            "remaining": "{{time}} left",
+            "seconds": "{{count}} s",
+            "cancel": "Cancel",
+            "cancelled": "Upload cancelled."
         }
     },
     "providers": {

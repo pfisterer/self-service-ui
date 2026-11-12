@@ -49,6 +49,14 @@ describe('apiError', () => {
         expect(err.status).toBe(409);
     });
 
+    it('carries the code and the body of a refusal, not of a thrown error or a text', () => {
+        const err = apiError({ error: { error: 'Nur lesen', code: 'read_only' }, response: { ok: false, status: 403 } });
+        expect(err.code).toBe('read_only');
+        expect(err.body).toEqual({ error: 'Nur lesen', code: 'read_only' });
+        expect(apiError({ error: new TypeError('Failed to fetch') }).body).toBeUndefined();
+        expect(apiError({ error: 'Bad Gateway', response: { ok: false, status: 502 } }).code).toBeUndefined();
+    });
+
     it('falls back to a generic message rather than throwing null', () => {
         const err = apiError({});
         expect(err.message).toBe('Request failed');

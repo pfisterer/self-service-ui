@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { apiError, apiErrorMessage } from '/helper/api-error.js';
 import { allPages, asPage } from '/helper/pages.js';
+import { upload } from '/helper/upload.js';
 import { useClient } from '/providers/client.jsx';
 // The GPU part lives in llm-management-api (same service, same client and base
 // URL as the LLM section), under /v1/gpu. Named imports, as in llm/api-llm.jsx:
@@ -9,7 +10,7 @@ import {
     deleteGpuPool, deleteWorkspaceProject, getGpuFleet, getMyWorkspaceUsage, getGpuHours, putGpuNode, putGpuPool, getProjectImageLog, getWorkspaceCatalog, getWorkspaceStorage, getWorkspaceUsage,
     getGpuServerProgress, getGpuStartOptions, listGpuServers, listWorkspaceProjects, startGpuServer, rebuildProjectImage, stopGpuServer, updateProjectImage, updateWorkspaceProject,
     deleteProjectCredential, listProjectCredentials, setProjectCredential,
-    cancelGpuJob, downloadGpuJobFile, getGpuJob, getGpuJobLog, listGpuJobFiles, listGpuJobs, submitGpuJob, uploadGpuFile,
+    cancelGpuJob, downloadGpuJobFile, getGpuJob, getGpuJobLog, listGpuJobFiles, listGpuJobs, submitGpuJob,
 } from '@dhbw-cloud/llm-client';
 
 function unwrap(res) {
@@ -71,8 +72,8 @@ export function useGpuApi() {
             // A job's files (todo job_files): a folder of the home it ran in ({ path, files, truncated }; without path the job's folder), and one file as a Blob. The service reads them through a short-lived pod, so the first request takes a few seconds.
             jobFiles: (id, path) => call(listGpuJobFiles, { path: { id }, query: path ? { path } : undefined }),
             jobFile: (id, path) => call(downloadGpuJobFile, { path: { id }, query: { path }, parseAs: 'blob' }),
-            // Uploads a File (a Blob) as path relative to the person's home in the project (under project-shared/ into the shared folder); answers the written file { name, path, size, modified }. The body goes as it is (application/octet-stream), so the browser streams it with its Content-Length.
-            uploadFile: (project, path, file) => call(uploadGpuFile, { query: { project, path }, body: file }),
+            // Uploads a File (a Blob) as path relative to the person's home in the project (under project-shared/ into the shared folder); answers the written file { name, path, size, modified }. The body goes as it is (application/octet-stream), so the browser streams it with its Content-Length. PUT /v1/gpu/files as the client's uploadGpuFile, but through helper/upload.js (XMLHttpRequest), which reports progress and can be cancelled: opts = { onProgress, signal } (useUpload's run passes both).
+            uploadFile: (project, path, file, opts = {}) => upload({ client, url: '/v1/gpu/files', method: 'PUT', query: { project, path }, body: file, ...opts }),
         };
     }, [client]);
 }

@@ -219,7 +219,13 @@ describe('the GPU views render', () => {
     it('Batch jobs upload a file into the home or the shared folder of the filtered project', async () => {
         globalThis.__gpuApi.listProjects = async () => JOB_PROJECTS;
         const sent = [];
-        globalThis.__gpuApi.uploadFile = async (project, path, file) => { sent.push({ project, path, name: file.name }); return { name: file.name, path, type: 'file', size: file.size }; };
+        // The facade gets { onProgress, signal } from useUpload and passes them to helper/upload.js; the progress shows while the upload runs.
+        let finish;
+        globalThis.__gpuApi.uploadFile = (project, path, file, opts) => {
+            sent.push({ project, path, name: file.name, signal: opts.signal instanceof AbortSignal });
+            opts.onProgress({ loaded: 4, total: 8, percent: 50, bytesPerSec: 2, etaSec: 2 });
+            return new Promise((resolve) => { finish = () => resolve({ name: file.name, path, type: 'file', size: file.size }); });
+        };
         window.history.replaceState(null, '', '/jobs?project=wwi23seb-ml');
         try {
             renderView(<GpuJobs />);
@@ -234,13 +240,41 @@ describe('the GPU views render', () => {
             expect(await screen.findByText('~/project-shared/kurs/train.py')).toBeTruthy();
             await waitFor(() => expect(screen.getByRole('button', { name: /^(Hochladen|Upload)$/ }).disabled).toBe(false));
             fireEvent.click(screen.getByRole('button', { name: /^(Hochladen|Upload)$/ }));
+            expect(await screen.findByRole('progressbar')).toBeTruthy();
+            expect(screen.getByText(/^50 ?%$/)).toBeTruthy();
+            expect(screen.getByRole('button', { name: /^(Schließen|Close)$/ }).disabled).toBe(true);
+            finish();
             expect(await screen.findByText(/(Hochgeladen|Uploaded): ~\/project-shared\/kurs\/train\.py/)).toBeTruthy();
-            expect(sent).toEqual([{ project: 'wwi23seb-ml', path: 'project-shared/kurs/train.py', name: 'train.py' }]);
+            expect(screen.queryByRole('progressbar')).toBeNull();
+            expect(sent).toEqual([{ project: 'wwi23seb-ml', path: 'project-shared/kurs/train.py', name: 'train.py', signal: true }]);
             fireEvent.click(screen.getByRole('button', { name: /^(Schließen|Close)$/ }));
             await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         } finally {
             window.history.replaceState(null, '', '/');
         }
+        expectNoRenderFailure();
+    });
+
+    it('Batch jobs cancel a running upload, and show a refusal in the dialog', async () => {
+        globalThis.__gpuApi.listProjects = async () => JOB_PROJECTS;
+        globalThis.__gpuApi.uploadFile = (project, path, file, opts) => new Promise((_, reject) => {
+            opts.signal.addEventListener('abort', () => reject(new DOMException('cancelled', 'AbortError')));
+        });
+        renderView(<GpuJobs />);
+        expect(await screen.findByText('training-1')).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: /^(Dateien hochladen|Upload files)$/ }));
+        await screen.findByRole('button', { name: /^(Hochladen|Upload)$/ });
+        fireEvent.change(document.querySelector('input[type=file]'), { target: { files: [new File(['print(1)'], 'train.py')] } });
+        await waitFor(() => expect(screen.getByRole('button', { name: /^(Hochladen|Upload)$/ }).disabled).toBe(false));
+        fireEvent.click(screen.getByRole('button', { name: /^(Hochladen|Upload)$/ }));
+        fireEvent.click(await screen.findByRole('button', { name: /^(Abbrechen|Cancel)$/ }));
+        expect(await screen.findByText(/(Hochladen abgebrochen|Upload cancelled)\./)).toBeTruthy();
+        expect(screen.queryByRole('progressbar')).toBeNull();
+
+        globalThis.__gpuApi.uploadFile = async () => { throw Object.assign(new Error('Kein Platz mehr im Home.'), { status: 507, code: 'quota' }); };
+        fireEvent.click(screen.getByRole('button', { name: /^(Hochladen|Upload)$/ }));
+        expect(await screen.findByText('Kein Platz mehr im Home.')).toBeTruthy();
+        expect(screen.queryByText(/(Hochladen abgebrochen|Upload cancelled)\./)).toBeNull();
         expectNoRenderFailure();
     });
 

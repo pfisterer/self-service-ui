@@ -1,3 +1,5 @@
+import { formatBytes } from '/helper/bytes.js';
+
 // Batch jobs (docs/architektur.md "Batch-Jobs" in aiaas-deployment): GPU jobs without a workspace, in the project's environment with the person's home and ~/project-shared. The bounds below are the AI service's (workspace/jobs.go).
 
 // The run time of a job when the project sets none (job_max_hours 0), and the most a project may allow.
@@ -79,15 +81,6 @@ export function parentPath(path, root) {
     const i = path.lastIndexOf('/');
     const up = i < 0 ? '' : path.slice(0, i);
     return root && !(up === root || up.startsWith(root + '/')) ? null : up;
-}
-
-// formatBytes is a file size for people (B, KB, MB, GB, binary steps).
-export function formatBytes(n) {
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    let i = 0;
-    let v = n || 0;
-    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
-    return i === 0 ? `${v} B` : `${v.toFixed(v < 10 ? 1 : 0)} ${units[i]}`;
 }
 
 // Uploading files for jobs (todo job_files): PUT /v1/gpu/files writes one file into the person's home in the project or, under project-shared/, into the project's shared folder (not for the role reader). The bounds are the AI service's (gpu/jobfiles.go).
