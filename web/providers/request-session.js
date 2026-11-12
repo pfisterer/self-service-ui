@@ -1,6 +1,7 @@
 // What every request to the services carries, and what every answer may set off — in one place, so the generated clients (their interceptors in client.jsx) and the upload with progress (helper/upload.js, XMLHttpRequest) cannot drift apart.
 //
 // A plain module without React: the values live in React (the token, the session's expire callback) but must exist before the first request, so ClientProvider keeps this holder current and everything here reads it at request time.
+import i18n from 'i18next';
 import { actingAsAtLoad } from '/providers/acting-as.js';
 
 const useDummyAuth = Boolean(import.meta.env?.DEV && typeof window !== 'undefined' && window.appconfig?.dummyAuth === true);
@@ -14,12 +15,19 @@ export const requestSession = {
     actAs: actingAsAtLoad,
 };
 
+// uiLanguage is the language the UI speaks right now ('de', 'en'), read at request time so a switch in the header applies to the next request; the services answer their error messages in it. null before i18next is initialised.
+export function uiLanguage() {
+    return i18n.resolvedLanguage || i18n.language || null;
+}
+
 // requestHeaders is the set of headers every request gets, as a plain object.
 export function requestHeaders() {
     const headers = {};
     if (requestSession.token) headers.Authorization = `Bearer ${requestSession.token}`;
     // Every service gets the person's address and checks for itself that the caller may (act-as.jsx).
     if (requestSession.actAs) headers['X-Act-As'] = requestSession.actAs;
+    const lang = uiLanguage();
+    if (lang) headers['Accept-Language'] = lang;
     return headers;
 }
 

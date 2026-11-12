@@ -1,4 +1,4 @@
-// upload sends a file (or any large body) to one of the services and reports how far it got. The generated clients use fetch, which cannot report upload progress, so this one uses XMLHttpRequest — with the same headers (token pre-BFF, X-Act-As) and the same 401 handling as the clients' interceptors, both from providers/request-session.js, and failing in the same shape the facades throw (helper/api-error.js: an Error with message, status, and the parsed body's code).
+// upload sends a file (or any large body) to one of the services and reports how far it got. The generated clients use fetch, which cannot report upload progress, so this one uses XMLHttpRequest — with the same headers (token pre-BFF, X-Act-As, Accept-Language) and the same 401 handling as the clients' interceptors, both from providers/request-session.js, and failing in the same shape the facades throw (helper/api-error.js: an Error with message, status, and the parsed body's code).
 //
 // options:
 //   client     a generated client (useClient('llm')); its baseUrl is used. Or:

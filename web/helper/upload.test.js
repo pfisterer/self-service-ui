@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import i18n from '/i18n/index.js';
 import { requestSession } from '/providers/request-session.js';
 import { isAbort, progressOf, upload, uploadUrl } from './upload.js';
 
@@ -34,13 +35,14 @@ class FakeXHR {
 const client = { getConfig: () => ({ baseUrl: 'https://ai.example' }) };
 const file = () => new Blob(['x'.repeat(1000)]);
 
-beforeEach(() => {
+beforeEach(async () => {
     vi.stubGlobal('XMLHttpRequest', FakeXHR);
     FakeXHR.last = null;
     requestSession.token = null;
     requestSession.actAs = null;
     requestSession.useDummyAuth = false;
     requestSession.expire = () => { };
+    await i18n.changeLanguage('de');
 });
 
 afterEach(() => {
@@ -82,17 +84,19 @@ describe('upload', () => {
             'Content-Type': 'application/octet-stream',
             Authorization: 'Bearer tok',
             'X-Act-As': 'erika@dhbw.de',
+            'Accept-Language': 'de',
         });
         xhr.respond(200, { name: 'a.py', path: 'a.py', size: 1000 });
         await expect(p).resolves.toEqual({ name: 'a.py', path: 'a.py', size: 1000 });
         expect(onDone).toHaveBeenCalledWith({ name: 'a.py', path: 'a.py', size: 1000 });
     });
 
-    it('sends no Authorization and no X-Act-As in BFF mode without acting', async () => {
+    it('sends no Authorization and no X-Act-As in BFF mode without acting, and follows a language switch', async () => {
+        await i18n.changeLanguage('en');
         const p = upload({ baseUrl: '', url: '/v1/f', method: 'POST', body: file() });
         const xhr = FakeXHR.last;
         expect(xhr.method).toBe('POST');
-        expect(xhr.headers).toEqual({ 'Content-Type': 'application/octet-stream' });
+        expect(xhr.headers).toEqual({ 'Content-Type': 'application/octet-stream', 'Accept-Language': 'en' });
         xhr.respond(204, '');
         await expect(p).resolves.toEqual({});
     });

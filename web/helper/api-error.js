@@ -46,7 +46,7 @@ export function formatError(err) {
 // every failure is just a string, and a stale approval reads like a validation
 // error the user is supposed to fix.
 //
-// The services answer a refusal as `{ error, code }`: `code` is the stable, machine-readable reason (the message is for people), so it rides along as err.code, and the whole parsed body as err.body.
+// The services answer a refusal as `{ error, code }`: `code` is the stable, machine-readable reason (the message is for people and follows Accept-Language), so it rides along as err.code, and the whole parsed body as err.body.
 export function apiError(res) {
     const err = new Error(apiErrorMessage(res) ?? 'Request failed');
     err.status = res?.response?.status;

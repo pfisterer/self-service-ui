@@ -6,9 +6,7 @@
 // format-date.js) — which was defensible while there was one language, and is
 // not once the reader picks one.
 //
-// The choice lives in the browser, not in the backend: it is a preference of
-// this person at this screen, no server needs to know it, and a stored
-// preference would be one more thing to migrate per deployment.
+// The choice lives in the browser, not in the backend: it is a preference of this person at this screen, and a stored preference would be one more thing to migrate per deployment. The services only hear it per request, as Accept-Language (providers/request-session.js), to answer their error messages in it.
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';

@@ -1,22 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import i18n from '/i18n/index.js';
 import { applyRequestHeaders, noteResponseStatus, requestHeaders, requestSession } from './request-session.js';
 
-beforeEach(() => {
+beforeEach(async () => {
     requestSession.token = null;
     requestSession.actAs = null;
     requestSession.useDummyAuth = false;
     requestSession.expire = () => { };
+    await i18n.changeLanguage('de');
 });
 
 describe('requestHeaders', () => {
-    it('is empty in BFF mode without acting', () => {
-        expect(requestHeaders()).toEqual({});
+    it('carries the UI language and follows a switch at runtime', async () => {
+        expect(requestHeaders()).toEqual({ 'Accept-Language': 'de' });
+        await i18n.changeLanguage('en');
+        expect(requestHeaders()).toEqual({ 'Accept-Language': 'en' });
+        // A regional variant from the browser is read as the language the UI speaks.
+        await i18n.changeLanguage('de-DE');
+        expect(requestHeaders()['Accept-Language']).toBe('de');
     });
 
     it('adds the token pre-BFF and X-Act-As while acting for somebody', () => {
         requestSession.token = 'tok';
         requestSession.actAs = 'erika@dhbw.de';
-        expect(requestHeaders()).toEqual({ Authorization: 'Bearer tok', 'X-Act-As': 'erika@dhbw.de' });
+        expect(requestHeaders()).toEqual({ Authorization: 'Bearer tok', 'X-Act-As': 'erika@dhbw.de', 'Accept-Language': 'de' });
     });
 });
 
@@ -26,6 +33,7 @@ describe('applyRequestHeaders', () => {
         applyRequestHeaders(h);
         expect(h.get('Authorization')).toBeNull();
         expect(h.get('Content-Type')).toBe('application/json');
+        expect(h.get('Accept-Language')).toBe('de');
 
         requestSession.token = 'tok';
         requestSession.actAs = 'erika@dhbw.de';

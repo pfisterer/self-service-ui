@@ -28,7 +28,7 @@ groupsClient.setConfig({ baseUrl: window?.appconfig?.groupsBaseUrl });
 
 const CLIENTS = { projects: projectsClient, dyndns: dyndnsClient, llm: llmClient, groups: groupsClient };
 
-// The headers every request carries (token pre-BFF, X-Act-As) and the 401 handling live in request-session.js, shared with the upload with progress (helper/upload.js), so the two ways a request leaves the UI cannot drift. The interceptors are registered once and read the current values at request time.
+// The headers every request carries (token pre-BFF, X-Act-As, Accept-Language) and the 401 handling live in request-session.js, shared with the upload with progress (helper/upload.js), so the two ways a request leaves the UI cannot drift. The interceptors are registered once and read the current values at request time.
 for (const c of Object.values(CLIENTS)) {
     c.interceptors.request.use((request) => {
         applyRequestHeaders(request.headers);
