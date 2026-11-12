@@ -11,7 +11,7 @@ import { DIALOG_SIZE, FormModal, FormTabs, tabHasError as tabFlag, tabWithError 
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
 import { formatError } from '/helper/api-error.js';
-import { COLOR, catalogKinds, freeAmount, isAvailability, isPoolAutoApprove, kindOfResource, PROJECT_KINDS, UNLIMITED_QUOTA, visibleResources, endDate, endDay } from './util-project.jsx';
+import { COLOR, catalogKinds, freeAmount, isAvailability, isPoolAutoApprove, kindOfResource, PROJECT_KINDS, UNLIMITED_QUOTA, visibleResources, endDate, endDay, resourceAmount } from './util-project.jsx';
 import { BudgetSelect, withCurrentParent } from './component-budget-select.jsx';
 import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
@@ -234,7 +234,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 const cap = sourceBudget.limit?.[r.id];
                 if (cap === UNLIMITED_QUOTA || cap === undefined || cap === null) return null;
                 const free = freeAmount(sourceBudget, r.id);
-                return r.unit ? `${free}/${cap} ${r.unit} ${r.name}` : `${free}/${cap} ${r.name}`;
+                return resourceAmount(t, r, `${free}/${cap}`);
             })
             .filter(Boolean)
             .join(' · ')

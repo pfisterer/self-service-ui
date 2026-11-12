@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { gpuPools, quotaSections, shortName } from './component-quota-inputs.jsx';
+import { gpuPools, quotaSections } from './component-quota-inputs.jsx';
+import { shortName } from './util-project.jsx';
 
 describe('gpuPools', () => {
     it('pairs the two resources of each GPU class and arranges the classes by pool, tiers in order', () => {

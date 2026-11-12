@@ -120,7 +120,7 @@ export function AllocationSection({ node, resources, draft }) {
     const askGiveBack = async (a) => {
         const ok = await confirm({
             title: t('projects.allocation.giveBackTitle', { name: a.budget_name || a.budget_id }),
-            message: t('projects.allocation.giveBackText', { summary: resourceSummaryText(resources, a.limit) }),
+            message: t('projects.allocation.giveBackText', { summary: resourceSummaryText(t, resources, a.limit) }),
             severity: 'warning',
             confirmLabel: t('projects.allocation.giveBack'),
         });
@@ -145,7 +145,7 @@ export function AllocationSection({ node, resources, draft }) {
                     <Group gap="xs" wrap="nowrap" align="flex-start" style={{ minWidth: 0 }}>
                         <Gift size="14" style={{ marginTop: 3, flexShrink: 0, color: `var(--mantine-color-${COLOR.info}-7)` }} />
                         <div style={{ minWidth: 0 }}>
-                            <Text size="sm"><b>{a.budget_name || a.budget_id}</b>{' · '}{resourceSummaryText(resources, a.limit)}</Text>
+                            <Text size="sm"><b>{a.budget_name || a.budget_id}</b>{' · '}{resourceSummaryText(t, resources, a.limit)}</Text>
                             <Text size="xs" c="dimmed">
                                 {t('projects.allocation.grantedBy', { who: a.granted_by, date: formatDate(a.granted_at) })}
                                 {a.reason ? ` — ${a.reason}` : ''}

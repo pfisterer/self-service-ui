@@ -868,7 +868,111 @@
             "failed": "unbekannter Fehler; wird beim nächsten Abgleich erneut versucht"
         },
         "syncProblems": "In OpenStack nicht umgesetzt",
-        "syncSince": "seit {{date}}"
+        "syncSince": "seit {{date}}",
+        "cores": {
+            "name": "Kerne",
+            "hint": "{{min}} – {{max}} Kerne"
+        },
+        "ram": {
+            "name": "Arbeitsspeicher",
+            "hint": "{{min}} – {{max}}"
+        },
+        "storage": {
+            "name": "Speicherplatz",
+            "hint": "{{min}} – {{max}}"
+        },
+        "networks": {
+            "name": "Netze"
+        },
+        "subnets": {
+            "name": "Subnetze"
+        },
+        "ports": {
+            "name": "Ports"
+        },
+        "routers": {
+            "name": "Router"
+        },
+        "floating_ips": {
+            "name": "Floating IPs"
+        },
+        "security_groups": {
+            "name": "Sicherheitsgruppen"
+        },
+        "volumes": {
+            "name": "Volumes"
+        },
+        "snapshots": {
+            "name": "Snapshots"
+        },
+        "ws-vcpu-hours": {
+            "name": "Workspace-CPU",
+            "short": "CPU",
+            "hint": "vCPU-Stunden pro 30 Tage, z. B. 30 Personen × 4 Kerne × 40 h = 4800"
+        },
+        "ws-ram-gb-hours": {
+            "name": "Workspace-RAM",
+            "short": "RAM",
+            "hint": "GB-Stunden pro 30 Tage, z. B. 30 Personen × 16 GB × 40 h = 19200"
+        },
+        "ws-storage-gb": {
+            "name": "Workspace-Speicher",
+            "short": "Speicher",
+            "hint": "Speicherplatz für die Homes der Mitglieder im Projekt und seinen gemeinsamen Ordner zusammen; wird mit dem Projekt gelöscht"
+        },
+        "llm-mtokens": {
+            "name": "LLM-Tokens",
+            "short": "Tokens",
+            "hint": "Millionen Tokens pro 30 Tage, ein gemeinsamer Vorrat aller Mitglieder des Projekts, z. B. 30 Personen × 50 Mio. = 1500",
+            "unit": "Mio. Tokens"
+        },
+        "llm-rpm": {
+            "name": "LLM-Anfragen pro Minute",
+            "short": "Anfragen pro Minute",
+            "hint": "Anfragen pro Minute für das ganze Projekt, alle Mitglieder und Schlüssel zusammen",
+            "unit": "Anfragen/min"
+        },
+        "llm-tpm": {
+            "name": "LLM-Tokens pro Minute",
+            "short": "Tokens pro Minute",
+            "hint": "Tokens pro Minute für das ganze Projekt, alle Mitglieder und Schlüssel zusammen",
+            "unit": "Tokens/min"
+        },
+        "llm-model-all-proxy-models": {
+            "name": "LLM: alle Modelle direkt",
+            "short": "Alle Modelle direkt",
+            "hint": "jedes bereitgestellte Modell unter seinem eigenen Namen, nicht nur die stabilen Aliasse"
+        },
+        "llm-model-chat-large": {
+            "name": "LLM: chat-large",
+            "short": "chat-large",
+            "hint": "das größte Modell (Strata auf dem GB10): langsamer, wenige Anfragen gleichzeitig, verbraucht dreimal so viele Tokens wie chat-default"
+        },
+        "ws-profile-cpu": {
+            "name": "Workspace-Art: CPU",
+            "short": "Art: CPU",
+            "hint": "Workspaces auf einem CPU-Knoten, ohne GPU"
+        },
+        "ws-profile-cpu-gpukernel": {
+            "name": "Workspace-Art: CPU + GPU-Kernel",
+            "short": "Art: CPU + GPU-Kernel",
+            "hint": "das Notebook auf einem CPU-Knoten, eine GPU nur, solange ein GPU-Kernel läuft (bei Leerlauf freigegeben); braucht eine GPU-Klasse"
+        },
+        "ws-profile-gpu": {
+            "name": "Workspace-Art: GPU",
+            "short": "Art: GPU",
+            "hint": "der ganze Workspace auf einem GPU-Knoten, der die GPU hält, solange er läuft; braucht eine GPU-Klasse"
+        },
+        "gpuClass": {
+            "gpus": {
+                "name": "{{class}}: GPUs gleichzeitig",
+                "hint": "wie viele GPUs der Klasse {{class}} das Projekt gleichzeitig nutzen darf"
+            },
+            "hours": {
+                "name": "{{class}}: GPU-Stunden",
+                "hint": "GPU-Stunden pro {{window}} auf GPUs der Klasse {{class}}"
+            }
+        }
     },
     "attributes": {
         "tab": "Merkmale",

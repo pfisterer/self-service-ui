@@ -117,7 +117,7 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                                 <Gift size="11" style={{ verticalAlign: '-1px', marginRight: 4 }} />
                                 {t('projects.allocation.factValue', {
                                     count: node.allocated_out.projects,
-                                    summary: resourceSummaryText(resources, node.allocated_out.limit),
+                                    summary: resourceSummaryText(t, resources, node.allocated_out.limit),
                                 })}
                             </Anchor>
                         </FactRow>

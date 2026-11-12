@@ -118,7 +118,7 @@ export function StartView() {
                                     label={<Text fw={600} size="sm">{o.budget.name}</Text>}
                                     description={
                                         o.has ? t('projects.start.has')
-                                            : `${resourceSummaryText(o.offered, o.amounts) || t('projects.start.nothing')} — ${t(o.instant ? 'projects.start.instant' : 'projects.start.approval')}`
+                                            : `${resourceSummaryText(t, o.offered, o.amounts) || t('projects.start.nothing')} — ${t(o.instant ? 'projects.start.instant' : 'projects.start.approval')}`
                                     }
                                 />
                             </Paper>

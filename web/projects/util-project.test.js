@@ -6,6 +6,9 @@ import i18n from '/i18n/index.js';
 const t = i18n.getFixedT('en');
 import { endDate, resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, usageState, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds } from './util-project.jsx';
 
+// asServer is a translator without translations: every resource text comes out as the server sent it.
+const asServer = (key, opts) => opts?.defaultValue ?? key;
+
 const RESOURCES = [
     { id: 'cpu', name: 'vCPUs' },
     { id: 'ram', name: 'RAM', unit: 'GB' },
@@ -159,16 +162,16 @@ describe('autoApproveHeadroom', () => {
 
 describe('resourceSummaryText', () => {
     it('joins the non-zero resources with their units', () => {
-        expect(resourceSummaryText(RESOURCES, { cpu: 8, ram: 16 })).toBe('8 vCPUs · 16 GB RAM');
+        expect(resourceSummaryText(asServer, RESOURCES, { cpu: 8, ram: 16 })).toBe('8 vCPUs · 16 GB RAM');
     });
 
     it('leaves out what was not requested', () => {
-        expect(resourceSummaryText(RESOURCES, { cpu: 8, ram: 0 })).toBe('8 vCPUs');
-        expect(resourceSummaryText(RESOURCES, {})).toBe('');
+        expect(resourceSummaryText(asServer, RESOURCES, { cpu: 8, ram: 0 })).toBe('8 vCPUs');
+        expect(resourceSummaryText(asServer, RESOURCES, {})).toBe('');
     });
 
     it('writes an unlimited quota as ∞', () => {
-        expect(resourceSummaryText(RESOURCES, { cpu: UNLIMITED_QUOTA })).toBe('∞ vCPUs');
+        expect(resourceSummaryText(asServer, RESOURCES, { cpu: UNLIMITED_QUOTA })).toBe('∞ vCPUs');
     });
 });
 
@@ -421,7 +424,7 @@ describe('overageEntries / overageText', () => {
     it('reports only what OpenStack measures above the limit', () => {
         const node = { limit: { cores: 4, ram: 2, storage: 5 }, bindings: { openstack: { in_use: { cores: 8, ram: 1 } } } };
         expect(overageEntries(resources, node).map(r => r.id)).toEqual(['cores']);
-        expect(overageText(overageEntries(resources, node))).toBe('8 Cores');
+        expect(overageText(asServer, overageEntries(resources, node))).toBe('8 Cores');
     });
 
     // A key missing from in_use means "not measured", not zero — treating it
@@ -445,7 +448,7 @@ describe('overageEntries / overageText', () => {
 
     it('formats several resources with their units', () => {
         const node = { limit: { cores: 4, ram: 2 }, bindings: { openstack: { in_use: { cores: 8, ram: 5 } } } };
-        expect(overageText(overageEntries(resources, node))).toBe('8 Cores · 5 GB RAM');
+        expect(overageText(asServer, overageEntries(resources, node))).toBe('8 Cores · 5 GB RAM');
     });
 });
 
@@ -597,13 +600,13 @@ describe('resourceSummaryText with availabilities', () => {
     // "1 DHBW IPv4" invites the question of what two would be, and there is no
     // answer — an availability reads as its own name.
     it('names an availability instead of counting it', () => {
-        const text = resourceSummaryText(resources, { cores: 4, ram: 8, 'dhbw-ipv4': 1 });
+        const text = resourceSummaryText(asServer, resources, { cores: 4, ram: 8, 'dhbw-ipv4': 1 });
 
         expect(text).toBe('4 Cores · 8 GB RAM · DHBW IPv4');
     });
 
     it('leaves out what was not granted', () => {
-        const text = resourceSummaryText(resources, { cores: 4, 'dhbw-ipv4': 0 });
+        const text = resourceSummaryText(asServer, resources, { cores: 4, 'dhbw-ipv4': 0 });
 
         expect(text).toBe('4 Cores');
     });
@@ -737,11 +740,11 @@ describe('resourceUsageText', () => {
         { id: 'net', name: 'DHBW IPv4', kind: 'bool' },
     ];
     it('puts what is in use before what was granted', () => {
-        expect(resourceUsageText(res, { cores: 80, ram: 320, net: 1 }, { cores: 72, ram: 288 }))
+        expect(resourceUsageText(asServer, res, { cores: 80, ram: 320, net: 1 }, { cores: 72, ram: 288 }))
             .toBe('72 / 80 Cores · 288 / 320 GB RAM · DHBW IPv4');
     });
     it('shows an unmeasured resource as granted only, never as zero', () => {
-        expect(resourceUsageText(res, { cores: 4, ram: 8 }, { cores: 0 })).toBe('0 / 4 Cores · 8 GB RAM');
+        expect(resourceUsageText(asServer, res, { cores: 4, ram: 8 }, { cores: 0 })).toBe('0 / 4 Cores · 8 GB RAM');
     });
 });
 

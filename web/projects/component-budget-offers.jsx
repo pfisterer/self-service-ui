@@ -31,11 +31,11 @@ function BudgetOfferCard({ budget, resources, kinds = [], myProjects, onNewProje
     const available = instant
         ? autoApproveHeadroom(budget, scope, myProjects)
         : Object.fromEntries(scope.map(r => [r.id, freeAmount(budget, r.id)]));
-    const summary = resourceSummaryText(scope, printable(available));
+    const summary = resourceSummaryText(t, scope, printable(available));
     // Zero for a reason: "nothing" read as if there never had been anything.
     const exhausted = instant && !summary ? headroomExhaustedBy(budget, scope, myProjects) : null;
     const nothingText = exhausted === 'share'
-        ? t('projects.offers.shareInUse', { share: resourceSummaryText(scope, budget.auto_approve.per_requester_limit) })
+        ? t('projects.offers.shareInUse', { share: resourceSummaryText(t, scope, budget.auto_approve.per_requester_limit) })
         : exhausted === 'budget'
             ? t('projects.offers.budgetUsedUp')
             : t('projects.offers.nothing');

@@ -311,17 +311,94 @@ export function windowName(t, window) {
     return t(`projects.resources.window.${window}`, { defaultValue: window });
 }
 
+// ── Resource names, hints and units ─────────────────────────────────────────
+//
+// The catalogue arrives in English (OpenStack's defaults, the deployment's providerResources, the GPU classes the AI service's provider builds). Like the caps (util-caps.js), a resource is named by its id where the UI has a translation (projects.resources.<id>.name, .short, .hint, .unit), else by the server's text; availabilities root admins add in the portal have no translation and stay as written. A GPU class is named from its structured gpu_class (pool and tier names as the GPU administration gives them) with a translated suffix. Every place that shows a resource's name, hint or unit goes through these.
+
+// GPU_CLASS_RESOURCE are the two resources of a GPU class: ws-gpus-<class> (GPUs at the same time) and ws-gpu-hours-<class> (GPU hours per window).
+const GPU_CLASS_RESOURCE = /^ws-(gpus|gpu-hours)-(.+)$/;
+
+// gpuClassResource says what a GPU class resource is: kind 'gpus' or 'hours', the class id and the class's name ("General · medium", from gpu_class; '' without it). null for any other resource.
+export function gpuClassResource(r) {
+    const m = GPU_CLASS_RESOURCE.exec(r?.id || '');
+    if (!m) return null;
+    const c = r.gpu_class || {};
+    const name = c.pool_name && c.tier_name ? `${c.pool_name} · ${c.tier_name}` : '';
+    return { kind: m[1] === 'gpus' ? 'gpus' : 'hours', classId: m[2], name };
+}
+
+// translatable is whether an id can be a key segment: ids from the deployment are; anything with a key or namespace separator is not looked up at all.
+function translatable(r) {
+    return !!r?.id && !/[.:]/.test(r.id);
+}
+
+// resourceName is a resource's name: the translation where the UI has one, for a GPU class "<pool> · <tier>: GPU hours" from its structured data, else the server's name.
+export function resourceName(t, r) {
+    if (!r) return '';
+    const fallback = r.name || r.id || '';
+    const gpu = gpuClassResource(r);
+    if (gpu?.name) return t(`projects.resources.gpuClass.${gpu.kind}.name`, { class: gpu.name });
+    if (!translatable(r)) return fallback;
+    return t(`projects.resources.${r.id}.name`, { defaultValue: fallback });
+}
+
+// shortName drops the prefix a section heading says already: "Workspace CPU" → "CPU", "LLM tokens per minute" → "Tokens per minute", "LLM: every model directly" → "Every model directly". Only for names the UI has no short form of (resourceShortName).
+export function shortName(name) {
+    const rest = (name || '').replace(/^(workspaces?|llm)(\s*:\s*|\s+|-)/i, '');
+    return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : name;
+}
+
+// resourceShortName is a resource's name under a heading that names its area (Workspaces, LLM): the translated short form where the UI has one, else its name without the area's prefix.
+export function resourceShortName(t, r) {
+    const full = resourceName(t, r);
+    if (!translatable(r) || gpuClassResource(r)) return shortName(full);
+    return t(`projects.resources.${r.id}.short`, { defaultValue: shortName(full) });
+}
+
+// RANGE_HINTS are the hints that state a resource's range ("1 - 100000 cores", "1 GB - 256 TB"): translated with the catalogue's own min and max, so a deployment's range still shows.
+const gbAmount = (n) => (n >= 1000 && n % 1000 === 0 ? `${n / 1000} TB` : `${n} GB`);
+const RANGE_HINTS = { cores: String, ram: gbAmount, storage: gbAmount };
+
+// resourceHint is a resource's explanation: the translation where the UI has one, else the server's message; '' where the server gives none.
+export function resourceHint(t, r) {
+    if (!r?.message) return '';
+    const gpu = gpuClassResource(r);
+    if (gpu?.name) return t(`projects.resources.gpuClass.${gpu.kind}.hint`, { class: gpu.name, window: windowName(t, r.window || '30d') });
+    if (!translatable(r)) return r.message;
+    const range = RANGE_HINTS[r.id];
+    if (range) {
+        if (typeof r.min !== 'number' || typeof r.max !== 'number') return r.message;
+        return t(`projects.resources.${r.id}.hint`, { defaultValue: r.message, min: range(r.min), max: range(r.max) });
+    }
+    return t(`projects.resources.${r.id}.hint`, { defaultValue: r.message });
+}
+
+// resourceUnitName is a resource's unit ("M tokens" → "Mio. Tokens"): the translation where the UI has one, else the server's; '' without a unit.
+export function resourceUnitName(t, r) {
+    if (!r?.unit) return '';
+    if (!translatable(r)) return r.unit;
+    return t(`projects.resources.${r.id}.unit`, { defaultValue: r.unit });
+}
+
+// resourceAmount is an amount of a resource in running text: "8 GB Arbeitsspeicher", "4 Kerne"; an availability reads as its name alone.
+export function resourceAmount(t, r, amount) {
+    if (isAvailability(r)) return resourceName(t, r);
+    const unit = resourceUnitName(t, r);
+    return unit ? `${amount} ${unit} ${resourceName(t, r)}` : `${amount} ${resourceName(t, r)}`;
+}
+
 // resourceLabel is how a resource is named next to a value: its name, its unit,
 // and for an amount per window the window — "GPU hours (h per 30 days)".
 export function resourceLabel(t, r) {
+    const name = resourceName(t, r);
     const suffix = resourceUnit(t, r);
-    return suffix ? `${r.name} ${suffix}` : r.name;
+    return suffix ? `${name} ${suffix}` : name;
 }
 
 // resourceUnit is the unit and window of a resource in brackets ("(GPU h per 30 days)"); '' without either.
 export function resourceUnit(t, r) {
     const per = r.window ? t('projects.resources.perWindow', { window: windowName(t, r.window) }) : '';
-    const suffix = [r.unit, per].filter(Boolean).join(' ');
+    const suffix = [resourceUnitName(t, r), per].filter(Boolean).join(' ');
     return suffix ? `(${suffix})` : '';
 }
 
@@ -484,7 +561,7 @@ export function beyondAutoApproveRefused(budget) {
 export function autoApproveFacts(t, resources, budget) {
     if (!hasAutoApprove(budget)) return null;
     const amount = isPoolAutoApprove(budget)
-        ? '' : resourceSummaryText(resources, budget.auto_approve.per_requester_limit);
+        ? '' : resourceSummaryText(t, resources, budget.auto_approve.per_requester_limit);
     return {
         // A pool grants whatever the budget still has, so it has no figure of
         // its own to show.
@@ -673,17 +750,12 @@ export function nodeChanges({ resources, limitFrom, limitTo, dateFrom, dateTo, u
 }
 
 // One-line resource summary, e.g. "8 vCPUs · 16 GB RAM · 200 GB Disk".
-export function resourceSummaryText(resources, quota) {
+export function resourceSummaryText(t, resources, quota) {
     if (!resources || !quota) return '';
     return resources
         .filter(r => (quota[r.id] ?? 0) !== 0)
-        .map(r => {
-            // An availability reads as its own name. "1 DHBW IPv4" invites the
-            // question of what two would be, and there is no answer.
-            if (isAvailability(r)) return r.name;
-            const v = quota[r.id] === UNLIMITED_QUOTA ? '∞' : quota[r.id];
-            return r.unit ? `${v} ${r.unit} ${r.name}` : `${v} ${r.name}`;
-        })
+        // An availability reads as its own name (resourceAmount). "1 DHBW IPv4" invites the question of what two would be, and there is no answer.
+        .map(r => resourceAmount(t, r, quota[r.id] === UNLIMITED_QUOTA ? '∞' : quota[r.id]))
         .join(' · ');
 }
 
@@ -707,22 +779,20 @@ export function usageLevel(used, limit) {
 // USAGE_COLOR is the colour of a level: normal, a hint, a warning.
 export const USAGE_COLOR = { ok: null, high: COLOR.attention, full: COLOR.negative };
 
-export function resourceUsageText(resources, quota, inUse) {
-    return resourceUsageItems(resources, quota, inUse, ' / ').join(' · ');
+export function resourceUsageText(t, resources, quota, inUse) {
+    return resourceUsageItems(t, resources, quota, inUse, ' / ').join(' · ');
 }
 
 // resourceUsageItems is the same as a list, one entry per resource, for places
 // that lay the entries out themselves; `sep` goes between used and granted.
-export function resourceUsageItems(resources, quota, inUse, sep = '/') {
+export function resourceUsageItems(t, resources, quota, inUse, sep = '/') {
     if (!resources || !quota) return [];
     return resources
         .filter(r => (quota[r.id] ?? 0) !== 0)
         .map(r => {
-            if (isAvailability(r)) return r.name;
             const limit = quota[r.id] === UNLIMITED_QUOTA ? '∞' : quota[r.id];
             const used = inUse?.[r.id];
-            const v = used === undefined ? limit : `${used}${sep}${limit}`;
-            return r.unit ? `${v} ${r.unit} ${r.name}` : `${v} ${r.name}`;
+            return resourceAmount(t, r, used === undefined ? limit : `${used}${sep}${limit}`);
         });
 }
 
@@ -752,8 +822,8 @@ export function overageEntries(resources, node) {
 
 // "8 Cores · 5 GB RAM" for the overage rows above, in the same shape as
 // resourceSummaryText so the two lines read as a pair.
-export function overageText(entries) {
-    return entries.map(r => (r.unit ? `${r.used} ${r.unit} ${r.name}` : `${r.used} ${r.name}`)).join(' · ');
+export function overageText(t, entries) {
+    return entries.map(r => resourceAmount(t, r, r.used)).join(' · ');
 }
 
 // childrenById turns the per-branch query results of the budget tree into one

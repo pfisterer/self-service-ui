@@ -868,7 +868,111 @@
             "failed": "unknown error; it is retried on the next sync"
         },
         "syncProblems": "Not carried out in OpenStack",
-        "syncSince": "since {{date}}"
+        "syncSince": "since {{date}}",
+        "cores": {
+            "name": "Cores",
+            "hint": "{{min}} - {{max}} cores"
+        },
+        "ram": {
+            "name": "RAM",
+            "hint": "{{min}} - {{max}}"
+        },
+        "storage": {
+            "name": "Storage",
+            "hint": "{{min}} - {{max}}"
+        },
+        "networks": {
+            "name": "Networks"
+        },
+        "subnets": {
+            "name": "Subnets"
+        },
+        "ports": {
+            "name": "Ports"
+        },
+        "routers": {
+            "name": "Routers"
+        },
+        "floating_ips": {
+            "name": "Floating IPs"
+        },
+        "security_groups": {
+            "name": "Security Groups"
+        },
+        "volumes": {
+            "name": "Volumes"
+        },
+        "snapshots": {
+            "name": "Snapshots"
+        },
+        "ws-vcpu-hours": {
+            "name": "Workspace CPU",
+            "short": "CPU",
+            "hint": "vCPU hours per 30 days, e.g. 30 people × 4 cores × 40 h = 4800"
+        },
+        "ws-ram-gb-hours": {
+            "name": "Workspace RAM",
+            "short": "RAM",
+            "hint": "GB hours per 30 days, e.g. 30 people × 16 GB × 40 h = 19200"
+        },
+        "ws-storage-gb": {
+            "name": "Workspace storage",
+            "short": "Storage",
+            "hint": "disk space for the members' homes in the project and its shared folder together; deleted with the project"
+        },
+        "llm-mtokens": {
+            "name": "LLM tokens",
+            "short": "Tokens",
+            "hint": "million tokens per 30 days, one pool shared by the project's members, e.g. 30 people × 50 M = 1500",
+            "unit": "M tokens"
+        },
+        "llm-rpm": {
+            "name": "LLM requests per minute",
+            "short": "Requests per minute",
+            "hint": "requests per minute for the whole project, all members and keys together",
+            "unit": "req/min"
+        },
+        "llm-tpm": {
+            "name": "LLM tokens per minute",
+            "short": "Tokens per minute",
+            "hint": "tokens per minute for the whole project, all members and keys together",
+            "unit": "tokens/min"
+        },
+        "llm-model-all-proxy-models": {
+            "name": "LLM: every model directly",
+            "short": "Every model directly",
+            "hint": "every deployed model by its own name, not only the stable aliases"
+        },
+        "llm-model-chat-large": {
+            "name": "LLM: chat-large",
+            "short": "chat-large",
+            "hint": "the largest model (Strata on the GB10): slower, few requests at a time, three times the tokens of chat-default"
+        },
+        "ws-profile-cpu": {
+            "name": "Workspace type: CPU",
+            "short": "Type: CPU",
+            "hint": "workspaces on a CPU node, without GPU"
+        },
+        "ws-profile-cpu-gpukernel": {
+            "name": "Workspace type: CPU + GPU kernel",
+            "short": "Type: CPU + GPU kernel",
+            "hint": "the notebook on a CPU node, GPU only while a GPU kernel runs (released when idle); needs a GPU class"
+        },
+        "ws-profile-gpu": {
+            "name": "Workspace type: GPU",
+            "short": "Type: GPU",
+            "hint": "the whole workspace on a GPU node, holding the GPU as long as it runs; needs a GPU class"
+        },
+        "gpuClass": {
+            "gpus": {
+                "name": "{{class}}: GPUs at the same time",
+                "hint": "how many GPUs of the class {{class}} the project may use at the same time"
+            },
+            "hours": {
+                "name": "{{class}}: GPU hours",
+                "hint": "GPU hours per {{window}} on GPUs of the class {{class}}"
+            }
+        }
     },
     "attributes": {
         "tab": "Attributes",

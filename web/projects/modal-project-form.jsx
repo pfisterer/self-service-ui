@@ -523,7 +523,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
                 that is used up are the note under the form's business. */}
             {!isChange && !isAdopt && !selectedIsPool && usableHeadroomFor(parentId) && (
                 <Text size="xs" c={COLOR.positive}>
-                    {t('projects.projectForm.prefilled', { amount: resourceSummaryText(resources, selectedHeadroom) })}
+                    {t('projects.projectForm.prefilled', { amount: resourceSummaryText(t, resources, selectedHeadroom) })}
                 </Text>
             )}
 
@@ -606,7 +606,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
                 <Alert color={COLOR.info} variant="light" p="xs" icon={<Gift size="16" />}>
                     <Text size="xs">
                         {t('projects.allocation.ownShareOnly', {
-                            list: node.allocations.map(a => `${a.budget_name || a.budget_id}: ${resourceSummaryText(resources, a.limit)}`).join(' · '),
+                            list: node.allocations.map(a => `${a.budget_name || a.budget_id}: ${resourceSummaryText(t, resources, a.limit)}`).join(' · '),
                         })}
                     </Text>
                 </Alert>

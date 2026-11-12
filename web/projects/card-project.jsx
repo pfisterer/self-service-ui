@@ -73,7 +73,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     const summaryQuota = (isChangePending && node.pending?.limit) ? node.pending.limit : node.limit;
     // In total, allocations from budgets further up included — that is what
     // the project has in OpenStack. Where it comes from is the next row.
-    const resourceSummary = resourceSummaryText(resources, effectiveLimit(node, summaryQuota));
+    const resourceSummary = resourceSummaryText(t, resources, effectiveLimit(node, summaryQuota));
     const allocated = hasAllocations(node);
     // An LLM project that is still in use: say when its limits keep it from working (no tokens, rates too low).
     const llmHints = projectKinds(node, resources).includes('llm') && !isRetired(node) && !isRejected && !deletionRequested(node);
@@ -114,7 +114,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         )}
                         {openstackSide(node).overcommitted && (
                             <Tooltip label={overage.length > 0
-                                ? t('projects.projectCard.overcommittedWithAmount', { amount: overageText(overage) })
+                                ? t('projects.projectCard.overcommittedWithAmount', { amount: overageText(t, overage) })
                                 : t('projects.projectCard.overcommitted')}>
                                 <Badge color={COLOR.negative} variant="filled" style={{ cursor: 'default' }}>
                                     <AlertTriangle size="11" style={{ marginRight: 3, verticalAlign: 'middle' }} />
@@ -183,13 +183,13 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                             <Stack gap={2}>
                                 <Text size="xs">
                                     <b>{parentName ? <BudgetPath path={node.parent_path} name={parentName} inherit /> : t('projects.allocation.ownBudget')}</b>
-                                    {' · '}{resourceSummaryText(resources, summaryQuota) || '—'}
+                                    {' · '}{resourceSummaryText(t, resources, summaryQuota) || '—'}
                                 </Text>
                                 {node.allocations.map(a => (
                                     <Text size="xs" key={a.budget_id}>
                                         <Gift size="11" style={{ verticalAlign: '-1px', marginRight: 4, color: `var(--mantine-color-${COLOR.info}-7)` }} />
                                         <b><BudgetPath path={a.budget_path} name={a.budget_name || a.budget_id} inherit /></b>
-                                        {' · '}{resourceSummaryText(resources, a.limit)}
+                                        {' · '}{resourceSummaryText(t, resources, a.limit)}
                                         <Text span size="xs" c="dimmed">{' '}({t('projects.allocation.badge')})</Text>
                                     </Text>
                                 ))}
@@ -206,7 +206,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         badge is there. */}
                     {overage.length > 0 && (
                         <FactRow label={t('projects.fact.inUse')} hint={t('projects.projectCard.inUseHint')}>
-                            <Text size="xs" c={COLOR.negative} fw={600}>{overageText(overage)}</Text>
+                            <Text size="xs" c={COLOR.negative} fw={600}>{overageText(t, overage)}</Text>
                         </FactRow>
                     )}
 

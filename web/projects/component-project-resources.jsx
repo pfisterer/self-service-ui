@@ -1,7 +1,7 @@
 import { Badge, Group, Progress, Stack, Text, Tooltip } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '../format-date.js';
-import { COLOR, UNLIMITED_QUOTA, USAGE_COLOR, isAvailability, resourceSummaryText, usageLevel, measuredUse, openstackSide, resourceLabel, windowName } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, USAGE_COLOR, isAvailability, resourceSummaryText, usageLevel, measuredUse, openstackSide, resourceLabel, resourceName, windowName } from './util-project.jsx';
 
 // ProjectResources: what a project was granted and, where the reconciler has
 // measured it, how much of that is in use right now — a bar per quantity, the
@@ -14,7 +14,7 @@ export function ProjectResources({ node, resources, quota, size = 'xs' }) {
     const inUse = measuredUse(node);
     const errors = openstackSide(node).sync_errors;
     if (!inUse) {
-        const text = resourceSummaryText(resources, quota);
+        const text = resourceSummaryText(t, resources, quota);
         return (text || errors) ? (
             <Stack gap={6}>
                 {text && <Text size={size}>{text}</Text>}
@@ -172,7 +172,7 @@ function GrantUseBadge({ resource, granted, count, syncError }) {
     const tip = syncError ? syncErrorText(t, resource, syncError) : !granted ? t('projects.resources.grantUsedNotGranted') : grantUseText(t, resource, count);
     const badge = (
         <Badge size="xs" variant={measured && !used ? 'outline' : 'light'} color={color}>
-            {used ? `${resource.name} · ${count}` : resource.name}
+            {used ? `${resourceName(t, resource)} · ${count}` : resourceName(t, resource)}
         </Badge>
     );
     return tip ? <Tooltip label={tip}>{badge}</Tooltip> : badge;

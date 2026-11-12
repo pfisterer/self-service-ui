@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Anchor, Badge, Checkbox, Grid, Group, NumberInput, Paper, Stack, Switch, Text, TextInput } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { UNLIMITED_QUOTA, groupResources, isAvailability, resourceLabel, resourceUnit } from './util-project.jsx';
+import { UNLIMITED_QUOTA, gpuClassResource, groupResources, isAvailability, resourceHint, resourceLabel, resourceName, resourceShortName, resourceUnit } from './util-project.jsx';
 import { UsageMeter, grantUseText, syncErrorText } from './component-project-resources.jsx';
 
 // Above this many fields the list stops being scannable and gets a filter. The
@@ -41,11 +41,10 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
     const matching = useMemo(() => {
         const q = query.trim().toLowerCase();
         if (!q) return resources || [];
-        // Name and id both: people look for "rtx6000" as readily as for the label
-        // it is shown under.
+        // Name and id both: people look for "rtx6000" as readily as for the label it is shown under; the name as shown and as the catalogue has it.
         return (resources || []).filter(r =>
-            r.name?.toLowerCase().includes(q) || r.id.toLowerCase().includes(q));
-    }, [resources, query]);
+            resourceName(t, r).toLowerCase().includes(q) || r.name?.toLowerCase().includes(q) || r.id.toLowerCase().includes(q));
+    }, [resources, query, t]);
 
     if (!resources) return null;
 
@@ -114,8 +113,8 @@ export function QuotaInputs({ resources, value, onChange, errors = {}, disabled 
                                             {part.resources.map(r => (
                                                 <Grid.Col key={r.id} span={{ base: 12, sm: isAvailability(r) ? 6 : 4 }}>
                                                     {isAvailability(r)
-                                                        ? <AvailabilityField resource={r} label={part.short ? shortName(r.name) : undefined} value={value?.[r.id]} onChange={onChange} disabled={disabled} error={errors[r.id]} used={usage?.grantUse?.[r.id]} syncError={usage?.syncErrors?.[r.id]} />
-                                                        : quantity(r, part.short ? shortName(r.name) : undefined)}
+                                                        ? <AvailabilityField resource={r} label={part.short ? resourceShortName(t, r) : undefined} value={value?.[r.id]} onChange={onChange} disabled={disabled} error={errors[r.id]} used={usage?.grantUse?.[r.id]} syncError={usage?.syncErrors?.[r.id]} />
+                                                        : quantity(r, part.short ? resourceShortName(t, r) : undefined)}
                                                 </Grid.Col>
                                             ))}
                                         </Grid>
@@ -155,27 +154,21 @@ export function quotaSections(groups) {
     return sections;
 }
 
-// shortName drops the prefix the section heading says already: "Workspace CPU" → "CPU", "LLM tokens per minute" → "Tokens per minute", "LLM: every model directly" → "Every model directly".
-export function shortName(name) {
-    const rest = (name || '').replace(/^(workspaces?|llm)\s*:?\s+/i, '');
-    return rest ? rest.charAt(0).toUpperCase() + rest.slice(1) : name;
-}
-
 const TIER_ORDER = ['small', 'medium', 'large'];
 
-// gpuPools pairs the GPU resources of a group by class (ws-gpus-<class>, ws-gpu-hours-<class>) and arranges the classes by pool (general first), a row per tier in tier order. Pool and tier come from the resource's gpu_class; without it the name says them ("General · medium: GPU hours"). GPU types lose the vendor ("NVIDIA-L40S-12Q" → "L40S-12Q"). null when the group holds anything else.
+// gpuPools pairs the GPU resources of a group by class (ws-gpus-<class>, ws-gpu-hours-<class>) and arranges the classes by pool (general first), a row per tier in tier order. Pool and tier come from the resource's gpu_class; a server without it gets one pool named by the class's catalogue name up to its colon split at "·" ("General · medium"), else the class id. GPU types lose the vendor ("NVIDIA-L40S-12Q" → "L40S-12Q"). null when the group holds anything else.
 export function gpuPools(resources) {
     const pools = new Map();
     for (const r of resources) {
-        const m = /^ws-(gpus|gpu-hours)-(.+)$/.exec(r.id);
-        if (!m) return null;
-        const [poolName, tierName] = (r.name || m[2]).split(':')[0].split('·').map(x => x.trim());
+        const g = gpuClassResource(r);
+        if (!g) return null;
         const c = r.gpu_class || {};
-        const poolId = c.pool || poolName;
-        const pool = pools.get(poolId) ?? { id: poolId, name: c.pool_name || poolName, products: (c.products || '').replace(/NVIDIA-/g, ''), lends: !!c.lends, rows: new Map() };
-        const row = pool.rows.get(m[2]) ?? { id: m[2], tier: c.tier || tierName || m[2], name: c.tier_name || tierName || m[2] };
-        row[m[1] === 'gpus' ? 'gpus' : 'hours'] = r;
-        pool.rows.set(m[2], row);
+        const [poolName, tierName] = c.pool_name || c.tier_name ? [] : (r.name || '').split(':')[0].split('·').map(x => x.trim());
+        const poolId = c.pool || poolName || g.classId;
+        const pool = pools.get(poolId) ?? { id: poolId, name: c.pool_name || poolName || poolId, products: (c.products || '').replace(/NVIDIA-/g, ''), lends: !!c.lends, rows: new Map() };
+        const row = pool.rows.get(g.classId) ?? { id: g.classId, tier: c.tier || tierName || g.classId, name: c.tier_name || tierName || g.classId };
+        row[g.kind] = r;
+        pool.rows.set(g.classId, row);
         pools.set(poolId, pool);
     }
     if (!pools.size) return null;
@@ -210,8 +203,8 @@ function AvailabilityField({ resource, label, value, onChange, disabled, error, 
                     checked={on}
                     disabled={disabled}
                     onChange={e => onChange(resource.id, e.currentTarget.checked ? 1 : 0)}
-                    label={label ?? resource.name}
-                    description={resource.message}
+                    label={label ?? resourceName(t, resource)}
+                    description={resourceHint(t, resource) || undefined}
                     error={error}
                 />
             </Group>
@@ -248,7 +241,7 @@ function QuantityField({ providerDefaults, emptyIsZero, resource: r, name, value
                 // Emptied, a field with a default goes back to it: absent from the limit, not an empty string.
                 onChange={v => onChange(r.id, v === '' && (emptyIsZero || (providerDefaults && showsDefault(r))) ? undefined : v)}
                 error={error}
-                description={isUnlimited || extra || name ? undefined : r.message}
+                description={isUnlimited || extra || name ? undefined : resourceHint(t, r) || undefined}
             />
             <HeadroomShare free={free} value={isUnlimited ? UNLIMITED_QUOTA : current}
                 onTake={disabled ? undefined : () => onChange(r.id, typeof r.max === 'number' && r.max > 0 ? Math.min(free, r.max) : free)} />

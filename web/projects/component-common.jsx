@@ -6,7 +6,7 @@ import { ActionIcon, Anchor, Badge, Box, Button, Checkbox, Group, NumberInput, P
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { COLOR, UNLIMITED_QUOTA, endDate, formatRoleLabel, isAvailability, limitDelta, nodeChanges, resourceBarSegments, usageState, statusDescription, statusLabel, statusStyle, resourceLabel } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, endDate, formatRoleLabel, isAvailability, limitDelta, nodeChanges, resourceBarSegments, usageState, statusDescription, statusLabel, statusStyle, resourceAmount, resourceLabel, resourceName } from './util-project.jsx';
 import { tokenDisplay, tokenEmail, useTokenLabels } from './token-labels.jsx';
 import { formatDate } from '../format-date.js';
 
@@ -180,6 +180,7 @@ export function TokenBadgeList({ tokens, emptyMessage = null, size = 'sm' }) {
 
 // QuotaBadges renders a quota map as one badge per resource ("10 vCPUs" …).
 export function QuotaBadges({ resources, quota, size = 'sm' }) {
+    const { t } = useTranslation();
     if (!quota || !resources) return null;
     return (
         <Group gap="xs" wrap="wrap">
@@ -189,11 +190,10 @@ export function QuotaBadges({ resources, quota, size = 'sm' }) {
                 // nothing when withheld — "0 DHBW IPv4 network" reads like an amount.
                 if (isAvailability(r)) {
                     return value === 1
-                        ? <Badge key={r.id} size={size} variant="outline" color={COLOR.identity}>{r.name}</Badge>
+                        ? <Badge key={r.id} size={size} variant="outline" color={COLOR.identity}>{resourceName(t, r)}</Badge>
                         : null;
                 }
-                const display = value === UNLIMITED_QUOTA ? '∞' : (r.unit ? `${value} ${r.unit}` : value);
-                return <Badge key={r.id} size={size} variant="outline" color={COLOR.identity}>{display} {r.name}</Badge>;
+                return <Badge key={r.id} size={size} variant="outline" color={COLOR.identity}>{resourceAmount(t, r, value === UNLIMITED_QUOTA ? '∞' : value)}</Badge>;
             })}
         </Group>
     );
@@ -345,11 +345,12 @@ function NothingGranted() {
 
 // AvailabilityBadges lists what a node may use, as opposed to how much of it.
 export function AvailabilityBadges({ resources }) {
+    const { t } = useTranslation();
     if (!resources?.length) return null;
     return (
         <Group gap="4" wrap="wrap">
             {resources.map(r => (
-                <Badge key={r.id} size="xs" variant="light" color="gray">{r.name}</Badge>
+                <Badge key={r.id} size="xs" variant="light" color="gray">{resourceName(t, r)}</Badge>
             ))}
         </Group>
     );

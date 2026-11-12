@@ -8,12 +8,11 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { InfoPopover, NodeStatusBadge } from './component-common.jsx';
 import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
-import { COLOR, UNLIMITED_QUOTA, budgetKinds, resourcesOfKinds, deletesOnRequest, deletionRequested, effectiveLimit, finalDeletion, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, budgetKinds, resourcesOfKinds, deletesOnRequest, deletionRequested, effectiveLimit, finalDeletion, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting, resourceName, resourceShortName, resourceUnitName } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
 import { formatDate } from '../format-date.js';
-import { shortName } from './component-quota-inputs.jsx';
 
 // Rows per page. A table, unlike the tree it replaces for projects, pages
 // instead of growing: a budget for all students of a location holds hundreds.
@@ -394,7 +393,7 @@ function resourceColumns(t, resources, items, short = false) {
     const quotaOf = (n) => effectiveLimit(n, n.pending?.limit || n.limit) || {};
     const cols = (resources || [])
         .filter(r => !isAvailability(r) && items.some(n => (quotaOf(n)[r.id] ?? 0) !== 0))
-        .map(r => ({ id: r.id, label: short ? shortName(r.name) : r.name, unit: r.unit, window: r.window }));
+        .map(r => ({ id: r.id, label: short ? resourceShortName(t, r) : resourceName(t, r), unit: resourceUnitName(t, r), window: r.window }));
     if (items.some(n => openstackSide(n).facts?.servers != null)) {
         cols.push({ id: VMS, label: t('projects.resources.vms') });
     }
@@ -515,7 +514,7 @@ function ProjectRow({ node, resources, columns, summaries, compact = false, onAc
                     <Text size="sm" fw={500} style={{ overflowWrap: 'anywhere' }}>{nodeTitle(node)}</Text>
                     {hasAllocations(node) && (
                         <Tooltip label={node.allocations.map(a =>
-                            `${a.budget_name || a.budget_id}: ${resourceSummaryText(resources, a.limit)}`).join(' · ')}>
+                            `${a.budget_name || a.budget_id}: ${resourceSummaryText(t, resources, a.limit)}`).join(' · ')}>
                             <Badge size="xs" variant="light" color={COLOR.info} tt="none" leftSection={<Gift size="10" />}
                                 style={{ flexShrink: 0 }}>
                                 {t('projects.allocation.badge')}
@@ -536,8 +535,8 @@ function ProjectRow({ node, resources, columns, summaries, compact = false, onAc
                     </Text>
                 )}
                 {/* Availabilities have no amount, so they get no column. */}
-                {availabilityNames(resources, node) && (
-                    <Text size="xs" c="dimmed">{availabilityNames(resources, node)}</Text>
+                {availabilityNames(t, resources, node) && (
+                    <Text size="xs" c="dimmed">{availabilityNames(t, resources, node)}</Text>
                 )}
             </Table.Td>
             {/* The status is the one cell that must never be cut: "Change
@@ -591,7 +590,7 @@ function RowAction({ label, color = 'gray', onClick, children }) {
     );
 }
 
-function availabilityNames(resources, node) {
+function availabilityNames(t, resources, node) {
     const quota = effectiveLimit(node, node.pending?.limit || node.limit) || {};
-    return (resources || []).filter(r => isAvailability(r) && quota[r.id] === 1).map(r => r.name).join(' · ');
+    return (resources || []).filter(r => isAvailability(r) && quota[r.id] === 1).map(r => resourceName(t, r)).join(' · ');
 }
