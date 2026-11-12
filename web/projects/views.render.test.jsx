@@ -219,6 +219,20 @@ describe('the cloud project views render', () => {
         expectNoRenderFailure();
     });
 
+    // The tree works by keyboard as the zones and groups do: down moves, Enter selects.
+    it('moves through the budget tree by keyboard and selects with Enter', async () => {
+        renderView(<MyBudgetsView />);
+        const tree = () => within(screen.getByRole('tree'));
+        await waitFor(() => expect(tree().getAllByText('Mannheim')).toHaveLength(1));
+        const root = tree().getAllByRole('treeitem')[0];
+        root.focus();
+        fireEvent.keyDown(root, { key: 'ArrowDown', code: 'ArrowDown' });
+        expect(document.activeElement.textContent).toContain('Mannheim');
+        fireEvent.keyDown(document.activeElement, { key: 'Enter', code: 'Enter' });
+        expect(await within(await screen.findByRole('table')).findByText('Mein Projekt')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
     // A requester who manages nothing still sees where their requests would
     // draw from: the eligible budget appears in the tree, read-only — no
     // manager actions, but requesting from it is offered.

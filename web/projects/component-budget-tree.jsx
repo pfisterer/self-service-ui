@@ -1,33 +1,19 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ChevronDown, ChevronRight, CloudDownload, CornerLeftUp, Eye, FileText, Folder, Zap } from 'lucide-react';
-import { Box, Group, Loader, Text, Tooltip, Tree, UnstyledButton } from '@mantine/core';
+import { CloudDownload, CornerLeftUp, Eye, FileText, Folder, Zap } from 'lucide-react';
+import { Box, Group, Text, Tooltip, UnstyledButton } from '@mantine/core';
+import { NavTree } from '/helper/tree.jsx';
 import { COLOR, isBudget, isImported, nodeTitle, statusDescription, statusLabel, statusStyle } from './util-project.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
 
-// BudgetTree is the navigation side of the "My Budgets" master-detail view: a
-// lazily loaded tree of budgets (inner nodes) and projects (leaves).
+// BudgetTree is the navigation side of the "My Budgets" master-detail view: a lazily loaded tree of budgets, the one tree of the master-detail pages (helper/tree.jsx's NavTree, on Mantine's Tree): its expansion, guide lines, keyboard and ARIA, and the loading of a branch as it opens (onLoadChildren) with its spinner and its failure on the row.
 //
-// Built on Mantine's Tree, which brings what this used to hand-roll: expansion
-// state, the guide lines, keyboard navigation and ARIA roles, and — the reason
-// for the rewrite — first-class lazy loading via useTree({ onLoadChildren }),
-// including the per-node loading and error state surfaced below.
+// Children arrive one page at a time. A budget with more children than fit in a page ends in a "show more" row instead of silently stopping: a course budget with 600 student projects must not look like it has 50.
 //
-// Children arrive one page at a time. A budget with more children than fit in a
-// page ends in a "show more" row instead of silently stopping: a course budget
-// with 600 student projects must not look like it has 50.
-//
-// The owning view keeps the data (roots + loaded pages) and the selection, so a
-// refresh after any action can simply reload them; expansion lives in the Tree
-// controller passed in as `tree`.
+// The owning view keeps the data (roots + loaded pages), the selection and the expansion (useTreeExpansion), so a refresh after any action can simply reload them.
 
-// The value of the synthetic row that loads the next page. Suffixed onto the
-// parent's ID so it is unique, and recognisable when the tree hands it back.
-//
-// Exported because the owning view has to tell these rows apart from real nodes
-// when it reads the expansion state: they carry no node and there is nothing to
-// fetch for them.
-export const MORE_SUFFIX = '::more';
+// The id of the synthetic row that loads the next page, suffixed onto the parent's id so it is unique.
+const MORE_SUFFIX = '::more';
 
 // budgetChildCount is how many budgets sit under this one — what the tree can
 // expand into, now that projects are listed in a table instead. child_count
@@ -36,37 +22,38 @@ export function budgetChildCount(node) {
     return node?.child_budget_count ?? node?.child_count ?? 0;
 }
 
-// budgetsToTreeData converts the loaded pages into Mantine's node shape.
+// budgetsToTreeData converts the loaded pages into the tree's nodes (helper/tree.jsx).
 //
-// hasChildren comes from the server's child_count, NOT from the children loaded
-// so far: children arrive on demand, so without it every budget would offer an
-// expand control and half of them would turn out empty.
+// hasChildren comes from the server's child_count, NOT from the children loaded so far: children arrive on demand, so without it every budget would offer an expand control and half of them would turn out empty.
 //
-// `childrenById` is a plain object keyed by node id, and that is load-bearing
-// rather than a matter of taste — see childrenById() in the owning view.
-export function budgetsToTreeData(t, roots, childrenById) {
+// `childrenById` is a plain object keyed by node id, and that is load-bearing rather than a matter of taste — see childrenById() in the owning view. `onLoadMore(parentId)` fetches a branch's next page.
+export function budgetsToTreeData(t, roots, childrenById, onLoadMore) {
     const toData = (node) => {
         const page = childrenById[node.id];
         const loaded = page?.items || [];
         const rows = loaded.map(toData);
-        // One more page to go: the row that fetches it is part of the tree, so
-        // it sits with its siblings and scrolls with them.
+        // One more page to go: the row that fetches it is part of the tree, so it sits with its siblings and scrolls with them.
         if (page && loaded.length < page.total) {
-            rows.push({
-                value: node.id + MORE_SUFFIX,
-                label: t('projects.actions.showMore'),
-                nodeProps: { more: { parentId: node.id, loaded: loaded.length, total: page.total } },
-            });
+            rows.push({ id: node.id + MORE_SUFFIX, label: t('projects.actions.showMore'), more: { loaded: loaded.length, total: page.total, onLoad: () => onLoadMore(node.id) } });
         }
         return {
-            value: node.id,
+            id: node.id,
             label: nodeTitle(node),
+            node,
+            icon: <NodeIcon node={node} />,
+            badge: (
+                <>
+                    {/* How many projects the budget pays for — listed in the table beside the tree, so the row only counts them. */}
+                    {isBudget(node) && node.child_project_count > 0 && (
+                        <Tooltip label={t('projects.tree.projectCount', { count: node.child_project_count })}>
+                            <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>{node.child_project_count}</Text>
+                        </Tooltip>
+                    )}
+                    <NodeMarkers node={node} />
+                </>
+            ),
             hasChildren: isBudget(node) && budgetChildCount(node) > 0,
-            // An EMPTY loaded list must stay undefined: Mantine derives
-            // "has children" from `Array.isArray(node.children)`, so handing it
-            // `[]` produces an expand control that opens nothing.
             children: rows.length ? rows : undefined,
-            nodeProps: { node },
         };
     };
     return (roots || []).map(toData);
@@ -143,131 +130,12 @@ function rowStyle(selected) {
     };
 }
 
-// The last row under a partly loaded budget. It reports how much is still
-// hidden — a page boundary that says nothing is indistinguishable from the end
-// of the list.
-function MoreRow({ more, elementProps, onLoadMore }) {
+// BudgetTree: the budgets as NavTree. A click on a row selects it and opens it, but never closes it: looking at a budget's details used to close it, and the tree remembered it closed. Only the arrow closes a branch.
+export function BudgetTree({ data, expansion, selectedId, onSelect, onLoadChildren }) {
     const { t } = useTranslation();
-    const [loading, setLoading] = useState(false);
-
-    const load = async (event) => {
-        // Neither select nor collapse the parent: this row only fetches.
-        event.stopPropagation();
-        if (loading) return;
-        setLoading(true);
-        try {
-            await onLoadMore(more.parentId);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     return (
-        <Group {...elementProps} gap="4" wrap="nowrap" pr="6" py="4"
-            style={{ ...elementProps.style, cursor: 'default' }}
-            onClick={(event) => event.stopPropagation()}>
-            <Box w={14} style={{ flexShrink: 0 }} />
-            {loading ? <Loader size="12" /> : <ChevronDown size="14" color="var(--mantine-color-gray-6)" style={{ flexShrink: 0 }} />}
-            <UnstyledButton onClick={load} disabled={loading}>
-                <Text size="xs" c={COLOR.info} fw={500}>
-                    {loading ? t('projects.actions.loading') : t('projects.actions.showMore')}
-                    <Text span size="xs" c="dimmed" fw={400}>{` (${more.loaded}/${more.total})`}</Text>
-                </Text>
-            </UnstyledButton>
-        </Group>
-    );
-}
-
-// One row: chevron (only where there is something to expand), type icon, title,
-// auto-approve marker and status dot.
-function TreeRow({ payload, selectedId, onSelect, onLoadMore }) {
-    const { t } = useTranslation();
-    const { node: treeNode, tree, expanded, hasChildren, isLoading, loadError, elementProps } = payload;
-
-    if (treeNode.nodeProps?.more) {
-        return <MoreRow more={treeNode.nodeProps.more} elementProps={elementProps} onLoadMore={onLoadMore} />;
-    }
-
-    const node = treeNode.nodeProps.node;
-    const isSelected = node.id === selectedId;
-
-    return (
-        <Group
-            {...elementProps}
-            gap="4"
-            wrap="nowrap"
-            // No horizontal padding prop here: Mantine indents this very element
-            // with `padding-inline-start: var(--label-offset)`, and an inline
-            // padding-left from `px` would silently flatten the whole tree.
-            // Right-side spacing only, which does not collide.
-            pr="6"
-            py="4"
-            // A click on the row selects it and opens it, but never closes it: looking at a budget's details used to close it, and the tree remembered it closed. Only the arrow closes a branch.
-            onClick={(event) => {
-                if (expanded) event.stopPropagation();
-                else elementProps.onClick(event);
-                onSelect(node);
-            }}
-            style={{ ...elementProps.style, ...rowStyle(isSelected) }}
-        >
-            {hasChildren ? (
-                isLoading
-                    ? <Loader size="12" style={{ flexShrink: 0 }} />
-                    : <ChevronRight
-                        size="14"
-                        role="button"
-                        aria-label={t(expanded ? 'projects.tree.collapse' : 'projects.tree.expand')}
-                        onClick={(event) => { event.stopPropagation(); tree.toggleExpanded(treeNode.value); }}
-                        style={{
-                            flexShrink: 0,
-                            cursor: 'pointer',
-                            transform: expanded ? 'rotate(90deg)' : 'none',
-                            transition: 'transform 150ms ease',
-                        }} />
-            ) : (
-                <Box w={14} style={{ flexShrink: 0 }} />
-            )}
-
-            <NodeIcon node={node} />
-            <Text size="sm" truncate style={{ flex: 1 }} fw={isSelected ? 600 : 400}>
-                {nodeTitle(node)}
-            </Text>
-            {/* How many projects the budget pays for — listed in the table beside
-                the tree, so the row only counts them. */}
-            {isBudget(node) && node.child_project_count > 0 && (
-                <Tooltip label={t('projects.tree.projectCount', { count: node.child_project_count })}>
-                    <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>{node.child_project_count}</Text>
-                </Tooltip>
-            )}
-
-            {/* A failed child fetch stays on the row it belongs to instead of
-                popping an error modal that loses the context. */}
-            {loadError && (
-                <Tooltip label={`Could not load contents: ${loadError.message}`}>
-                    <AlertTriangle size="12" color="var(--mantine-color-red-6)" style={{ flexShrink: 0 }} />
-                </Tooltip>
-            )}
-            <NodeMarkers node={node} />
-        </Group>
-    );
-}
-
-export function BudgetTree({ data, tree, selectedId, onSelect, onLoadMore }) {
-    const { t } = useTranslation();
-    if (!data || data.length === 0) {
-        return <Text size="sm" c="dimmed" p="xs">{t('projects.budgets.noMatches')}</Text>;
-    }
-    return (
-        <Tree
-            data={data}
-            tree={tree}
-            withLines
-            levelOffset={20}
-            renderNode={(payload) => (
-                <TreeRow payload={payload} selectedId={selectedId}
-                    onSelect={onSelect} onLoadMore={onLoadMore} />
-            )}
-        />
+        <NavTree label={t('nav.myBudgets')} nodes={data} expansion={expansion} withLines openOnSelect selectedId={selectedId} onSelect={(n) => onSelect(n.node)} onLoadChildren={onLoadChildren}
+            empty={<Text size="sm" c="dimmed" p="xs">{t('projects.budgets.noMatches')}</Text>} />
     );
 }
 

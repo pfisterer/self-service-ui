@@ -1,17 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronsDownUp, ChevronsUpDown, Inbox, Search, X } from 'lucide-react';
-import { ActionIcon, Alert, Anchor, Badge, Box, Button, Checkbox, Flex, Group, Loader, Paper, SegmentedControl, Stack, Text, TextInput, Title, Tooltip, useTree } from '@mantine/core';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Inbox } from 'lucide-react';
+import { Alert, Anchor, Badge, Box, Button, Checkbox, Flex, Group, Loader, Paper, SegmentedControl, Stack, Text, Title } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useErrorModal } from '/providers/error-modal.jsx';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useDebouncedValue, useLocalStorage } from '@mantine/hooks';
+import { useDebouncedValue } from '@mantine/hooks';
+import { TreeFilter, useExpandAll, useTreeExpansion } from '/helper/tree.jsx';
 import { PAGE_SIZE, useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { BudgetCard } from './card-budget.jsx';
 import { ProjectCard } from './card-project.jsx';
-import { BudgetTree, MORE_SUFFIX, NodeResultList, budgetsToTreeData, budgetChildCount } from './component-budget-tree.jsx';
+import { BudgetTree, NodeResultList, budgetsToTreeData, budgetChildCount } from './component-budget-tree.jsx';
 import { BudgetProjectsTable } from './component-budget-projects.jsx';
 import { RetireModal } from './modal-retire.jsx';
 import { DecisionModal } from './modal-decide.jsx';
@@ -209,41 +210,13 @@ export function MyBudgetsView({ params }) {
     // reopening retries it.
     const loadChildren = (nodeId) => queryClient.fetchQuery(childQuery(nodeId));
 
-    // "Expand everything", remembered per browser (see the pass further down).
-    const [expandAll, setExpandAll] = useLocalStorage({
-        key: 'self-service.budget-tree.expand-all',
-        defaultValue: false,
-        getInitialValueInEffect: false,
-    });
-    // The open branches, remembered per browser, so the tree comes back as the viewer last left it. Held here and handed to the tree controlled: the tree rebuilds its own state from the nodes it has loaded whenever its data changes, so closing a branch forgot what was open below it. Only the viewer's expanding and collapsing changes it, and our own passes below. The viewer's last action wins: closing a branch by hand ends "expand everything", which would otherwise reopen it on the next visit.
-    const [expanded, setExpanded] = useLocalStorage({
-        key: 'self-service.budget-tree.expanded',
-        defaultValue: null,
-        getInitialValueInEffect: false,
-    });
-    // null means nothing remembered yet, and then the first level opens as before.
-    const [restoredExpanded] = useState(expanded !== null);
-    const tree = useTree({
-        multiple: false,
-        onLoadChildren: loadChildren,
-        expandedState: expanded ?? {},
-        onExpandedStateChange: () => {},
-        onNodeExpand: (id) => setExpanded(prev => ({ ...prev, [id]: true })),
-        onNodeCollapse: (id) => {
-            setExpanded(prev => Object.fromEntries(Object.entries(prev ?? {}).filter(([key]) => key !== id)));
-            setExpandAll(false);
-        },
-    });
+    // The open branches, remembered per browser, so the tree comes back as the viewer last left it (helper/tree.jsx's useTreeExpansion). The first level starts open: collapsed, the tree shows a manager their own budgets and nothing about what is in them, and the first click is then always the same one. What is stored are the branches opened or closed from that; expand-all is remembered beside them (useExpandAll below), and closing a branch by hand ends it.
+    const rootIdSet = useMemo(() => new Set(rootBudgets.map(b => b.id)), [rootBudgets]);
+    const expansion = useTreeExpansion({ storageKey: 'self-service.budget-tree.expansion', defaultOpen: (id) => rootIdSet.has(id) });
 
-    // The branches currently open. This — not a Map the view maintains — is what
-    // decides which children are fetched, so expansion and data cannot disagree.
-    // The "show more" placeholder rows are not nodes and have nothing to fetch.
-    const openIds = useMemo(
-        () => Object.entries(tree.expandedState)
-            .filter(([id, open]) => open && !id.endsWith(MORE_SUFFIX))
-            .map(([id]) => id),
-        [tree.expandedState],
-    );
+    // The branches currently open: the roots left open and every budget opened below them. This — not a Map the view maintains — is what decides which children are fetched, so expansion and data cannot disagree.
+    const openKey = [...rootBudgets.filter(b => budgetChildCount(b) > 0 && expansion.isOpen(b.id)).map(b => b.id), ...expansion.opened.filter(id => !rootIdSet.has(id))].join('\u0000');
+    const openIds = useMemo(() => (openKey ? openKey.split('\u0000') : []), [openKey]);
 
     // One query per open branch, under the shared `tree()` prefix — so every
     // write already invalidates them and the tree refreshes itself. That is the
@@ -310,34 +283,8 @@ export function MyBudgetsView({ params }) {
         }
     };
 
-    // The first level is always open. Collapsed, the tree shows a manager their
-    // own budgets and nothing about what is in them — and the first click is
-    // then always the same one.
-    //
-    // Expansion is set in one go instead of per node via tree.expand(): that
-    // helper builds the next state from the state it captured, so expanding
-    // several roots in a row would keep only the last one. Fetching is not ours
-    // to trigger any more — a branch that counts as open is queried by that
-    // alone.
-    //
-    // Keyed on the root IDs and not on the root OBJECTS: a write that only
-    // changes a root's child_count (a move into one, say) hands back a new array
-    // but the same set of roots, and re-running then re-opened what the user had
-    // just collapsed.
+    // Keyed on the root IDs and not on the root OBJECTS: a write that only changes a root's child_count (a move into one, say) hands back a new array but the same set of roots.
     const rootIds = rootBudgets.map(b => b.id).join('\u0000');
-    // A remembered state replaces this: it already says which roots the viewer left open.
-    useEffect(() => {
-        if (restoredExpanded) return;
-        const openable = rootBudgets.filter(b => budgetChildCount(b) > 0);
-        if (openable.length === 0) return;
-        setExpanded({
-            ...tree.expandedState,
-            ...Object.fromEntries(openable.map(b => [b.id, true])),
-        });
-        // `tree` and `rootBudgets` are read to decide what to open; listing them
-        // would re-run this on every expand and fight the user's own collapsing.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rootIds]);
 
     // A linked node is opened in the tree: every budget on its way down from the
     // first one the viewer manages. What lies above that is not in their tree.
@@ -349,12 +296,8 @@ export function MyBudgetsView({ params }) {
         let from = path.findIndex(id => shown.has(id));
         if (from < 0 && shown.has('root')) from = 0;
         if (from < 0) return;
-        setExpanded({
-            ...tree.expandedState,
-            ...Object.fromEntries(path.slice(from).map(id => [id, true])),
-        });
-        // `tree` is read to keep what is open; listing it would re-run this on
-        // every toggle and re-open what the user just closed.
+        expansion.expand(path.slice(from));
+        // `expansion` is new every render; listing it would re-run this on every toggle and re-open what the user just closed.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [linked?.id, rootIds]);
 
@@ -403,48 +346,13 @@ export function MyBudgetsView({ params }) {
     };
 
     const treeData = useMemo(
-        () => budgetsToTreeData(t, [...rootBudgets, ...requestableOnly], childrenMap),
+        () => budgetsToTreeData(t, [...rootBudgets, ...requestableOnly], childrenMap, loadMoreChildren),
+        // loadMoreChildren reads the limits, which are part of the children's query keys and so of childrenMap.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         [t, rootBudgets, requestableOnly, childrenMap],
     );
-
-    // "Expand everything", remembered per browser. The tree loads a branch when
-    // it is opened, so everything cannot be opened at once: each pass opens the
-    // budgets that are loaded and still closed, their children arrive, and the
-    // next pass opens those — level by level until nothing closed is left.
-    // Each budget is handled once: collapsing one drops its branch's query, which
-    // changes treeData and re-runs the pass, and that must not reopen what the
-    // viewer just closed. `seen` remembers every budget a pass has met, open or
-    // not — the first level is open before the pass and closable all the same.
-    const seen = useRef(new Set());
-    useEffect(() => {
-        if (!expandAll) {
-            seen.current.clear();
-            return;
-        }
-        const closed = [];
-        const walk = (rows) => rows.forEach(row => {
-            if (row.hasChildren && !seen.current.has(row.value)) {
-                seen.current.add(row.value);
-                if (!tree.expandedState[row.value]) closed.push(row.value);
-            }
-            if (row.children) walk(row.children);
-        });
-        walk(treeData);
-        if (closed.length) {
-            setExpanded({ ...tree.expandedState, ...Object.fromEntries(closed.map(id => [id, true])) });
-        }
-        // `tree` is read to see what is open; listing it would re-run this on
-        // every toggle, which is the point only while expandAll is on anyway.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [expandAll, treeData]);
-    // Switching it off goes back to the default: the first level open.
-    const toggleExpandAll = () => {
-        if (expandAll) {
-            setExpanded(Object.fromEntries(
-                rootBudgets.filter(b => budgetChildCount(b) > 0).map(b => [b.id, true])));
-        }
-        setExpandAll(!expandAll);
-    };
+    // "Expand everything", remembered per browser: the tree loads a branch when it is opened, so the budgets open level by level as their children arrive. Switching it off goes back to the first level open.
+    const expandAll = useExpandAll(expansion, treeData, { keepOpen: (id) => rootIdSet.has(id) });
 
     // Widening the scope only changes the inbox, not the tree. The scope is part
     // of that list's query key, so switching it IS the reload — no separate
@@ -687,32 +595,12 @@ export function MyBudgetsView({ params }) {
                                 </>
                             )}
 
-                            <Group gap="xs" mb="xs" wrap="nowrap">
-                                <TextInput
-                                    size="xs"
-                                    style={{ flex: 1 }}
-                                    placeholder={t('projects.budgets.searchPlaceholder')}
-                                    aria-label={t('projects.budgets.searchLabel')}
-                                    leftSection={searchBusy ? <Loader size="12" /> : <Search size="13" />}
-                                    value={search}
-                                    onChange={(e) => changeSearch(e.currentTarget.value)}
-                                    rightSection={search ? (
-                                        <ActionIcon size="xs" variant="subtle" color="gray"
-                                            aria-label={t('projects.budgets.clearSearch')} onClick={() => changeSearch('')}>
-                                            <X size="12" />
-                                        </ActionIcon>
-                                    ) : null}
-                                />
-                                {!searching && !filtering && (
-                                    <Tooltip label={t(expandAll ? 'projects.budgets.collapseAll' : 'projects.budgets.expandAll')}>
-                                        <ActionIcon size="sm" variant={expandAll ? 'light' : 'subtle'} color="gray"
-                                            aria-label={t(expandAll ? 'projects.budgets.collapseAll' : 'projects.budgets.expandAll')}
-                                            aria-pressed={expandAll} onClick={toggleExpandAll}>
-                                            {expandAll ? <ChevronsDownUp size="14" /> : <ChevronsUpDown size="14" />}
-                                        </ActionIcon>
-                                    </Tooltip>
-                                )}
-                            </Group>
+                            {/* The search box and the expand-all toggle of the one tree (helper/tree.jsx); the toggle not while a flat list replaces the tree. */}
+                            <Box mb="xs">
+                                <TreeFilter size="xs" value={search} onChange={changeSearch} busy={searchBusy}
+                                    label={t('projects.budgets.searchLabel')} placeholder={t('projects.budgets.searchPlaceholder')} clearLabel={t('projects.budgets.clearSearch')}
+                                    expandAll={filtering ? null : expandAll} expandAllLabel={t('projects.budgets.expandAll')} collapseAllLabel={t('projects.budgets.collapseAll')} />
+                            </Box>
 
                             {/* Searching and filtering each replace the tree with a
                                 flat list — see the note on this component. */}
@@ -738,10 +626,10 @@ export function MyBudgetsView({ params }) {
                                 ) : (
                                     <BudgetTree
                                         data={treeData}
-                                        tree={tree}
+                                        expansion={expansion}
                                         selectedId={selected?.id}
                                         onSelect={select}
-                                        onLoadMore={loadMoreChildren}
+                                        onLoadChildren={loadChildren}
                                     />
                                 )}
                             </div>

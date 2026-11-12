@@ -77,12 +77,13 @@ export function useTreeExpansion({ storageKey, defaultOpen = false }) {
     };
 }
 
-// useExpandAll: the expand-all and collapse-all toggle beside a tree's filter (TreeFilter's expandAll), over the branches among `nodes` (the tree's nodes as far as loaded). Expand-all is a mode, remembered: while it is on, a branch that arrives later (loaded as its parent opened) opens too, so a tree that loads lazily opens level by level. Collapse-all closes every branch but the ones `keepOpen` names (the budget tree keeps its first level open). `allOpen` is whether the mode is on or every branch is open.
+// useExpandAll: the expand-all and collapse-all toggle beside a tree's filter (TreeFilter's expandAll), over the branches among `nodes` (the tree's nodes as far as loaded). Expand-all is a mode, remembered: while it is on, a branch that arrives later (loaded as its parent opened) opens too, so a tree that loads lazily opens level by level. Collapse-all closes every branch but the ones `keepOpen` names (the budget tree keeps its first level open). `allOpen` is whether the mode is on or every branch is open (and collapse-all would close one).
 export function useExpandAll(expansion, nodes, { keepOpen } = {}) {
     const { isOpen, startsOpen, setOpen, setFlipped, allMode, setAllMode } = expansion;
     const index = useMemo(() => indexNodes(nodes), [nodes]);
     const branches = [...index.values()].filter(e => isBranch(e.node)).map(e => e.node.id);
-    const allOpen = allMode || (branches.length > 0 && branches.every(isOpen));
+    // Pressed while the mode is on, or while every branch is open and collapsing would close one (not where only branches kept open are known).
+    const allOpen = allMode || (branches.some(id => !keepOpen?.(id)) && branches.every(isOpen));
 
     // While the mode is on, every branch seen for the first time opens; each only once, so one closed again by hand is not reopened by the next pass.
     const seen = useRef(new Set());
