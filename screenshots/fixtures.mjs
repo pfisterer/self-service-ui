@@ -58,6 +58,23 @@ const P_WEB = project('p_web', 'Webserver Projektarbeit', { cores: 4, ram: 16, s
 const NODES = [B_ROOT, B_FAC, B_LEA, P_ML, P_BILD, P_WEB];
 const page = (items) => ({ items, total: items.length });
 
+// For the README's Cloud and Budgets pictures (README_CLOUD in shots.mjs): a project waiting for approval and one administered for a colleague beside the own one, two budgets to draw from (one granting a fixed share per person on its own, one on request), and a student's request waiting in the lecturer's budget.
+const TOM = 'user:tom.beispiel@dhbw.example';
+const P_DB = project('p_db', 'Datenbanken Seminar', { cores: 2, ram: 8, storage: 50 }, { status: 'pending', reason: 'Übungsdatenbanken für das Seminar Datenbanken', termination_date: '2027-01-31', created_at: '2026-11-09T10:00:00Z' });
+const P_IOT = project('p_iot', 'IoT-Labor', { cores: 8, ram: 32, storage: 200 }, { parent_id: 'b_lab', parent_name: 'Forschungslabor WI', ancestor_ids: ['b_root', 'b_wi', 'b_lab'], owner: TOM, viewer_relation: 'admin', admin_scope: [`user:${ME}`], authorized_users: [{ token: TOM, role: 'member' }, { token: `user:${ME}`, role: 'member' }, { token: 'group:tutoren', role: 'member' }], termination_date: '2027-09-30', bindings: { openstack: { external_id: 'os-iot', external_name: 'iot-labor', in_use: { cores: 6, ram: 24, storage: 120 } } } });
+const P_REQ = project('p_req', 'Chatbot Projektarbeit', { cores: 4, ram: 16, storage: 100 }, { status: 'pending', owner: 'user:mia.beispiel@dhbw.example', viewer_relation: undefined, reason: 'Chatbot für die Projektarbeit im 5. Semester, mit einer kleinen Datenbank', termination_date: '2027-02-28', created_at: '2026-11-09T14:20:00Z' });
+const B_STUD = node({ id: 'b_stud', kind: 'budget', name: 'WI Studierende (kleine VM)', parent_id: 'b_wi', parent_name: 'Wirtschaftsinformatik', ancestor_ids: ['b_root', 'b_wi'], admin_scope: ['group:lehrende-wi'], eligible_requesters: ['group:wi24a'], limit: { cores: 64, ram: 256, storage: 2000 }, available_resources: ['cores', 'ram', 'storage'], auto_approve: { per_requester_limit: { cores: 2, ram: 4, storage: 20 } }, usage: { approved: { limit: { cores: 20, ram: 80, storage: 400 } } }, termination_date: '2027-09-30' });
+const B_LAB = node({ id: 'b_lab', kind: 'budget', name: 'Forschungslabor WI', parent_id: 'b_wi', parent_name: 'Wirtschaftsinformatik', ancestor_ids: ['b_root', 'b_wi'], admin_scope: [TOM], eligible_requesters: ['group:lehrende-wi'], limit: { cores: 48, ram: 192, storage: 2000 }, available_resources: ['cores', 'ram', 'storage'], usage: { approved: { limit: { cores: 8, ram: 32, storage: 200 } } }, termination_date: '2027-12-31' });
+export const README_CLOUD = {
+    'projects GET /v1/nodes/mine': page([P_WEB, P_DB, P_IOT]),
+    'projects GET /v1/nodes/eligible-for-me': page([B_STUD, B_LAB]),
+    'projects GET /v1/nodes/to-manage': page([P_REQ]),
+    'projects GET /v1/nodes/b_lea/children': (query) => page([P_ML, P_BILD, P_WEB, P_REQ].filter(n => !query.get('kind') || n.kind === query.get('kind'))),
+    'projects GET /v1/nodes/p_req': P_REQ,
+    'projects GET /v1/nodes/b_stud': B_STUD,
+    'projects GET /v1/nodes/b_lab': B_LAB,
+};
+
 const at = (h) => new Date(Date.UTC(2026, 10, 10, h, 0)).toISOString();
 
 const DEFAULTS = {

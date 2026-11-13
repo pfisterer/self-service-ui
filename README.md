@@ -38,9 +38,9 @@ A budget with auto-approval grants requests on the spot — as a pool until the 
 
 ### Cloud and Budgets
 
-**My Projects** — first the projects a person owns, then those they administer with someone else (marked *Shared*): what they cost, which budget pays for them, who has access and who administers them, and what a pending change would do. Below them, set apart, the budgets they may draw from for new ones, each saying how much is theirs right away and whether a project there needs an approval.
+**Projects** — one page per area (Cloud, Workspaces, LLM; shown: Cloud), first the projects a person owns, then those they administer with someone else (marked *Shared*): what they cost, which budget pays for them, who has access and who administers them, and what a pending change would do. Below them, set apart, the budgets they may draw from for new ones, each saying how much is theirs right away and whether a project there needs an approval.
 
-![My Projects](docs/img/01-my-projects.webp)
+![Cloud projects](docs/img/01-my-projects.webp)
 
 **Requesting a project** — the budget to pay from comes first. While the form is filled in, it says what the button will do: create the project right away, or send it to the budget's managers. Where a budget grants a fixed share per person on its own, the form starts filled with exactly what goes through instantly.
 
