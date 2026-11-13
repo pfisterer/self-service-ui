@@ -22,6 +22,18 @@ describe('QuotaBadges', () => {
         renderView(<QuotaBadges resources={[cores, ipv4]} quota={{ cores: 2, 'dhbw-ipv4': 1 }} />);
         expect(screen.getByText('DHBW IPv4 network')).toBeTruthy();
     });
+
+    // A request lists what it asks for; the zeros the form fills in for the budget's other resources stay out.
+    it('leaves amounts of 0 out with hideZero', () => {
+        const ram = { id: 'ram', name: 'RAM', unit: 'GB', group: 'Compute', min: 0, max: 64, default: 0 };
+        renderView(<QuotaBadges resources={[cores, ram]} quota={{ cores: 2, ram: 0 }} hideZero />);
+        expect(screen.getByText('2 Cores')).toBeTruthy();
+        expect(screen.queryByText(/RAM/)).toBeNull();
+
+        cleanup();
+        renderView(<QuotaBadges resources={[cores, ram]} quota={{ cores: 2, ram: 0 }} />);
+        expect(screen.getByText(/RAM/)).toBeTruthy();
+    });
 });
 
 describe('BudgetFormModal in request mode', () => {

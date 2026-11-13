@@ -178,8 +178,8 @@ export function TokenBadgeList({ tokens, emptyMessage = null, size = 'sm' }) {
     );
 }
 
-// QuotaBadges renders a quota map as one badge per resource ("10 vCPUs" …).
-export function QuotaBadges({ resources, quota, size = 'sm' }) {
+// QuotaBadges renders a quota map as one badge per resource ("10 vCPUs" …). hideZero leaves out amounts of 0, for a request: a project asks for what it names, and the form fills every other resource of the budget with 0, so a cloud project's request would otherwise list "0 vCPU h Workspace CPU" and the like.
+export function QuotaBadges({ resources, quota, size = 'sm', hideZero = false }) {
     const { t } = useTranslation();
     if (!quota || !resources) return null;
     return (
@@ -193,6 +193,7 @@ export function QuotaBadges({ resources, quota, size = 'sm' }) {
                         ? <Badge key={r.id} size={size} variant="outline" color={COLOR.identity}>{resourceName(t, r)}</Badge>
                         : null;
                 }
+                if (hideZero && value === 0) return null;
                 return <Badge key={r.id} size={size} variant="outline" color={COLOR.identity}>{resourceAmount(t, r, value === UNLIMITED_QUOTA ? '∞' : value)}</Badge>;
             })}
         </Group>

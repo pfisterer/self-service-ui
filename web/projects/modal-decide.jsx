@@ -141,7 +141,7 @@ export function DecisionModal({ opened, onClose, onDone, resources, node }) {
             ) : (
                 <div>
                     <Text size="sm" fw={600} mb="xs">{t('projects.approve.requestedAmount')}</Text>
-                    <QuotaBadges resources={resources} quota={requested} />
+                    <QuotaBadges resources={resources} quota={requested} hideZero />
                 </div>
             )}
 
