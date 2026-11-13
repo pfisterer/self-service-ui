@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Keeps the SHA-pinned actions in .github/workflows current: Dependabot understands the "@<sha> # vX.Y.Z" form and bumps SHA and comment together, so the pin protects against a moved tag without freezing the version. Grouped into one pull request a month, so the updates arrive as one reviewable change rather than a stream.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+    open-pull-requests-limit: 1
