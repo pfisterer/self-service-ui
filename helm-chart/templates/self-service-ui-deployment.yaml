@@ -31,7 +31,7 @@ spec:
           # version is passed at all, so "new chart, old image" cannot occur.
           # An explicit value still wins — that is how argocd-image-updater
           # keeps driving the standalone releases.
-          image: {{ .Values.selfServiceUI.image }}:{{ .Values.selfServiceUI.version | default .Chart.AppVersion }}
+          image: {{ .Values.selfServiceUI.image }}:{{ .Values.selfServiceUI.version | default .Chart.AppVersion }}{{ with .Values.selfServiceUI.digest }}@{{ . }}{{ end }}
           imagePullPolicy: {{ .Values.selfServiceUI.imagePullPolicy | default "Always" }}
           ports:
             - containerPort: 8080

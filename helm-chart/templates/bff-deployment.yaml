@@ -39,7 +39,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: oauth2-proxy
-          image: {{ .Values.bff.image }}:{{ .Values.bff.version }}
+          image: {{ .Values.bff.image }}:{{ .Values.bff.version }}{{ with .Values.bff.digest }}@{{ . }}{{ end }}
           args:
             - --provider=oidc
             - --oidc-issuer-url={{ .Values.auth.oidc.issuerUrl }}

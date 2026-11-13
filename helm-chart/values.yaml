@@ -15,6 +15,8 @@ selfServiceUI:
   image: "ghcr.io/pfisterer/self-service-ui"
   # Empty -> the chart\'s appVersion is used (see the deployment template).
   version: ""
+  # Optional image digest, e.g. digest: "sha256:<64 hex>": the image is then pulled as <image>:<version>@<digest>, so a re-pushed tag cannot change what runs. Left unset on purpose (not even ""), so the checksum/values annotation and thus the pods stay as they are.
+  # digest: ""
   dynamicZonesBaseUrl: https://dyndnsapi.example.com
   # Where an MCP client reaches the DNS API. Same reasoning as
   # cloudResourcesMcpUrl below: the API's own host, never a BFF path.
@@ -94,6 +96,8 @@ bff:
   enabled: false
   image: quay.io/oauth2-proxy/oauth2-proxy
   version: v7.15.5
+  # Optional image digest, e.g. digest: "sha256:<64 hex>": the image is then pulled as <image>:<version>@<digest>, so a re-pushed tag cannot change what runs. Left unset on purpose (not even ""), so the checksum/values annotation and thus the pods stay as they are.
+  # digest: ""
   # Supplies client-id, client-secret and cookie-secret. Created out of band;
   # keeping the cookie-secret stable across a redeploy is what keeps sessions
   # alive.
