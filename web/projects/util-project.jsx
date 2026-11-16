@@ -865,18 +865,10 @@ export function normalizeObjectResponse(res, fallback = {}) {
     return fallback;
 }
 
-// The role of a project member: in OpenStack member or reader; in the workspaces of
-// the AI service the same role decides whether the shared folder is writable.
-// kinds (kindsFor) says what the project is, so a project with workspaces names
-// the workspace meaning and one with cloud and workspaces names both.
-const WORKSPACE_ROLE_LABELS = { member: 'Shared Workspace Writer', reader: 'Shared Workspace Reader' };
-
-export function formatRoleLabel(roleId, kinds) {
+// The role of a project member, as OpenStack knows it (member, reader). In the workspaces of the AI service it decides nothing: who writes the shared folder ~/dhbw/project is a setting of the project (shared_write), the managers always do. kinds is kept for the callers.
+export function formatRoleLabel(roleId, _kinds) {
     if (!roleId) return '';
-    const openstack = roleId.charAt(0).toUpperCase() + roleId.slice(1);
-    if (!kinds?.includes('workspaces')) return openstack;
-    const workspace = WORKSPACE_ROLE_LABELS[roleId] || openstack;
-    return kinds.includes('cloud') ? `${openstack} · ${workspace}` : workspace;
+    return roleId.charAt(0).toUpperCase() + roleId.slice(1);
 }
 
 // getAuthUserEmail is whose view the page shows: the person this tab acts on behalf of (providers/acting-as.js), else the signed-in person. Every caller asks it to tell the viewer's own projects from others' and to fill in the viewer as requester, which while acting on behalf must be the person acted for, as the APIs see it.

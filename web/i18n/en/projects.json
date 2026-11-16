@@ -392,9 +392,9 @@
         "ownerHint": "Who answers for the project. A change takes effect when saved, without a request.",
         "moveHint": "The budget the project is paid from. Moving takes effect when saved; the target needs free capacity.",
         "accessAiaas": "Members",
-        "accessAiaasHint": "Who uses the project: its workspaces and its LLM quota. The quota is one shared pool all members draw from. With the role “Shared Workspace Reader” the shared folder ~/dhbw/project is read-only, with “Shared Workspace Writer” writable too.",
+        "accessAiaasHint": "Who uses the project: its workspaces and its LLM quota. The quota is one shared pool all members draw from. Who may write the shared folder ~/dhbw/project is set by the managers in the workspace settings (all members or only managers).",
         "accessBoth": "Access",
-        "accessBothHint": "Who uses the project: in OpenStack with the chosen role, plus its workspaces and the shared LLM quota. The role also applies to the workspaces' shared folder ~/dhbw/project: “Reader” only reads, “Member” writes too (Shared Workspace Reader or Writer).",
+        "accessBothHint": "Who uses the project: in OpenStack with the chosen role, plus its workspaces and the shared LLM quota. The role applies to OpenStack only; who may write the workspaces' shared folder ~/dhbw/project is set by the managers in the workspace settings.",
         "adminsHintAiaas": "Administer the project here together with the owner: rename it, request changes, edit this list and delete it. They use its workspaces and LLM quota too.",
         "adminsHintBoth": "Administer the project here together with the owner: rename it, request changes, edit this list and delete it. They use its workspaces and LLM quota too; this gives no access in OpenStack.",
         "nameHintAiaas": "A short, recognizable name — this is how the project appears in workspaces and LLM."

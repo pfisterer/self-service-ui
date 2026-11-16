@@ -207,7 +207,8 @@
             "limits": "Limits",
             "jobs": "Batch jobs",
             "release": "Release times",
-            "groups": "Groups"
+            "groups": "Groups",
+            "storage": "Storage"
         },
         "groups": {
             "intro": "Groups get a folder of their own, ~/dhbw/groups/<name>, in their workspaces and jobs. Only the group’s members see it, and the project’s managers. The folder of the whole project stays at ~/dhbw/project.",
@@ -226,7 +227,24 @@
             "count": "Number",
             "distribute": "Create groups and deal out members",
             "hint": "Changes apply from the next start of a workspace or job. The group folders count against the project’s storage. Dealing out splits the people not yet in a group among the new groups in turn.",
-            "noStorage": "Groups need workspace storage in the project; without it there are no folders."
+            "noStorage": "Groups need workspace storage in the project; without it there are no folders.",
+            "storage": "Storage limit of the group",
+            "storageNone": "none",
+            "storageShort": "Limit"
+        },
+        "storageLimits": {
+            "noStorage": "The project has no workspace storage; without it there are no limits.",
+            "intro": "The project has {{gb}} GB of workspace storage for all homes and shared folders together. Limits below keep one person or folder from filling it for everyone.",
+            "sharedTitle": "Shared folder ~/dhbw/project",
+            "writeAll": "All members write",
+            "writeManagers": "Only managers write",
+            "writeHint": "Managers always write. “Only managers” suits handing out material and data sets; group work has the group folders.",
+            "sharedGb": "Limit of the shared folder",
+            "sharedGbHint": "0 = no limit of its own",
+            "homeTitle": "Home per member",
+            "homeGb": "Limit per home",
+            "homeGbHint": "0 = automatic: twice the fair share (storage divided by the number of homes), at least 1 GB. Does not apply to managers.",
+            "hint": "Limits apply a few minutes after saving. When one is reached, only writing into that folder fails. Limits for groups are in the Groups tab."
         }
     },
     "storage": {

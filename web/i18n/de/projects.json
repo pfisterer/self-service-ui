@@ -392,9 +392,9 @@
         "ownerHint": "Wer für das Projekt verantwortlich ist. Eine Änderung wirkt sofort beim Speichern, ohne Antrag.",
         "moveHint": "Aus welchem Budget das Projekt bezahlt wird. Verschieben wirkt sofort beim Speichern; das Ziel braucht freie Kapazität.",
         "accessAiaas": "Mitglieder",
-        "accessAiaasHint": "Wer das Projekt nutzt: seine Workspaces und das LLM-Kontingent. Das Kontingent ist ein gemeinsamer Topf, alle Mitglieder verbrauchen daraus. Mit der Rolle „Shared Workspace Reader“ ist der gemeinsame Ordner ~/dhbw/project nur lesbar, mit „Shared Workspace Writer“ auch beschreibbar.",
+        "accessAiaasHint": "Wer das Projekt nutzt: seine Workspaces und das LLM-Kontingent. Das Kontingent ist ein gemeinsamer Topf, alle Mitglieder verbrauchen daraus. Wer in den gemeinsamen Ordner ~/dhbw/project schreiben darf, legen die Verwaltenden in den Workspace-Einstellungen fest (alle Mitglieder oder nur Verwaltende).",
         "accessBoth": "Zugang",
-        "accessBothHint": "Wer das Projekt nutzt: in OpenStack mit der gewählten Rolle, dazu seine Workspaces und das gemeinsame LLM-Kontingent. Die Rolle gilt auch für den gemeinsamen Ordner ~/dhbw/project der Workspaces: „Reader“ liest nur, „Member“ schreibt auch (Shared Workspace Reader bzw. Writer).",
+        "accessBothHint": "Wer das Projekt nutzt: in OpenStack mit der gewählten Rolle, dazu seine Workspaces und das gemeinsame LLM-Kontingent. Die Rolle gilt nur für OpenStack; wer in den gemeinsamen Ordner ~/dhbw/project der Workspaces schreiben darf, legen die Verwaltenden in den Workspace-Einstellungen fest.",
         "adminsHintAiaas": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt löschen. Workspaces und LLM-Kontingent nutzen sie mit.",
         "adminsHintBoth": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt löschen. Workspaces und LLM-Kontingent nutzen sie mit, Zugang in OpenStack entsteht dadurch nicht.",
         "nameHintAiaas": "Ein kurzer, wiedererkennbarer Name — so erscheint das Projekt bei Workspaces und LLM."

@@ -9,6 +9,7 @@ import { ProjectCredentials } from '/gpu/credentials.jsx';
 import { ImageFacts } from '/gpu/image-facts.jsx';
 import { ProjectId } from '/gpu/project-id.jsx';
 import { GroupsPanel } from '/gpu/groups.jsx';
+import { StoragePanel } from '/gpu/storage-settings.jsx';
 import { llmEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
@@ -356,6 +357,7 @@ export function WorkspaceSettingsPanel({ draft }) {
                     <Tabs.Tab value="jobs">{t('gpu.projects.sub.jobs')}</Tabs.Tab>
                     <Tabs.Tab value="release">{t('gpu.projects.sub.release')}</Tabs.Tab>
                     <Tabs.Tab value="groups">{t('gpu.projects.sub.groups')}</Tabs.Tab>
+                    <Tabs.Tab value="storage">{t('gpu.projects.sub.storage')}</Tabs.Tab>
                 </Tabs.List>
                 <Tabs.Panel value="environment">
                     <Stack gap="md">
@@ -425,6 +427,9 @@ export function WorkspaceSettingsPanel({ draft }) {
                 </Tabs.Panel>
                 <Tabs.Panel value="groups">
                     <GroupsPanel draft={draft} />
+                </Tabs.Panel>
+                <Tabs.Panel value="storage">
+                    <StoragePanel draft={draft} />
                 </Tabs.Panel>
                 <Tabs.Panel value="release">
                     <ReleaseTimes draft={draft} defaults={catalog.data?.releaseDefaults} />

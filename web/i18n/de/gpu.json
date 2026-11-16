@@ -207,7 +207,8 @@
             "limits": "Grenzen",
             "jobs": "Batch-Jobs",
             "release": "Rückgabezeiten",
-            "groups": "Gruppen"
+            "groups": "Gruppen",
+            "storage": "Speicher"
         },
         "groups": {
             "intro": "Gruppen bekommen einen eigenen Ordner ~/dhbw/groups/<Name> in ihren Workspaces und Jobs. Nur die Mitglieder der Gruppe sehen ihn, dazu die Verwaltenden des Projekts. Den gemeinsamen Ordner des ganzen Projekts gibt es weiter unter ~/dhbw/project.",
@@ -226,7 +227,24 @@
             "count": "Anzahl",
             "distribute": "Gruppen anlegen und Mitglieder verteilen",
             "hint": "Änderungen gelten ab dem nächsten Start eines Workspaces oder Jobs. Die Gruppenordner zählen zum Speicher des Projekts. Beim Verteilen werden einzelne Personen, die noch in keiner Gruppe sind, reihum auf die neuen Gruppen aufgeteilt.",
-            "noStorage": "Gruppen brauchen Workspace-Speicher im Projekt; ohne ihn gibt es keine Ordner."
+            "noStorage": "Gruppen brauchen Workspace-Speicher im Projekt; ohne ihn gibt es keine Ordner.",
+            "storage": "Speichergrenze der Gruppe",
+            "storageNone": "keine",
+            "storageShort": "Grenze"
+        },
+        "storageLimits": {
+            "noStorage": "Das Projekt hat keinen Workspace-Speicher; ohne ihn gibt es keine Grenzen.",
+            "intro": "Das Projekt hat {{gb}} GB Workspace-Speicher für alle Homes und gemeinsamen Ordner zusammen. Grenzen darunter verhindern, dass eine Person oder ein Ordner den Speicher für alle füllt.",
+            "sharedTitle": "Gemeinsamer Ordner ~/dhbw/project",
+            "writeAll": "Alle Mitglieder schreiben",
+            "writeManagers": "Nur Verwaltende schreiben",
+            "writeHint": "Verwaltende schreiben immer. „Nur Verwaltende“ eignet sich, um Material und Datensätze zu verteilen; für Gruppenarbeit gibt es die Gruppenordner.",
+            "sharedGb": "Grenze des gemeinsamen Ordners",
+            "sharedGbHint": "0 = keine eigene Grenze",
+            "homeTitle": "Home je Mitglied",
+            "homeGb": "Grenze je Home",
+            "homeGbHint": "0 = automatisch: das Doppelte des fairen Anteils (Speicher geteilt durch die Zahl der Homes), mindestens 1 GB. Gilt nicht für Verwaltende.",
+            "hint": "Grenzen greifen wenige Minuten nach dem Speichern. Ist eine Grenze erreicht, schlägt nur das Schreiben in diesem Ordner fehl. Grenzen für Gruppen stehen im Reiter Gruppen."
         }
     },
     "storage": {

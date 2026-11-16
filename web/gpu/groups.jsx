@@ -35,7 +35,9 @@ export function GroupsPanel({ draft }) {
                                 <ActionIcon mt={26} variant="subtle" color="red" aria-label={t('gpu.projects.groups.remove')} onClick={() => set(groups.filter((_, j) => j !== i))}><Trash2 size={16} /></ActionIcon>
                             </Tooltip>
                         </Group>
-                        <Group gap="lg" mt="xs">
+                        <Group gap="lg" mt="xs" align="center">
+                            <NumberInput size="xs" w={150} min={0} max={p.storage_gb} suffix=" GB" aria-label={t('gpu.projects.groups.storage')} placeholder={t('gpu.projects.groups.storageNone')}
+                                value={g.storage_gb || ''} onChange={v => setGroup(i, { storage_gb: Math.max(0, Math.min(p.storage_gb, Math.floor(Number(v) || 0))) })} leftSection={<Text size="xs" c="dimmed" pl={4}>{t('gpu.projects.groups.storageShort')}</Text>} leftSectionWidth={70} />
                             <Switch size="xs" label={t('gpu.projects.groups.readOnly')} checked={!!g.read_only} onChange={e => setGroup(i, { read_only: e.currentTarget.checked })} />
                             <Switch size="xs" label={t('gpu.projects.groups.archived')} checked={!!g.archived} onChange={e => setGroup(i, { archived: e.currentTarget.checked })} />
                         </Group>

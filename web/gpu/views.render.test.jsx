@@ -166,6 +166,17 @@ describe('the GPU views render', () => {
         expectNoRenderFailure();
     });
 
+    it('the workspace settings tab lets a manager set the storage limits and who writes the shared folder', async () => {
+        globalThis.__llmIsAdmin = false;
+        globalThis.__gpuApi.listProjects = async () => [{ ...PROJECTS[0], storage_gb: 20, shared_write: 'managers', storage_home_gb: 0, storage_project_gb: 5 }, PROJECTS[1]];
+        renderView(<SettingsTab nodeId="p_ml" />);
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Speicher|Storage)$/ }));
+        expect(screen.getByText(/20 GB/)).toBeTruthy();
+        expect(screen.getByDisplayValue('5 GB')).toBeTruthy();
+        expect(screen.getByRole('radio', { name: /(Nur Verwaltende schreiben|Only managers write)/ }).checked).toBe(true);
+        expectNoRenderFailure();
+    });
+
     it('the workspace settings tab lets a manager choose the release times within the budget', async () => {
         globalThis.__llmIsAdmin = false;
         renderView(<SettingsTab nodeId="p_ml" />);
