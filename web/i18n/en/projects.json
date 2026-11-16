@@ -309,7 +309,7 @@
         "noTokensTitle": "No token quota",
         "noTokens": "Without a token quota there is no access to the chat and the API. The project needs LLM tokens for that (at least 1 M per 30 days).",
         "lowRatesTitle": "Very low per-minute limits",
-        "lowRates": "With {{list}}, requests will likely be rejected: a single chat request often takes several thousand tokens.",
+        "lowRates": "With {{list}}, requests will likely be rejected: a single chat request often takes several thousand tokens, a coding agent's request 20,000 to 60,000. A request larger than the per-minute limit is always rejected, even after waiting.",
         "poolLowRates": "Project “{{name}}”: with {{list}}, requests will likely be rejected. Higher limits are requested by changing the project.",
         "tpm": "{{n}} tokens per minute (useful from {{min}})",
         "rpm": "{{n}} requests per minute (useful from {{min}})",

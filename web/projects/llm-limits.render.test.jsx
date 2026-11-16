@@ -55,6 +55,8 @@ describe('llmLimitIssues', () => {
         expect(llmLimitIssues({ 'llm-mtokens': -1, 'llm-rpm': -1, 'llm-tpm': 0 }, LLM)).toEqual({ noTokens: false, lowRpm: null, lowTpm: null });
         expect(llmLimitIssues({ 'llm-mtokens': 10, 'llm-rpm': 30, 'llm-tpm': 100000 }, LLM)).toEqual({ noTokens: false, lowRpm: null, lowTpm: null });
         expect(llmLimitIssues({ 'llm-mtokens': 1, 'llm-rpm': MIN_USABLE_RPM, 'llm-tpm': MIN_USABLE_TPM }, LLM)).toEqual({ noTokens: false, lowRpm: null, lowTpm: null });
+        // 20 000 tokens per minute is less than a single coding agent request, which LiteLLM then always rejects.
+        expect(llmLimitIssues({ 'llm-mtokens': 10, 'llm-rpm': 100, 'llm-tpm': 20000 }, LLM)).toEqual({ noTokens: false, lowRpm: null, lowTpm: 20000 });
     });
 
     it('is null for a catalogue without LLM resources', () => {

@@ -309,7 +309,7 @@
         "noTokensTitle": "Kein Token-Kontingent",
         "noTokens": "Ohne Token-Kontingent ist kein Zugang zu Chat und API möglich. Dafür braucht das Projekt LLM-Tokens (mindestens 1 M pro 30 Tage).",
         "lowRatesTitle": "Grenzen pro Minute sehr niedrig",
-        "lowRates": "Mit {{list}} werden Anfragen voraussichtlich abgelehnt: Schon eine einzelne Chat-Anfrage braucht oft mehrere tausend Tokens.",
+        "lowRates": "Mit {{list}} werden Anfragen voraussichtlich abgelehnt: Schon eine einzelne Chat-Anfrage braucht oft mehrere tausend Tokens, eine Anfrage eines Coding-Agenten 20.000 bis 60.000. Eine Anfrage, die größer ist als die Grenze pro Minute, wird immer abgelehnt, auch nach Warten.",
         "poolLowRates": "Projekt „{{name}}“: Mit {{list}} werden Anfragen voraussichtlich abgelehnt. Höhere Grenzen sind über eine Änderung des Projekts zu beantragen.",
         "tpm": "{{n}} Tokens pro Minute (sinnvoll ab {{min}})",
         "rpm": "{{n}} Anfragen pro Minute (sinnvoll ab {{min}})",

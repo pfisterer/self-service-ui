@@ -5,8 +5,8 @@ export const LLM_TOKENS = 'llm-mtokens';
 export const LLM_RPM = 'llm-rpm';
 export const LLM_TPM = 'llm-tpm';
 
-// Below these a rate limit is set but hardly usable: a single chat request with its history and answer already takes a few thousand tokens, and a coding tool sends several requests per action. A budget may still set less on purpose (a test, a deliberate throttle), so the UI only warns and never blocks.
-export const MIN_USABLE_TPM = 10_000;
+// Below these a rate limit is set but hardly usable: a single chat request with its history and answer already takes a few thousand tokens, a coding agent sends 20 000 to 60 000 tokens per request (system prompt, tool definitions, history), and LiteLLM rejects a request larger than the per-minute token limit outright, however long the client waits. A coding tool also sends several requests per action. A budget may still set less on purpose (a test, a deliberate throttle), so the UI only warns and never blocks.
+export const MIN_USABLE_TPM = 50_000;
 export const MIN_USABLE_RPM = 5;
 
 // What a project to try things out with sensibly gets: 10 M tokens per 30 days, 30 requests and 100 000 tokens per minute. Shown as a recommendation in the request form, not applied.
