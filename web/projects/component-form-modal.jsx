@@ -1,6 +1,7 @@
-import { Badge, Button, Group, Modal, Stack, Tabs, Text } from '@mantine/core';
+import { Badge, Box, Button, Group, Modal, NavLink, Select, Stack, Tabs, Text, Tooltip } from '@mantine/core';
+import { useElementSize, useMediaQuery } from '@mantine/hooks';
 import { useTranslation } from 'react-i18next';
-import { BarChart3, CheckCheck, Gauge, History, Info, KeyRound, Settings2, Tags, Users } from 'lucide-react';
+import { BarChart3, CheckCheck, Gauge, HardDrive, History, Hourglass, Info, KeyRound, Layers, ListChecks, Settings2, SlidersHorizontal, Tags, Timer, Users, UsersRound, Zap } from 'lucide-react';
 import { COLOR } from './util-project.jsx';
 
 // The shell every create/change dialog in this section shares: a modal holding a
@@ -48,6 +49,13 @@ const TAB_ICONS = {
     'auto-approve': CheckCheck,
     usage: BarChart3,
     history: History,
+    // The workspace settings of a project, one entry each in FormSections.
+    'workspaces-environment': Layers,
+    'workspaces-groups': UsersRound,
+    'workspaces-storage': HardDrive,
+    'workspaces-limits': SlidersHorizontal,
+    'workspaces-jobs': ListChecks,
+    'workspaces-release': Timer,
 };
 
 function tabIcon(value) {
@@ -75,6 +83,95 @@ export function FormTabs({ value, onChange, tabs }) {
     );
 }
 
+// SECTION_MARKS are the marks a group of FormSections may carry next to its heading: how a change of its entries takes effect.
+const SECTION_MARKS = {
+    approval: { Icon: Hourglass, color: 'var(--mantine-color-orange-7)', text: 'formSections.markApproval' },
+    instant: { Icon: Zap, color: 'var(--mantine-color-green-7)', text: 'formSections.markInstant' },
+};
+
+// SectionMark is a group's mark, its meaning on hover.
+function SectionMark({ mark }) {
+    const { t } = useTranslation();
+    const m = SECTION_MARKS[mark];
+    if (!m) return null;
+    return (
+        <Tooltip label={t(m.text)} withArrow multiline maw={260}>
+            <Box component="span" aria-label={t(m.text)} style={{ display: 'inline-flex', color: m.color, cursor: 'help' }}>
+                <m.Icon size={12} />
+            </Box>
+        </Tooltip>
+    );
+}
+
+// NAV_WIDTH is the width of FormSections' navigation, wide enough for "Rückgabezeiten" with its icon and marks.
+const NAV_WIDTH = '13.5rem';
+
+/**
+ * FormSections is FormTabs for a dialog with more parts than a tab strip holds: a navigation on the left with the entries in groups, the active entry's content on the right, and an optional header above both. Below sm the navigation is a select above the content.
+ *
+ * groups: [{ key, label, mark?: 'approval'|'instant', items: [{ value, label, hasError?, changed?, content }] }]; a group without items is left out.
+ *
+ * Every content stays mounted, only hidden, as with tabs: the form's fields and the queries in them do not start over when an entry is left. The entries are tabs to assistive technology (role="tab"), named by their label.
+ */
+export function FormSections({ value, onChange, header = null, groups }) {
+    const { t } = useTranslation();
+    const narrow = useMediaQuery('(max-width: 48em)');
+    const { ref: headerRef, height: headerHeight } = useElementSize();
+    const shown = (groups || []).filter(g => g.items?.length > 0);
+    const items = shown.flatMap(g => g.items);
+    // The navigation and the header stay in view under the dialog's title while the content scrolls.
+    // The header's own height is measured without its padding and line (about 2 × 10 px + 1 px), plus a gap.
+    const navTop = HEADER_HEIGHT + (header ? headerHeight + 33 : 0);
+    return (
+        <div>
+            {header && <div style={STICKY_HEADER}><div ref={headerRef}>{header}</div></div>}
+            {narrow && (
+                <Select mb="md" allowDeselect={false} aria-label={t('formSections.navigation')} value={value} onChange={v => v && onChange(v)}
+                    data={shown.map(g => ({ group: g.label, items: g.items.map(i => ({ value: i.value, label: i.hasError ? `${i.label} (!)` : i.label })) }))} />
+            )}
+            <div style={{ display: 'flex', gap: 'var(--mantine-spacing-lg)', alignItems: 'flex-start' }}>
+                {!narrow && (
+                    <nav role="tablist" aria-orientation="vertical" aria-label={t('formSections.navigation')}
+                        style={{ width: NAV_WIDTH, flexShrink: 0, position: 'sticky', top: navTop, zIndex: 1 }}>
+                        <Stack gap="sm">
+                            {shown.map(g => (
+                                <div key={g.key}>
+                                    <Group gap={6} wrap="nowrap" px="xs" mb={4}>
+                                        <Text size="xs" c="dimmed" fw={700} tt="uppercase" style={{ letterSpacing: '0.04em' }}>{g.label}</Text>
+                                        <SectionMark mark={g.mark} />
+                                    </Group>
+                                    {g.items.map(i => (
+                                        <NavLink key={i.value} component="button" type="button" role="tab" aria-selected={i.value === value}
+                                            active={i.value === value} onClick={() => onChange(i.value)} leftSection={tabIcon(i.value)} fw={500}
+                                            style={{ borderRadius: 'var(--mantine-radius-sm)' }}
+                                            label={<TabLabel label={i.label} hasError={!!i.hasError} />}
+                                            rightSection={i.changed ? <ChangedDot /> : null} />
+                                    ))}
+                                </div>
+                            ))}
+                        </Stack>
+                    </nav>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    {items.map(i => (
+                        <div key={i.value} role="tabpanel" style={i.value === value ? undefined : { display: 'none' }}>{i.content}</div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ChangedDot marks an entry of FormSections whose fields were changed and not yet saved.
+function ChangedDot() {
+    const { t } = useTranslation();
+    return (
+        <Tooltip label={t('formSections.changed')} withArrow>
+            <Box aria-hidden w={8} h={8} style={{ borderRadius: '50%', background: 'var(--mantine-color-blue-6)' }} />
+        </Tooltip>
+    );
+}
+
 // The dialog header (Mantine keeps it at the top) is one line high when its
 // title does not wrap — DIALOG_STYLES sees to that — and the tab strip stays
 // right below it.
@@ -86,6 +183,14 @@ const STICKY_TABS = {
     background: 'var(--mantine-color-body)',
     margin: '0 calc(-1 * var(--mb-padding, var(--mantine-spacing-md)))',
     paddingInline: 'var(--mb-padding, var(--mantine-spacing-md))',
+};
+
+// STICKY_HEADER is FormSections' header, kept under the dialog's title like the tab strip, with a line below it.
+const STICKY_HEADER = {
+    ...STICKY_TABS,
+    paddingBlock: 'var(--mantine-spacing-xs)',
+    marginBottom: 'var(--mantine-spacing-md)',
+    borderBottom: '1px solid var(--mantine-color-default-border)',
 };
 
 // DIALOG_SIZE is the width of the tabbed project and budget dialogs: wide enough for a quota grid, a member row with its role picker and the Lab/KI workspace settings side by side, capped by the viewport on small screens.

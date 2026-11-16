@@ -21,7 +21,7 @@ export const SHOTS = [
         act: async (page) => {
             await page.locator('.mantine-Card-root, .mantine-Paper-root').filter({ hasText: 'ML-Grundlagen WI24' }).getByRole('button', { name: 'Bearbeiten' }).click();
             await page.locator('.mantine-Modal-content').waitFor();
-            await page.getByRole('tab', { name: 'Workspace-Einstellungen' }).click();
+            await page.getByRole('tab', { name: 'Umgebung', exact: true }).click();
         },
     },
     // batch-jobs: the list and a new job.

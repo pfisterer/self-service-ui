@@ -7,9 +7,9 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { formatError } from '/helper/api-error.js';
 import { isEmail, useForm } from '@mantine/form';
-import { formatTerm, NodeChangesDiff, TerminationDatePicker, TokenBadgeList } from './component-common.jsx';
+import { formatTerm, NodeChangesDiff, NodeStatusBadge, TerminationDatePicker, TokenBadgeList } from './component-common.jsx';
 import { formatDate } from '../format-date.js';
-import { DIALOG_SIZE, FormModal, FormTabs, tabHasError as tabFlag, tabWithError } from './component-form-modal.jsx';
+import { DIALOG_SIZE, FormModal, FormSections, tabHasError as tabFlag, tabWithError } from './component-form-modal.jsx';
 import { QuotaInputs, validateQuota, withUnsetAsZero } from './component-quota-inputs.jsx';
 import { MemberRoleEditor, TokenListEditor } from './component-token-list-editor.jsx';
 import { BudgetSelect } from './component-budget-select.jsx';
@@ -17,9 +17,10 @@ import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
 import { PersonInput, personEmail } from './principal-search.jsx';
 import { AllocationSection, useAllocationDraft } from './component-allocation-section.jsx';
-import { WorkspaceSettingsPanel, useWorkspaceSettings } from '/gpu/workspace-settings.jsx';
+import { useWorkspaceSettings, workspaceSettingsItems } from '/gpu/workspace-settings.jsx';
+import { ProjectId } from '/gpu/project-id.jsx';
 import { withCurrentParent } from './component-budget-select.jsx';
-import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds, PROJECT_KINDS, kindOfResource, isLab, endDate, endDay } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds, PROJECT_KINDS, kindOfResource, isLab, endDate, endDay, expiryTone, expiryValue } from './util-project.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
@@ -32,10 +33,28 @@ const TAB_RESOURCES = 'resources';
 const TAB_MEMBERS = 'members';
 const TAB_ATTRIBUTES = 'attributes';
 const TAB_WORKSPACES = 'workspaces';
+// The first of the workspace settings' entries, where a dialog opened on "workspaces" lands.
+const TAB_WORKSPACES_FIRST = `${TAB_WORKSPACES}-environment`;
 
 // OutcomeNote says, while the form is being filled in, what pressing the button
 // will do — the one thing a requester cannot otherwise tell before it happened.
-function OutcomeNote({ outcome, isChange, budget, hasPolicy, over = [] }) {
+// workspacesChanged: the workspace settings were changed too; they apply at once, which the note adds where it does not say so for everything already (an approval, an amended request).
+function OutcomeNote({ outcome, workspacesChanged = false, ...props }) {
+    const { t } = useTranslation();
+    const note = <OutcomeSentence outcome={outcome} {...props} />;
+    if (!workspacesChanged || !(outcome === null || outcome === 'approval')) return note;
+    return (
+        <Stack gap={4}>
+            {note}
+            <Group gap={6} wrap="nowrap">
+                <Zap size="14" color="var(--mantine-color-green-7)" style={{ flexShrink: 0 }} />
+                <Text size="sm" c="green.8">{t('gpu.projects.settingsInstant')}</Text>
+            </Group>
+        </Stack>
+    );
+}
+
+function OutcomeSentence({ outcome, isChange, budget, hasPolicy, over = [] }) {
     const { t } = useTranslation();
     if (!outcome) return null;
     // One whole sentence per outcome — the budget is named by the picker above,
@@ -152,7 +171,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
     const workspaces = useWorkspaceSettings(isChange && opened ? node?.id : null, isChange && opened);
     const attrs = useAttributesTab(node);
 
-    const [activeTab, setActiveTab] = useState(initialTab ?? TAB_DETAILS);
+    // "workspaces" was the tab of all workspace settings; they are entries of their own now.
+    const [activeTab, setActiveTab] = useState(initialTab === TAB_WORKSPACES ? TAB_WORKSPACES_FIRST : (initialTab ?? TAB_DETAILS));
 
 
     // Auto-approve only ever applies to budgets you REQUEST under. On a budget
@@ -640,8 +660,8 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
                     </Stack>
                 </Alert>
             )}
-            {/* What the project gets from its budget, and what a change of it needs. How a Lab/KI project uses that inside is a tab of its own (TAB_WORKSPACES), applied at once. */}
-            <ResourceSection title={t('projects.resourceSections.quota')} hint={t(isChange ? 'projects.resourceSections.quotaHintChange' : 'projects.resourceSections.quotaHintNew')}>
+            {/* What the project gets from its budget, and what a change of it needs; the group "Quotas" names it already, so only the hint. How a Lab/KI project uses that inside is a group of entries of its own (workspaceSettingsItems), applied at once. */}
+            <ResourceSection hint={t(isChange ? 'projects.resourceSections.quotaHintChange' : 'projects.resourceSections.quotaHintNew')}>
                 <QuotaInputs
                     providerDefaults
                     resources={kind ? offered.filter(r => kindOfResource(r) === kind) : offered}
@@ -698,6 +718,31 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
         </Stack>
     );
 
+    // Which entries hold a change not saved yet: against what the form opened with (a pending request's figures for a pending project).
+    const quotaChanged = (kind) => offered.some(r => (!kind || kindOfResource(r) === kind) && form.isDirty(`quota.${r.id}`));
+    const detailsChanged = isChange && (['name', 'reason', 'terminationDate'].some(k => form.isDirty(k)) || ownerChanged || !!parentChanged);
+
+    // Above the sections of an existing project: its state, its end, its budget and, for one the AI service knows, its id there (what the dhbw-cloud CLI takes as --project). A new one has its kind in the dialog's title and nothing else to show yet.
+    const header = isChange ? (
+        <Group gap="lg" rowGap={4} wrap="wrap" align="center">
+            <NodeStatusBadge status={node.status} />
+            {node.termination_date && (
+                <Text size="xs" c="dimmed">
+                    {t('projects.fact.validUntil')}:{' '}
+                    <Text span inherit fw={500} c={expiryTone(node.termination_date) === 'gray' ? 'var(--mantine-color-text)' : `${expiryTone(node.termination_date)}.7`}>
+                        {expiryValue(t, node.termination_date)}
+                    </Text>
+                </Text>
+            )}
+            {node.parent_name && (
+                <Text size="xs" c="dimmed">
+                    {t('projects.projectForm.budget')}: <Text span inherit fw={500} c="var(--mantine-color-text)">{node.parent_name}</Text>
+                </Text>
+            )}
+            <ProjectId slug={workspaces.project?.slug} />
+        </Group>
+    ) : null;
+
     return (
         <FormModal
             opened={opened}
@@ -730,6 +775,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
             note={<OutcomeNote
                 over={over}
                 outcome={outcome}
+                workspacesChanged={workspaces.changed}
                 isChange={isChange}
                 budget={outcomeBudget}
                 hasPolicy={!!outcomeBudget?.auto_approve && !managedIds.has(outcomeBudget?.id)}
@@ -739,33 +785,40 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
                     : outcome === 'instant' ? t('projects.forms.saveChanges') : t('projects.projectForm.submitChangeRequest'))
                 : (outcome === 'approval' ? t('projects.forms.submitRequest') : t('projects.projectForm.submitNew'))}
         >
-            <FormTabs
+            <FormSections
                 value={activeTab}
                 onChange={setActiveTab}
-                tabs={[
-                    { value: TAB_DETAILS, label: t('projects.actions.details'), hasError: tabHasError(TAB_DETAILS) || !!newOwnerError, content: detailsTab },
-                    ...resourceTabKinds.map((kind, i) => ({
-                        value: resourceTabValue(kind),
-                        label: resourceTabKinds.length > 1 ? t(`projects.kind.${kind}`) : t('projects.fact.resources'),
-                        hasError: tabHasError(resourceTabValue(kind)) || (i === 0 && !!alloc.error),
-                        content: resourcesTab(kind, i === 0),
-                    })),
+                header={header}
+                groups={[
+                    {
+                        key: 'project', label: t('formSections.groupProject'),
+                        items: [
+                            { value: TAB_DETAILS, label: t('projects.actions.details'), hasError: tabHasError(TAB_DETAILS) || !!newOwnerError || !!ownerError, changed: detailsChanged, content: detailsTab },
+                            { value: TAB_MEMBERS, label: t('projects.fact.members'), changed: isChange && (form.isDirty('authorizedUsers') || form.isDirty('adminScope')), content: membersTab },
+                            // Set by the budget's managers; its owner and admins see them.
+                            ...(withAttributes ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'), hasError: !!attrs.error,
+                                content: <AttributesEditor node={node} groups={attrs.groups} onChange={attrs.onChange} /> }]
+                                : isChange && hasAttributes(node) ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'),
+                                    content: <AttributesView node={node} /> }] : []),
+                            ...(isChange ? nodeExtraTabs(t, node, resources, activeTab) : []),
+                        ],
+                    },
+                    {
+                        // What the project gets from its budget: a change is granted at once or requested, depending on the budget.
+                        key: 'quotas', label: t('projects.resourceSections.quota'), mark: 'approval',
+                        items: resourceTabKinds.map((kind, i) => ({
+                            value: resourceTabValue(kind),
+                            label: resourceTabKinds.length > 1 ? t(`projects.kind.${kind}`) : t('projects.fact.resources'),
+                            hasError: tabHasError(resourceTabValue(kind)) || (i === 0 && !!alloc.error),
+                            changed: isChange && (quotaChanged(kind) || (i === 0 && alloc.changed)),
+                            content: resourcesTab(kind, i === 0),
+                        })),
+                    },
                     // Lab/KI: how the quotas are used inside the project — the AI service's part, saved with the rest but at once.
                     ...(workspaces.available ? [{
-                        value: TAB_WORKSPACES, label: t('projects.resourceSections.workspaces'),
-                        content: (
-                            <ResourceSection hint={t('projects.resourceSections.workspacesHint')}>
-                                <WorkspaceSettingsPanel draft={workspaces} />
-                            </ResourceSection>
-                        ),
+                        key: 'workspaces', label: t('projects.kind.workspaces'), mark: 'instant',
+                        items: workspaceSettingsItems(t, workspaces),
                     }] : []),
-                    { value: TAB_MEMBERS, label: t('projects.fact.members'), content: membersTab },
-                    // Set by the budget's managers; its owner and admins see them.
-                    ...(withAttributes ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'), hasError: !!attrs.error,
-                        content: <AttributesEditor node={node} groups={attrs.groups} onChange={attrs.onChange} /> }]
-                        : isChange && hasAttributes(node) ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'),
-                            content: <AttributesView node={node} /> }] : []),
-                    ...(isChange ? nodeExtraTabs(t, node, resources, activeTab) : []),
                 ]}
             />
 

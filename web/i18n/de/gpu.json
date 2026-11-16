@@ -182,7 +182,6 @@
             "fromTree": "aus dem Projekt"
         },
         "profilesHint": "Was Mitglieder beim Start eines Workspaces in JupyterHub wählen können. Die Liste gibt die Plattform vor; GPU-Arten zählen gegen die GPU-Kontingente des Projekts.",
-        "adminOnlyHint": "Workspace-Arten, Grenzen und Verbrauchsgrenzen legen Admins fest. Die Umgebung (Basis, Projekt-Image, Git), das Material, die Rückgabezeiten (innerhalb der Höchstwerte des Budgets) und die Gruppen lassen sich hier ändern.",
         "jobs": {
             "title": "Batch-Jobs",
             "allow": "Batch-Jobs erlauben",
@@ -245,7 +244,12 @@
             "homeGb": "Grenze je Home",
             "homeGbHint": "0 = automatisch: das Doppelte des fairen Anteils (Speicher geteilt durch die Zahl der Homes), mindestens 1 GB. Gilt nicht für Verwaltende.",
             "hint": "Grenzen greifen wenige Minuten nach dem Speichern. Ist eine Grenze erreicht, schlägt nur das Schreiben in diesem Ordner fehl. Grenzen für Gruppen stehen im Reiter Gruppen."
-        }
+        },
+        "adminOnly": {
+            "environment": "Die Workspace-Arten legen Admins fest.",
+            "limits": "Grenzen und Verbrauchsgrenzen legen Admins fest."
+        },
+        "settingsInstant": "Workspace-Einstellungen: gilt sofort."
     },
     "storage": {
         "title": "Speicher (Admins)",

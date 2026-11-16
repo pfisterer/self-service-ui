@@ -182,7 +182,6 @@
             "fromTree": "from the project"
         },
         "profilesHint": "What members can choose when starting a workspace in JupyterHub. The platform sets the list; GPU types count against the project's GPU quotas.",
-        "adminOnlyHint": "Workspace types, limits and usage limits are set by admins. The environment (base, project image, Git), the material, the release times (within the budget's maximums) and the groups can be changed here.",
         "jobs": {
             "title": "Batch jobs",
             "allow": "Allow batch jobs",
@@ -245,7 +244,12 @@
             "homeGb": "Limit per home",
             "homeGbHint": "0 = automatic: twice the fair share (storage divided by the number of homes), at least 1 GB. Does not apply to managers.",
             "hint": "Limits apply a few minutes after saving. When one is reached, only writing into that folder fails. Limits for groups are in the Groups tab."
-        }
+        },
+        "adminOnly": {
+            "environment": "Workspace types are set by admins.",
+            "limits": "Limits and usage limits are set by admins."
+        },
+        "settingsInstant": "Workspace settings: apply at once."
     },
     "storage": {
         "title": "Storage (admins)",

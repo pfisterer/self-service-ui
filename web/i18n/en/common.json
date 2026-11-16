@@ -166,5 +166,12 @@
             "title": "LLM and workspaces",
             "text": "Management of workspaces, GPU servers and models. The API tokens only work for this management API; the keys for the language models are under LLM → API Keys."
         }
+    },
+    "formSections": {
+        "navigation": "Sections",
+        "changed": "Changed, not saved yet",
+        "markApproval": "Depending on the budget, changes are granted at once or requested and approved.",
+        "markInstant": "Applies at once, without approval.",
+        "groupProject": "Project"
     }
 }

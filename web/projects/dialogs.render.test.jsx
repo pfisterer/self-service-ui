@@ -127,6 +127,21 @@ describe('node dialogs', () => {
         expect(fatal()).toEqual([]);
     });
 
+    it('the project dialog groups its entries and jumps to the one with a failed field', async () => {
+        const tree = fixtureTree();
+        renderView(<ProjectFormModal opened onClose={() => {}} resources={RESOURCES} roles={['member', 'reader']} myBudgets={[tree.roots[0]]} />);
+        expect(await screen.findByText(i18n.t('formSections.groupProject'))).toBeTruthy();
+        expect(screen.getByText(i18n.t('projects.resourceSections.quota'))).toBeTruthy();
+        fireEvent.click(screen.getByRole('tab', { name: /Members|Mitglieder/ }));
+        expect(screen.getByRole('tab', { name: /Members|Mitglieder/ }).getAttribute('aria-selected')).toBe('true');
+        // The name is missing: the submit marks Details and goes there.
+        fireEvent.click(screen.getAllByRole('button').find(b => b.type === 'submit'));
+        const details = await screen.findByRole('tab', { name: /Details/ });
+        await waitFor(() => expect(details.getAttribute('aria-selected')).toBe('true'));
+        expect(details.textContent).toContain('!');
+        expect(fatal()).toEqual([]);
+    });
+
     it('new project: one button per kind, a kind without a budget disabled', async () => {
         const picked = [];
         renderView(<NewProjectButton kinds={['cloud', 'llm']} available={['llm']} onPick={k => picked.push(k)} />);

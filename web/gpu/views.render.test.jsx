@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { renderView } from '/test/render-harness.jsx';
 
 // Does each GPU view render at all, with data in it? Same question as llm/views.render.test.jsx.
@@ -66,11 +68,18 @@ const { GpuServers } = await import('/gpu/servers.jsx');
 const { GpuJobs, GpuJobDetail } = await import('/gpu/jobs.jsx');
 const { GpuJobSubmit } = await import('/gpu/job-submit.jsx');
 const { GpuUsage, groupUsage } = await import('/gpu/usage.jsx');
-const { WorkspaceSettingsPanel, useWorkspaceSettings } = await import('/gpu/workspace-settings.jsx');
+const { useWorkspaceSettings, workspaceSettingsItems } = await import('/gpu/workspace-settings.jsx');
+const { FormSections } = await import('/projects/component-form-modal.jsx');
+const { ProjectId } = await import('/gpu/project-id.jsx');
 
+// SettingsTab is the workspace settings as the project dialog shows them: the project id in the header, one entry per section.
 function SettingsTab({ nodeId }) {
+    const { t } = useTranslation();
     const draft = useWorkspaceSettings(nodeId, true);
-    return draft.available ? <WorkspaceSettingsPanel draft={draft} /> : <span>none</span>;
+    const [active, setActive] = useState('workspaces-environment');
+    return draft.available
+        ? <FormSections value={active} onChange={setActive} header={<ProjectId slug={draft.project?.slug} />} groups={[{ key: 'workspaces', label: 'Workspaces', mark: 'instant', items: workspaceSettingsItems(t, draft) }]} />
+        : <span>none</span>;
 }
 
 let consoleErrors = [];
@@ -139,7 +148,7 @@ describe('the GPU views render', () => {
     it('the workspace settings tab shows a manager the settings of the admins without offering to change them', async () => {
         globalThis.__llmIsAdmin = false;
         renderView(<SettingsTab nodeId="p_ml" />);
-        expect(await screen.findByText(/legen Admins fest|set by admins/)).toBeTruthy();
+        expect((await screen.findAllByText(/legen Admins fest|set by admins/)).length).toBe(2);
         expect(screen.queryByText(/Grenze hinzufügen|Add a limit/)).toBeNull();
         // The environment stays editable.
         expect(screen.getByText('89abcdef0123 (main)')).toBeTruthy();
