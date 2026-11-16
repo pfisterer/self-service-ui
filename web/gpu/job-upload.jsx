@@ -10,7 +10,7 @@ import { UploadProgress, useUpload } from '/helper/upload-progress.jsx';
 import { isAbort } from '/helper/upload.js';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
-import { canWriteShared, SHARED_DIR, uploadErrors, uploadPath } from '/gpu/jobs.js';
+import { SHARED_DIR, uploadErrors, uploadPath, uploadTargets } from '/gpu/jobs.js';
 
 // JobUploadModal puts a file into the person's home in a project or into its shared folder, for batch jobs without a workspace (todo job_files; the CLI's dhbw-cloud job upload). One file at a time; the service writes it through a short-lived pod, so the first upload takes a few seconds. The upload goes through helper/upload.js, so the dialog shows its progress (percent, speed, time left) and can cancel it; a failure is shown in the dialog, a 409 in the shared dialog as everywhere (useApiMutation), a cancel only as a note. projects are the person's projects that allow jobs, project the one to start with.
 export function JobUploadModal({ projects, project, opened, onClose }) {
@@ -22,9 +22,11 @@ export function JobUploadModal({ projects, project, opened, onClose }) {
     const [file, setFile] = useState(null);
     const [done, setDone] = useState(null);
     const chosen = projects.find(p => p.slug === slug);
-    // A reader only reads the shared folder: the choice is not offered.
-    const shared = canWriteShared(chosen);
-    const where = shared ? target : 'home';
+    // Where the person may write: the home and their writable areas (a reader only reads the shared folder, a read-only group only reads its own); with nothing but the home the choice is not offered.
+    const targets = uploadTargets(chosen);
+    const shared = targets.length > 1;
+    const where = targets.includes(target) ? target : 'home';
+    const targetChoices = targets.map(v => ({ value: v, label: v === 'home' ? t('gpu.jobs.upload.home') : v === SHARED_DIR ? t('gpu.jobs.upload.shared', { dir: SHARED_DIR }) : t('gpu.jobs.upload.group', { dir: v }) }));
     const errors = uploadErrors(t, { file, folder });
     const path = uploadPath(where, folder, file?.name);
     const transfer = useUpload();
@@ -50,8 +52,12 @@ export function JobUploadModal({ projects, project, opened, onClose }) {
                 {shared ? (
                     <div>
                         <Text size="sm" fw={500} mb={4}>{t('gpu.jobs.upload.target')}</Text>
-                        <SegmentedControl size="xs" value={target} onChange={setTarget} disabled={running}
-                            data={[{ value: 'home', label: t('gpu.jobs.upload.home') }, { value: 'shared', label: t('gpu.jobs.upload.shared', { dir: SHARED_DIR }) }]} />
+                        {/* Up to three places side by side, more (several groups) in a list. */}
+                        {targets.length <= 3 ? (
+                            <SegmentedControl size="xs" value={where} onChange={setTarget} disabled={running} data={targetChoices} />
+                        ) : (
+                            <Select size="xs" maw={360} value={where} onChange={(v) => setTarget(v || 'home')} allowDeselect={false} disabled={running} data={targetChoices} />
+                        )}
                     </div>
                 ) : (
                     <Text size="xs" c="dimmed">{t('gpu.jobs.upload.readerHomeOnly', { dir: SHARED_DIR })}</Text>

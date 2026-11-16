@@ -87,11 +87,11 @@ describe('uploading files for jobs', () => {
         for (const bad of ['..', '../x', 'a/../b', 'a/./b', 'a//b', 'a\nb']) expect(uploadFolder(bad), bad).toBeNull();
     });
 
-    it('puts the file into the home or under project-shared/', () => {
+    it('puts the file into the home or under dhbw/project/', () => {
         expect(uploadPath('home', '', 'train.py')).toBe('train.py');
         expect(uploadPath('home', 'jobs/t1', 'train.py')).toBe('jobs/t1/train.py');
-        expect(uploadPath('shared', '', 'data.csv')).toBe('project-shared/data.csv');
-        expect(uploadPath('shared', '/daten/', 'data.csv')).toBe('project-shared/daten/data.csv');
+        expect(uploadPath('shared', '', 'data.csv')).toBe('dhbw/project/data.csv');
+        expect(uploadPath('shared', '/daten/', 'data.csv')).toBe('dhbw/project/daten/data.csv');
         expect(uploadPath('home', '..', 'x')).toBeNull();
         expect(uploadPath('home', 'a', '')).toBeNull();
     });

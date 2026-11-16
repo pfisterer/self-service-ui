@@ -1,6 +1,6 @@
 import { formatBytes } from '/helper/bytes.js';
 
-// Batch jobs (docs/architektur.md "Batch-Jobs" in aiaas-deployment): GPU jobs without a workspace, in the project's environment with the person's home and ~/project-shared. The bounds below are the AI service's (workspace/jobs.go).
+// Batch jobs (docs/architektur.md "Batch-Jobs" in aiaas-deployment): GPU jobs without a workspace, in the project's environment with the person's home and the folders below ~/dhbw (the project's, the person's groups). The bounds below are the AI service's (workspace/jobs.go).
 
 // The run time of a job when the project sets none (job_max_hours 0), and the most a project may allow.
 export const DEFAULT_JOB_MAX_HOURS = 4;
@@ -83,13 +83,21 @@ export function parentPath(path, root) {
     return root && !(up === root || up.startsWith(root + '/')) ? null : up;
 }
 
-// Uploading files for jobs (todo job_files): PUT /v1/gpu/files writes one file into the person's home in the project or, under project-shared/, into the project's shared folder (not for the role reader). The bounds are the AI service's (gpu/jobfiles.go).
+// Uploading files for jobs (todo job_files): PUT /v1/gpu/files writes one file into the person's home in the project or into one of their areas below ~/dhbw they may write (areas_groups: the project's shared folder dhbw/project, not for the role reader; their groups dhbw/groups/<name>). The bounds are the AI service's (gpu/jobfiles.go).
 export const JOB_FILE_MAX_BYTES = 5 * 1024 ** 3;
-export const SHARED_DIR = 'project-shared';
+export const SHARED_DIR = 'dhbw/project';
+
+// uploadTargets are the folders a person may upload into in the project: their home, then the writable areas the service lists (areas); without that list (an older service) the shared folder unless they are a reader.
 
 // canWriteShared: the role reader only reads the project's shared folder, as in a workspace.
 export function canWriteShared(project) {
     return project?.role !== 'reader';
+}
+
+export function uploadTargets(project) {
+    if (!project) return ['home'];
+    if (Array.isArray(project.areas)) return ['home', ...project.areas.filter(a => !a.read_only).map(a => a.mount)];
+    return canWriteShared(project) ? ['home', SHARED_DIR] : ['home'];
 }
 
 // uploadFolder is the folder a file goes into, relative to the home or the shared folder: trimmed, without a leading ~/ or / and trailing slashes, empty for the top. null where it is no plain folder ('.' or '..' segments, empty segments, control characters): the service would refuse a path leaving the home, and a path it cleans up is a guess.
@@ -101,11 +109,12 @@ export function uploadFolder(folder) {
     return f.split('/').every(s => s !== '' && s !== '.' && s !== '..') ? f : null;
 }
 
-// uploadPath is the path the service is asked to write: relative to the home, under project-shared/ for the shared folder. null without a file name or with a folder uploadFolder refuses.
+// uploadPath is the path the service is asked to write: relative to the home ('home'), or below an area (its mount, e.g. dhbw/groups/gruppe-1; 'shared' is the project's shared folder). null without a file name or with a folder uploadFolder refuses.
 export function uploadPath(target, folder, fileName) {
     const f = uploadFolder(folder);
     if (f === null || !fileName) return null;
-    return [target === 'shared' ? SHARED_DIR : '', f, fileName].filter(Boolean).join('/');
+    const base = target === 'shared' ? SHARED_DIR : (target && target !== 'home' ? target : '');
+    return [base, f, fileName].filter(Boolean).join('/');
 }
 
 // uploadErrors checks the upload form like the service does, keyed by field: a file of at most 5 GB, a plain folder.

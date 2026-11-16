@@ -72,7 +72,7 @@ export function useGpuApi() {
             // A job's files (todo job_files): a folder of the home it ran in ({ path, files, truncated }; without path the job's folder), and one file as a Blob. The service reads them through a short-lived pod, so the first request takes a few seconds.
             jobFiles: (id, path) => call(listGpuJobFiles, { path: { id }, query: path ? { path } : undefined }),
             jobFile: (id, path) => call(downloadGpuJobFile, { path: { id }, query: { path }, parseAs: 'blob' }),
-            // Uploads a File (a Blob) as path relative to the person's home in the project (under project-shared/ into the shared folder); answers the written file { name, path, size, modified }. The body goes as it is (application/octet-stream), so the browser streams it with its Content-Length. PUT /v1/gpu/files as the client's uploadGpuFile, but through helper/upload.js (XMLHttpRequest), which reports progress and can be cancelled: opts = { onProgress, signal } (useUpload's run passes both).
+            // Uploads a File (a Blob) as path relative to the person's home in the project (below dhbw/ into one of the person's writable folders: dhbw/project, dhbw/groups/<name>); answers the written file { name, path, size, modified }. The body goes as it is (application/octet-stream), so the browser streams it with its Content-Length. PUT /v1/gpu/files as the client's uploadGpuFile, but through helper/upload.js (XMLHttpRequest), which reports progress and can be cancelled: opts = { onProgress, signal } (useUpload's run passes both).
             uploadFile: (project, path, file, opts = {}) => upload({ client, url: '/v1/gpu/files', method: 'PUT', query: { project, path }, body: file, ...opts }),
         };
     }, [client]);

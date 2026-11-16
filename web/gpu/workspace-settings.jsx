@@ -8,6 +8,7 @@ import { GitSource } from '/gpu/git-source.jsx';
 import { ProjectCredentials } from '/gpu/credentials.jsx';
 import { ImageFacts } from '/gpu/image-facts.jsx';
 import { ProjectId } from '/gpu/project-id.jsx';
+import { GroupsPanel } from '/gpu/groups.jsx';
 import { llmEnabled } from '/features.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
@@ -83,7 +84,7 @@ export function useWorkspaceSettings(nodeId, active) {
 
 // The part of a workspace project its settings change; the rest (name, members, end, quotas) belongs to the tree and is sent back as it is.
 function editable(project) {
-    const { role: _role, budget_status: _status, image_build: _build, release_ceiling: _ceiling, release_effective: _effective, ...rest } = project;
+    const { role: _role, budget_status: _status, image_build: _build, release_ceiling: _ceiling, release_effective: _effective, areas: _areas, ...rest } = project;
     return { ...rest, limits: { ...DEFAULT_LIMITS, ...(project.limits ?? {}) } };
 }
 
@@ -327,7 +328,7 @@ function ReleaseTimes({ draft, defaults }) {
 export function WorkspaceSettingsPanel({ draft }) {
     const { t } = useTranslation();
     const api = useGpuApi();
-    // A project's managers change only its description, members, environment, material, release times (within the budget's) and the LLM project of its workspaces; profiles, limits and budgets are the admins' — the server keeps them as they are for anybody else, so they are shown, not offered for editing.
+    // A project's managers change only its description, members, groups, environment, material, release times (within the budget's) and the LLM project of its workspaces; profiles, limits and budgets are the admins' — the server keeps them as they are for anybody else, so they are shown, not offered for editing.
     const { isAdmin } = useLlmMe();
     const locked = !isAdmin;
     const catalog = useQuery({ queryKey: gpuKeys.catalog(), queryFn: () => api.catalog(), staleTime: 10 * 60 * 1000 });
@@ -354,6 +355,7 @@ export function WorkspaceSettingsPanel({ draft }) {
                     <Tabs.Tab value="limits">{t('gpu.projects.sub.limits')}</Tabs.Tab>
                     <Tabs.Tab value="jobs">{t('gpu.projects.sub.jobs')}</Tabs.Tab>
                     <Tabs.Tab value="release">{t('gpu.projects.sub.release')}</Tabs.Tab>
+                    <Tabs.Tab value="groups">{t('gpu.projects.sub.groups')}</Tabs.Tab>
                 </Tabs.List>
                 <Tabs.Panel value="environment">
                     <Stack gap="md">
@@ -420,6 +422,9 @@ export function WorkspaceSettingsPanel({ draft }) {
                 </Tabs.Panel>
                 <Tabs.Panel value="jobs">
                     <BatchJobsBox p={p} setLimit={setLimit} locked={locked} classes={catalog.data?.gpuClasses ?? []} />
+                </Tabs.Panel>
+                <Tabs.Panel value="groups">
+                    <GroupsPanel draft={draft} />
                 </Tabs.Panel>
                 <Tabs.Panel value="release">
                     <ReleaseTimes draft={draft} defaults={catalog.data?.releaseDefaults} />

@@ -206,7 +206,27 @@
             "environment": "Environment",
             "limits": "Limits",
             "jobs": "Batch jobs",
-            "release": "Release times"
+            "release": "Release times",
+            "groups": "Groups"
+        },
+        "groups": {
+            "intro": "Groups get a folder of their own, ~/dhbw/groups/<name>, in their workspaces and jobs. Only the group’s members see it, and the project’s managers. The folder of the whole project stays at ~/dhbw/project.",
+            "none": "No groups yet.",
+            "name": "Name (folder)",
+            "nameError": {
+                "invalid": "Lowercase letters, digits, dot, hyphen and underscore, at most 40 characters.",
+                "duplicate": "This name is taken."
+            },
+            "members": "Members",
+            "membersPlaceholder": "Choose members of the project",
+            "readOnly": "Members only read",
+            "archived": "Archived (only managers see the folder, read-only)",
+            "remove": "Remove the group (its folder stays in the project’s storage but is mounted for nobody)",
+            "add": "Add group",
+            "count": "Number",
+            "distribute": "Create groups and deal out members",
+            "hint": "Changes apply from the next start of a workspace or job. The group folders count against the project’s storage. Dealing out splits the people not yet in a group among the new groups in turn.",
+            "noStorage": "Groups need workspace storage in the project; without it there are no folders."
         }
     },
     "storage": {
@@ -314,7 +334,7 @@
         "onlyProject": "only project",
         "booked": "Computing time is booked to this project.",
         "image": "Project environment: {{image}}.",
-        "storage": "The home directory belongs to the project ({{gb}} GB for all members together) and is the same in every environment; its folder project-shared is for all members. Deleting the project deletes these files too.",
+        "storage": "The home directory belongs to the project ({{gb}} GB for all members together) and is the same in every environment; its folder dhbw/project is for all members, dhbw/groups/<group> for a group's members. Deleting the project deletes these files too.",
         "noStorage": "This project has no workspace storage: files are lost when the workspace ends. Storage is requested at the project.",
         "scratch": "Local storage outside the home: {{gb}} GB per workspace, e.g. for packages installed with pip or conda and /tmp. Files in the home do not count. Writing more ends the workspace; larger packages belong in the project's environment.",
         "scratchNoStorage": "Local storage: {{gb}} GB per workspace, without workspace storage including the home. Writing more ends the workspace.",
@@ -473,7 +493,7 @@
         },
         "submit": {
             "title": "Submit job",
-            "intro": "The job runs in the project's environment with the own home and ~/project-shared. Its output is also in ~/jobs/<name>/output-<attempt>.log. A preemptible job is ended when a workspace needs the GPU and starts again from the beginning afterwards.",
+            "intro": "The job runs in the project's environment with the own home and the shared folders below ~/dhbw. Its output is also in ~/jobs/<name>/output-<attempt>.log. A preemptible job is ended when a workspace needs the GPU and starts again from the beginning afterwards.",
             "cliTitle": "On the command line",
             "cliHint": "pip install dhbw-cloud, then dhbw-cloud login with an API token; inside a workspace of the DHBW Cloud no login is needed.",
             "cliCommand": "<command>",
@@ -532,7 +552,8 @@
             "badFolder": "A folder below the target, without . or .. and without empty parts.",
             "done": "Uploaded: {{path}}",
             "close": "Close",
-            "submit": "Upload"
+            "submit": "Upload",
+            "group": "Group folder (~/{{dir}})"
         }
     }
 }

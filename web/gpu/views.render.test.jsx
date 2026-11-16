@@ -145,6 +145,26 @@ describe('the GPU views render', () => {
         expectNoRenderFailure();
     });
 
+    it('the workspace settings tab lets a manager make groups and deal out the members', async () => {
+        globalThis.__llmIsAdmin = false;
+        const project = { ...PROJECTS[0], storage_gb: 20, groups: [],
+            members: [{ token: 'user:a@dhbw.de', role: 'member' }, { token: 'user:b@dhbw.de', role: 'member' }, { token: 'user:c@dhbw.de', role: 'reader' }, { token: 'user:m@dhbw.de', role: 'manager' }] };
+        globalThis.__gpuApi.listProjects = async () => [project, PROJECTS[1]];
+        renderView(<SettingsTab nodeId="p_ml" />);
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
+        expect(screen.getByText(/(Noch keine Gruppen|No groups yet)/)).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: /(Mitglieder verteilen|deal out members)/ }));
+        expect(screen.getByDisplayValue('gruppe-1')).toBeTruthy();
+        expect(screen.getByDisplayValue('gruppe-2')).toBeTruthy();
+        expect(screen.getByText('~/dhbw/groups/gruppe-1')).toBeTruthy();
+        // Two people in the first group, one in the second; the manager in none.
+        expect(screen.getAllByText('a@dhbw.de').length).toBeGreaterThan(0);
+        expect(screen.queryByText('m@dhbw.de')).toBeNull();
+        fireEvent.change(screen.getByDisplayValue('gruppe-2'), { target: { value: 'gruppe-1' } });
+        expect(screen.getAllByText(/(gibt es schon|is taken)/).length).toBe(2);
+        expectNoRenderFailure();
+    });
+
     it('the workspace settings tab lets a manager choose the release times within the budget', async () => {
         globalThis.__llmIsAdmin = false;
         renderView(<SettingsTab nodeId="p_ml" />);
@@ -237,16 +257,16 @@ describe('the GPU views render', () => {
             fireEvent.change(input, { target: { files: [new File(['print(1)'], 'train.py')] } });
             fireEvent.click(screen.getByText(/(Gemeinsamer Ordner|Shared folder)/));
             fireEvent.change(screen.getByLabelText(/(Ordner|Folder) \(optional\)/), { target: { value: 'kurs/' } });
-            expect(await screen.findByText('~/project-shared/kurs/train.py')).toBeTruthy();
+            expect(await screen.findByText('~/dhbw/project/kurs/train.py')).toBeTruthy();
             await waitFor(() => expect(screen.getByRole('button', { name: /^(Hochladen|Upload)$/ }).disabled).toBe(false));
             fireEvent.click(screen.getByRole('button', { name: /^(Hochladen|Upload)$/ }));
             expect(await screen.findByRole('progressbar')).toBeTruthy();
             expect(screen.getByText(/^50 ?%$/)).toBeTruthy();
             expect(screen.getByRole('button', { name: /^(Schließen|Close)$/ }).disabled).toBe(true);
             finish();
-            expect(await screen.findByText(/(Hochgeladen|Uploaded): ~\/project-shared\/kurs\/train\.py/)).toBeTruthy();
+            expect(await screen.findByText(/(Hochgeladen|Uploaded): ~\/dhbw\/project\/kurs\/train\.py/)).toBeTruthy();
             expect(screen.queryByRole('progressbar')).toBeNull();
-            expect(sent).toEqual([{ project: 'wwi23seb-ml', path: 'project-shared/kurs/train.py', name: 'train.py', signal: true }]);
+            expect(sent).toEqual([{ project: 'wwi23seb-ml', path: 'dhbw/project/kurs/train.py', name: 'train.py', signal: true }]);
             fireEvent.click(screen.getByRole('button', { name: /^(Schließen|Close)$/ }));
             await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         } finally {

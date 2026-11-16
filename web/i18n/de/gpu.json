@@ -206,7 +206,27 @@
             "environment": "Umgebung",
             "limits": "Grenzen",
             "jobs": "Batch-Jobs",
-            "release": "Rückgabezeiten"
+            "release": "Rückgabezeiten",
+            "groups": "Gruppen"
+        },
+        "groups": {
+            "intro": "Gruppen bekommen einen eigenen Ordner ~/dhbw/groups/<Name> in ihren Workspaces und Jobs. Nur die Mitglieder der Gruppe sehen ihn, dazu die Verwaltenden des Projekts. Den gemeinsamen Ordner des ganzen Projekts gibt es weiter unter ~/dhbw/project.",
+            "none": "Noch keine Gruppen.",
+            "name": "Name (Ordner)",
+            "nameError": {
+                "invalid": "Kleinbuchstaben, Ziffern, Punkt, Binde- und Unterstrich, höchstens 40 Zeichen.",
+                "duplicate": "Den Namen gibt es schon."
+            },
+            "members": "Mitglieder",
+            "membersPlaceholder": "Mitglieder des Projekts wählen",
+            "readOnly": "Mitglieder lesen nur",
+            "archived": "Archiviert (nur Verwaltende sehen den Ordner, lesend)",
+            "remove": "Gruppe entfernen (der Ordner bleibt im Speicher des Projekts, ist aber für niemanden mehr eingehängt)",
+            "add": "Gruppe hinzufügen",
+            "count": "Anzahl",
+            "distribute": "Gruppen anlegen und Mitglieder verteilen",
+            "hint": "Änderungen gelten ab dem nächsten Start eines Workspaces oder Jobs. Die Gruppenordner zählen zum Speicher des Projekts. Beim Verteilen werden einzelne Personen, die noch in keiner Gruppe sind, reihum auf die neuen Gruppen aufgeteilt.",
+            "noStorage": "Gruppen brauchen Workspace-Speicher im Projekt; ohne ihn gibt es keine Ordner."
         }
     },
     "storage": {
@@ -314,7 +334,7 @@
         "onlyProject": "einziges Projekt",
         "booked": "Die Rechenzeit wird diesem Projekt angerechnet.",
         "image": "Umgebung des Projekts: {{image}}.",
-        "storage": "Das Home-Verzeichnis gehört zum Projekt ({{gb}} GB für alle Mitglieder zusammen) und ist in allen Umgebungen dasselbe; der Ordner project-shared darin ist für alle Mitglieder. Wird das Projekt gelöscht, werden auch diese Dateien gelöscht.",
+        "storage": "Das Home-Verzeichnis gehört zum Projekt ({{gb}} GB für alle Mitglieder zusammen) und ist in allen Umgebungen dasselbe; der Ordner dhbw/project darin ist für alle Mitglieder, dhbw/groups/<Gruppe> für die Mitglieder einer Gruppe. Wird das Projekt gelöscht, werden auch diese Dateien gelöscht.",
         "noStorage": "Dieses Projekt hat keinen Workspace-Speicher: Dateien gehen beim Beenden des Workspace verloren. Speicher wird am Projekt beantragt.",
         "scratch": "Lokaler Speicher außerhalb des Homes: {{gb}} GB je Workspace, z. B. für mit pip oder conda installierte Pakete und /tmp. Dateien im Home zählen nicht. Wird mehr geschrieben, wird der Workspace beendet; größere Pakete gehören in die Projekt-Umgebung.",
         "scratchNoStorage": "Lokaler Speicher: {{gb}} GB je Workspace, ohne Workspace-Speicher einschließlich des Homes. Wird mehr geschrieben, wird der Workspace beendet.",
@@ -473,7 +493,7 @@
         },
         "submit": {
             "title": "Job starten",
-            "intro": "Der Job läuft in der Umgebung des Projekts mit dem eigenen Home und ~/project-shared. Die Ausgabe steht auch in ~/jobs/<Name>/output-<Versuch>.log. Ein verdrängbarer Job wird beendet, wenn ein Workspace die GPU braucht, und startet danach von vorn.",
+            "intro": "Der Job läuft in der Umgebung des Projekts mit dem eigenen Home und den gemeinsamen Ordnern unter ~/dhbw. Die Ausgabe steht auch in ~/jobs/<Name>/output-<Versuch>.log. Ein verdrängbarer Job wird beendet, wenn ein Workspace die GPU braucht, und startet danach von vorn.",
             "cliTitle": "Per Kommandozeile",
             "cliHint": "pip install dhbw-cloud, dann dhbw-cloud login mit einem API-Token; in einem Workspace der DHBW Cloud geht es ohne Anmeldung.",
             "cliCommand": "<Befehl>",
@@ -532,7 +552,8 @@
             "badFolder": "Ein Ordner unterhalb des Ziels, ohne . oder .. und ohne leere Teile.",
             "done": "Hochgeladen: {{path}}",
             "close": "Schließen",
-            "submit": "Hochladen"
+            "submit": "Hochladen",
+            "group": "Ordner der Gruppe (~/{{dir}})"
         }
     }
 }
