@@ -182,7 +182,7 @@
             "fromTree": "from the project"
         },
         "profilesHint": "What members can choose when starting a workspace in JupyterHub. The platform sets the list; GPU types count against the project's GPU quotas.",
-        "adminOnlyHint": "Workspace types, limits and usage limits are set by admins. The environment (base, project image, Git), the material and the release times (within the budget's maximums) can be changed here.",
+        "adminOnlyHint": "Workspace types, limits and usage limits are set by admins. The environment (base, project image, Git), the material, the release times (within the budget's maximums) and the groups can be changed here.",
         "jobs": {
             "title": "Batch jobs",
             "allow": "Allow batch jobs",

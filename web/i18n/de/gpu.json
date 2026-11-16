@@ -182,7 +182,7 @@
             "fromTree": "aus dem Projekt"
         },
         "profilesHint": "Was Mitglieder beim Start eines Workspaces in JupyterHub wählen können. Die Liste gibt die Plattform vor; GPU-Arten zählen gegen die GPU-Kontingente des Projekts.",
-        "adminOnlyHint": "Workspace-Arten, Grenzen und Verbrauchsgrenzen legen Admins fest. Die Umgebung (Basis, Projekt-Image, Git), das Material und die Rückgabezeiten (innerhalb der Höchstwerte des Budgets) lassen sich hier ändern.",
+        "adminOnlyHint": "Workspace-Arten, Grenzen und Verbrauchsgrenzen legen Admins fest. Die Umgebung (Basis, Projekt-Image, Git), das Material, die Rückgabezeiten (innerhalb der Höchstwerte des Budgets) und die Gruppen lassen sich hier ändern.",
         "jobs": {
             "title": "Batch-Jobs",
             "allow": "Batch-Jobs erlauben",
