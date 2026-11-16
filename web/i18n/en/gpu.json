@@ -66,7 +66,7 @@
         "remove": "Remove",
         "environments": "Environments",
         "profiles": "Workspace types in JupyterHub",
-        "profilesFromTree": "The project's budget decides its workspace types (quotas, Workspaces: “Workspace type …”); none without a grant.",
+        "profilesFromTree": "The project's budget decides its workspace types (under Quotas, entry “Workspace type …”); none without a grant.",
         "image": {
             "buildOnSave": "The build starts on saving (usually 5–15 minutes).",
             "status": {
