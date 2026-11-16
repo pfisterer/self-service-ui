@@ -64,6 +64,8 @@ let consoleErrors = [];
 let calls = [];
 beforeEach(() => {
     calls = [];
+    // The detail's tab lives in the address (?tab=…): every test starts on the first tab.
+    window.history.replaceState(null, '', '/');
     const store = new Map();
     vi.stubGlobal('localStorage', { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k), clear: () => store.clear() });
     globalThis.__groupsApi = {
@@ -112,6 +114,16 @@ describe('the groups views render', () => {
         // The role is a choice in the row, one per entry.
         expect(screen.getAllByLabelText(/^(Rolle|Role)$/).length).toBeGreaterThanOrEqual(4);
         expectNoRenderFailure();
+    });
+
+    it('a tab has its own address: ?tab=viewers opens it, choosing another tab changes the address', async () => {
+        window.history.replaceState(null, '', '/wwi23seb?tab=viewers');
+        renderView(<GroupDetail params={{ id: 'wwi23seb' }} />);
+        expect(await screen.findByText('pruefungsamt#leitung')).toBeTruthy();
+        fireEvent.click(screen.getByRole('tab', { name: /Verwaltung|Managers/ }));
+        await waitFor(() => expect(window.location.search).toBe('?tab=managers'));
+        fireEvent.click(screen.getByRole('tab', { name: /Einträge|Entries/ }));
+        await waitFor(() => expect(window.location.search).toBe(''));
     });
 
     it('a group shows everyone it counts, its managers and its history', async () => {

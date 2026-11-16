@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { Link, useLocation, useSearch } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { DatePickerInput } from '@mantine/dates';
@@ -40,6 +40,7 @@ export function GroupDetail({ params, embedded = false }) {
     const api = useGroupsApi();
     const confirm = useConfirm();
     const [, navigate] = useLocation();
+    const requestedTab = new URLSearchParams(useSearch()).get('tab');
     const [editing, setEditing] = useState(false);
 
     const detail = useQuery({ queryKey: groupsKeys.detail(id), queryFn: () => api.getGroup(id) });
@@ -61,6 +62,10 @@ export function GroupDetail({ params, embedded = false }) {
     const managers = detail.data.managers ?? [];
     const viewers = detail.data.viewers ?? [];
     const readOnly = !editable;
+    // Every tab has its own address, /groups/<id>?tab=viewers, to link to; the first tab is the group's plain address. A tab the caller does not get (history for a viewer) or an unknown one opens the first.
+    const tabs = ['entries', 'effective', 'managers', 'viewers', ...(viewOnly ? [] : ['history'])];
+    const tab = tabs.includes(requestedTab) ? requestedTab : 'entries';
+    const selectTab = (v) => navigate(`/${encodeURIComponent(group.id)}${v === 'entries' ? '' : `?tab=${v}`}`, { replace: true });
 
     async function onDelete() {
         const ok = await confirm({
@@ -107,7 +112,7 @@ export function GroupDetail({ params, embedded = false }) {
                     )}
                 </Paper>
 
-                <Tabs defaultValue="entries" keepMounted={false}>
+                <Tabs value={tab} onChange={selectTab} keepMounted={false}>
                     <Tabs.List>
                         <Tabs.Tab value="entries">{t('groups.tabs.entries', { count: memberships.length })}</Tabs.Tab>
                         <Tabs.Tab value="effective">{t('groups.tabs.effective')}</Tabs.Tab>
