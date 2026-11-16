@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { distribute, groupNameError, memberChoices, nextGroupName, tokenLabel } from '/gpu/groups.js';
-import { SHARED_DIR, uploadPath, uploadTargets } from '/gpu/jobs.js';
+import { uploadPath, uploadTargets } from '/gpu/jobs.js';
 
 describe('groups', () => {
     it('checks names like the service', () => {
@@ -31,8 +31,7 @@ describe('upload targets', () => {
         const p = { role: 'member', areas: [{ mount: 'dhbw/project', read_only: false }, { mount: 'dhbw/groups/g1', read_only: false }, { mount: 'dhbw/groups/g2', read_only: true }] };
         expect(uploadTargets(p)).toEqual(['home', 'dhbw/project', 'dhbw/groups/g1']);
         expect(uploadTargets({ role: 'reader', areas: [{ mount: 'dhbw/project', read_only: true }] })).toEqual(['home']);
-        expect(uploadTargets({ role: 'member' })).toEqual(['home', SHARED_DIR]);
-        expect(uploadTargets({ role: 'reader' })).toEqual(['home']);
+        expect(uploadTargets({ role: 'member' })).toEqual(['home']);
     });
     it('builds the path below the chosen folder', () => {
         expect(uploadPath('home', 'daten', 'a.csv')).toBe('daten/a.csv');

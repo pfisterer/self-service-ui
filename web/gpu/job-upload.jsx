@@ -60,7 +60,7 @@ export function JobUploadModal({ projects, project, opened, onClose }) {
                         )}
                     </div>
                 ) : (
-                    <Text size="xs" c="dimmed">{t('gpu.jobs.upload.readerHomeOnly', { dir: SHARED_DIR })}</Text>
+                    <Text size="xs" c="dimmed">{t('gpu.jobs.upload.readerHomeOnly')}</Text>
                 )}
                 <TextInput label={t('gpu.jobs.upload.folder')} description={t('gpu.jobs.upload.folderHint')} placeholder="jobs/training-1" value={folder}
                     onChange={(e) => setFolder(e.currentTarget.value)} error={errors.folder} disabled={running} />

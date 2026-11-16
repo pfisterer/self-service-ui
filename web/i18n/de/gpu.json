@@ -541,7 +541,7 @@
             "target": "Wohin",
             "home": "Mein Home (~)",
             "shared": "Gemeinsamer Ordner (~/{{dir}})",
-            "readerHomeOnly": "Nur ins eigene Home: Mit der Rolle „Lesend“ ist der gemeinsame Ordner ~/{{dir}} nur lesbar.",
+            "readerHomeOnly": "Nur ins eigene Home: Die gemeinsamen Ordner unter ~/dhbw sind hier nur lesbar.",
             "folder": "Ordner (optional)",
             "folderHint": "Relativ zum Ziel, fehlende Ordner werden angelegt; leer für die oberste Ebene.",
             "drop": "Datei hierher ziehen oder klicken, um eine auszuwählen",

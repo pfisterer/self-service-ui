@@ -38,6 +38,7 @@ const USAGE = {
 
 const PROJECTS = [
     { slug: 'wwi23seb-ml', tree_node: 'p_ml', name: 'Machine Learning WWI23SEB', description: 'Übungen', role: 'manager', profiles: ['cpu', 'gpu'], gpu_classes: ['l4-3q'],
+      areas: [{ mount: 'dhbw/project', dir: 'project-shared', read_only: false }],
       members: [{ token: 'group:wwi23seb', role: 'member' }], image_base: 'tensorflow',
       image_git_url: 'https://github.com/o/ml-kurs', project_image: 'reg/envs/github-com-o-ml-kurs:0123456789ab-v1.1.0',
       image_build: { status: 'building', image: 'reg/envs/github-com-o-ml-kurs:89abcdef0123-v1.1.0', commit: '89abcdef0123456', branch: 'main', updated_at: '2026-10-14T08:00:00Z' },
@@ -299,7 +300,7 @@ describe('the GPU views render', () => {
     });
 
     it('Batch jobs do not offer a reader the shared folder for uploads', async () => {
-        globalThis.__gpuApi.listProjects = async () => JOB_PROJECTS.map(p => ({ ...p, role: 'reader' }));
+        globalThis.__gpuApi.listProjects = async () => JOB_PROJECTS.map(p => ({ ...p, role: 'reader', areas: [{ mount: 'dhbw/project', dir: 'project-shared', read_only: true }] }));
         renderView(<GpuJobs />);
         expect(await screen.findByText('training-1')).toBeTruthy();
         fireEvent.click(await screen.findByRole('button', { name: /^(Dateien hochladen|Upload files)$/ }));

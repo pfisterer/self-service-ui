@@ -541,7 +541,7 @@
             "target": "Where to",
             "home": "My home (~)",
             "shared": "Shared folder (~/{{dir}})",
-            "readerHomeOnly": "Into your home only: with the role reader the shared folder ~/{{dir}} is read-only.",
+            "readerHomeOnly": "Into your home only: the shared folders below ~/dhbw are read-only here.",
             "folder": "Folder (optional)",
             "folderHint": "Relative to the target, missing folders are created; empty for the top.",
             "drop": "Drop a file here or click to choose one",

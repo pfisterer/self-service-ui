@@ -209,7 +209,7 @@
         "admins": "Admins",
         "archivedOn": "Archiviert am",
         "labDeletion": "Workspace-Dateien gelöscht am",
-        "labDeletionHint": "Workspaces mit Home-Verzeichnissen und „project-shared“. Verlängern verschiebt den Tag.",
+        "labDeletionHint": "Workspaces mit Home-Verzeichnissen und den gemeinsamen Ordnern unter ~/dhbw. Verlängern verschiebt den Tag.",
         "deletion": "Endgültig gelöscht am",
         "workspaces": "Workspaces"
     },
@@ -392,9 +392,9 @@
         "ownerHint": "Wer für das Projekt verantwortlich ist. Eine Änderung wirkt sofort beim Speichern, ohne Antrag.",
         "moveHint": "Aus welchem Budget das Projekt bezahlt wird. Verschieben wirkt sofort beim Speichern; das Ziel braucht freie Kapazität.",
         "accessAiaas": "Mitglieder",
-        "accessAiaasHint": "Wer das Projekt nutzt: seine Workspaces und das LLM-Kontingent. Das Kontingent ist ein gemeinsamer Topf, alle Mitglieder verbrauchen daraus. Mit der Rolle „Shared Workspace Reader“ ist der gemeinsame Ordner project-shared nur lesbar, mit „Shared Workspace Writer“ auch beschreibbar.",
+        "accessAiaasHint": "Wer das Projekt nutzt: seine Workspaces und das LLM-Kontingent. Das Kontingent ist ein gemeinsamer Topf, alle Mitglieder verbrauchen daraus. Mit der Rolle „Shared Workspace Reader“ ist der gemeinsame Ordner ~/dhbw/project nur lesbar, mit „Shared Workspace Writer“ auch beschreibbar.",
         "accessBoth": "Zugang",
-        "accessBothHint": "Wer das Projekt nutzt: in OpenStack mit der gewählten Rolle, dazu seine Workspaces und das gemeinsame LLM-Kontingent. Die Rolle gilt auch für den gemeinsamen Ordner project-shared der Workspaces: „Reader“ liest nur, „Member“ schreibt auch (Shared Workspace Reader bzw. Writer).",
+        "accessBothHint": "Wer das Projekt nutzt: in OpenStack mit der gewählten Rolle, dazu seine Workspaces und das gemeinsame LLM-Kontingent. Die Rolle gilt auch für den gemeinsamen Ordner ~/dhbw/project der Workspaces: „Reader“ liest nur, „Member“ schreibt auch (Shared Workspace Reader bzw. Writer).",
         "adminsHintAiaas": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt löschen. Workspaces und LLM-Kontingent nutzen sie mit.",
         "adminsHintBoth": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt löschen. Workspaces und LLM-Kontingent nutzen sie mit, Zugang in OpenStack entsteht dadurch nicht.",
         "nameHintAiaas": "Ein kurzer, wiedererkennbarer Name — so erscheint das Projekt bei Workspaces und LLM."
@@ -667,7 +667,7 @@
         "keptForever": "Erhalten bleibt: {{what}}.",
         "what": {
             "cloud": "die Maschinen, Volumes und alle Daten darauf",
-            "workspaces": "der Workspace-Speicher (Home-Verzeichnisse und „project-shared“)",
+            "workspaces": "der Workspace-Speicher (Home-Verzeichnisse und die gemeinsamen Ordner unter ~/dhbw)",
             "llm": "das LLM-Projekt im KI-Dienst"
         },
         "chargeStorage": "Ab dann belegt es im Budget nur noch seinen Speicher.",
@@ -675,7 +675,7 @@
         "chargeNothingNow": "Das Budget wird sofort frei.",
         "chargeUntilGone": "Bis dahin belegt es weiter sein Budget; „Sofort endgültig löschen“ gibt es sofort frei.",
         "deleteWhat": "Alles im OpenStack-Projekt wird in den nächsten Minuten gelöscht: Maschinen, Volumes, Snapshots, Images, Netze und alle Daten darauf.",
-        "deleteWorkspaces": "Workspaces: Laufende Workspaces werden beendet, und der Workspace-Speicher wird gelöscht – die Home-Verzeichnisse aller Mitglieder in diesem Projekt und der Ordner „project-shared“. Nur Admins können ihn noch 7 Tage lang wiederherstellen.",
+        "deleteWorkspaces": "Workspaces: Laufende Workspaces werden beendet, und der Workspace-Speicher wird gelöscht – die Home-Verzeichnisse aller Mitglieder in diesem Projekt und die gemeinsamen Ordner unter ~/dhbw (Projekt und Gruppen). Nur Admins können ihn noch 7 Tage lang wiederherstellen.",
         "deleteKeys": "LLM: Das Projekt im KI-Dienst wird gelöscht; seine API-Keys haben kein Kontingent mehr.",
         "deleteAfter": "Danach verschwindet das Projekt aus der Liste. Was es verbraucht hat, bleibt in der Verbrauchsstatistik.",
         "irreversible": "Das lässt sich nicht rückgängig machen.",
@@ -1132,7 +1132,7 @@
         "workspace-scratch-gb": {
             "name": "Lokaler Speicher je Workspace",
             "unit": "GB",
-            "hint": "Wie viel ein Workspace oder GPU-Kernel der Projekte unter diesem Budget außerhalb des Homes schreiben darf: installierte Pakete in der Umgebung, /tmp, Logs. Dateien im Home und in project-shared zählen nicht (Workspace-Speicher des Projekts). Wird mehr geschrieben, beendet Kubernetes den Workspace. Leer übernimmt den Wert der Budgets darüber, ohne Wert dort gilt der Standard des KI-Dienstes (10 GB). Budgets darunter können den Wert nur verkleinern.",
+            "hint": "Wie viel ein Workspace oder GPU-Kernel der Projekte unter diesem Budget außerhalb des Homes schreiben darf: installierte Pakete in der Umgebung, /tmp, Logs. Dateien im Home und unter ~/dhbw zählen nicht (Workspace-Speicher des Projekts). Wird mehr geschrieben, beendet Kubernetes den Workspace. Leer übernimmt den Wert der Budgets darüber, ohne Wert dort gilt der Standard des KI-Dienstes (10 GB). Budgets darunter können den Wert nur verkleinern.",
             "standard": "Standard (10 GB)"
         },
         "batch-priority": {

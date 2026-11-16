@@ -87,17 +87,10 @@ export function parentPath(path, root) {
 export const JOB_FILE_MAX_BYTES = 5 * 1024 ** 3;
 export const SHARED_DIR = 'dhbw/project';
 
-// uploadTargets are the folders a person may upload into in the project: their home, then the writable areas the service lists (areas); without that list (an older service) the shared folder unless they are a reader.
-
-// canWriteShared: the role reader only reads the project's shared folder, as in a workspace.
-export function canWriteShared(project) {
-    return project?.role !== 'reader';
-}
+// uploadTargets are the folders a person may upload into in the project: their home, then the writable areas the service lists (areas; a reader only reads the shared folder, a read-only group only reads its own).
 
 export function uploadTargets(project) {
-    if (!project) return ['home'];
-    if (Array.isArray(project.areas)) return ['home', ...project.areas.filter(a => !a.read_only).map(a => a.mount)];
-    return canWriteShared(project) ? ['home', SHARED_DIR] : ['home'];
+    return ['home', ...(project?.areas ?? []).filter(a => !a.read_only).map(a => a.mount)];
 }
 
 // uploadFolder is the folder a file goes into, relative to the home or the shared folder: trimmed, without a leading ~/ or / and trailing slashes, empty for the top. null where it is no plain folder ('.' or '..' segments, empty segments, control characters): the service would refuse a path leaving the home, and a path it cleans up is a guess.

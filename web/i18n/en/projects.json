@@ -209,7 +209,7 @@
         "admins": "Admins",
         "archivedOn": "Archived on",
         "labDeletion": "Workspace files deleted on",
-        "labDeletionHint": "Workspaces with home directories and “project-shared”. Extending the project moves the day.",
+        "labDeletionHint": "Workspaces with home directories and the shared folders below ~/dhbw. Extending the project moves the day.",
         "deletion": "Deleted for good on",
         "workspaces": "Workspaces"
     },
@@ -392,9 +392,9 @@
         "ownerHint": "Who answers for the project. A change takes effect when saved, without a request.",
         "moveHint": "The budget the project is paid from. Moving takes effect when saved; the target needs free capacity.",
         "accessAiaas": "Members",
-        "accessAiaasHint": "Who uses the project: its workspaces and its LLM quota. The quota is one shared pool all members draw from. With the role “Shared Workspace Reader” the shared folder project-shared is read-only, with “Shared Workspace Writer” writable too.",
+        "accessAiaasHint": "Who uses the project: its workspaces and its LLM quota. The quota is one shared pool all members draw from. With the role “Shared Workspace Reader” the shared folder ~/dhbw/project is read-only, with “Shared Workspace Writer” writable too.",
         "accessBoth": "Access",
-        "accessBothHint": "Who uses the project: in OpenStack with the chosen role, plus its workspaces and the shared LLM quota. The role also applies to the workspaces' shared folder project-shared: “Reader” only reads, “Member” writes too (Shared Workspace Reader or Writer).",
+        "accessBothHint": "Who uses the project: in OpenStack with the chosen role, plus its workspaces and the shared LLM quota. The role also applies to the workspaces' shared folder ~/dhbw/project: “Reader” only reads, “Member” writes too (Shared Workspace Reader or Writer).",
         "adminsHintAiaas": "Administer the project here together with the owner: rename it, request changes, edit this list and delete it. They use its workspaces and LLM quota too.",
         "adminsHintBoth": "Administer the project here together with the owner: rename it, request changes, edit this list and delete it. They use its workspaces and LLM quota too; this gives no access in OpenStack.",
         "nameHintAiaas": "A short, recognizable name — this is how the project appears in workspaces and LLM."
@@ -667,7 +667,7 @@
         "keptForever": "Kept: {{what}}.",
         "what": {
             "cloud": "the machines, volumes and all data on them",
-            "workspaces": "the workspace storage (home directories and “project-shared”)",
+            "workspaces": "the workspace storage (home directories and the shared folders below ~/dhbw)",
             "llm": "the LLM project at the AI service"
         },
         "chargeStorage": "From then on it holds only its storage in the budget.",
@@ -675,7 +675,7 @@
         "chargeNothingNow": "Its budget is free at once.",
         "chargeUntilGone": "Until then it keeps holding its budget; “Delete for good right away” frees it at once.",
         "deleteWhat": "Everything in the OpenStack project is deleted within the next minutes: machines, volumes, snapshots, images, networks and all data on them.",
-        "deleteWorkspaces": "Workspaces: running workspaces are ended and the workspace storage is deleted — every member's home directory in this project and the folder “project-shared”. Only admins can restore it for another 7 days.",
+        "deleteWorkspaces": "Workspaces: running workspaces are ended and the workspace storage is deleted — every member's home directory in this project and the shared folders below ~/dhbw (project and groups). Only admins can restore it for another 7 days.",
         "deleteKeys": "LLM: the project at the AI service is deleted; its API keys have no quota any more.",
         "deleteAfter": "Then the project disappears from the list. What it used stays in the usage statistics.",
         "irreversible": "This cannot be undone.",
@@ -1132,7 +1132,7 @@
         "workspace-scratch-gb": {
             "name": "Local storage per workspace",
             "unit": "GB",
-            "hint": "How much a workspace or GPU kernel of the projects below this budget may write outside its home: packages installed into the environment, /tmp, logs. Files in the home and in project-shared do not count (the project's workspace storage). Writing more makes Kubernetes end the workspace. Empty takes the value of the budgets above; without one there, the AI service's default applies (10 GB). Budgets below can only lower it.",
+            "hint": "How much a workspace or GPU kernel of the projects below this budget may write outside its home: packages installed into the environment, /tmp, logs. Files in the home and below ~/dhbw do not count (the project's workspace storage). Writing more makes Kubernetes end the workspace. Empty takes the value of the budgets above; without one there, the AI service's default applies (10 GB). Budgets below can only lower it.",
             "standard": "Default (10 GB)"
         },
         "batch-priority": {

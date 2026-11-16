@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canWriteShared, DEFAULT_JOB_MAX_HOURS, isActive, JOB_FILE_MAX_BYTES, jobBody, jobCommandLine, jobErrors, jobMaxHours, jobProjects, MAX_JOB_HOURS, parentPath, shellQuote, uploadErrors, uploadFolder, uploadPath } from '/gpu/jobs.js';
+import { DEFAULT_JOB_MAX_HOURS, isActive, JOB_FILE_MAX_BYTES, jobBody, jobCommandLine, jobErrors, jobMaxHours, jobProjects, MAX_JOB_HOURS, parentPath, shellQuote, uploadErrors, uploadFolder, uploadPath } from '/gpu/jobs.js';
 
 const t = (key, vars) => (vars ? `${key} ${JSON.stringify(vars)}` : key);
 
@@ -103,9 +103,4 @@ describe('uploading files for jobs', () => {
         expect(Object.keys(uploadErrors(t, { file: { size: JOB_FILE_MAX_BYTES + 1 }, folder: '../x' }))).toEqual(['file', 'folder']);
     });
 
-    it('offers the shared folder to everyone but a reader', () => {
-        expect(canWriteShared({ role: 'member' })).toBe(true);
-        expect(canWriteShared({ role: 'manager' })).toBe(true);
-        expect(canWriteShared({ role: 'reader' })).toBe(false);
-    });
 });
