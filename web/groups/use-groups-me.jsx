@@ -4,7 +4,7 @@ import { useAuth } from '/providers/auth.jsx';
 import { useGroupsApi } from '/groups/api-groups.jsx';
 import { groupsKeys } from '/groups/query-keys.js';
 
-// Who the caller is to the role provider's group maintenance. The service decides and this hook only reads the answer, so the navigation and the routes cannot disagree: the section is offered to whoever maintains at least one group, and to admins.
+// Who the caller is to the role provider's group maintenance. The service decides and this hook only reads the answer, so the navigation and the routes cannot disagree: the section is offered to whoever maintains at least one group or may look at the members of one (a viewer), and to admins.
 //
 // A failed request counts as "nothing to maintain" for the menu: offering a section that cannot load helps nobody. The section's own pages show the error instead.
 export function useGroupsMe() {
@@ -22,7 +22,7 @@ export function useGroupsMe() {
     return {
         query,
         me,
-        visible: Boolean(me?.manages_any),
+        visible: Boolean(me?.manages_any || me?.views_any),
         isAdmin: Boolean(me?.admin),
         relations: me?.relations ?? ['member'],
         sourceName: me?.source_name ?? '',

@@ -3,9 +3,9 @@ import { apiError, apiErrorMessage } from '/helper/api-error.js';
 import { useClient } from '/providers/client.jsx';
 // Named imports, as in llm/api-llm.jsx: an operation missing from the client fails the build, not the browser.
 import {
-    manageAddManager, manageAddMember, manageChangeRelation, manageCreateGroup, manageDeleteGroup, manageEffectiveMembers, manageGetGroup,
-    manageGetMe, manageHistory, manageListGroups, manageListSources, manageRemoveManager, manageRemoveMember, manageSearchPrincipals,
-    manageUpdateGroup,
+    manageAddManager, manageAddMember, manageAddViewer, manageChangeRelation, manageCreateGroup, manageDeleteGroup, manageEffectiveMembers,
+    manageGetGroup, manageGetMe, manageHistory, manageListGroups, manageListSources, manageRemoveManager, manageRemoveMember, manageRemoveViewer,
+    manageSearchPrincipals, manageUpdateGroup,
 } from '@dhbw-cloud/role-provider-client';
 
 // useGroupsApi is the one place that knows the transport of the groups section: the role provider's /v1/manage, reached through the UI's own proxy. Every call returns clean data or throws an Error carrying the server's message and status.
@@ -23,7 +23,7 @@ export function useGroupsApi() {
         const call = async (op, opts = {}) => unwrap(await op({ client, ...opts }));
         return {
             getMe: () => call(manageGetMe),
-            // One page { items, total }. For admins: { pathTo } is the way from the top of a group's source down to it, { parent } lists the groups in a group, { q, source? } searches, { source } is the top of a source's tree; everybody else gets the groups they maintain, narrowed by q.
+            // One page { items, total }. For admins: { pathTo } is the way from the top of a group's source down to it, { parent } lists the groups in a group, { q, source? } searches, { source } is the top of a source's tree; everybody else gets the groups they maintain or may look at (as viewers, and every group nested in one of those, read-only), narrowed by q.
             listGroups: ({ q, source, parent, pathTo, limit } = {}) => call(manageListGroups, {
                 query: Object.fromEntries(Object.entries({ q, source, parent, path_to: pathTo, limit }).filter(([, v]) => v)),
             }),
@@ -49,6 +49,9 @@ export function useGroupsApi() {
             effectiveMembers: (group) => call(manageEffectiveMembers, { path: { group } }),
             addManager: (group, manager) => call(manageAddManager, { path: { group }, body: { manager }, headers: JSON_HEADERS }),
             removeManager: (group, manager) => call(manageRemoveManager, { path: { group }, query: { manager } }),
+            // Viewers may look at the members of the group and of every group nested in it, nothing more; whoever may change the managers may change them.
+            addViewer: (group, viewer) => call(manageAddViewer, { path: { group }, body: { viewer }, headers: JSON_HEADERS }),
+            removeViewer: (group, viewer) => call(manageRemoveViewer, { path: { group }, query: { viewer } }),
             history: (group) => call(manageHistory, { path: { group } }),
             // In the shape PrincipalTokenAutocomplete expects: groups with their labels (the source in the description, so "wwi23seb" and its origin read together), then addresses.
             searchPrincipals: async (q, limit) => {

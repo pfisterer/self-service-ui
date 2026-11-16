@@ -13,7 +13,7 @@ import { useConfirm } from '/providers/confirm.jsx';
 import { useGroupsApi } from '/groups/api-groups.jsx';
 import { groupsKeys } from '/groups/query-keys.js';
 import { useGroupsMe } from '/groups/use-groups-me.jsx';
-import { TokenText } from '/groups/tokens.jsx';
+import { TokenText, tokenKind, tokenValue } from '/groups/tokens.jsx';
 
 // What somebody types is completed to a token: an address is a person, anything else without a prefix a group. The service checks the rest.
 export function asToken(raw) {
@@ -33,7 +33,7 @@ export function endOfDay(date) {
     return date ? dayjs(date).endOf('day').toDate() : null;
 }
 
-// GroupDetail: one group — its entries, everyone it counts in the end, who maintains it, and what happened to it. A group of a sync source (admins see every source) is read-only: it changes at its source. Embedded, it is the right-hand side of the admins' browser, without a page of its own.
+// GroupDetail: one group — its entries, everyone it counts in the end, who maintains it, who may look at its members, and what happened to it. A group of a sync source (admins see every source) is read-only: it changes at its source, except for who may view its members, which admins set here. A group the caller may only look at (view_only: a viewer, or the manager or viewer of a group it is nested in) is read-only too, without its history. Embedded, it is the right-hand side of the admins' browser, without a page of its own.
 export function GroupDetail({ params, embedded = false }) {
     const id = decodeURIComponent(params.id);
     const { t } = useTranslation();
@@ -54,9 +54,12 @@ export function GroupDetail({ params, embedded = false }) {
     if (detail.isError) return <Frame><LoadError query={detail} /></Frame>;
 
     // ?? rather than defaults: a default only covers a missing field, and older role providers answered "managers": null for a group nobody maintains.
-    const { group, may_delete: mayDelete, editable } = detail.data;
+    const { group, may_delete: mayDelete, editable, view_only: viewOnly } = detail.data;
+    // Viewers are the one thing admins set on a sync source's group too; an older role provider without the field leaves them with the rest.
+    const viewersEditable = detail.data.viewers_editable ?? editable;
     const memberships = detail.data.memberships ?? [];
     const managers = detail.data.managers ?? [];
+    const viewers = detail.data.viewers ?? [];
     const readOnly = !editable;
 
     async function onDelete() {
@@ -91,7 +94,17 @@ export function GroupDetail({ params, embedded = false }) {
                             )}
                         </Group>}
                     </Group>
-                    {readOnly && <Alert variant="light" color="gray" mt="md">{t('groups.detail.readOnly', { source: group.source_name || '?' })}</Alert>}
+                    {readOnly && (
+                        <Alert variant="light" color="gray" mt="md">
+                            {viewOnly
+                                ? t('groups.detail.viewOnly')
+                                : t(viewersEditable ? 'groups.detail.readOnlyViewers' : 'groups.detail.readOnly', { source: group.source_name || '?' })}
+                        </Alert>
+                    )}
+                    {/* A sync source's group without entries that viewers still point at: most likely one its source no longer delivers, which the role provider keeps only for them (it does not record whether the source still has it). */}
+                    {!editable && group.source_name && memberships.length === 0 && viewers.length > 0 && (
+                        <Alert variant="light" color="yellow" mt="sm">{t('groups.detail.emptyKept', { source: group.source_name })}</Alert>
+                    )}
                 </Paper>
 
                 <Tabs defaultValue="entries" keepMounted={false}>
@@ -99,12 +112,14 @@ export function GroupDetail({ params, embedded = false }) {
                         <Tabs.Tab value="entries">{t('groups.tabs.entries', { count: memberships.length })}</Tabs.Tab>
                         <Tabs.Tab value="effective">{t('groups.tabs.effective')}</Tabs.Tab>
                         <Tabs.Tab value="managers">{t('groups.tabs.managers', { count: managers.length })}</Tabs.Tab>
-                        <Tabs.Tab value="history">{t('groups.tabs.history')}</Tabs.Tab>
+                        <Tabs.Tab value="viewers">{t('groups.tabs.viewers', { count: viewers.length })}</Tabs.Tab>
+                        {!viewOnly && <Tabs.Tab value="history">{t('groups.tabs.history')}</Tabs.Tab>}
                     </Tabs.List>
                     <Tabs.Panel value="entries" pt="md"><Entries id={group.id} memberships={memberships} readOnly={readOnly} /></Tabs.Panel>
                     <Tabs.Panel value="effective" pt="md"><Effective id={group.id} /></Tabs.Panel>
-                    <Tabs.Panel value="managers" pt="md"><Managers id={group.id} managers={managers} readOnly={readOnly} /></Tabs.Panel>
-                    <Tabs.Panel value="history" pt="md"><History id={group.id} /></Tabs.Panel>
+                    <Tabs.Panel value="managers" pt="md"><Holders kind="managers" id={group.id} holders={managers} readOnly={readOnly} /></Tabs.Panel>
+                    <Tabs.Panel value="viewers" pt="md"><Holders kind="viewers" id={group.id} holders={viewers} readOnly={!viewersEditable} /></Tabs.Panel>
+                    {!viewOnly && <Tabs.Panel value="history" pt="md"><History id={group.id} /></Tabs.Panel>}
                 </Tabs>
             </Stack>
             {editing && <EditGroupModal group={group} onClose={() => setEditing(false)} />}
@@ -230,7 +245,7 @@ function Entries({ id, memberships, readOnly }) {
                     )}
                     {memberships.map(m => (
                         <Table.Tr key={`${m.member}#${m.relation}`} style={m.expired ? { opacity: 0.6 } : undefined}>
-                            <Table.Td><TokenText token={m.member} /></Table.Td>
+                            <Table.Td><EntryToken entry={m} /></Table.Td>
                             <Table.Td>
                                 {relations.length > 1 && !readOnly ? (
                                     <Select size="xs" w={170} allowDeselect={false} aria-label={t('groups.entries.relation')}
@@ -262,6 +277,17 @@ function Entries({ id, memberships, readOnly }) {
             </Table>
             {extending && <ExpiryModal id={id} entry={extending} onClose={() => setExtending(null)} />}
         </Paper>
+    );
+}
+
+// EntryToken: an entry, a group in it as a link to that group — whoever may look at this group may look at every group in it. An expired entry nests nothing, so it is no link.
+function EntryToken({ entry }) {
+    if (tokenKind(entry.member) !== 'group' || entry.expired) return <TokenText token={entry.member} />;
+    const group = tokenValue(entry.member).split('#')[0];
+    return (
+        <Anchor component={Link} to={`/${encodeURIComponent(group)}`} underline="hover" c="inherit">
+            <TokenText token={entry.member} />
+        </Anchor>
     );
 }
 
@@ -314,38 +340,39 @@ function Effective({ id }) {
     );
 }
 
-// Managers: who maintains the group. Maintaining a group is not being in it, which the hint says, because the two are easy to confuse.
-function Managers({ id, managers, readOnly }) {
+// Holders: who maintains the group (kind "managers") or may look at its members (kind "viewers"). Neither is being in the group, which the hint says, because the two are easy to confuse. The texts live under groups.<kind>.
+function Holders({ kind, id, holders, readOnly }) {
     const { t } = useTranslation();
     const api = useGroupsApi();
     const confirm = useConfirm();
     const [input, setInput] = useState('');
+    const [addHolder, removeHolder] = kind === 'viewers' ? [api.addViewer, api.removeViewer] : [api.addManager, api.removeManager];
     const invalidates = [groupsKeys.detail(id), groupsKeys.history(id), groupsKeys.lists(), groupsKeys.me()];
     const add = useApiMutation({
-        mutationFn: (token) => api.addManager(id, token),
+        mutationFn: (token) => addHolder(id, token),
         invalidates,
         onSuccess: () => setInput(''),
     });
     const remove = useApiMutation({
-        mutationFn: (token) => api.removeManager(id, token),
+        mutationFn: (token) => removeHolder(id, token),
         invalidates,
     });
 
     async function onRemove(token) {
         const ok = await confirm({
-            title: t('groups.managers.removeTitle'),
-            confirmLabel: t('groups.managers.removeConfirm'),
-            message: t('groups.managers.removeMessage', { manager: token }),
+            title: t(`groups.${kind}.removeTitle`),
+            confirmLabel: t(`groups.${kind}.removeConfirm`),
+            message: t(`groups.${kind}.removeMessage`, { token }),
         });
         if (ok) remove.mutate(token);
     }
 
     return (
         <Paper p="lg" radius="md" withBorder>
-            <Alert variant="light" color="gray" mb="md">{t('groups.managers.hint')}</Alert>
+            <Alert variant="light" color="gray" mb="md">{t(`groups.${kind}.hint`)}</Alert>
             {!readOnly && <Group align="flex-end" gap="xs">
                 <div style={{ flex: '1 1 280px' }}>
-                    <PrincipalTokenAutocomplete single label={t('groups.managers.add')} placeholder={t('groups.managers.placeholder')}
+                    <PrincipalTokenAutocomplete single label={t(`groups.${kind}.add`)} placeholder={t('groups.managers.placeholder')}
                         value={input} onChange={setInput} search={api.searchPrincipals} searchKey={groupsKeys.principals()} />
                 </div>
                 <Button leftSection={<Plus size={16} />} disabled={!asToken(input)} loading={add.isPending} onClick={() => add.mutate(asToken(input))}>
@@ -354,10 +381,10 @@ function Managers({ id, managers, readOnly }) {
             </Group>}
             <Table striped mt="md">
                 <Table.Tbody>
-                    {managers.length === 0 && (
-                        <Table.Tr><Table.Td><Text size="sm" c="dimmed">{t('groups.managers.none')}</Text></Table.Td></Table.Tr>
+                    {holders.length === 0 && (
+                        <Table.Tr><Table.Td><Text size="sm" c="dimmed">{t(`groups.${kind}.none`)}</Text></Table.Td></Table.Tr>
                     )}
-                    {managers.map(m => (
+                    {holders.map(m => (
                         <Table.Tr key={m.token}>
                             <Table.Td><TokenText token={m.token} /></Table.Td>
                             <Table.Td><Text size="xs" c="dimmed">{m.created_by ? t('groups.managers.addedBy', { who: m.created_by, date: formatDate(m.created_at) }) : formatDate(m.created_at)}</Text></Table.Td>

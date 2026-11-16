@@ -14,7 +14,7 @@
     },
     "list": {
         "title": "Gruppen",
-        "intro": "Gruppen, deren Mitglieder hier gepflegt werden: Personen, andere Gruppen und Regeln für ganze Adressbereiche, jeweils mit Rolle und auf Wunsch befristet.",
+        "intro": "Gruppen, deren Mitglieder hier gepflegt werden: Personen, andere Gruppen und Regeln für ganze Adressbereiche, jeweils mit Rolle und auf Wunsch befristet. Gruppen, deren Mitglieder nur eingesehen werden dürfen, sind mit „nur einsehen“ markiert.",
         "introAdmin": "Alle Gruppen der Quelle {{source}}. Gruppen aus anderen Quellen (z. B. bwIDM) werden dort gepflegt und können hier als Mitglied eingetragen werden.",
         "search": "Gruppen durchsuchen",
         "create": "Gruppe anlegen",
@@ -22,7 +22,8 @@
         "description": "Beschreibung",
         "roles": "Rollen",
         "none": "Keine Gruppen.",
-        "noMatch": "Keine Gruppe passt zur Suche."
+        "noMatch": "Keine Gruppe passt zur Suche.",
+        "viewOnly": "nur einsehen"
     },
     "create": {
         "title": "Gruppe anlegen",
@@ -49,12 +50,16 @@
         "back": "Alle Gruppen",
         "token": "Token: {{token}}",
         "edit": "Bearbeiten",
-        "readOnly": "Diese Gruppe kommt aus der Quelle {{source}} und wird dort gepflegt; hier ist sie nur lesbar."
+        "readOnly": "Diese Gruppe kommt aus der Quelle {{source}} und wird dort gepflegt; hier ist sie nur lesbar.",
+        "readOnlyViewers": "Diese Gruppe kommt aus der Quelle {{source}} und wird dort gepflegt; hier lässt sich nur festlegen, wer ihre Mitglieder einsehen darf.",
+        "viewOnly": "Nur zum Einsehen freigegeben: Einträge und Mitglieder dieser Gruppe sind lesbar, Änderungen sind hier nicht möglich.",
+        "emptyKept": "Diese Gruppe ist leer. Liefert die Quelle {{source}} sie nicht mehr, bleibt sie nur wegen der Einträge unter „Mitglieder einsehen“ bestehen; werden diese entfernt, löscht der nächste Abgleich die Gruppe."
     },
     "tabs": {
         "entries": "Einträge ({{count}})",
         "effective": "Mitglieder insgesamt",
         "managers": "Verwaltung ({{count}})",
+        "viewers": "Mitglieder einsehen ({{count}})",
         "history": "Verlauf"
     },
     "entries": {
@@ -93,7 +98,15 @@
         "remove": "Entfernen",
         "removeTitle": "Verwaltung entziehen?",
         "removeConfirm": "Entziehen",
-        "removeMessage": "{{manager}} kann diese Gruppe danach nicht mehr verwalten."
+        "removeMessage": "{{token}} kann diese Gruppe danach nicht mehr verwalten."
+    },
+    "viewers": {
+        "hint": "Wer Mitglieder einsehen darf, sieht die Einträge dieser Gruppe und alle ihre Mitglieder insgesamt, ebenso bei jeder Gruppe, die darin enthalten ist, auch über mehrere Ebenen. Ändern lässt sich damit nichts, und Mitglied der Gruppe wird dadurch niemand.",
+        "add": "Einsicht in die Mitglieder geben an",
+        "none": "Außer der Verwaltung darf niemand die Mitglieder einsehen.",
+        "removeTitle": "Einsicht entziehen?",
+        "removeConfirm": "Entziehen",
+        "removeMessage": "{{token}} kann die Mitglieder dieser Gruppe danach nicht mehr einsehen."
     },
     "history": {
         "at": "Zeitpunkt",
@@ -113,6 +126,8 @@
             "member_removed": "{{member}} als {{relation}} entfernt",
             "manager_added": "Verwaltung an {{member}} übertragen",
             "manager_removed": "Verwaltung von {{member}} entzogen",
+            "viewer_added": "Einsicht in die Mitglieder an {{member}} vergeben",
+            "viewer_removed": "Einsicht in die Mitglieder von {{member}} entzogen",
             "relation_changed": "{{member}}: Rolle von {{from}} auf {{relation}} geändert"
         }
     },
@@ -120,7 +135,7 @@
         "search": "Alle Quellen durchsuchen",
         "more_one": "… und {{count}} weitere",
         "more_other": "… und {{count}} weitere",
-        "intro": "Gruppen aus allen Quellen. Gepflegt werden hier nur die Gruppen von {{source}}; Gruppen anderer Quellen kommen aus deren Import und sind hier nur lesbar. Links eine Gruppe wählen.",
+        "intro": "Gruppen aus allen Quellen. Gepflegt werden hier nur die Gruppen von {{source}}; Gruppen anderer Quellen kommen aus deren Import und sind hier nur lesbar. Bei ihnen wird hier nur festgelegt, wer die Mitglieder einsehen darf. Links eine Gruppe wählen.",
         "source": "Quelle",
         "kind": "Art",
         "groups": "Gruppen",

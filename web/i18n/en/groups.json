@@ -14,7 +14,7 @@
     },
     "list": {
         "title": "Groups",
-        "intro": "Groups whose members are maintained here: people, other groups and rules for whole address ranges, each with a role and, if wanted, until a date.",
+        "intro": "Groups whose members are maintained here: people, other groups and rules for whole address ranges, each with a role and, if wanted, until a date. Groups whose members may only be viewed are marked “view only”.",
         "introAdmin": "All groups of the source {{source}}. Groups from other sources (e.g. bwIDM) are maintained there and can be entered here as members.",
         "search": "Search groups",
         "create": "Create group",
@@ -22,7 +22,8 @@
         "description": "Description",
         "roles": "Roles",
         "none": "No groups.",
-        "noMatch": "No group matches the search."
+        "noMatch": "No group matches the search.",
+        "viewOnly": "view only"
     },
     "create": {
         "title": "Create group",
@@ -49,12 +50,16 @@
         "back": "All groups",
         "token": "Token: {{token}}",
         "edit": "Edit",
-        "readOnly": "This group comes from the source {{source}} and is maintained there; it is read-only here."
+        "readOnly": "This group comes from the source {{source}} and is maintained there; it is read-only here.",
+        "readOnlyViewers": "This group comes from the source {{source}} and is maintained there; here only who may view its members can be set.",
+        "viewOnly": "Shared for viewing only: the entries and members of this group can be read, not changed here.",
+        "emptyKept": "This group is empty. If the source {{source}} no longer delivers it, it is only kept because of the entries under “View members”; once they are removed, the next sync deletes the group."
     },
     "tabs": {
         "entries": "Entries ({{count}})",
         "effective": "All members",
         "managers": "Managers ({{count}})",
+        "viewers": "View members ({{count}})",
         "history": "History"
     },
     "entries": {
@@ -93,7 +98,15 @@
         "remove": "Remove",
         "removeTitle": "Take management away?",
         "removeConfirm": "Take away",
-        "removeMessage": "{{manager}} can no longer manage this group."
+        "removeMessage": "{{token}} can no longer manage this group."
+    },
+    "viewers": {
+        "hint": "Whoever may view the members sees the entries of this group and all of its members, and those of every group it contains, at any depth. They cannot change anything and do not become members of the group.",
+        "add": "Grant viewing the members to",
+        "none": "Apart from the managers, nobody may view the members.",
+        "removeTitle": "Take viewing away?",
+        "removeConfirm": "Take away",
+        "removeMessage": "{{token}} can no longer view the members of this group."
     },
     "history": {
         "at": "When",
@@ -113,6 +126,8 @@
             "member_removed": "{{member}} removed as {{relation}}",
             "manager_added": "Management handed to {{member}}",
             "manager_removed": "Management taken from {{member}}",
+            "viewer_added": "{{member}} may view the members",
+            "viewer_removed": "{{member}} may no longer view the members",
             "relation_changed": "{{member}}: role changed from {{from}} to {{relation}}"
         }
     },
@@ -120,7 +135,7 @@
         "search": "Search all sources",
         "more_one": "… and {{count}} more",
         "more_other": "… and {{count}} more",
-        "intro": "Groups of every source. Only the groups of {{source}} are maintained here; groups of other sources come from their import and are read-only here. Pick a group on the left.",
+        "intro": "Groups of every source. Only the groups of {{source}} are maintained here; groups of other sources come from their import and are read-only here, except for who may view their members. Pick a group on the left.",
         "source": "Source",
         "kind": "Kind",
         "groups": "Groups",

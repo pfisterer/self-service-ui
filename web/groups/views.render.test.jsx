@@ -26,6 +26,7 @@ const DETAIL = {
         { member: 'pattern:*@student.dhbw-mannheim.de', relation: 'member', created_at: '2026-10-01T10:00:00Z' },
     ],
     managers: [{ token: 'user:dekan@dhbw.de', created_by: 'root@dhbw.de', created_at: '2026-10-01T10:00:00Z' }],
+    viewers: [{ token: 'group:pruefungsamt#leitung', created_by: 'dekan@dhbw.de', created_at: '2026-10-02T10:00:00Z' }],
 };
 const HISTORY = [
     { id: 'h3', group_id: 'wwi23seb', at: '2026-10-03T10:00:00Z', actor: 'dekan@dhbw.de', action: 'relation_changed', member: 'user:ben@dhbw.de', relation: 'dozent', detail: 'member' },
@@ -46,6 +47,9 @@ const DUALIS_DETAIL = {
     memberships: [{ member: 'group:dualis-orga-ma-t-mb', relation: 'studierende', created_at: '2026-11-04T10:00:00Z' }],
     // null as role providers before b2689b9 answered for a group nobody maintains; the detail page crashed on it.
     managers: null,
+    // Admins set who may view the members of a sync source's group, nothing else of it.
+    viewers: [{ token: 'user:sekretariat@dhbw.de', created_by: 'root@dhbw.de', created_at: '2026-11-05T10:00:00Z' }],
+    viewers_editable: true,
 };
 const SOURCES = [
     { name: 'ZWR', type: 'local', local: true, groups: 1 },
@@ -117,10 +121,39 @@ describe('the groups views render', () => {
         expect(await screen.findByText('ben@dhbw.de')).toBeTruthy();
         fireEvent.click(screen.getByRole('tab', { name: /Verwaltung|Managers/ }));
         expect(await screen.findByText('dekan@dhbw.de')).toBeTruthy();
+        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder einsehen|View members/ }));
+        expect(await screen.findByText('pruefungsamt#leitung')).toBeTruthy();
+        expect(screen.getAllByLabelText(/Einsicht in die Mitglieder geben an|Grant viewing the members to/).length).toBeGreaterThan(0);
         fireEvent.click(screen.getByRole('tab', { name: /Verlauf|History/ }));
         expect(await screen.findByText(/(im Auftrag von|on behalf of) dekan@dhbw.de/)).toBeTruthy();
         expect(screen.getByText(/dhbw-mannheim/)).toBeTruthy();
         expect(screen.getByText(/ben@dhbw.de: (Rolle von Mitglied auf|role changed from Member to)/)).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    // Somebody who may only look: the group read-only and marked so, its entries and members and who may see them, but no forms and no history; a group in it is a link.
+    it('a group shared for viewing is read-only and has no history', async () => {
+        globalThis.__groupsApi.getGroup = async () => ({ ...DETAIL, editable: false, view_only: true, may_delete: false });
+        renderView(<GroupDetail params={{ id: 'wwi23seb' }} />);
+        expect(await screen.findByText(/Nur zum Einsehen freigegeben|Shared for viewing only/)).toBeTruthy();
+        expect(screen.getByRole('link', { name: /wwi23seb-kurs/ })).toBeTruthy();
+        expect(screen.queryByRole('link', { name: /alt@dhbw.de/ })).toBeNull();
+        expect(screen.queryByRole('button', { name: /^(Bearbeiten|Edit)$/ })).toBeNull();
+        expect(screen.queryByRole('button', { name: /^(Hinzufügen|Add)$/ })).toBeNull();
+        expect(screen.queryByRole('tab', { name: /Verlauf|History/ })).toBeNull();
+        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder insgesamt|All members/ }));
+        expect(await screen.findByText('ben@dhbw.de')).toBeTruthy();
+        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder einsehen|View members/ }));
+        expect(await screen.findByText('pruefungsamt#leitung')).toBeTruthy();
+        expect(screen.queryByRole('button', { name: /^(Entfernen|Remove)$/ })).toBeNull();
+        expectNoRenderFailure();
+    });
+
+    it('the list marks a group that may only be viewed', async () => {
+        globalThis.__groupsApi.listGroups = async () => ({ items: [{ ...GROUP, editable: true, child_groups: 1 }, { ...DUALIS_INSIDE[0], editable: false }], total: 2 });
+        renderView(<GroupsList />);
+        expect(await screen.findByText('dualis-mannheim-fakultaet-technik')).toBeTruthy();
+        expect(screen.getAllByText(/^(nur einsehen|view only)$/).length).toBe(1);
         expectNoRenderFailure();
     });
 
@@ -147,9 +180,24 @@ describe('the groups views render', () => {
         expect(screen.queryByRole('button', { name: /^(Hinzufügen|Add)$/ })).toBeNull();
         expect(screen.queryByRole('button', { name: /^(Entfernen|Remove)$/ })).toBeNull();
         expect(screen.getByText('dualis-orga-ma-t-mb')).toBeTruthy();
+        expect(screen.getByText(/nur festlegen, wer ihre Mitglieder einsehen darf|only who may view its members can be set/)).toBeTruthy();
+        expect(screen.queryByText(/Diese Gruppe ist leer|This group is empty/)).toBeNull();
+        // The viewers are the one thing an admin edits there.
+        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder einsehen|View members/ }));
+        expect(await screen.findByText('sekretariat@dhbw.de')).toBeTruthy();
+        expect(screen.getAllByLabelText(/Einsicht in die Mitglieder geben an|Grant viewing the members to/).length).toBeGreaterThan(0);
+        expect(screen.getByRole('button', { name: /^(Entfernen|Remove)$/ })).toBeTruthy();
+        fireEvent.click(screen.getByRole('tab', { name: /Verwaltung|Managers/ }));
+        expect(screen.queryByRole('button', { name: /^(Hinzufügen|Add)$/ })).toBeNull();
         expectNoRenderFailure();
     });
 
+    it('an empty group of a sync source that viewers keep says so', async () => {
+        globalThis.__groupsApi.getGroup = async () => ({ ...DUALIS_DETAIL, memberships: [] });
+        renderView(<GroupsBrowser params={{ id: 'dualis-mannheim-fakultaet-technik' }} />);
+        expect(await screen.findByText(/Diese Gruppe ist leer|This group is empty/)).toBeTruthy();
+        expectNoRenderFailure();
+    });
     it('a search lists matches from every source', async () => {
         renderView(<GroupsBrowser params={{}} />);
         await screen.findAllByText('dualis');

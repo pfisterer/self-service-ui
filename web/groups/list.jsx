@@ -15,7 +15,7 @@ import { TokenChips } from '/groups/tokens.jsx';
 // The same shape the service accepts (common.GroupIDPattern), checked here so the button says it before the server does.
 export const GROUP_ID = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 
-// GroupsList: the groups the caller maintains, with a search. Admins get the browser over every source instead (browser.jsx).
+// GroupsList: the groups the caller maintains or may only look at (marked), with a search. Admins get the browser over every source instead (browser.jsx).
 export function GroupsList() {
     const { t } = useTranslation();
     const api = useGroupsApi();
@@ -63,7 +63,10 @@ export function GroupsList() {
                                 {groups.data.items.map(g => (
                                     <Table.Tr key={g.id}>
                                         <Table.Td>
-                                            <Anchor component={Link} to={`/${encodeURIComponent(g.id)}`} fw={500}>{g.id}</Anchor>
+                                            <Group gap="xs" wrap="nowrap">
+                                                <Anchor component={Link} to={`/${encodeURIComponent(g.id)}`} fw={500}>{g.id}</Anchor>
+                                                {!g.editable && <Badge size="xs" variant="light" color="gray">{t('groups.list.viewOnly')}</Badge>}
+                                            </Group>
                                             {g.display_name && g.display_name !== g.id && <Text size="xs" c="dimmed">{g.display_name}</Text>}
                                         </Table.Td>
                                         <Table.Td><Text size="sm">{g.description}</Text></Table.Td>
