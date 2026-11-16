@@ -9,6 +9,8 @@ export const groupsKeys = {
     detail: (id) => ['groups', 'detail', id],
     effective: (id) => ['groups', 'effective', id],
     history: (id) => ['groups', 'history', id],
+    // The people a member token (group:<id> or group:<id>#<relation>) counts, as a workspace project's groups offer them (gpu/groups.js resolveGroupToken).
+    resolved: (token) => ['groups', 'resolved', token],
     // Prefix only; the autocomplete appends the search term and limit.
     principals: () => ['groups', 'principals'],
 };

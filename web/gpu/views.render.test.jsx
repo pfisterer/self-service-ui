@@ -12,7 +12,12 @@ const ME = {
 };
 
 // The workspace settings ask the AI service only where this deployment has it.
-vi.mock('/features.js', async (importOriginal) => ({ ...(await importOriginal()), llmEnabled: true }));
+// And the role provider, through which a project's groups look up the people of its course groups.
+vi.mock('/features.js', async (importOriginal) => ({ ...(await importOriginal()), llmEnabled: true, groupsEnabled: true }));
+vi.mock('/groups/api-groups.jsx', async (importOriginal) => {
+    const actual = await importOriginal();
+    return { ...actual, useGroupsApi: () => globalThis.__groupsApi };
+});
 // A test switches to a project manager who is not an admin with globalThis.__llmIsAdmin = false.
 vi.mock('/llm/use-llm-me.jsx', () => ({
     useLlmMe: () => ({ query: { isPending: false, isError: false }, me: ME, hasAccess: true, isFleetAdmin: true, isAdmin: globalThis.__llmIsAdmin ?? true }),
@@ -103,6 +108,10 @@ beforeEach(() => {
         submitJob: async () => JOBS[0],
         startOptions: async () => START_OPTIONS,
     };
+    globalThis.__groupsApi = {
+        effectiveMembers: async () => [],
+        getGroup: async () => ({ memberships: [] }),
+    };
     globalThis.__llmIsAdmin = true;
     consoleErrors = [];
     vi.spyOn(console, 'error').mockImplementation((...args) => { consoleErrors.push(args.join(' ')); });
@@ -163,7 +172,7 @@ describe('the GPU views render', () => {
         renderView(<SettingsTab nodeId="p_ml" />);
         fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
         expect(screen.getByText(/(Noch keine Gruppen|No groups yet)/)).toBeTruthy();
-        fireEvent.click(screen.getByRole('button', { name: /(Mitglieder verteilen|deal out members)/ }));
+        fireEvent.click(screen.getByRole('button', { name: /(Mitglieder verteilen|members dealt out)/ }));
         expect(screen.getByDisplayValue('gruppe-1')).toBeTruthy();
         expect(screen.getByDisplayValue('gruppe-2')).toBeTruthy();
         expect(screen.getByText('~/dhbw/groups/gruppe-1')).toBeTruthy();
@@ -172,6 +181,33 @@ describe('the GPU views render', () => {
         expect(screen.queryByText('m@dhbw.de')).toBeNull();
         fireEvent.change(screen.getByDisplayValue('gruppe-2'), { target: { value: 'gruppe-1' } });
         expect(screen.getAllByText(/(gibt es schon|is taken)/).length).toBe(2);
+        expectNoRenderFailure();
+    });
+
+    it('the workspace settings tab resolves course groups to their people, and says when a group is not visible', async () => {
+        globalThis.__llmIsAdmin = false;
+        const forbidden = Object.assign(new Error('forbidden'), { status: 403 });
+        globalThis.__groupsApi = {
+            getGroup: async (id) => (id === 'wwi24'
+                ? { memberships: [{ member: 'user:s1@dhbw.de', relation: 'studierende' }, { member: 'user:s2@dhbw.de', relation: 'studierende' }, { member: 'user:doz@dhbw.de', relation: 'dozent' }] }
+                : Promise.reject(forbidden)),
+            effectiveMembers: async () => { throw forbidden; },
+        };
+        const project = { ...PROJECTS[0], storage_gb: 20, groups: [],
+            members: [{ token: 'user:a@dhbw.de', role: 'member' }, { token: 'group:wwi24#studierende', role: 'member' }, { token: 'group:wwi25', role: 'member' }, { token: 'user:m@dhbw.de', role: 'manager' }] };
+        globalThis.__gpuApi.listProjects = async () => [project, PROJECTS[1]];
+        renderView(<SettingsTab nodeId="p_ml" />);
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
+        expect(await screen.findByText(/^2 (Personen|people)/)).toBeTruthy();
+        expect(await screen.findByText(/(Mitglieder von wwi25 sind hier nicht einsehbar|members of wwi25 are not visible)/)).toBeTruthy();
+        expect(screen.getByLabelText(/(Anzahl der neuen Gruppen|Number of new groups)/)).toBeTruthy();
+        expect(screen.queryByText('s1@dhbw.de')).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: /(Mitglieder verteilen|members dealt out)/ }));
+        // a, s1 and s2 dealt among the two new groups; not the lecturer, who holds another relation, nor the manager.
+        expect(screen.getAllByText('s1@dhbw.de').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('s2@dhbw.de').length).toBeGreaterThan(0);
+        expect(screen.queryByText('doz@dhbw.de')).toBeNull();
+        expect(screen.queryByText('m@dhbw.de')).toBeNull();
         expectNoRenderFailure();
     });
 

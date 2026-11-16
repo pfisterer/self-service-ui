@@ -26,7 +26,7 @@ export function nextGroupName(groups, prefix = 'gruppe') {
     return `${prefix}-${n}`;
 }
 
-// distribute makes count new groups <prefix>-1… and deals the people (user tokens) among them in turn, in the order given; group tokens are not dealt, they are a whole course. Existing groups stay as they are; names already taken are skipped.
+// distribute makes count new groups <prefix>-1… and deals the people (user tokens) among them in turn, in the order given (dealablePeople); group tokens are not dealt, they are a whole course. Existing groups stay as they are; names already taken are skipped.
 export function distribute(groups, people, count, prefix = 'gruppe') {
     const out = [...groups];
     const made = [];
@@ -39,6 +39,69 @@ export function distribute(groups, people, count, prefix = 'gruppe') {
         if (made.length) made[i % made.length].members.push(t);
     });
     return out;
+}
+
+// splitGroupToken parses group:<id> or group:<id>#<relation> (the role provider's member tokens); the plain group is relation "member", everyone in it whatever their relation.
+export function splitGroupToken(token) {
+    const [id, relation] = (token ?? '').replace(/^group:/, '').split('#');
+    return { id, relation: relation || 'member' };
+}
+
+// groupTokens are the course groups (group: tokens) among the project's members, managers left out, and among the members of its groups: the ones whose people can be looked up to pick or deal them out.
+export function groupTokens(members, groups) {
+    const all = [...memberChoices(members), ...(groups ?? []).flatMap(g => g.members ?? [])];
+    return [...new Set(all.filter(t => t.startsWith('group:')))];
+}
+
+// resolveGroupToken lists the people (user tokens) a group token counts, the way the role provider counts them: a plain group is everyone in it, sub-groups resolved (effective(id), GET /v1/manage/groups/{id}/effective); group:<id>#<relation> only the people holding that relation — the endpoint takes no relation, so it goes through the group's own entries (detail(id), GET /v1/manage/groups/{id}): the live entries with that relation, a person as is, a group entry resolved the same way (a plain group as a whole, group:y#r as the people holding r in y). Pattern entries count nobody, as in the effective members.
+export async function resolveGroupToken(token, { effective, detail }, seen = new Set()) {
+    const { id, relation } = splitGroupToken(token);
+    const key = `${id}#${relation}`;
+    if (!id || seen.has(key)) return [];
+    seen.add(key);
+    if (relation === 'member') return (await effective(id)) ?? [];
+    const entries = ((await detail(id))?.memberships ?? []).filter(m => !m.expired && (m.relation || 'member') === relation);
+    const nested = await Promise.all(entries.filter(m => m.member.startsWith('group:')).map(m => resolveGroupToken(m.member, { effective, detail }, seen)));
+    return [...new Set([...entries.filter(m => m.member.startsWith('user:')).map(m => m.member), ...nested.flat()])];
+}
+
+// resolvedChoices are the people of the resolved course groups (resolved: [{ token, people }]) that are not already offered directly (taken), each once, under the first group that has them.
+export function resolvedChoices(taken, resolved) {
+    const seen = new Set(taken.map(t => t.toLowerCase()));
+    return resolved.map(({ token, people }) => ({
+        token,
+        people: (people ?? []).filter(t => {
+            const k = t.toLowerCase();
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+        }),
+    })).filter(r => r.people.length > 0);
+}
+
+// dealablePeople are the people distribute deals out: the project's own members (user tokens, managers left out), then the people of the resolved course groups (resolved: [{ token, people }]), each once (e-mail addresses compared without case), without the ones already in a group.
+export function dealablePeople(members, groups, resolved = []) {
+    const skip = new Set([
+        ...(members ?? []).filter(m => m.role === 'manager').map(m => m.token),
+        ...(groups ?? []).flatMap(g => g.members ?? []),
+    ].map(t => t.toLowerCase()));
+    const out = [];
+    for (const t of [...memberChoices(members), ...resolved.flatMap(r => r.people ?? [])]) {
+        const k = t.toLowerCase();
+        if (!t.startsWith('user:') || skip.has(k)) continue;
+        skip.add(k);
+        out.push(t);
+    }
+    return out;
+}
+
+// EMAIL is loose on purpose: an address typed into a group's members, checked again by the service.
+const EMAIL = /^[^\s@:]+@[^\s@]+\.[^\s@]+$/;
+
+// typedPerson is the user token for an e-mail address typed into a group's member field, or null.
+export function typedPerson(search) {
+    const s = (search ?? '').trim().toLowerCase();
+    return EMAIL.test(s) ? `user:${s}` : null;
 }
 
 // tokenLabel shows a member token without its prefix.
