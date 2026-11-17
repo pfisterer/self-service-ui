@@ -14,7 +14,7 @@ import { DnsRecordsList } from '/dyndns/zones/dns-record-list.jsx';
 import { TlsCertificates } from '/dyndns/zones/tls-certificates.jsx';
 import { Title, Paper, Stack, Tabs, Button, Text, Alert, Group, TextInput, Modal, Box, Tooltip, Badge, ActionIcon, VisuallyHidden } from '@mantine/core';
 import { AlertCircle, Globe, Plus, Users, RefreshCw, LogOut } from 'lucide-react';
-import { subzoneLabelError } from '/helper/dns-validation.js';
+import { subzoneLabelError, wildcardCnRemaining, WILDCARD_CN_MAX } from '/helper/dns-validation.js';
 import { CopyableText } from '/helper/copyable-text.jsx';
 import { MasterDetail } from '/helper/master-detail.jsx';
 import { NavTree, TreeFilter, useExpandAll, useTreeExpansion } from '/helper/tree.jsx';
@@ -177,6 +177,9 @@ export function SubzoneModal({ parent, onClose, onCreated }) {
     }
 
     const preview = label.trim().replace(/\.+$/, '');
+    // Room left for `*.<subzone>` as a certificate's commonName, live while typing: the fixed parent differs per person, so a fixed maximum for the label would say nothing. Over the limit is a warning only, the zone itself works in DNS.
+    const remaining = wildcardCnRemaining(label, parent);
+    const wildcardZone = preview ? `${preview}.${parent}` : `….${parent}`;
     return (
         <Modal opened={!!parent} onClose={onClose} title={t('dyndns.subzone.title')} centered size="lg">
             <Stack gap="lg" p="xs">
@@ -193,6 +196,15 @@ export function SubzoneModal({ parent, onClose, onCreated }) {
                     size="md"
                     data-autofocus
                 />
+                {remaining >= 0 ? (
+                    <Text size="xs" c={remaining < 10 ? 'orange' : 'dimmed'} data-testid="wildcard-remaining">
+                        {t('dyndns.subzone.wildcardRemaining', { count: remaining, zone: wildcardZone, max: WILDCARD_CN_MAX })}
+                    </Text>
+                ) : (
+                    <Alert color="orange" icon={<AlertCircle size={16} />} data-testid="wildcard-too-long">
+                        {t('dyndns.subzone.wildcardTooLong', { count: -remaining, zone: wildcardZone, max: WILDCARD_CN_MAX })}
+                    </Alert>
+                )}
                 <Text size="sm" c="dimmed">
                     {t('dyndns.subzone.fullNameLabel')}{' '}
                     {valid

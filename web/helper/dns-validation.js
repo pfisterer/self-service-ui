@@ -75,6 +75,16 @@ export function subzoneLabelError(label, parent, t) {
     return null;
 }
 
+// X.509 limits a certificate's commonName to 64 characters (RFC 5280, ub-common-name), and Let's Encrypt refuses longer ones. A wildcard certificate that carries `*.<zone>` as its commonName therefore needs `*.` + zone ≤ 64; names only in the SAN have no such limit, so this is a warning, not a DNS error.
+export const WILDCARD_CN_MAX = 64;
+
+// wildcardCnRemaining is how many characters are left for `*.<label>.<parent>` within WILDCARD_CN_MAX; negative when the subzone is too long for a wildcard commonName. With an empty label it is the room the label has (its separating dot counted). The fixed parent (e.g. `<user>.users.dhbw.site`) differs per person, which is why the form shows this number live.
+export function wildcardCnRemaining(label, parent) {
+    const s = (label || '').trim().replace(/\.+$/, '');
+    const p = (parent || '').trim().replace(/\.+$/, '');
+    return WILDCARD_CN_MAX - ('*.'.length + s.length + 1 + p.length);
+}
+
 // Client-side validation of a record's NAME (the relative name entered in the
 // "Name" column / field, e.g. `www`, `_dmarc`, `*`, or `@` for the zone apex).
 // Empty or '@' means the apex and is valid. Otherwise every dot-separated label

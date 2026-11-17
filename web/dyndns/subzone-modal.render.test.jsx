@@ -14,9 +14,18 @@ function type(value) {
 }
 
 describe('creating a subzone (todo d3)', () => {
-    it('allows a long subzone: a wildcard certificate without commonName works for it', () => {
+    it('shows the characters left for a wildcard certificate while typing', () => {
+        renderView(<SubzoneModal parent={parent} onClose={() => {}} onCreated={() => {}} />);
+        expect(screen.getByTestId('wildcard-remaining').textContent).toContain(String(64 - 3 - parent.length));
+        type('data-eng-wdski24a');
+        expect(screen.getByTestId('wildcard-remaining').textContent).toBe(i18n.t('dyndns.subzone.wildcardRemaining', { count: 1, zone: `data-eng-wdski24a.${parent}`, max: 64 }));
+    });
+
+    it('warns over 64 but still allows creating the zone', () => {
         renderView(<SubzoneModal parent={parent} onClose={() => {}} onCreated={() => {}} />);
         type('data-eng-wdski24a-longer');
+        expect(screen.queryByTestId('wildcard-remaining')).toBeNull();
+        expect(screen.getByTestId('wildcard-too-long').textContent).toContain(`*.data-eng-wdski24a-longer.${parent}`);
         expect(screen.getByRole('button', { name: i18n.t('dyndns.subzone.submit') }).disabled).toBe(false);
     });
 
