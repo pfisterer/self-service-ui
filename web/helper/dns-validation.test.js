@@ -5,8 +5,9 @@ import {
     isValidDnsName,
     isValidZonePattern,
     isValidUserFilter,
-    singleFilterDomain,
-    localPartFilterOk,
+    appendToUserFilter,
+    splitUserFilter,
+    USER_FILTER_MAX,
     zoneWithinAnySuffix,
     subzoneLabelError,
     wildcardCnRemaining,
@@ -82,25 +83,6 @@ describe('%l in zone patterns', () => {
         expect(isValidZonePattern('%l')).toBe(false);
         expect(isValidZonePattern('%l..users.dhbw.site')).toBe(false);
     });
-
-    it('finds the one domain a filter is limited to', () => {
-        expect(singleFilterDomain('*@student.dhbw-mannheim.de')).toBe('student.dhbw-mannheim.de');
-        expect(singleFilterDomain(' *@DHBW.de , x@dhbw.DE,')).toBe('dhbw.de');
-        expect(singleFilterDomain('a@dhbw.de, b@dhbw.de')).toBe('dhbw.de');
-        expect(singleFilterDomain('*')).toBe(null);
-        expect(singleFilterDomain('*.dhbw.de')).toBe(null);
-        expect(singleFilterDomain('a@*.dhbw.de')).toBe(null);
-        expect(singleFilterDomain('*@dhbw.de,*@cas.dhbw.de')).toBe(null);
-        expect(singleFilterDomain('')).toBe(null);
-    });
-
-    it('requires a single-domain filter for %l only', () => {
-        expect(localPartFilterOk('%l-stma.users.dhbw.site', '*@student.dhbw-mannheim.de')).toBe(true);
-        expect(localPartFilterOk('%l.users.dhbw.site', '*@dhbw.de,*@cas.dhbw.de')).toBe(false);
-        expect(localPartFilterOk('%l.users.dhbw.site', '*')).toBe(false);
-        expect(localPartFilterOk('%u.users.dhbw.site', '*@dhbw.de,*@cas.dhbw.de')).toBe(true);
-        expect(localPartFilterOk('%u.users.dhbw.site', '*')).toBe(true);
-    });
 });
 
 describe('isValidUserFilter', () => {
@@ -125,6 +107,34 @@ describe('isValidUserFilter', () => {
     it('rejects empty input', () => {
         expect(isValidUserFilter('')).toBe(false);
         expect(isValidUserFilter(',')).toBe(false);
+    });
+
+    it('accepts the role provider tokens, also mixed with addresses', () => {
+        expect(isValidUserFilter('user:max@dhbw.de')).toBe(true);
+        expect(isValidUserFilter('group:wwi23seb')).toBe(true);
+        expect(isValidUserFilter('group:WWI23SEB')).toBe(true);
+        expect(isValidUserFilter('group:wwi23seb#studierende')).toBe(true);
+        expect(isValidUserFilter('group:standort-ma.x_y')).toBe(true);
+        expect(isValidUserFilter('*@dhbw.de, group:wwi23seb#dozent ,user:b@cas.dhbw.de,')).toBe(true);
+    });
+
+    it('rejects malformed tokens', () => {
+        for (const bad of ['group:', 'group:-x', 'group:a b', 'group:x#', 'group:x#1rel', 'group:x#a#b', 'user:', 'user:not-an-address', 'user:*@dhbw.de', 'pattern:*@dhbw.de', 'role:x']) {
+            expect(isValidUserFilter(bad), bad).toBe(false);
+        }
+    });
+
+    it('rejects a filter longer than the column', () => {
+        expect(isValidUserFilter('a'.repeat(USER_FILTER_MAX) + '@x.de')).toBe(false);
+    });
+});
+
+describe('appendToUserFilter', () => {
+    it('adds a picked token once, keeping what was typed', () => {
+        expect(appendToUserFilter('', 'group:wwi23seb')).toBe('group:wwi23seb');
+        expect(appendToUserFilter('*@dhbw.de,', 'group:wwi23seb')).toBe('*@dhbw.de, group:wwi23seb');
+        expect(appendToUserFilter('*@dhbw.de, GROUP:wwi23seb', 'group:wwi23seb')).toBe('*@dhbw.de, GROUP:wwi23seb');
+        expect(splitUserFilter(' a@b.de ,, group:x ')).toEqual(['a@b.de', 'group:x']);
     });
 });
 

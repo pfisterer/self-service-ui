@@ -1,6 +1,6 @@
 // Shared DNS validation. The primitives (IP, FQDN, email) come from the
 // `validator` library; only the DNS-policy-specific rules that no general
-// library covers (%u/%l zone patterns, wildcard-email filters, lowercase subzone
+// library covers (%u/%l zone patterns, user filters with patterns and group tokens, lowercase subzone
 // labels) are kept as thin wrappers around it.
 
 import isIP from 'validator/lib/isIP.js';
@@ -31,40 +31,46 @@ export function isValidZonePattern(value) {
     return isFQDN(value.replaceAll('%u', 'a').replaceAll('%l', 'a').trim());
 }
 
-// singleFilterDomain is the one e-mail domain every entry of a comma-separated user filter is limited to (lowercase), or null when an entry leaves the domain open ('*', '*.dhbw.de', a wildcard in the domain) or the entries name different domains. The client-side twin of the server's singleFilterDomain.
-export function singleFilterDomain(filter) {
-    let domain = null;
-    for (const raw of (filter || '').split(',')) {
-        const p = raw.trim().toLowerCase();
-        if (p === '') continue;
-        const at = p.lastIndexOf('@');
-        if (at < 0) return null;
-        const local = p.slice(0, at);
-        const d = p.slice(at + 1);
-        if (d === '' || d.includes('*') || (local.includes('*') && local.includes('@'))) return null;
-        if (domain !== null && d !== domain) return null;
-        domain = d;
+// The role provider's token shapes (role-provider-service: group ids and relation names), compared case-insensitively like the server does.
+const GROUP_ID_RE = /^[a-z0-9][a-z0-9._-]{0,127}$/;
+const RELATION_RE = /^[a-z][a-z0-9_-]*$/;
+
+// splitUserFilter: the non-empty, trimmed entries of a comma-separated user filter.
+export function splitUserFilter(value) {
+    return (value || '').split(',').map(p => p.trim()).filter(p => p !== '');
+}
+
+// appendToUserFilter adds an entry to a filter unless it is already there (case-insensitive), keeping what was typed.
+export function appendToUserFilter(filter, entry) {
+    const e = (entry || '').trim();
+    const parts = splitUserFilter(filter);
+    if (!e || parts.some(p => p.toLowerCase() === e.toLowerCase())) return parts.join(', ');
+    return [...parts, e].join(', ');
+}
+
+// isValidUserFilterEntry: an e-mail address, a pattern with a leading * (*@domain.com, *user@domain.com), or a role-provider token user:<email>, group:<id>, group:<id>#<relation>. The server accepts the same forms.
+export function isValidUserFilterEntry(entry) {
+    const p = (entry || '').trim();
+    const lower = p.toLowerCase();
+    if (lower.startsWith('user:')) return isEmail(p.slice(5)) && !p.includes('*');
+    if (lower.startsWith('group:')) {
+        const [id, relation, ...rest] = lower.slice(6).split('#');
+        if (rest.length > 0 || !GROUP_ID_RE.test(id)) return false;
+        return relation === undefined || RELATION_RE.test(relation);
     }
-    return domain;
+    if (isEmail(p)) return true;
+    const at = p.lastIndexOf('@'); // wildcard local part: *[...]@fqdn
+    return at > 0 && p.slice(0, at).startsWith('*') && isFQDN(p.slice(at + 1));
 }
 
-// localPartFilterOk: '%l' drops the domain of the address, so a pattern with '%l' needs a user filter limited to one e-mail domain — otherwise max@a.de and max@b.de would get the same zone. Patterns without '%l' are always fine. The server refuses the same.
-export function localPartFilterOk(pattern, filter) {
-    if (!(pattern || '').includes('%l')) return true;
-    return singleFilterDomain(filter) !== null;
-}
+// USER_FILTER_MAX is the length of the server's column.
+export const USER_FILTER_MAX = 255;
 
-// An email or wildcard-email pattern, or a comma-separated list of them
-// (*@domain.com, user@domain.com, *user@domain.com).
+// A comma-separated list of user filter entries (see isValidUserFilterEntry), at most USER_FILTER_MAX characters.
 export function isValidUserFilter(value) {
-    if (!value) return false;
-    const parts = value.split(',').map(p => p.trim()).filter(p => p !== '');
-    if (parts.length === 0) return false;
-    return parts.every(p => {
-        if (isEmail(p)) return true;
-        const at = p.lastIndexOf('@'); // wildcard local part: *[...]@fqdn
-        return at > 0 && p.slice(0, at).startsWith('*') && isFQDN(p.slice(at + 1));
-    });
+    if (!value || value.length > USER_FILTER_MAX) return false;
+    const parts = splitUserFilter(value);
+    return parts.length > 0 && parts.every(isValidUserFilterEntry);
 }
 
 // zoneWithinAnySuffix reports whether `zone` equals one of the given zones or

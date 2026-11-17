@@ -15,7 +15,7 @@
         "validationError": "Ungültige Eingabe"
     },
     "validation": {
-        "userFilter": "Erwartet werden gültige E-Mail-Adressen und/oder *@domain-Muster, durch Komma getrennt.",
+        "userFilter": "Erwartet werden durch Komma getrennt: E-Mail-Adressen, Muster wie *@domain.de und Tokens wie group:<gruppe>, group:<gruppe>#<rolle> oder user:<adresse>.",
         "dnsName": "Erwartet wird ein gültiger DNS-Domainname."
     },
     "loadState": {
@@ -243,16 +243,15 @@
         "invalidFields": "Zonenmuster, Zone SOA und Benutzerfilter müssen gültig sein.",
         "zoneLabel": "Zone (Name oder Muster)",
         "zonePlaceholder": "z. B. projekt1.example.com, %u.users.example.com oder %l-stma.users.example.com",
-        "zoneDescription": "Platzhalter: %u = die ganze E-Mail-Adresse (dennis.pfisterer@dhbw.de → dennis-pfisterer-at-dhbw-de), %l = nur der Teil vor dem @ (s252690@student.dhbw-mannheim.de mit %l-stma.users.dhbw.site → s252690-stma.users.dhbw.site). %l nur, wenn der Benutzerfilter auf eine E-Mail-Domain beschränkt ist.",
+        "zoneDescription": "Platzhalter: %u = die ganze E-Mail-Adresse (dennis.pfisterer@dhbw.de → dennis-pfisterer-at-dhbw-de), %l = nur der Teil vor dem @ (s252690@student.dhbw-mannheim.de mit %l-stma.users.dhbw.site → s252690-stma.users.dhbw.site). Ergibt %l für zwei Personen denselben Namen, erhält ihn, wer die Zone zuerst anlegt.",
         "zoneError": "Erwartet wird eine gültige Domain. Erlaubt: '%u' und '%l' in einem Label (nicht in der TLD). Wildcards sind nicht erlaubt.",
-        "localPartNeedsSingleDomain": "Mit %l im Zonenmuster muss der Benutzerfilter auf genau eine E-Mail-Domain beschränkt sein: nur *@domain oder Adressen derselben Domain. Sonst könnten Personen verschiedener Domains dieselbe Zone erhalten; für mehrere Domains %u verwenden oder je Domain eine Regel anlegen.",
         "soaLabel": "Zone SOA",
         "soaPlaceholder": "z. B. users.example.com",
         "soaDescription": "Die autoritative Zone für diesen Nameserver (z. B. users.example.com)",
         "soaOutOfScope": "Die eigenen Delegationen umfassen {{zones}} — die Zone SOA muss in oder unter einer dieser Zonen liegen.",
         "userFilterLabel": "Benutzerfilter",
-        "userFilterPlaceholder": "z. B. *@example.com  oder  alice@example.com, bob@example.com",
-        "userFilterDescription": "Durch Komma getrennte Liste. *@example.com = alle Nutzer dieser Domain; alice@example.com = eine bestimmte Person. Zugriff gibt es, sobald ein Eintrag passt.",
+        "userFilterPlaceholder": "z. B. *@example.com, group:wwi23seb#studierende",
+        "userFilterDescription": "Durch Komma getrennte Liste; die Regel gilt, sobald ein Eintrag passt: *@example.com = alle Adressen dieser Domain, alice@example.com = eine bestimmte Person, group:wwi23seb = alle Mitglieder einer Gruppe, group:wwi23seb#studierende = nur die mit dieser Rolle in der Gruppe. Gruppen und Personen lassen sich unten suchen und hinzufügen.",
         "allowSubdomains": "Subdomains erlauben",
         "allowSubdomainsDescription": "Eigentümer einer passenden Zone dürfen darunter auch delegierte Subzonen anlegen und verwalten (z. B. sub.example.com unter example.com).",
         "allowSharing": "Teilen erlauben",
@@ -288,8 +287,8 @@
         "updated": "✅ Delegation aktualisiert!",
         "invalidFields": "Benutzerfilter und Zone müssen gültig sein.",
         "userFilterLabel": "Benutzerfilter",
-        "userFilterPlaceholder": "z. B. max@uni-mannheim.de, petra@uni-mannheim.de  oder  *@uni-mannheim.de",
-        "userFilterDescription": "Wer die Regeln für die Zone unten verwalten darf. Durch Komma getrennte Liste aus E-Mail-Adressen und/oder *@domain-Mustern.",
+        "userFilterPlaceholder": "z. B. max@uni-mannheim.de, *@uni-mannheim.de, group:stg-wi#studiengangsleiter",
+        "userFilterDescription": "Wer die Regeln für die Zone unten verwalten darf. Durch Komma getrennte Liste aus E-Mail-Adressen, *@domain-Mustern und Gruppen (group:<gruppe> oder group:<gruppe>#<rolle>).",
         "zoneLabel": "Zone",
         "zonePlaceholder": "z. B. uni-mannheim.de",
         "zoneDescription": "Delegierte Nutzer dürfen die Regeln für diese Zone und ihre Subdomains verwalten",
@@ -336,5 +335,15 @@
         "viaSource": "via {{source}}",
         "mailTooltip": "Den Eigentümern schreiben, Fehlermeldung ist vorausgefüllt",
         "mailAria": "Den Eigentümern schreiben"
+    },
+    "userFilter": {
+        "pickLabel": "Gruppe oder Person hinzufügen",
+        "pickPlaceholder": "Gruppe oder E-Mail-Adresse suchen, z. B. wwi23 oder mustermann@",
+        "noDirectory": "Gruppen lassen sich hier als group:<gruppe> oder group:<gruppe>#<rolle> eintragen.",
+        "kind": {
+            "group": "Gruppe",
+            "user": "Person",
+            "pattern": "Muster für E-Mail-Adressen"
+        }
     }
 }

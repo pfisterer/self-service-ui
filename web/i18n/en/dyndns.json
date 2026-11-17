@@ -15,7 +15,7 @@
         "validationError": "Validation Error"
     },
     "validation": {
-        "userFilter": "Enter valid emails and/or *@domain patterns, comma-separated.",
+        "userFilter": "Expected, comma-separated: e-mail addresses, patterns such as *@domain.com and tokens such as group:<group>, group:<group>#<role> or user:<address>.",
         "dnsName": "Enter a valid DNS domain name."
     },
     "loadState": {
@@ -243,16 +243,15 @@
         "invalidFields": "Please ensure Zone Pattern, Zone SOA, and User Filter are all valid.",
         "zoneLabel": "Zone (Name or Pattern)",
         "zonePlaceholder": "e.g. projekt1.example.com, %u.users.example.com or %l-stma.users.example.com",
-        "zoneDescription": "Placeholders: %u = the whole e-mail address (dennis.pfisterer@dhbw.de → dennis-pfisterer-at-dhbw-de), %l = only the part before the @ (s252690@student.dhbw-mannheim.de with %l-stma.users.dhbw.site → s252690-stma.users.dhbw.site). %l only when the user filter is limited to one e-mail domain.",
+        "zoneDescription": "Placeholders: %u = the whole e-mail address (dennis.pfisterer@dhbw.de → dennis-pfisterer-at-dhbw-de), %l = only the part before the @ (s252690@student.dhbw-mannheim.de with %l-stma.users.dhbw.site → s252690-stma.users.dhbw.site). If %l gives two people the same name, whoever creates the zone first gets it.",
         "zoneError": "Enter a valid domain. Allowed: '%u' and '%l' within a label (not in the TLD). Wildcards are not permitted.",
-        "localPartNeedsSingleDomain": "With %l in the zone pattern, the user filter must be limited to exactly one e-mail domain: only *@domain or addresses of that domain. Otherwise people from different domains could get the same zone; for several domains use %u or create one rule per domain.",
         "soaLabel": "Zone SOA",
         "soaPlaceholder": "e.g. users.example.com",
         "soaDescription": "The authoritative zone for this nameserver (e.g., users.example.com)",
         "soaOutOfScope": "Your delegations cover {{zones}} — the Zone SOA must be at or below one of these zones.",
         "userFilterLabel": "User Filter",
-        "userFilterPlaceholder": "e.g. *@example.com  or  alice@example.com, bob@example.com",
-        "userFilterDescription": "Comma-separated list. *@example.com = all users at that domain; alice@example.com = one specific user. Access is granted if any entry matches.",
+        "userFilterPlaceholder": "e.g. *@example.com, group:wwi23seb#studierende",
+        "userFilterDescription": "Comma-separated list; the rule applies as soon as one entry matches: *@example.com = all addresses at that domain, alice@example.com = one specific person, group:wwi23seb = all members of a group, group:wwi23seb#studierende = only those with that role in the group. Groups and people can be searched and added below.",
         "allowSubdomains": "Allow subdomains",
         "allowSubdomainsDescription": "Owners of a matched zone may also create and manage delegated subzones under it (e.g. sub.example.com under example.com).",
         "allowSharing": "Allow sharing",
@@ -288,8 +287,8 @@
         "updated": "✅ Delegation updated!",
         "invalidFields": "Enter a valid user filter and zone.",
         "userFilterLabel": "User filter",
-        "userFilterPlaceholder": "e.g. max@uni-mannheim.de, petra@uni-mannheim.de  or  *@uni-mannheim.de",
-        "userFilterDescription": "Who may manage policy rules for the zone below. Comma-separated list of emails and/or *@domain patterns.",
+        "userFilterPlaceholder": "e.g. max@uni-mannheim.de, *@uni-mannheim.de, group:stg-wi#studiengangsleiter",
+        "userFilterDescription": "Who may manage the rules for the zone below. Comma-separated list of e-mail addresses, *@domain patterns and groups (group:<group> or group:<group>#<role>).",
         "zoneLabel": "Zone",
         "zonePlaceholder": "e.g. uni-mannheim.de",
         "zoneDescription": "Delegated users may manage rules for this zone and its subdomains",
@@ -336,5 +335,15 @@
         "viaSource": "via {{source}}",
         "mailTooltip": "Mail the owners, error message pre-filled",
         "mailAria": "Mail the owners"
+    },
+    "userFilter": {
+        "pickLabel": "Add a group or person",
+        "pickPlaceholder": "Search a group or e-mail address, e.g. wwi23 or mustermann@",
+        "noDirectory": "Groups can be entered here as group:<group> or group:<group>#<role>.",
+        "kind": {
+            "group": "Group",
+            "user": "Person",
+            "pattern": "Pattern for e-mail addresses"
+        }
     }
 }

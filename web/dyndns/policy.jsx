@@ -8,7 +8,9 @@ import { ZoneEventsAdminPanel } from '/dyndns/zone-events-admin.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
 import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
-import { isValidDnsName, isValidZonePattern, isValidUserFilter, localPartFilterOk, zoneWithinAnySuffix } from '/helper/dns-validation.js';
+import { isValidDnsName, isValidZonePattern, isValidUserFilter, zoneWithinAnySuffix } from '/helper/dns-validation.js';
+import { FilterEntries, UserFilterField, useDirectorySearch } from '/dyndns/user-filter-field.jsx';
+import { TokenLabelProvider } from '/projects/token-labels.jsx';
 import { Trash2, Edit, Plus, Search, X, AlertCircle } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, Switch, SimpleGrid, Card, Modal, Alert, ActionIcon, Paper, Tabs, Badge, Table } from '@mantine/core';
@@ -69,7 +71,9 @@ export function DnsPolicy() {
     if (!api || policyQuery.isPending) return <Loading />;
     if (policyQuery.isError) return <LoadError query={policyQuery} title={t('dyndns.policy.loadError')} />;
 
+    // Group tokens in the user filters are shown with their display names, looked up once per session.
     return (
+        <TokenLabelProvider>
         <Container fluid py="md" px="xl">
             <Stack gap="lg">
                 <Title order={2}>{t('dyndns.policy.title')}</Title>
@@ -148,6 +152,7 @@ export function DnsPolicy() {
                 )}
             </Stack>
         </Container>
+        </TokenLabelProvider>
     );
 }
 
@@ -242,7 +247,7 @@ export function RuleList({ rules, isSuperAdmin, onEdit }) {
                                 </Group>
                             </Table.Td>
                             <Table.Td><code style={codeStyle}>{rule.zone_soa}</code></Table.Td>
-                            <Table.Td><code style={codeStyle}>{rule.target_user_filter}</code></Table.Td>
+                            <Table.Td><FilterEntries filter={rule.target_user_filter} /></Table.Td>
                             <Table.Td>
                                 <Badge size="sm" variant="light" color={rule.allow_subdomains ? 'green' : 'gray'}
                                     title={t('dyndns.policy.subdomainsTooltip')}>
@@ -279,9 +284,12 @@ export function RuleList({ rules, isSuperAdmin, onEdit }) {
 }
 
 // --- Rule Form Modal ---
-export function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
+// principalSearch: the directory search for the user filter (tests inject one); by default the projects' search, none without a projects section.
+export function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose, principalSearch }) {
     const { t } = useTranslation();
     const api = useZonesApi();
+    const directorySearch = useDirectorySearch();
+    const search = principalSearch ?? directorySearch;
     const isEditMode = ruleToEdit !== null;
 
     // A delegated (non-admin) editor may only place rules whose SOA lies at or
@@ -321,8 +329,6 @@ export function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose
     const zoneValid = isValidZonePattern(rule.zone_pattern);
     const zoneSoaValid = isValidDnsName(rule.zone_soa);
     const userFilterValid = isValidUserFilter(rule.target_user_filter);
-    // %l (local part without the domain) only on a rule for one e-mail domain; shown on the filter field once the filter itself is valid.
-    const localPartOk = localPartFilterOk(rule.zone_pattern, rule.target_user_filter);
     const soaInScope = delegationSuffixes.length === 0 || zoneWithinAnySuffix(rule.zone_soa, delegationSuffixes);
 
     const saveRule = useApiMutation({
@@ -350,7 +356,7 @@ export function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose
         e.preventDefault();
         setMessage(null);
 
-        if (!zoneValid || !zoneSoaValid || !userFilterValid || !localPartOk || !soaInScope) {
+        if (!zoneValid || !zoneSoaValid || !userFilterValid || !soaInScope) {
             setMessage(<Alert icon={<AlertCircle size="16" />} title={t('dyndns.messages.validationError')} color="red">{t('dyndns.ruleForm.invalidFields')}</Alert>);
             return;
         }
@@ -396,16 +402,14 @@ export function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose
                                 || (!soaInScope && t('dyndns.ruleForm.soaOutOfScope', { zones: delegationSuffixes.join(', ') }))}
                         />
 
-                        <TextInput
+                        <UserFilterField
                             label={t('dyndns.ruleForm.userFilterLabel')}
-                            name="target_user_filter"
                             value={rule.target_user_filter}
-                            onChange={handleChange}
-                            required
+                            onChange={(v) => setRule(prev => ({ ...prev, target_user_filter: v }))}
                             placeholder={t('dyndns.ruleForm.userFilterPlaceholder')}
                             description={t('dyndns.ruleForm.userFilterDescription')}
-                            error={(!userFilterValid && t('dyndns.validation.userFilter'))
-                                || (!localPartOk && t('dyndns.ruleForm.localPartNeedsSingleDomain'))}
+                            error={!userFilterValid && t('dyndns.validation.userFilter')}
+                            search={search}
                         />
 
                         <Checkbox
@@ -443,7 +447,7 @@ export function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose
                             <Button
                                 type="submit"
                                 loading={saveRule.isPending}
-                                disabled={!zoneValid || !zoneSoaValid || !userFilterValid || !localPartOk || !soaInScope}>
+                                disabled={!zoneValid || !zoneSoaValid || !userFilterValid || !soaInScope}>
                                 {isEditMode ? t('dyndns.ruleForm.save') : t('dyndns.ruleForm.create')}
                             </Button>
                         </Group>
@@ -557,7 +561,7 @@ function DelegationManagement() {
                         <Table.Tbody>
                             {delegations.map(d => (
                                 <Table.Tr key={d.id}>
-                                    <Table.Td><code style={{ fontSize: '0.85em', whiteSpace: 'nowrap' }}>{d.target_user_filter}</code></Table.Td>
+                                    <Table.Td><FilterEntries filter={d.target_user_filter} /></Table.Td>
                                     <Table.Td><code style={{ fontSize: '0.85em', whiteSpace: 'nowrap' }}>{d.zone_suffix}</code></Table.Td>
                                     <Table.Td><Text size="sm" c="dimmed">{d.description}</Text></Table.Td>
                                     <Table.Td>
@@ -584,8 +588,10 @@ function DelegationManagement() {
     );
 }
 
-function DelegationFormModal({ delegationToEdit, onSuccess, onClose }) {
+export function DelegationFormModal({ delegationToEdit, onSuccess, onClose, principalSearch }) {
     const { t } = useTranslation();
+    const directorySearch = useDirectorySearch();
+    const search = principalSearch ?? directorySearch;
     const api = useZonesApi();
     const isEdit = delegationToEdit !== null;
     const [form, setForm] = useState({ target_user_filter: '', zone_suffix: '', description: '', ...(delegationToEdit || {}) });
@@ -629,11 +635,13 @@ function DelegationFormModal({ delegationToEdit, onSuccess, onClose }) {
                 {message}
                 <form onSubmit={handleSubmit}>
                     <Stack gap="md">
-                        <TextInput
-                            label={t('dyndns.delegationForm.userFilterLabel')} name="target_user_filter" value={form.target_user_filter} onChange={handleChange} required
+                        <UserFilterField
+                            label={t('dyndns.delegationForm.userFilterLabel')} value={form.target_user_filter}
+                            onChange={(v) => setForm(prev => ({ ...prev, target_user_filter: v }))}
                             placeholder={t('dyndns.delegationForm.userFilterPlaceholder')}
                             description={t('dyndns.delegationForm.userFilterDescription')}
                             error={!userValid && form.target_user_filter && t('dyndns.validation.userFilter')}
+                            search={search}
                         />
                         <TextInput
                             label={t('dyndns.delegationForm.zoneLabel')} name="zone_suffix" value={form.zone_suffix} onChange={handleChange} required

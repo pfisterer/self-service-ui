@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { renderView } from '/test/render-harness.jsx';
 import i18n from '/i18n/index.js';
 import { RuleFormModal, RuleList } from '/dyndns/policy.jsx';
@@ -27,26 +27,63 @@ describe('rule form: the placeholders %u and %l', () => {
         expect(screen.getByText(i18n.t('dyndns.ruleForm.zoneDescription'))).toBeTruthy();
     });
 
-    it('refuses %l on a filter for several domains and accepts it for one', () => {
+    it('accepts %l with any filter, groups and several domains included', () => {
         renderView(<RuleFormModal ruleToEdit={null} isSuperAdmin={true} onFormSuccess={() => {}} onClose={() => {}} />);
         type('dyndns.ruleForm.zoneLabel', '%l.users.dhbw.site');
         type('dyndns.ruleForm.soaLabel', 'users.dhbw.site');
-        type('dyndns.ruleForm.userFilterLabel', '*@dhbw.de, *@cas.dhbw.de');
-        expect(screen.getByText(i18n.t('dyndns.ruleForm.localPartNeedsSingleDomain'))).toBeTruthy();
-        expect(submit().disabled).toBe(true);
-
-        type('dyndns.ruleForm.userFilterLabel', '*@cas.dhbw.de');
-        expect(screen.queryByText(i18n.t('dyndns.ruleForm.localPartNeedsSingleDomain'))).toBeNull();
-        expect(submit().disabled).toBe(false);
+        for (const filter of ['*@dhbw.de, *@cas.dhbw.de', 'group:wwi23seb#studierende', 'group:wwi23seb, *@dhbw.de']) {
+            type('dyndns.ruleForm.userFilterLabel', filter);
+            expect(screen.queryByText(i18n.t('dyndns.validation.userFilter'))).toBeNull();
+            expect(submit().disabled).toBe(false);
+        }
     });
+});
 
-    it('leaves %u rules for several domains alone', () => {
+describe('rule form: groups in the user filter', () => {
+    const search = vi.fn(async () => [
+        { token: 'group:wwi23seb#studierende', label: 'WWI23SEB', description: 'Kurs' },
+        { token: 'user:student@dhbw.de' },
+    ]);
+
+    it('marks a malformed token and accepts a mix of addresses and groups', () => {
         renderView(<RuleFormModal ruleToEdit={null} isSuperAdmin={true} onFormSuccess={() => {}} onClose={() => {}} />);
         type('dyndns.ruleForm.zoneLabel', '%u.users.dhbw.site');
         type('dyndns.ruleForm.soaLabel', 'users.dhbw.site');
-        type('dyndns.ruleForm.userFilterLabel', '*@dhbw.de, *@cas.dhbw.de');
-        expect(screen.queryByText(i18n.t('dyndns.ruleForm.localPartNeedsSingleDomain'))).toBeNull();
+        type('dyndns.ruleForm.userFilterLabel', '*@dhbw.de, group:bad id');
+        expect(screen.getByText(i18n.t('dyndns.validation.userFilter'))).toBeTruthy();
+        expect(submit().disabled).toBe(true);
+        type('dyndns.ruleForm.userFilterLabel', '*@dhbw.de, group:wwi23seb, user:max@dhbw.de');
+        expect(screen.queryByText(i18n.t('dyndns.validation.userFilter'))).toBeNull();
         expect(submit().disabled).toBe(false);
+    });
+
+    it('adds a group picked from the directory to what was typed', async () => {
+        renderView(<RuleFormModal ruleToEdit={null} isSuperAdmin={true} onFormSuccess={() => {}} onClose={() => {}} principalSearch={search} />);
+        type('dyndns.ruleForm.userFilterLabel', '*@dhbw.de');
+        fireEvent.change(screen.getByPlaceholderText(i18n.t('dyndns.userFilter.pickPlaceholder')), { target: { value: 'wwi' } });
+        fireEvent.click(await screen.findByText('group:wwi23seb#studierende'));
+        await waitFor(() => expect(screen.getByLabelText(i18n.t('dyndns.ruleForm.userFilterLabel'), { exact: false }).value).toBe('*@dhbw.de, group:wwi23seb#studierende'));
+    });
+
+    it('without a directory says how to type a group', () => {
+        renderView(<RuleFormModal ruleToEdit={null} isSuperAdmin={true} onFormSuccess={() => {}} onClose={() => {}} />);
+        expect(screen.getByText(i18n.t('dyndns.userFilter.noDirectory'))).toBeTruthy();
+        expect(screen.queryByPlaceholderText(i18n.t('dyndns.userFilter.pickPlaceholder'))).toBeNull();
+    });
+
+    it('the rule table shows one entry per item, a user token by its address', () => {
+        const rule = { id: 1, zone_pattern: '%l.kurs.dhbw.site', zone_soa: 'kurs.dhbw.site', target_user_filter: 'group:wwi23seb#studierende, user:max@dhbw.de, *@dhbw.de', allow_subdomains: false, sharing_allowed: false };
+        renderView(<RuleList rules={[rule]} isSuperAdmin={false} onEdit={() => {}} />);
+        const entries = screen.getByTestId('filter-entries');
+        expect(entries.textContent).toContain('group:wwi23seb#studierende');
+        expect(entries.textContent).toContain('max@dhbw.de');
+        expect(entries.textContent).not.toContain('user:max');
+        expect(entries.textContent).toContain('*@dhbw.de');
+    });
+
+    it('the help text names the group forms, in German and English', () => {
+        expect(i18n.getFixedT('de')('dyndns.ruleForm.userFilterDescription')).toContain('group:wwi23seb#studierende');
+        expect(i18n.getFixedT('en')('dyndns.ruleForm.userFilterDescription')).toContain('group:wwi23seb#studierende');
     });
 });
 
