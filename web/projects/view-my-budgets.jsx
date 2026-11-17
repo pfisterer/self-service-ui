@@ -710,8 +710,9 @@ export function MyBudgetsView({ params }) {
             />
             {/* A manager may edit a project of theirs, so the change dialog has to
                 exist on this side too — not only in My Projects. On a pending
-                request it amends in place; on an approved one it files a change
-                for them to approve. */}
+                request it amends in place; on an approved one their change takes
+                effect at once where the budgets have room, since they would be the
+                ones to approve it. */}
             <ProjectFormModal
                 key={`change:${dlg.key}`}
                 opened={dlg.is('change')}
@@ -724,6 +725,9 @@ export function MyBudgetsView({ params }) {
                 // maximum project term bound the new end date. A sub-budget
                 // managed through an ancestor is not among myBudgets.
                 myBudgets={selected ? [selected, ...myBudgets.items] : myBudgets.items}
+                isRoot={cloudStatus.isRoot}
+                // A budget raised from the dialog: the tree, the selected budget and the badge follow.
+                onBudgetChanged={refresh}
                 // Opened from a budget's projects: a manager of it, who says
                 // who pays, moves it and hands it over — the owner does not.
                 asManager

@@ -220,6 +220,9 @@ export function MyProjectsView({ area = 'cloud' }) {
                 myBudgets={myBudgets}
                 eligibleBudgets={eligibleBudgets}
                 myProjects={ownProjects}
+                isRoot={cloudStatus.isRoot}
+                // A budget raised from the dialog: the lists follow by themselves (tree()), the header badge by hand.
+                onBudgetChanged={cloudStatus.refresh}
                 initialBudgetId={newProject?.budget || null}
                 initialKind={newProject?.kind ?? null}
             />
@@ -235,6 +238,9 @@ export function MyProjectsView({ area = 'cloud' }) {
                 myBudgets={myBudgets}
                 eligibleBudgets={eligibleBudgets}
                 myProjects={ownProjects}
+                isRoot={cloudStatus.isRoot}
+                // A budget raised from the dialog: the lists follow by themselves (tree()), the header badge by hand.
+                onBudgetChanged={cloudStatus.refresh}
                 initialTab={dlg.tab}
             />
             <BudgetFormModal

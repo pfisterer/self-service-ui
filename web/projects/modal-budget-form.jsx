@@ -11,7 +11,7 @@ import { DIALOG_SIZE, FormModal, FormTabs, tabHasError as tabFlag, tabWithError 
 import { defaultQuota, QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { TokenListEditor } from './component-token-list-editor.jsx';
 import { formatError } from '/helper/api-error.js';
-import { COLOR, catalogKinds, freeAmount, isAvailability, isPoolAutoApprove, kindOfResource, PROJECT_KINDS, UNLIMITED_QUOTA, visibleResources, endDate, endDay, resourceAmount } from './util-project.jsx';
+import { COLOR, catalogKinds, freeAmount, isAvailability, isPoolAutoApprove, kindOfResource, PROJECT_KINDS, UNLIMITED_QUOTA, visibleResources, endDate, endDay, resourceAmount, resourceSummaryText } from './util-project.jsx';
 import { BudgetSelect, withCurrentParent } from './component-budget-select.jsx';
 import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
@@ -32,6 +32,16 @@ const TAB_ACCESS = 'access';
 const TAB_AUTO_APPROVE = 'auto-approve';
 const TAB_ATTRIBUTES = 'attributes';
 
+// raisedLimit is limit with each quantity of add added to it; an unlimited one stays unlimited.
+function raisedLimit(limit, add) {
+    const out = { ...limit };
+    for (const [id, v] of Object.entries(add || {})) {
+        if (out[id] === UNLIMITED_QUOTA || !(v > 0)) continue;
+        out[id] = (out[id] ?? 0) + v;
+    }
+    return out;
+}
+
 // purposeChanged reports whether the purpose in the form differs from the budget's, ignoring surrounding space (the server trims it).
 function purposeChanged(reason, node) {
     return (reason || '').trim() !== (node?.reason || '').trim();
@@ -51,7 +61,9 @@ function purposeChanged(reason, node) {
 //
 // moveTargets: in edit mode, the budgets it may be moved under — a field of the
 // Details tab that acts at once when saved, like in a project's dialog.
-export function BudgetFormModal({ opened, onClose, onDone, resources, mode, parent = null, node = null, eligibleBudgets = [], currentUserEmail = '', moveTargets = [] }) {
+//
+// raiseBy, raiseFor: in edit mode, opened from a project's dialog to make room for that project (raiseFor, its name): the limit starts raised by raiseBy per quantity (an unlimited one stays unlimited), on the resources tab of the first resource raised, with a note saying why. Nothing is saved before the person does. zIndex: above the dialog it was opened from.
+export function BudgetFormModal({ opened, onClose, onDone, resources, mode, parent = null, node = null, eligibleBudgets = [], currentUserEmail = '', moveTargets = [], raiseBy = null, raiseFor = '', zIndex }) {
     const { t } = useTranslation();
     const api = useNodesApi();
     const isEdit = mode === 'edit';
@@ -109,7 +121,15 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
     // The caps the form shows (on some tab) for the budget it draws from.
     const shownCaps = (parentId) => capCatalog.filter(c => capTabKind(c, parentId) !== undefined);
 
-    const [activeTab, setActiveTab] = useState(TAB_DETAILS);
+    // Raising for a project: what is raised, and the tab it is on.
+    const raising = isEdit && !!node && !!raiseBy && Object.values(raiseBy).some(v => v > 0);
+    const raisedTab = () => {
+        const first = (resources || []).find(r => (raiseBy?.[r.id] ?? 0) > 0);
+        const kinds = kindsFor(null);
+        const kind = kinds.includes(kindOfResource(first)) ? kindOfResource(first) : kinds[0];
+        return kind ? `${TAB_RESOURCES}-${kind}` : TAB_RESOURCES;
+    };
+    const [activeTab, setActiveTab] = useState(() => (raising ? raisedTab() : TAB_DETAILS));
     // Only when editing: a budget being created or requested has none yet.
     const attrs = useAttributesTab(node);
 
@@ -122,7 +142,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                 parentId: null,
                 name: node.name || '',
                 reason: node.reason || '',
-                quota: { ...node.limit },
+                quota: raising ? raisedLimit(node.limit, raiseBy) : { ...node.limit },
                 adminScope: node.admin_scope || [],
                 eligibleRequesters: node.eligible_requesters || [],
                 allowSubBudgetRequests: node.allow_sub_budget_requests !== false,
@@ -449,6 +469,11 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
                         {...form.getInputProps('inheritsLimit', { type: 'checkbox' })}
                     />
                 )}
+                {raising && !inheritsLimit && ofKind(kind).some(r => (raiseBy[r.id] ?? 0) > 0) && (
+                    <Alert variant="light" color={COLOR.info} icon={<Info size="16" />} p="xs">
+                        <Text size="xs">{t('projects.budgetForm.raisedFor', { amount: resourceSummaryText(t, resources, raiseBy), project: raiseFor })}</Text>
+                    </Alert>
+                )}
                 {inheritsLimit ? (
                     <Alert variant="light" color={COLOR.info} icon={<Info size="16" />} p="xs">
                         <Text size="xs">
@@ -669,6 +694,7 @@ export function BudgetFormModal({ opened, onClose, onDone, resources, mode, pare
             }, handleInvalid)}
             submitting={save.isPending}
             submitError={attrs.error || (save.error && formatError(save.error))}
+            zIndex={zIndex}
             submitLabel={isEdit ? t('projects.forms.saveChanges')
                 : isRequest ? t('projects.forms.submitRequest')
                     : t('projects.budgetForm.submitCreate')}

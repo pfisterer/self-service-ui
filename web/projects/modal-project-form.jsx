@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Group, Paper, Stack, Table, Text, TextInput } from '@mantine/core';
-import { Clock, Gift, Zap } from 'lucide-react';
+import { ArrowUpCircle, Clock, Gift, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
@@ -20,7 +20,8 @@ import { AllocationSection, useAllocationDraft } from './component-allocation-se
 import { useWorkspaceSettings, workspaceSettingsItems } from '/gpu/workspace-settings.jsx';
 import { ProjectId } from '/gpu/project-id.jsx';
 import { withCurrentParent } from './component-budget-select.jsx';
-import { autoApproveHeadroom, changeOutcome, COLOR, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds, PROJECT_KINDS, kindOfResource, isLab, endDate, endDay, expiryTone, expiryValue } from './util-project.jsx';
+import { BudgetFormModal } from './modal-budget-form.jsx';
+import { autoApproveHeadroom, budgetShortfall, canRaise, changeOutcome, COLOR, idsAbove, managesChainOf, projectNeed, raisePlan, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds, PROJECT_KINDS, kindOfResource, isLab, endDate, endDay, expiryTone, expiryValue } from './util-project.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
@@ -69,14 +70,14 @@ function OutcomeSentence({ outcome, isChange, budget, hasPolicy, over = [] }) {
     if (outcome === 'refused') {
         return (
             <Text size="sm" c={COLOR.negative}>
-                {t('projects.projectForm.outcomeRefused')}
+                {t(isChange ? 'projects.projectForm.outcomeRefusedChange' : 'projects.projectForm.outcomeRefused')}
                 {over.length > 0 && ` ${t('projects.projectForm.outcomeRefusedWhich', { list: over.map(r => t('projects.projectForm.overItem', { name: resourceLabel(t, r), asked: r.asked, free: r.free })).join(', ') })}`}
             </Text>
         );
     }
     if (outcome === 'direct' || outcome === 'instant') {
         const text = outcome === 'direct'
-            ? t('projects.projectForm.outcomeDirect')
+            ? t(isChange ? 'projects.projectForm.outcomeDirectChange' : 'projects.projectForm.outcomeDirect')
             : isChange
                 ? t('projects.projectForm.outcomeInstantChange')
                 : t('projects.projectForm.outcomeInstant');
@@ -110,12 +111,49 @@ function OutcomeSentence({ outcome, isChange, budget, hasPolicy, over = [] }) {
     );
 }
 
+// RaiseBudgetOffer says which budget lacks room for the project (raisePlan's top-most step) and, where the viewer may raise it, offers to: in full on the resources tab, as the button alone beside the outcome note (compact). Every other limit stays text — whose the budget is to raise, a request on it to decide first, a budget above out of view.
+function RaiseBudgetOffer({ plan, resources, chainComplete, onRaise, compact = false }) {
+    const { t } = useTranslation();
+    const top = plan?.[0];
+    if (!top) return null;
+    const amount = (q) => resourceSummaryText(t, resources, q);
+    const name = nodeTitle(top.budget);
+    const button = top.raisable && (
+        <Button size={compact ? 'compact-sm' : 'xs'} variant="light" leftSection={<ArrowUpCircle size="14" />} onClick={() => onRaise(top)}>
+            {t('projects.projectForm.raise.button', { name, amount: amount(top.short) })}
+        </Button>
+    );
+    if (compact) return button || null;
+    const lines = [];
+    if (top.raisable) {
+        lines.push(t('projects.projectForm.raise.missing', { name, amount: amount(top.short) }));
+    } else {
+        lines.push(top.ownShort || !top.child
+            ? t('projects.projectForm.raise.parentFree', { name, amount: amount(top.short) })
+            : t('projects.projectForm.raise.parentLimit', { name: nodeTitle(top.child), parent: name, amount: amount(top.short) }));
+        if (top.reason === 'pending') lines.push(t('projects.projectForm.raise.pending', { name }));
+        else if (top.reason === 'inherits') lines.push(t('projects.projectForm.raise.inherits', { name, parent: top.budget.parent_name || '…' }));
+        else if (top.budget.parent_name) lines.push(t('projects.projectForm.raise.notManager', { parent: top.budget.parent_name }));
+    }
+    if (!chainComplete) lines.push(t('projects.projectForm.raise.aboveUnknown'));
+    return (
+        <Alert color={top.raisable ? COLOR.info : COLOR.attention} variant="light" p="xs" icon={<ArrowUpCircle size="16" />}>
+            <Stack gap={6} align="flex-start">
+                {lines.map(l => <Text key={l} size="xs">{l}</Text>)}
+                {button}
+            </Stack>
+        </Alert>
+    );
+}
+
 // ProjectFormModal creates a new project request or proposes changes to an
 // existing project (mode is derived from `node`):
 //   node == null  → create: budget picker + purpose + resources + members
 //   node != null  → change: resources, end date and members are editable;
 //                   pending projects are amended in place, active projects get
-//                   a change request that a manager must approve.
+//                   a change request that a manager must approve — unless the
+//                   viewer manages a budget above the project or the budget's
+//                   auto-approve covers it: then it takes effect at once.
 //
 // initialBudgetId preselects the budget of a new project — set when the dialog
 // is opened from a budget's own card.
@@ -137,9 +175,14 @@ function OutcomeSentence({ outcome, isChange, budget, hasPolicy, over = [] }) {
 // management — the same tabs as any project, prefilled from OpenStack, plus who
 // answers for it and which budget pays. Its members can be corrected before it
 // goes through approval, instead of the adoption failing on one of them.
-export function ProjectFormModal({ opened, onClose, onDone, resources, roles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null, initialKind = null, asManager = false, moveTargets = [], adopt = false, initialTab }) {
+//
+// isRoot: the viewer is a root admin, who manages every budget's chain. Where the project's budget lacks room for what the form asks, someone who may raise it (a manager of a budget above it) gets the budget's dialog on top of this one, prefilled with the amount missing; onBudgetChanged runs after it saved, and this dialog keeps everything entered and looks again.
+export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, resources, roles, node = null, myBudgets = [], eligibleBudgets = [], myProjects = [], initialBudgetId = null, initialKind = null, asManager = false, moveTargets = [], adopt = false, initialTab, isRoot = false }) {
     const { t } = useTranslation();
     const api = useNodesApi();
+    const queryClient = useQueryClient();
+    // The budget being raised from here ({ budget, parent, add }), or null.
+    const [raise, setRaise] = useState(null);
     const isAdopt = adopt && !!node;
     const isChange = !!node && !isAdopt;
 
@@ -184,7 +227,14 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
     // runs inside useForm, before the render has a chosen budget to look at —
     // and a form that validates a different set from the one it renders will
     // demand a value for a field nobody was shown.
-    const budgetById = (id) => [...(myBudgets || []), ...(requestable || [])].find(b => b.id === id);
+    // A budget loaded fresh below (when it lacks room) wins over the lists' copy, which may be older than a raise made from here.
+    const freshBudget = (id) => {
+        const n = id ? queryClient.getQueryData(projectKeys.node(id)) : null;
+        return n?.kind === 'budget' ? n : null;
+    };
+    const budgetById = (id) => freshBudget(id) ?? [...(myBudgets || []), ...(requestable || [])].find(b => b.id === id);
+    // Whether the viewer manages the budget id or one above it: then a new project there is created at once, and a change of one takes effect at once.
+    const managesChain = (id) => managesChainOf(budgetById(id) ?? (id ? { id } : null), managedIds, isRoot);
     // Nothing outlives the budget it draws from, and no project runs longer at
     // a time than the budget allows (see latestProjectEnd).
     const latestEndOf = (id) => latestProjectEnd(budgetById(id));
@@ -218,7 +268,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
         return Object.fromEntries(Object.entries(quota || {}).filter(([rid]) => ids.has(rid)));
     };
 
-    const headroomFor = (id) => managedIds.has(id)
+    const headroomFor = (id) => managesChain(id)
         ? null
         : autoApproveHeadroom(
             [...(myBudgets || []), ...(requestable || [])].find(b => b.id === id),
@@ -337,28 +387,76 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
     // "headroom" is just the budget's free capacity, which the picker shows.
     const selectedIsPool = isPoolAutoApprove(budgetById(parentId));
 
-    // What the button will do. An amended pending request stays a request, so
-    // it has no outcome worth announcing.
-    const outcomeBudget = budgetById(isChange ? node.parent_id : parentId) || null;
-    // An adopted project always goes through approval; the note says so.
-    const outcome = isAdopt ? null : isChange
+    // The project's budget. For a change the project's record names the budgets above it, should the budget itself not be in view.
+    const projectBudgetId = isChange ? node.parent_id : parentId;
+    const offered = offeredFor(parentId, kind);
+    const knownBudget = budgetById(projectBudgetId) || null;
+    // Managing the budget or one above it is what the API asks of whoever creates a project directly or changes one at once — not only managing the budget itself (managing just the one above it showed "a manager decides").
+    const manages = !isAdopt && managesChainOf(knownBudget ?? (isChange ? { id: node.parent_id, parent_path: node.parent_path } : (parentId ? { id: parentId } : null)), managedIds, isRoot);
+    // An amended pending request stays a request, and an adopted project always goes through approval: neither applies anything now.
+    const applies = !isAdopt && !(isChange && node.status === 'pending');
+
+    // What the project needs the budgets to have free, and — while its budget lacks it and the viewer's change or project would apply at once — that budget loaded fresh with the ones above it, as far as the viewer may read them (a 403 leaves the rest unknown).
+    const need = projectNeed({ isChange, node, quota, resources: offered });
+    const lacking = Object.keys(need).length > 0
+        && (!knownBudget || Object.keys(budgetShortfall(knownBudget, need, offered)).length > 0);
+    const watchChain = opened && !!api && applies && manages && !!projectBudgetId && lacking;
+    const budgetQuery = useQuery({
+        queryKey: projectKeys.node(projectBudgetId),
+        queryFn: () => api.getNode(projectBudgetId),
+        enabled: watchChain,
+        retry: false,
+    });
+    const projectBudget = (budgetQuery.data?.kind === 'budget' ? budgetQuery.data : null) ?? knownBudget;
+    const aboveIds = projectBudget ? idsAbove(projectBudget) : [];
+    const aboveQueries = useQueries({
+        queries: aboveIds.map(id => ({ queryKey: projectKeys.node(id), queryFn: () => api.getNode(id), enabled: watchChain, retry: false })),
+    });
+    // The top budget is in no path: it is what the top-most one there hangs under.
+    const topAbove = aboveQueries[aboveQueries.length - 1]?.data;
+    const rootId = topAbove?.parent_id && !aboveIds.includes(topAbove.parent_id) ? topAbove.parent_id : null;
+    const rootQuery = useQuery({
+        queryKey: projectKeys.node(rootId),
+        queryFn: () => api.getNode(rootId),
+        enabled: watchChain && !!rootId,
+        retry: false,
+    });
+    // The chain from the project's budget upward as far as it is known, and whether that reaches the top.
+    const chain = [];
+    let chainComplete = false;
+    if (projectBudget) {
+        chain.push(projectBudget);
+        chainComplete = !projectBudget.parent_id;
+        for (const q of [...aboveQueries, ...(rootId ? [rootQuery] : [])]) {
+            if (chainComplete || !q.data) break;
+            chain.push(q.data);
+            chainComplete = !q.data.parent_id;
+        }
+    }
+    const plan = applies && manages && projectBudget
+        ? raisePlan(chain, need, offered, { canRaise: (b) => canRaise(b, managedIds, isRoot) })
+        : [];
+
+    // What the button will do.
+    const outcomeBudget = projectBudget;
+    const predicted = isAdopt ? null : isChange
         ? (node.status === 'pending' ? null : changeOutcome({
-            node, budget: outcomeBudget, quota, terminationDate, resources, myProjects,
-            manages: managedIds.has(node.parent_id),
+            node, budget: outcomeBudget, quota, terminationDate, resources, myProjects, manages,
         }))
         : requestOutcome({
-            budget: outcomeBudget, manages: managedIds.has(parentId), quota, resources, myProjects,
+            budget: outcomeBudget, manages, quota, resources, myProjects,
         });
+    // A budget above lacking room refuses what the project's own budget would allow.
+    const outcome = predicted === 'direct' && plan.length > 0 ? 'refused' : predicted;
 
-    const offered = offeredFor(parentId, kind);
-    // For a new project: what the chosen budget still has free per quantity,
-    // shown under each field, and the quantities asking for more than that —
-    // the refusal names them instead of leaving the person to guess. A change
-    // is left out: the project's own share is in the budget's use already.
-    const newRoom = !isChange && outcomeBudget ? roomIn(outcomeBudget, offered) : null;
+    // What the project's budget leaves for it per quantity, shown under each field, and the quantities asking for more than that — the refusal names them instead of leaving the person to guess. For an active project that is what it holds plus what the budget has free: its own share is in the budget's use already.
+    const held = isChange && (node.status === 'approved' || node.status === 'change_pending') ? (node.limit || {}) : {};
+    const budgetRoom = outcomeBudget ? roomIn(outcomeBudget, offered) : null;
+    const newRoom = budgetRoom ? Object.fromEntries(Object.entries(budgetRoom).map(([id, free]) => [id, free + (held[id] ?? 0)])) : null;
     const over = newRoom ? offered
         .filter(r => !isAvailability(r) && (quota?.[r.id] ?? 0) > (newRoom[r.id] ?? Infinity))
         .map(r => ({ ...r, asked: quota[r.id], free: newRoom[r.id] })) : [];
+    const openRaise = (step) => setRaise({ budget: step.budget, parent: step.parent, add: step.short });
     const latestEnd = latestEndOf(isChange ? node.parent_id : parentId);
 
     // Picking a budget with auto-approve fills the resources with the most it
@@ -622,6 +720,7 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
 
     const resourcesTab = (kind, first) => (
         <Stack>
+            {first && <RaiseBudgetOffer plan={plan} resources={resources} chainComplete={chainComplete} onRaise={openRaise} />}
             {first && isChange && hasAllocations(node) && (
                 <Alert color={COLOR.info} variant="light" p="xs" icon={<Gift size="16" />}>
                     <Text size="xs">
@@ -743,13 +842,17 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
         </Group>
     ) : null;
 
+    // The budget's dialog for a raise is a sibling, not a child: a child's submit would bubble through the React tree into this form and save the project too.
     return (
+        <>
         <FormModal
             opened={opened}
             // Every tabbed form is as wide: narrower, a member's row breaks
             // around its role picker and the tabs wrap.
             size={DIALOG_SIZE}
             onClose={onClose}
+            // Escape belongs to the budget's dialog while it is open over this one.
+            closeOnEscape={!raise}
             title={isAdopt ? t('projects.adopt.title', { name: nodeTitle(node) })
                 : isChange
                 ? t('projects.inspect.titleProject', { name: nodeTitle(node) })
@@ -775,17 +878,20 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
                 : formatError(save.error)))}
             submitColor={isAdopt ? COLOR.outside : undefined}
             // What the button will do, beside it.
-            note={<OutcomeNote
-                over={over}
-                outcome={outcome}
-                workspacesChanged={workspaces.changed}
-                isChange={isChange}
-                budget={outcomeBudget}
-                hasPolicy={!!outcomeBudget?.auto_approve && !managedIds.has(outcomeBudget?.id)}
-            />}
+            note={<Stack gap={6} align="flex-start">
+                <OutcomeNote
+                    over={over}
+                    outcome={outcome}
+                    workspacesChanged={workspaces.changed}
+                    isChange={isChange}
+                    budget={outcomeBudget}
+                    hasPolicy={!!outcomeBudget?.auto_approve && !manages}
+                />
+                <RaiseBudgetOffer compact plan={plan} resources={resources} chainComplete={chainComplete} onRaise={openRaise} />
+            </Stack>}
             submitLabel={isAdopt ? t('projects.actions.adopt') : isChange
                 ? (node?.status === 'pending' ? t('projects.projectForm.submitUpdateRequest')
-                    : outcome === 'instant' ? t('projects.forms.saveChanges') : t('projects.projectForm.submitChangeRequest'))
+                    : ['instant', 'direct', 'refused'].includes(outcome) ? t('projects.forms.saveChanges') : t('projects.projectForm.submitChangeRequest'))
                 : (outcome === 'approval' ? t('projects.forms.submitRequest') : t('projects.projectForm.submitNew'))}
         >
             <FormSections
@@ -840,6 +946,22 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
                 />
             )}
         </FormModal>
+        {raise && (
+            <BudgetFormModal
+                key={`raise:${raise.budget.id}`}
+                opened
+                mode="edit"
+                node={raise.budget}
+                parent={raise.parent}
+                resources={resources}
+                raiseBy={raise.add}
+                raiseFor={form.values.name.trim() || t('projects.projectForm.titleNew')}
+                zIndex={300}
+                onClose={() => setRaise(null)}
+                onDone={() => onBudgetChanged?.()}
+            />
+        )}
+        </>
     );
 }
 

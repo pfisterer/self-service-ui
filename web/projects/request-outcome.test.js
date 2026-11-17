@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autoApproveHeadroom, changeOutcome, isPoolAutoApprove, latestProjectEnd, requestOutcome, endDate, endDay } from './util-project.jsx';
+import { autoApproveHeadroom, changeOutcome, isPoolAutoApprove, latestProjectEnd, managesChainOf, requestOutcome, endDate, endDay } from './util-project.jsx';
 
 const RESOURCES = [
     { id: 'cpu', name: 'Cores' },
@@ -115,7 +115,9 @@ describe('a budget that takes no requests beyond auto-approve', () => {
 
     it('does not bind the budget\'s managers', () => {
         expect(requestOutcome({ budget: hard(individual()), manages: true, quota: { cpu: 5 }, resources: RESOURCES, myProjects: [] })).toBe('direct');
-        expect(changeOutcome({ node: project, budget: hard(pool()), quota: { cpu: 9, ram: 8 }, resources: RESOURCES, myProjects: [project], manages: true })).toBe('approval');
+        // Their change applies at once where the budget has room for the growth (6 free here) and is refused where it has not.
+        expect(changeOutcome({ node: project, budget: hard(pool()), quota: { cpu: 8, ram: 8 }, resources: RESOURCES, myProjects: [project], manages: true })).toBe('direct');
+        expect(changeOutcome({ node: project, budget: hard(pool()), quota: { cpu: 9, ram: 8 }, resources: RESOURCES, myProjects: [project], manages: true })).toBe('refused');
     });
 
     it('blocks growth past the pool but still lets resources go back', () => {
@@ -144,6 +146,34 @@ describe('a budget that leaves extensions to its managers', () => {
         const b = noExt({ ...pool(), allow_requests_beyond_auto_approve: false });
         expect(change(b, { cpu: 2, ram: 8 }, '2027-06-30T00:00:00Z')).toBe('approval');
         expect(change(b, { cpu: 9, ram: 8 }, '2027-06-30T00:00:00Z')).toBe('blocked');
+    });
+});
+
+describe('a change by someone who manages a budget above the project', () => {
+    const project = { id: 'p1', parent_id: 'b1', status: 'approved', limit: { cpu: 2, ram: 8 }, termination_date: '2027-03-31T00:00:00Z' };
+    // b1 hangs under b_dept, which the viewer manages; b1 itself they do not.
+    const b1 = budget({ parent_id: 'b_dept', parent_path: [{ id: 'b_dept', name: 'Department' }] });
+    const change = (quota, terminationDate = project.termination_date) => changeOutcome({
+        node: project, budget: b1, quota, terminationDate, resources: RESOURCES, myProjects: [],
+        manages: managesChainOf(b1, ['b_dept']),
+    });
+
+    it('counts as managing, so the change applies at once instead of waiting', () => {
+        expect(managesChainOf(b1, ['b_dept'])).toBe(true);
+        expect(change({ cpu: 8, ram: 8 })).toBe('direct');
+        expect(change({ cpu: 2, ram: 8 }, '2027-09-30T00:00:00Z')).toBe('direct');
+    });
+
+    it('is refused where the budget lacks room for the growth', () => {
+        expect(change({ cpu: 9, ram: 8 })).toBe('refused');
+    });
+
+    it('gives back at once as for anybody', () => {
+        expect(change({ cpu: 1, ram: 8 })).toBe('instant');
+    });
+
+    it('a new project there is created directly', () => {
+        expect(requestOutcome({ budget: b1, manages: managesChainOf(b1, ['b_dept']), quota: { cpu: 6 }, resources: RESOURCES, myProjects: [] })).toBe('direct');
     });
 });
 

@@ -104,7 +104,8 @@
         "moveHint": "Unter welchem Budget dieses steht. Verschieben wirkt sofort beim Speichern und braucht Verwaltungsrechte auf beiden Seiten.",
         "sub": {
             "quota": "Kontingente"
-        }
+        },
+        "raisedFor": "Um {{amount}} erhöht, damit das Projekt „{{project}}“ Platz hat. Vor dem Speichern prüfen."
     },
     "budgets": {
         "deleteTitle": "Budget „{{name}}“ löschen?",
@@ -375,7 +376,9 @@
         "outcomeRefusedWhich": "Zu viel: {{list}}.",
         "overItem": "{{name}} {{asked}}, frei {{free}}",
         "outcomeRefused": "Mehr, als dieses Budget frei hat — das Projekt wird nicht angelegt. Entweder die Menge verringern oder zuerst das Budget erhöhen.",
+        "outcomeRefusedChange": "Mehr, als im Budget frei ist — die Änderung wird abgelehnt. Entweder die Menge verringern oder zuerst das Budget vergrößern.",
         "outcomeDirect": "Dieses Budget ist in eigener Verwaltung — das Projekt wird sofort angelegt.",
+        "outcomeDirectChange": "Dieses Budget oder eines darüber ist in eigener Verwaltung — die Änderung wird sofort wirksam.",
         "outcomeInstantChange": "Wird sofort wirksam — keine Genehmigung nötig.",
         "outcomeInstant": "Wird sofort angelegt — dieses Budget genehmigt es automatisch.",
         "outcomeWaitingPolicyChange": "Mehr, als dieses Budget automatisch genehmigt. Eine verwaltende Person entscheidet; bis dahin behält das Projekt seine jetzigen Ressourcen.",
@@ -397,7 +400,17 @@
         "accessBothHint": "Wer das Projekt nutzt: in OpenStack mit der gewählten Rolle, dazu seine Workspaces und das gemeinsame LLM-Kontingent. Die Rolle gilt nur für OpenStack; wer in den gemeinsamen Ordner ~/dhbw/project der Workspaces schreiben darf, legen die Verwaltenden in den Workspace-Einstellungen fest.",
         "adminsHintAiaas": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt löschen. Workspaces und LLM-Kontingent nutzen sie mit.",
         "adminsHintBoth": "Verwalten das Projekt hier zusammen mit dem Owner: umbenennen, Änderungen beantragen, diese Liste bearbeiten und das Projekt löschen. Workspaces und LLM-Kontingent nutzen sie mit, Zugang in OpenStack entsteht dadurch nicht.",
-        "nameHintAiaas": "Ein kurzer, wiedererkennbarer Name — so erscheint das Projekt bei Workspaces und LLM."
+        "nameHintAiaas": "Ein kurzer, wiedererkennbarer Name — so erscheint das Projekt bei Workspaces und LLM.",
+        "raise": {
+            "button": "Budget „{{name}}“ um {{amount}} vergrößern",
+            "missing": "Im Budget „{{name}}“ fehlen dafür {{amount}}. Es lässt sich hier direkt vergrößern; die Eingaben in diesem Dialog bleiben erhalten.",
+            "parentLimit": "„{{name}}“ lässt sich nur bis zum Limit von „{{parent}}“ vergrößern; dort fehlen {{amount}}.",
+            "parentFree": "Im Budget „{{name}}“ ist dafür nicht genug frei: Es fehlen {{amount}}.",
+            "notManager": "Vergrößern können die Verwaltenden von „{{parent}}“.",
+            "pending": "Für „{{name}}“ liegt eine Anfrage auf mehr Ressourcen vor. Zuerst über diese Anfrage entscheiden, sonst ersetzt sie die Vergrößerung.",
+            "inherits": "„{{name}}“ übernimmt das Limit von „{{parent}}“; vergrößern lässt sich nur dieses.",
+            "aboveUnknown": "Ob die Budgets darüber genug frei haben, zeigt sich beim Speichern."
+        }
     },
     "quotaInputs": {
         "filter": "Ressourcen filtern",

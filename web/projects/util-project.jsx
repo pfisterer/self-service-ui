@@ -604,8 +604,7 @@ export function requestOutcome({ budget, manages, quota, resources, myProjects }
 // them — for growth only the DIFFERENCE has to fit, since the project already
 // holds its current size.
 //
-// `manages`: the viewer manages the budget — the hard limit of a budget that
-// takes no requests beyond its auto-approve does not bind them.
+// `manages`: the viewer manages the budget or one above it (managesChainOf) — the people who would approve the change. The API applies their change at once when every budget has room for the growth ('direct'), and refuses it otherwise ('refused'); the budgets above the project's own are raisePlan's business.
 // latestProjectEnd is the latest a project under budget may end at `now`:
 // the budget's end, or now plus the longest term the budget gives its projects
 // (max_project_term_days), whichever comes first. `term` is set when the term is
@@ -643,7 +642,13 @@ export function changeOutcome({ node, budget, quota, terminationDate, resources,
     const extendsEnd = nextEnd !== null && currentEnd !== null && nextEnd > currentEnd;
 
     if (!grows && !extendsEnd) return 'instant';
-    const beyond = beyondAutoApproveRefused(budget) && !manages ? 'blocked' : 'approval';
+    if (manages) {
+        // Only the growth needs room: the project holds its current size already. Without the budget in view the server decides.
+        const fits = !budget || counted.every(r =>
+            Math.max(0, (quota?.[r.id] ?? 0) - (current[r.id] ?? 0)) <= freeAmount(budget, r.id));
+        return fits ? 'direct' : 'refused';
+    }
+    const beyond = beyondAutoApproveRefused(budget) ? 'blocked' : 'approval';
     if (!hasAutoApprove(budget) || budget.status !== 'approved') return 'approval';
     if (extendsEnd) {
         const budgetEnd = endOf(budget.termination_date);
@@ -662,6 +667,109 @@ export function changeOutcome({ node, budget, quota, terminationDate, resources,
     // refused — the hard limit is about resources, not about asking.
     if (extendsEnd && budget.auto_approve_extensions === false) return 'approval';
     return 'instant';
+}
+
+// ── Raising a budget from the project dialog ────────────────────────────────
+
+const idSet = (ids) => (ids instanceof Set ? ids : new Set(ids || []));
+
+// idsAbove are the ids of the budgets above budget that its record names, nearest first: its parent and the path down to it (parent_path, root-most first, without the root itself), and ancestor_ids where the listing carries them.
+export function idsAbove(budget) {
+    const ids = [budget?.parent_id, ...[...(budget?.parent_path || [])].reverse().map(p => p.id), ...[...(budget?.ancestor_ids || [])].reverse()];
+    return [...new Set(ids.filter(Boolean))];
+}
+
+// managesChainOf reports whether the viewer manages budget or a budget above it — who the API lets create a project there directly and decide on, and change at once, a project in it. myBudgetIds are the budgets the viewer manages themselves (my-budgets); isRoot: the viewer is a root admin, who manages the top of every chain.
+export function managesChainOf(budget, myBudgetIds, isRoot = false) {
+    if (!budget) return false;
+    if (isRoot) return true;
+    const mine = idSet(myBudgetIds);
+    return [budget.id, ...idsAbove(budget)].some(id => mine.has(id));
+}
+
+// canRaise reports whether the viewer may raise budget's limit: the API takes a new limit only from a manager of a budget ABOVE it (managing it alone is not enough, nobody raises their own budget), and the top budget has nobody above it.
+export function canRaise(budget, myBudgetIds, isRoot = false) {
+    if (!budget?.parent_id) return false;
+    if (isRoot) return true;
+    const mine = idSet(myBudgetIds);
+    return idsAbove(budget).some(id => mine.has(id));
+}
+
+// projectNeed is what a project asks its budgets to have free, per quantity, positive amounts only: a new or still pending project all it asks for, an active one only its growth — what it holds already is counted in the budgets' use.
+export function projectNeed({ isChange, node, quota, resources }) {
+    const held = isChange && (node?.status === 'approved' || node?.status === 'change_pending') ? (node.limit || {}) : {};
+    const out = {};
+    for (const r of resources || []) {
+        if (isAvailability(r)) continue;
+        const v = (quota?.[r.id] ?? 0) - (held[r.id] ?? 0);
+        if (v > 0) out[r.id] = v;
+    }
+    return out;
+}
+
+// budgetShortfall is how much budget lacks of need, per quantity: need minus what it has free, where that is positive. A budget already over its limit lacks that excess too.
+export function budgetShortfall(budget, need, resources) {
+    const out = {};
+    for (const r of resources || []) {
+        if (isAvailability(r)) continue;
+        const n = need?.[r.id] ?? 0;
+        if (n <= 0) continue;
+        const free = freeAmount(budget, r.id);
+        if (n > free) out[r.id] = n - free;
+    }
+    return out;
+}
+
+// Per resource the larger of two amounts.
+function maxEach(a, b) {
+    const out = { ...a };
+    for (const [id, v] of Object.entries(b || {})) out[id] = Math.max(out[id] ?? 0, v);
+    return out;
+}
+
+// edgeOver is how far budget's limit raised by add would exceed the limit of the budget above (the API's edge rule: a budget holds no more than the one above it).
+function edgeOver(budget, add, parent) {
+    const out = {};
+    for (const [id, v] of Object.entries(add)) {
+        const cap = parent.limit?.[id];
+        const own = budget.limit?.[id] ?? 0;
+        if (cap === undefined || cap === null || cap === UNLIMITED_QUOTA || own === UNLIMITED_QUOTA) continue;
+        if (own + v > cap) out[id] = own + v - cap;
+    }
+    return out;
+}
+
+// raisePlan says which budgets would have to grow for a project's need to fit, top-most first. A project is granted only where every budget above it has room, while raising a budget the API checks only the limit of the one above it (not its free room), so the dialog checks the chain it can see itself. chain: the budgets from the project's own upward, nearest first, as far as the viewer can read them. canRaise(budget): whether the viewer may raise it.
+//
+// Each step is { budget, short, ownShort, parent, edgeShort, child, raisable, reason }: short is how much its limit has to grow — its own lack of room, and what the budget below it needs its limit to hold to be raised itself (edgeShort of that one); ownShort whether it lacks room itself; parent the budget whose limit bounds it; child the budget below it in the plan; reason why it cannot be raised here: 'pending' (a request for more of it waits, approving it would replace the raise), 'notManager', 'inherits' (it passes on the limit of a budget out of view). A budget that inherits its limit is skipped where the budget it inherits from is in view: that one sees the same projects and carries its shortage.
+export function raisePlan(chain, need, resources, { canRaise: may = () => false } = {}) {
+    const steps = [];
+    const budgets = (chain || []).filter(Boolean);
+    let carry = {};
+    let child = null;
+    for (let i = 0; i < budgets.length; i++) {
+        const b = budgets[i];
+        const parent = budgets.slice(i + 1).find(x => !x.inherits_limit) ?? null;
+        const own = budgetShortfall(b, need, resources);
+        if (b.inherits_limit) {
+            if (parent) continue;
+            const short = maxEach(own, carry);
+            if (Object.keys(short).length > 0) steps.push({ budget: b, short, ownShort: Object.keys(own).length > 0, parent: null, edgeShort: {}, child, raisable: false, reason: 'inherits' });
+            break;
+        }
+        const short = maxEach(own, carry);
+        if (Object.keys(short).length === 0) {
+            carry = {};
+            child = b;
+            continue;
+        }
+        const edgeShort = parent ? edgeOver(b, short, parent) : {};
+        const reason = b.status === 'change_pending' ? 'pending' : may(b) ? null : 'notManager';
+        steps.push({ budget: b, short, ownShort: Object.keys(own).length > 0, parent, edgeShort, child, raisable: reason === null, reason });
+        carry = edgeShort;
+        child = b;
+    }
+    return steps.reverse();
 }
 
 // resourceBarSegments turns absolute amounts into the widths of the stacked

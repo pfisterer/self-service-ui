@@ -236,17 +236,21 @@ export function DialogFooter({ children, error, note = null }) {
  * `submitting`/`submitError` are primitives rather than a mutation object so
  * the component stays dumb; callers pass `m.isPending` and
  * `formatError(m.error)`.
+ *
+ * `zIndex` and `closeOnEscape` go to the Modal: a dialog opened over another one (raising a budget from the project dialog) lies above it, and the one below does not close on the Escape meant for the one above.
  */
 export function FormModal({
     opened, onClose, title, size = 'lg',
     onSubmit, submitting, submitError, submitLabel, submitColor, submitDisabled = false,
     secondary = null,
     note = null,
+    zIndex,
+    closeOnEscape = true,
     children,
 }) {
     const { t } = useTranslation();
     return (
-        <Modal opened={opened} onClose={onClose} size={size} title={title} styles={DIALOG_STYLES}>
+        <Modal opened={opened} onClose={onClose} size={size} title={title} styles={DIALOG_STYLES} zIndex={zIndex} closeOnEscape={closeOnEscape}>
             {/* noValidate: these forms live in tabs, so a `required` field on an
                 inactive tab is display:none. The browser then refuses to submit
                 AND cannot focus the offender to say why ("An invalid form control

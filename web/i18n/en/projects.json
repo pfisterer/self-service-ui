@@ -104,7 +104,8 @@
         "moveHint": "The budget this one belongs to. Moving takes effect when saved and needs management rights on both sides.",
         "sub": {
             "quota": "Quotas"
-        }
+        },
+        "raisedFor": "Raised by {{amount}} so the project “{{project}}” fits. Check before saving."
     },
     "budgets": {
         "deleteTitle": "Delete budget “{{name}}”?",
@@ -375,7 +376,9 @@
         "outcomeRefusedWhich": "Too much: {{list}}.",
         "overItem": "{{name}} {{asked}}, {{free}} free",
         "outcomeRefused": "More than this budget has free — creating the project will be refused. Lower the amount, or raise the budget first.",
+        "outcomeRefusedChange": "More than the budget has free — the change will be refused. Lower the amount, or raise the budget first.",
         "outcomeDirect": "You manage this budget — the project is created right away.",
+        "outcomeDirectChange": "You manage this budget or one above it — the change takes effect right away.",
         "outcomeInstantChange": "Takes effect right away — no approval needed.",
         "outcomeInstant": "Created right away — this budget approves it automatically.",
         "outcomeWaitingPolicyChange": "More than this budget approves automatically. A manager decides, and until then the project keeps its current resources.",
@@ -397,7 +400,17 @@
         "accessBothHint": "Who uses the project: in OpenStack with the chosen role, plus its workspaces and the shared LLM quota. The role applies to OpenStack only; who may write the workspaces' shared folder ~/dhbw/project is set by the managers in the workspace settings.",
         "adminsHintAiaas": "Administer the project here together with the owner: rename it, request changes, edit this list and delete it. They use its workspaces and LLM quota too.",
         "adminsHintBoth": "Administer the project here together with the owner: rename it, request changes, edit this list and delete it. They use its workspaces and LLM quota too; this gives no access in OpenStack.",
-        "nameHintAiaas": "A short, recognizable name — this is how the project appears in workspaces and LLM."
+        "nameHintAiaas": "A short, recognizable name — this is how the project appears in workspaces and LLM.",
+        "raise": {
+            "button": "Raise budget “{{name}}” by {{amount}}",
+            "missing": "Budget “{{name}}” lacks {{amount}} for this. It can be raised right here; the entries in this dialog are kept.",
+            "parentLimit": "“{{name}}” can only be raised up to the limit of “{{parent}}”, which lacks {{amount}}.",
+            "parentFree": "Budget “{{name}}” does not have enough free for this: {{amount}} are missing.",
+            "notManager": "The managers of “{{parent}}” can raise it.",
+            "pending": "A request for more resources is waiting for “{{name}}”. Decide on that request first, otherwise it replaces the raise.",
+            "inherits": "“{{name}}” inherits the limit of “{{parent}}”; only that one can be raised.",
+            "aboveUnknown": "Whether the budgets above have enough free shows when saving."
+        }
     },
     "quotaInputs": {
         "filter": "Filter resources",
