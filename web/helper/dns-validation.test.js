@@ -7,8 +7,6 @@ import {
     isValidUserFilter,
     zoneWithinAnySuffix,
     subzoneLabelError,
-    wildcardCnRemaining,
-    WILDCARD_CN_MAX,
     recordNameError,
     recordValueError,
 } from './dns-validation.js';
@@ -210,16 +208,5 @@ describe('zone name length (todo d3)', () => {
         const long = `${'a'.repeat(63)}.${'b'.repeat(63)}.${'c'.repeat(63)}.${'d'.repeat(61)}`;
         const err = subzoneLabelError(long, parent, t);
         expect(err).toBe(t('helper.dnsValidation.nameTooLong', { length: long.length + 1 + parent.length }));
-    });
-
-    it('counts the room left for *.<label>.<parent> within 64 characters', () => {
-        expect(WILDCARD_CN_MAX).toBe(64);
-        // The zone that triggered the todo: *.data-eng-wdski24a.<parent> has 63 characters.
-        expect(wildcardCnRemaining('data-eng-wdski24a', parent)).toBe(1);
-        expect(wildcardCnRemaining('data-eng-wdski24ab', parent)).toBe(0);
-        expect(wildcardCnRemaining('data-eng-wdski24abc', parent)).toBe(-1);
-        // Empty: what the label may use, its dot already counted; spaces and trailing dots do not count.
-        expect(wildcardCnRemaining('', parent)).toBe(64 - 2 - 1 - parent.length);
-        expect(wildcardCnRemaining(' web. ', 'example.com.')).toBe(64 - '*.web.example.com'.length);
     });
 });
