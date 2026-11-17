@@ -231,41 +231,23 @@
                 "failed": "Die Mitglieder von {{group}} lassen sich gerade nicht abrufen. Personen lassen sich auch mit ihrer E-Mail-Adresse eintragen.",
                 "unavailable": "Die Personen in Kursgruppen lassen sich hier nicht anzeigen. Personen lassen sich mit ihrer E-Mail-Adresse eintragen."
             },
-            "readOnly": "Mitglieder lesen nur",
-            "archived": "Archiviert (nur Verwaltende sehen den Ordner, lesend)",
-            "remove": "Gruppe entfernen (ihr Ordner wird gelöscht; vorher kommt eine Rückfrage)",
             "add": "Gruppe hinzufügen",
-            "count": "Anzahl der neuen Gruppen",
-            "distribute": "Gruppen anlegen und Mitglieder verteilen",
-            "hint": "Änderungen gelten ab dem nächsten Start eines Workspaces oder Jobs. Die Gruppenordner zählen zum Speicher des Projekts. Beim Verteilen werden die Personen, die noch in keiner Gruppe sind, reihum auf die neuen Gruppen aufgeteilt: einzeln eingetragene Mitglieder und die Personen der angezeigten Kursgruppen, jede nur einmal.",
+            "hint": "Änderungen gelten ab dem nächsten Start eines Workspaces oder Jobs. Die Gruppenordner zählen zum Speicher des Projekts. „Verteilen …“ teilt die Personen, die noch in keiner Gruppe sind, auf neue Gruppen auf oder füllt freie Plätze: einzeln eingetragene Mitglieder und die Personen der angezeigten Kursgruppen, jede nur einmal.",
             "noStorage": "Gruppen brauchen Workspace-Speicher im Projekt; ohne ihn gibt es keine Ordner.",
             "storage": "Speichergrenze der Gruppe",
             "storageNone": "keine",
-            "storageShort": "Grenze",
-            "view": {
-                "list": "Liste",
-                "board": "Board"
-            },
             "choice": {
                 "switch": "Gruppenwahl durch Mitglieder möglich",
                 "max": "Plätze je Gruppe",
                 "noLimit": "keine Grenze",
-                "hint": "Mitglieder und Lesende des Projekts wählen dann selbst eine Gruppe und können sie wieder verlassen, jede Person höchstens eine. Die Verwaltung ordnet weiter zu, auch über die Plätze hinaus.",
-                "running": "Gruppenwahl läuft: Die Gruppenordner sind für Mitglieder noch nicht eingehängt, nur für die Verwaltung. Nach dem Ausschalten bekommen die Mitglieder ihren Gruppenordner beim nächsten Start eines Workspaces oder Jobs; schon laufende Workspaces behalten bis dahin ihre Ordner."
+                "hint": "Solange der Schalter an ist, treten Mitglieder und Lesende des Projekts, die noch in keiner Gruppe sind, selbst einer Gruppe mit freiem Platz bei. Der Beitritt ist verbindlich; einen Wechsel nimmt die Verwaltung hier vor, auch über die Plätze hinaus. Ausgeschaltet tritt niemand mehr bei.",
+                "running": "Gruppenwahl läuft: Mitglieder können einer Gruppe beitreten. Gruppenordner sind wie immer für die Mitglieder der Gruppe eingehängt, ab dem nächsten Start eines Workspaces oder Jobs."
             },
             "legacy": {
                 "label": "Kursgruppe {{group}} (früherer Eintrag)",
                 "remove": "{{group}} entfernen",
                 "hint": "Gruppen nehmen nur noch Personen auf; die Personen eines Kurses einzeln zuordnen. Frühere Einträge gelten weiter, bis sie entfernt werden."
             },
-            "board": {
-                "none": "Noch in keiner Gruppe",
-                "archived": "archiviert",
-                "drag": "{{person}} ziehen",
-                "moveOf": "{{person}} verschieben nach …",
-                "moveTo": "Verschieben nach …"
-            },
-            "removeOf": "Gruppe {{name}} entfernen",
             "removeConfirm": {
                 "title": "Gruppe {{name}} entfernen?",
                 "text": "Ihr Ordner ~/dhbw/groups/{{name}} wird mit allen Dateien gelöscht{{used}}. Gelöscht wird nach dem Speichern des Projekts.",
@@ -275,6 +257,47 @@
                 "delete": "Löschen",
                 "archive": "Archivieren",
                 "cancel": "Abbrechen"
+            },
+            "unassigned": "Noch in keiner Gruppe ({{count}}): {{names}}",
+            "unassignedNone": "Alle Personen des Projekts sind in einer Gruppe.",
+            "overCapacity": "Mehr Personen als Plätze (für die Verwaltung erlaubt)",
+            "card": "Gruppe {{name}}",
+            "menu": "Aktionen für Gruppe {{name}}",
+            "countTitle": "Personen in der Gruppe (von den Plätzen)",
+            "badge": {
+                "readOnly": "nur lesen",
+                "archived": "archiviert",
+                "storage": "max. {{gb}} GB"
+            },
+            "action": {
+                "storage": "Speichergrenze …",
+                "readOnly": "Mitglieder nur lesend",
+                "archive": "Archivieren",
+                "restore": "Wiederherstellen",
+                "remove": "Entfernen …"
+            },
+            "storageTitle": "Speichergrenze der Gruppe {{name}}",
+            "storageHint": "Leer = keine Grenze; höchstens {{gb}} GB (der Speicher des Projekts).",
+            "storageApply": "Übernehmen",
+            "deal": {
+                "button": "Verteilen …",
+                "title": "Personen auf Gruppen verteilen",
+                "allAssigned": "Alle sind bereits in einer Gruppe.",
+                "people_one": "{{count}} Person ist noch in keiner Gruppe.",
+                "people_other": "{{count}} Personen sind noch in keiner Gruppe.",
+                "newGroups": "Auf neue Gruppen mit je",
+                "size": "Personen je neuer Gruppe",
+                "persons": "Personen",
+                "previewNew_one": "→ {{count}} neue Gruppe: {{names}} ({{sizes}} Personen)",
+                "previewNew_other": "→ {{count}} neue Gruppen: {{names}} ({{sizes}} Personen)",
+                "fill": "Freie Plätze in bestehenden Gruppen auffüllen",
+                "previewFill": "→ {{groups}}",
+                "noPlaces": "Keine freien Plätze in den bestehenden Gruppen.",
+                "left_one": "{{count}} Person bleibt ohne Gruppe.",
+                "left_other": "{{count}} Personen bleiben ohne Gruppe.",
+                "hint": "Nur Personen ohne Gruppe werden verteilt; bestehende Zuordnungen bleiben. Wirksam mit dem Speichern des Projekts.",
+                "cancel": "Abbrechen",
+                "apply": "Verteilen"
             }
         },
         "storageLimits": {
@@ -627,15 +650,17 @@
     },
     "groupChoice": {
         "title": "Gruppenwahl: {{project}}",
-        "intro": "Im Projekt werden die Gruppen selbst gewählt: eine Gruppe wählen und bei Bedarf wieder verlassen, jede Person ist in höchstens einer. Den Ordner ~/dhbw/groups/<Name> der Gruppe gibt es in Workspaces und Jobs, sobald die Verwaltung die Gruppenwahl beendet.",
+        "intro": "Im Projekt wählen die Mitglieder ihre Gruppe selbst. Die Wahl ist verbindlich; einen Wechsel nehmen die Verwaltenden des Projekts vor. Den Ordner ~/dhbw/groups/<Name> der Gruppe gibt es ab dem nächsten Start eines Workspaces oder Jobs.",
         "places": "{{count}} von {{max}} Plätzen belegt",
         "people_one": "{{count}} Person",
         "people_other": "{{count}} Personen",
         "mine": "Eigene Gruppe",
         "members": "Mitglieder: {{names}}",
         "join": "Beitreten",
-        "leave": "Verlassen",
         "full": "voll",
-        "none": "Noch keine Gruppen angelegt."
+        "none": "Noch keine Gruppen angelegt.",
+        "confirmTitle": "Gruppe {{name}} beitreten?",
+        "confirmText": "Das lässt sich danach nur durch die Verwaltenden des Projekts ändern.",
+        "cancel": "Abbrechen"
     }
 }

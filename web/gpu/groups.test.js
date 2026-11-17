@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { choosing, dealablePeople, distribute, groupNameError, groupTokens, legacyTokens, memberChoices, moveMember, nextGroupName, overCapacity, peopleCount, personChoices, resolveGroupToken, resolvedChoices, seatState, splitGroupToken, tokenLabel, typedPerson } from '/gpu/groups.js';
+import { choosing, dealablePeople, fillFreePlaces, groupNameError, groupSizes, groupTokens, legacyTokens, memberChoices, newGroupsBySize, nextGroupName, overCapacity, peopleCount, personChoices, resolveGroupToken, resolvedChoices, seatState, splitGroupToken, tokenLabel, typedPerson } from '/gpu/groups.js';
 import { uploadPath, uploadTargets } from '/gpu/jobs.js';
 
 describe('groups', () => {
@@ -26,18 +26,6 @@ describe('groups', () => {
         expect(overCapacity(g, 1)).toBe(true);
         expect(overCapacity(g, 0)).toBe(false);
     });
-    it('moves a person between groups as the board does', () => {
-        const groups = [{ name: 'g1', members: ['user:a@dhbw.de', 'group:kurs'] }, { name: 'g2', members: ['user:b@dhbw.de'] }];
-        const moved = moveMember(groups, 'user:A@dhbw.de', 1);
-        expect(moved[0].members).toEqual(['group:kurs']);
-        expect(moved[1].members).toEqual(['user:b@dhbw.de', 'user:A@dhbw.de']);
-        // Into no group: out of every one; an untouched group stays the same object.
-        const out = moveMember(groups, 'user:b@dhbw.de', null);
-        expect(out[1].members).toEqual([]);
-        expect(out[0]).toBe(groups[0]);
-        // From nowhere into a group (a person of a course group).
-        expect(moveMember(groups, 'user:s1@dhbw.de', 0)[0].members).toEqual(['user:a@dhbw.de', 'group:kurs', 'user:s1@dhbw.de']);
-    });
     it('tells a member what each group offers in the group choice', () => {
         const seats = [{ id: 'a', count: 2, max: 2 }, { id: 'b', count: 0, max: 2 }, { id: 'c', count: 5, max: 0 }];
         expect(seats.map(x => seatState(x, seats))).toEqual(['full', 'open', 'open']);
@@ -45,13 +33,30 @@ describe('groups', () => {
         expect(mine.map(x => seatState(x, mine))).toEqual(['taken', 'mine']);
         expect(choosing([{ slug: 'x', role: 'member', group_seats: [] }, { slug: 'y', role: 'manager', group_seats: [] }, { slug: 'z', role: 'reader' }, { slug: 'r', role: 'reader', group_seats: [] }]).map(p => p.slug)).toEqual(['x', 'r']);
     });
-    it('names and deals out new groups', () => {
+    it('makes new groups of a size, without a tiny last one', () => {
         expect(nextGroupName([{ name: 'gruppe-1' }, { name: 'gruppe-3' }])).toBe('gruppe-2');
-        const out = distribute([{ name: 'gruppe-1', members: ['user:x@dhbw.de'] }], ['user:a@dhbw.de', 'user:b@dhbw.de', 'user:c@dhbw.de', 'group:kurs'], 2);
+        expect(groupSizes(13, 4)).toEqual([4, 4, 5]);
+        expect(groupSizes(12, 4)).toEqual([4, 4, 4]);
+        expect(groupSizes(3, 4)).toEqual([3]);
+        expect(groupSizes(7, 4)).toEqual([7]);
+        expect(groupSizes(0, 4)).toEqual([]);
+        const people = ['user:a@dhbw.de', 'user:b@dhbw.de', 'user:c@dhbw.de', 'group:kurs', 'user:d@dhbw.de', 'user:e@dhbw.de'];
+        const { groups: out, made } = newGroupsBySize([{ name: 'gruppe-1', members: ['user:x@dhbw.de'] }], people, 2);
         expect(out.map(g => g.name)).toEqual(['gruppe-1', 'gruppe-2', 'gruppe-3']);
         expect(out[0].members).toEqual(['user:x@dhbw.de']);
-        expect(out[1].members).toEqual(['user:a@dhbw.de', 'user:c@dhbw.de']);
-        expect(out[2].members).toEqual(['user:b@dhbw.de']);
+        expect(made.map(g => g.members)).toEqual([['user:a@dhbw.de', 'user:b@dhbw.de'], ['user:c@dhbw.de', 'user:d@dhbw.de', 'user:e@dhbw.de']]);
+    });
+    it('fills the free places of the open groups in turn, nobody beyond them', () => {
+        const groups = [{ name: 'a', members: ['user:q@dhbw.de'] }, { name: 'b', members: [] }, { name: 'alt', members: [], archived: true }, { name: 'voll', members: ['user:r@dhbw.de', 'user:s@dhbw.de'] }];
+        const people = ['user:p1@dhbw.de', 'user:p2@dhbw.de', 'user:p3@dhbw.de', 'user:p4@dhbw.de', 'user:p5@dhbw.de'];
+        const { groups: out, added, left } = fillFreePlaces(groups, people, 2);
+        expect(out[0].members).toEqual(['user:q@dhbw.de', 'user:p1@dhbw.de']);
+        expect(out[1].members).toEqual(['user:p2@dhbw.de', 'user:p3@dhbw.de']);
+        expect(added).toEqual([1, 2, 0, 0]);
+        expect(left).toBe(2);
+        // Untouched groups stay the same objects.
+        expect(out[2]).toBe(groups[2]);
+        expect(out[3]).toBe(groups[3]);
     });
     it('deals out the people of resolved course groups too, each once and none already in a group', () => {
         const members = [{ token: 'user:a@dhbw.de', role: 'member' }, { token: 'group:wwi24#studierende', role: 'member' }, { token: 'group:wwi25', role: 'reader' }, { token: 'user:m@dhbw.de', role: 'manager' }];
@@ -62,9 +67,8 @@ describe('groups', () => {
         ];
         const people = dealablePeople(members, groups, resolved);
         expect(people).toEqual(['user:a@dhbw.de', 'user:b@dhbw.de', 'user:c@dhbw.de', 'user:d@dhbw.de']);
-        const out = distribute(groups, people, 2);
-        expect(out[1].members).toEqual(['user:a@dhbw.de', 'user:c@dhbw.de']);
-        expect(out[2].members).toEqual(['user:b@dhbw.de', 'user:d@dhbw.de']);
+        const { made } = newGroupsBySize(groups, people, 2);
+        expect(made.map(g => g.members)).toEqual([['user:a@dhbw.de', 'user:b@dhbw.de'], ['user:c@dhbw.de', 'user:d@dhbw.de']]);
         // Without anything resolved, as before: the direct members only.
         expect(dealablePeople(members, groups)).toEqual(['user:a@dhbw.de']);
     });

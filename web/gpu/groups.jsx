@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
-import { ActionIcon, Alert, Badge, Button, Code, Group, Loader, Menu, Modal, MultiSelect, NumberInput, Paper, ScrollArea, SegmentedControl, Stack, Switch, Text, TextInput, Tooltip } from '@mantine/core';
-import { DndContext, KeyboardSensor, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
-import { ArrowRightLeft, GripVertical, Info, Plus, Trash2, Users, X } from 'lucide-react';
+import { ActionIcon, Alert, Badge, Button, Code, Group, Loader, Menu, Modal, MultiSelect, NumberInput, Paper, Radio, Stack, Switch, Text, TextInput, Tooltip } from '@mantine/core';
+import { Archive, ArchiveRestore, Check, HardDrive, Info, MoreHorizontal, Plus, Shuffle, Trash2, Users, X } from 'lucide-react';
 import { groupsEnabled } from '/features.js';
 import { useGroupsApi } from '/groups/api-groups.jsx';
 import { groupsKeys } from '/groups/query-keys.js';
-import { MAX_GROUPS, MAX_GROUP_MEMBERS, dealablePeople, distribute, groupNameError, groupTokens, isPerson, legacyTokens, moveMember, nextGroupName, overCapacity, peopleCount, personChoices, resolveGroupToken, resolvedChoices, tokenLabel, typedPerson } from '/gpu/groups.js';
+import { MAX_GROUPS, MAX_GROUP_MEMBERS, dealablePeople, fillFreePlaces, groupNameError, groupTokens, isPerson, legacyTokens, newGroupsBySize, nextGroupName, overCapacity, peopleCount, personChoices, resolveGroupToken, resolvedChoices, tokenLabel, typedPerson } from '/gpu/groups.js';
 
 // AUTO_RESOLVE: up to this many course groups their people are looked up as soon as the tab opens; with more, on request, so a big project does not fire a request per group unasked.
 const AUTO_RESOLVE = 3;
@@ -32,7 +31,7 @@ function useResolvedGroups(tokens, enabled) {
     });
 }
 
-// GroupsPanel edits a workspace project's groups (groups.js): the group choice by the members, then name, members, storage, read-only and archived per group, in a list or as a board to drag people between groups; and makes several at once with the people dealt among them. Groups take persons: course groups among the members can be resolved to their people, to pick them, drag them or deal them out one by one; a group token a group has from before shows as such, to be removed. Saved with the rest of the settings; a group's folder is ~/dhbw/groups/<name>, mounted for its members (not while the group choice is open) and the project's managers from the next start of a workspace or job.
+// GroupsPanel edits a workspace project's groups (groups.js): the group choice by the members, then one card per group (GroupCard), with who is in no group yet; and deals the people in no group out (DealModal: into new groups of a size, or into the free places of the existing ones). Groups take persons: course groups among the members can be resolved to their people, to pick them or deal them out one by one; a group token a group has from before shows as such, to be removed. Saved with the rest of the settings; a group's folder is ~/dhbw/groups/<name>, mounted for its members and the project's managers from the next start of a workspace or job.
 export function GroupsPanel({ draft }) {
     const { t } = useTranslation();
     const p = draft.value;
@@ -50,8 +49,8 @@ export function GroupsPanel({ draft }) {
     ];
     const set = (groups) => draft.update(cur => ({ ...cur, groups }));
     const setGroup = (i, patch) => set(groups.map((g, j) => (j === i ? { ...g, ...patch } : g)));
-    const [count, setCount] = useState(2);
-    const [view, setView] = useState('list');
+    const unassigned = dealablePeople(p.members, groups, resolved);
+    const [dealing, setDealing] = useState(false);
     const max = p.group_max_members || 0;
     // removing is the index of the group whose removal is being confirmed; a group not saved yet has no folder and goes at once.
     const [removing, setRemoving] = useState(null);
@@ -66,53 +65,143 @@ export function GroupsPanel({ draft }) {
             <GroupChoiceSettings p={p} update={draft.update} />
             {tokens.length > 0 && <CourseGroups tokens={tokens} queries={queries} resolving={resolving} onResolve={() => setResolveAsked(true)} />}
             {groups.length === 0 && <Text size="sm">{t('gpu.projects.groups.none')}</Text>}
-            {groups.length > 0 && (
-                <SegmentedControl size="xs" w="fit-content" value={view} onChange={setView} data={[
-                    { value: 'list', label: t('gpu.projects.groups.view.list') },
-                    { value: 'board', label: t('gpu.projects.groups.view.board') },
-                ]} />
-            )}
-            {view === 'board' && groups.length > 0 && (
-                <GroupBoard groups={groups} people={dealablePeople(p.members, groups, resolved)} max={max}
-                    onMove={(token, to) => set(moveMember(groups, token, to))}
-                    onRemove={(i, token) => setGroup(i, { members: (groups[i].members ?? []).filter(m => m !== token) })} onRemoveGroup={askRemove} />
-            )}
-            {view === 'list' && groups.map((g, i) => {
-                const err = groupNameError(g.name, groups, i);
-                return (
-                    <Paper key={g.id || `new-${i}`} withBorder radius="md" p="sm">
-                        <Group align="flex-start" wrap="nowrap" gap="sm">
-                            <TextInput w={200} label={t('gpu.projects.groups.name')} value={g.name ?? ''} onChange={e => setGroup(i, { name: e.currentTarget.value })}
-                                error={err ? t(`gpu.projects.groups.nameError.${err}`) : null} description={<Code fz="xs">~/dhbw/groups/{(g.name ?? '').trim().toLowerCase() || '…'}</Code>} />
-                            <MemberSelect value={(g.members ?? []).filter(isPerson)} choices={choices} capacity={max > 0 ? `${peopleCount(g)}/${max}` : null}
-                                onChange={v => setGroup(i, { members: [...v, ...legacyTokens(g)] })} />
-                            <Tooltip label={t('gpu.projects.groups.remove')}>
-                                <ActionIcon mt={26} variant="subtle" color="red" aria-label={t('gpu.projects.groups.remove')} onClick={() => askRemove(i)}><Trash2 size={16} /></ActionIcon>
-                            </Tooltip>
-                        </Group>
-                        <LegacyEntries tokens={legacyTokens(g)} onRemove={token => setGroup(i, { members: (g.members ?? []).filter(m => m !== token) })} />
-                        <Group gap="lg" mt="xs" align="center">
-                            <NumberInput size="xs" w={150} min={0} max={p.storage_gb} suffix=" GB" aria-label={t('gpu.projects.groups.storage')} placeholder={t('gpu.projects.groups.storageNone')}
-                                value={g.storage_gb || ''} onChange={v => setGroup(i, { storage_gb: Math.max(0, Math.min(p.storage_gb, Math.floor(Number(v) || 0))) })} leftSection={<Text size="xs" c="dimmed" pl={4}>{t('gpu.projects.groups.storageShort')}</Text>} leftSectionWidth={70} />
-                            <Switch size="xs" label={t('gpu.projects.groups.readOnly')} checked={!!g.read_only} onChange={e => setGroup(i, { read_only: e.currentTarget.checked })} />
-                            <Switch size="xs" label={t('gpu.projects.groups.archived')} checked={!!g.archived} onChange={e => setGroup(i, { archived: e.currentTarget.checked })} />
-                        </Group>
-                    </Paper>
-                );
-            })}
-            <Group gap="xl" align="center">
+            {groups.length > 0 && <Unassigned people={unassigned} />}
+            {groups.map((g, i) => (
+                <GroupCard key={g.id || `new-${i}`} g={g} nameError={groupNameError(g.name, groups, i)} choices={choices} max={max} storageGB={p.storage_gb}
+                    onChange={patch => setGroup(i, patch)} onRemove={() => askRemove(i)} />
+            ))}
+            <Group gap="sm" align="center">
                 <Button size="xs" variant="light" leftSection={<Plus size={14} />} disabled={groups.length >= MAX_GROUPS}
                     onClick={() => set([...groups, { name: nextGroupName(groups), members: [], read_only: false, archived: false }])}>{t('gpu.projects.groups.add')}</Button>
-                <Group gap={6} align="center" wrap="nowrap">
-                    <NumberInput size="xs" w={64} min={1} max={MAX_GROUPS} aria-label={t('gpu.projects.groups.count')} value={count} onChange={v => setCount(Math.max(1, Number(v) || 1))} />
-                    <Button size="xs" variant="light" leftSection={<Users size={14} />} disabled={groups.length >= MAX_GROUPS}
-                        onClick={() => set(distribute(groups, dealablePeople(p.members, groups, resolved), count))}>{t('gpu.projects.groups.distribute')}</Button>
-                </Group>
+                <Button size="xs" variant="light" leftSection={<Shuffle size={14} />} disabled={unassigned.length === 0} onClick={() => setDealing(true)}>{t('gpu.projects.groups.deal.button')}</Button>
+                {unassigned.length === 0 && <Text size="xs" c="dimmed">{t('gpu.projects.groups.deal.allAssigned')}</Text>}
             </Group>
             <Text size="xs" c="dimmed">{t('gpu.projects.groups.hint')}</Text>
             <RemoveGroupModal group={removing === null ? null : groups[removing]} onClose={() => setRemoving(null)}
                 onDelete={() => { set(groups.filter((_, j) => j !== removing)); setRemoving(null); }}
                 onArchive={() => { setGroup(removing, { archived: true }); setRemoving(null); }} />
+            <DealModal opened={dealing} onClose={() => setDealing(false)} groups={groups} people={unassigned} max={max}
+                onDeal={next => { set(next); setDealing(false); }} />
+        </Stack>
+    );
+}
+
+// GroupCard is one group in the list: a header with its name (and the folder it becomes), how many people it has (of the places, red when more), what is set (read-only, archived, a storage limit) and one menu for the rest (storage limit, read-only, archive or restore, remove), then the people picker over the full width. An archived group is dimmed and shows no picker.
+function GroupCard({ g, nameError, choices, max, storageGB, onChange, onRemove }) {
+    const { t } = useTranslation();
+    const [storageOpen, setStorageOpen] = useState(false);
+    const name = (g.name ?? '').trim().toLowerCase() || '…';
+    const count = peopleCount(g);
+    const over = overCapacity(g, max);
+    return (
+        <Paper withBorder radius="md" p="sm" style={g.archived ? { opacity: 0.6 } : undefined} aria-label={t('gpu.projects.groups.card', { name })} role="group">
+            <Group justify="space-between" wrap="nowrap" gap="sm" align="flex-start">
+                <Group gap="xs" wrap="wrap" align="center" style={{ flex: 1, minWidth: 0 }}>
+                    <TextInput size="xs" w={170} aria-label={t('gpu.projects.groups.name')} value={g.name ?? ''} onChange={e => onChange({ name: e.currentTarget.value })}
+                        error={nameError ? t(`gpu.projects.groups.nameError.${nameError}`) : null} />
+                    <Code fz="xs" c="dimmed">~/dhbw/groups/{name}</Code>
+                    <Badge size="sm" variant="light" color={over ? 'red' : 'gray'} title={t('gpu.projects.groups.countTitle')}>{max > 0 ? `${count}/${max}` : count}</Badge>
+                    {g.read_only && <Badge size="sm" variant="outline" color="gray">{t('gpu.projects.groups.badge.readOnly')}</Badge>}
+                    {g.archived && <Badge size="sm" variant="outline" color="gray">{t('gpu.projects.groups.badge.archived')}</Badge>}
+                    {g.storage_gb > 0 && <Badge size="sm" variant="outline" color="gray">{t('gpu.projects.groups.badge.storage', { gb: g.storage_gb })}</Badge>}
+                </Group>
+                <Menu position="bottom-end" withinPortal>
+                    <Menu.Target>
+                        <ActionIcon variant="subtle" color="gray" aria-label={t('gpu.projects.groups.menu', { name })}><MoreHorizontal size={16} /></ActionIcon>
+                    </Menu.Target>
+                    <Menu.Dropdown>
+                        <Menu.Item leftSection={<HardDrive size={14} />} onClick={() => setStorageOpen(true)}>{t('gpu.projects.groups.action.storage')}</Menu.Item>
+                        <Menu.Item leftSection={g.read_only ? <Check size={14} /> : <span style={{ width: 14, display: 'inline-block' }} />} onClick={() => onChange({ read_only: !g.read_only })}
+                            role="menuitemcheckbox" aria-checked={!!g.read_only}>{t('gpu.projects.groups.action.readOnly')}</Menu.Item>
+                        <Menu.Item leftSection={g.archived ? <ArchiveRestore size={14} /> : <Archive size={14} />} onClick={() => onChange({ archived: !g.archived })}>
+                            {t(g.archived ? 'gpu.projects.groups.action.restore' : 'gpu.projects.groups.action.archive')}
+                        </Menu.Item>
+                        <Menu.Divider />
+                        <Menu.Item color="red" leftSection={<Trash2 size={14} />} onClick={onRemove}>{t('gpu.projects.groups.action.remove')}</Menu.Item>
+                    </Menu.Dropdown>
+                </Menu>
+            </Group>
+            {!g.archived && (
+                <MemberSelect value={(g.members ?? []).filter(isPerson)} choices={choices} over={over} onChange={v => onChange({ members: [...v, ...legacyTokens(g)] })} />
+            )}
+            <LegacyEntries tokens={legacyTokens(g)} onRemove={token => onChange({ members: (g.members ?? []).filter(m => m !== token) })} />
+            <StorageModal opened={storageOpen} name={name} value={g.storage_gb || 0} storageGB={storageGB} onClose={() => setStorageOpen(false)}
+                onSave={gb => { onChange({ storage_gb: gb }); setStorageOpen(false); }} />
+        </Paper>
+    );
+}
+
+// StorageModal sets a group's storage limit (GB, 0 or empty = none, at most the project's storage).
+function StorageModal({ opened, name, value, storageGB, onClose, onSave }) {
+    const { t } = useTranslation();
+    const [gb, setGb] = useState(value);
+    return (
+        <Modal opened={opened} onClose={onClose} title={t('gpu.projects.groups.storageTitle', { name })} size="sm">
+            <NumberInput min={0} max={storageGB} suffix=" GB" label={t('gpu.projects.groups.storage')} placeholder={t('gpu.projects.groups.storageNone')} description={t('gpu.projects.groups.storageHint', { gb: storageGB })}
+                value={gb || ''} onChange={v => setGb(Math.max(0, Math.min(storageGB, Math.floor(Number(v) || 0))))} data-autofocus />
+            <Group justify="flex-end" mt="md" gap="sm">
+                <Button variant="default" onClick={onClose}>{t('gpu.projects.groups.deal.cancel')}</Button>
+                <Button onClick={() => onSave(gb)}>{t('gpu.projects.groups.storageApply')}</Button>
+            </Group>
+        </Modal>
+    );
+}
+
+// DealModal deals the people in no group yet (people: dealablePeople) out, applied to the draft (saved with the project): into new groups of about a size each (newGroupsBySize, no tiny last group), or, with places per group (max), into the free places of the existing groups that are not archived (fillFreePlaces; whoever does not fit stays in no group). Existing assignments stay as they are. A preview says what it will do.
+function DealModal({ opened, onClose, groups, people, max, onDeal }) {
+    const { t } = useTranslation();
+    return (
+        <Modal opened={opened} onClose={onClose} title={t('gpu.projects.groups.deal.title')} size="md">
+            {opened && <DealForm onClose={onClose} groups={groups} people={people} max={max} onDeal={onDeal} />}
+        </Modal>
+    );
+}
+
+// DealForm is the content of DealModal, made anew at every opening.
+function DealForm({ onClose, groups, people, max, onDeal }) {
+    const { t } = useTranslation();
+    const [mode, setMode] = useState('new');
+    const [size, setSize] = useState(4);
+    const fresh = newGroupsBySize(groups, people, size);
+    const fill = max > 0 ? fillFreePlaces(groups, people, max) : null;
+    const names = fresh.made.map(g => g.name);
+    const filled = fill ? fill.added.map((n, i) => (n ? `${groups[i].name} +${n}` : null)).filter(Boolean) : [];
+    return (
+        <Stack gap="sm">
+            <Text size="sm">{t('gpu.projects.groups.deal.people', { count: people.length })}</Text>
+            <Radio.Group value={mode} onChange={setMode}>
+                <Stack gap="sm">
+                    <div>
+                        <Group gap="xs" align="center" wrap="nowrap">
+                            <Radio value="new" label={t('gpu.projects.groups.deal.newGroups')} />
+                            <NumberInput size="xs" w={70} min={1} max={MAX_GROUP_MEMBERS} aria-label={t('gpu.projects.groups.deal.size')} value={size}
+                                onChange={v => setSize(Math.max(1, Math.floor(Number(v) || 1)))} disabled={mode !== 'new'} />
+                            <Text size="sm">{t('gpu.projects.groups.deal.persons')}</Text>
+                        </Group>
+                        {mode === 'new' && (
+                            <Text size="xs" c="dimmed" mt={4} ml={28}>
+                                {t('gpu.projects.groups.deal.previewNew', { count: names.length, names: names.length > 2 ? `${names[0]} … ${names[names.length - 1]}` : names.join(', '), sizes: fresh.made.map(g => g.members.length).join(', ') })}
+                            </Text>
+                        )}
+                    </div>
+                    {fill && (
+                        <div>
+                            <Radio value="fill" label={t('gpu.projects.groups.deal.fill')} />
+                            {mode === 'fill' && (
+                                <Text size="xs" c="dimmed" mt={4} ml={28}>
+                                    {filled.length ? t('gpu.projects.groups.deal.previewFill', { groups: filled.join(', ') }) : t('gpu.projects.groups.deal.noPlaces')}
+                                    {fill.left > 0 ? ` ${t('gpu.projects.groups.deal.left', { count: fill.left })}` : ''}
+                                </Text>
+                            )}
+                        </div>
+                    )}
+                </Stack>
+            </Radio.Group>
+            <Text size="xs" c="dimmed">{t('gpu.projects.groups.deal.hint')}</Text>
+            <Group justify="flex-end" gap="sm">
+                <Button variant="default" onClick={onClose}>{t('gpu.projects.groups.deal.cancel')}</Button>
+                <Button disabled={mode === 'fill' ? !filled.length : !names.length} onClick={() => onDeal(mode === 'fill' ? fill.groups : fresh.groups)}>{t('gpu.projects.groups.deal.apply')}</Button>
+            </Group>
         </Stack>
     );
 }
@@ -135,7 +224,7 @@ export function RemoveGroupModal({ group, onClose, onDelete, onArchive }) {
     );
 }
 
-// GroupChoiceSettings is the managers' switch for the group choice (group_choice) and the places per group (group_max_members, empty = no limit), with what it means while it is on: the members choose, their group folders wait.
+// GroupChoiceSettings is the managers' switch for the group choice (group_choice: it only opens and closes joining, which is binding) and the places per group (group_max_members, empty = no limit), with what it means while it is on.
 function GroupChoiceSettings({ p, update }) {
     const { t } = useTranslation();
     return (
@@ -170,94 +259,18 @@ function LegacyEntries({ tokens, onRemove }) {
     );
 }
 
-// NONE is the board's column of the people in no group yet.
-const NONE = 'none';
-
-// GroupBoard shows the groups as columns of people (a group removed from its column's header, asked first like in the list), next to a column of those in no group yet (dealablePeople: the project's members and the people of its resolved course groups, without managers); a card is dragged to another column, or moved with its menu (keyboard, touch). Moving into "not in a group" takes the person out of their group. A column shows how many places of the group choice are taken; managers may put more in. The board edits the same draft as the list.
-function GroupBoard({ groups, people, max, onMove, onRemove, onRemoveGroup }) {
+// Unassigned names the people in no group yet (dealablePeople: the project's members and the people of its resolved course groups, without managers), the ones "deal out" would take.
+function Unassigned({ people }) {
     const { t } = useTranslation();
-    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor));
-    const targets = [{ id: NONE, label: t('gpu.projects.groups.board.none') }, ...groups.map((g, i) => ({ id: String(i), label: g.name || '…' }))];
-    const move = (token, target) => onMove(token, target === NONE ? null : Number(target));
-    const onDragEnd = ({ active, over }) => {
-        if (!over || over.id === active.data.current?.from) return;
-        move(active.data.current.token, over.id);
-    };
     return (
-        <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-            <ScrollArea type="auto" offsetScrollbars>
-                <Group align="flex-start" wrap="nowrap" gap="sm" pb="xs">
-                    <BoardColumn id={NONE} title={t('gpu.projects.groups.board.none')} count={people.length}>
-                        {people.map(token => <PersonCard key={token} token={token} from={NONE} targets={targets} onMove={move} />)}
-                    </BoardColumn>
-                    {groups.map((g, i) => (
-                        <BoardColumn key={g.id || `new-${i}`} id={String(i)} title={g.name || '…'} count={peopleCount(g)} max={max} over={overCapacity(g, max)} archived={!!g.archived} onRemove={() => onRemoveGroup(i)}>
-                            {(g.members ?? []).filter(isPerson).map(token => <PersonCard key={token} token={token} from={String(i)} targets={targets} onMove={move} />)}
-                            {legacyTokens(g).map(token => (
-                                <Paper key={token} withBorder radius="sm" px={6} py={4} bg="var(--mantine-color-gray-light)">
-                                    <Group gap={4} wrap="nowrap" justify="space-between">
-                                        <Text size="xs" c="dimmed" truncate>{t('gpu.projects.groups.legacy.label', { group: tokenLabel(token) })}</Text>
-                                        <ActionIcon size="xs" variant="subtle" color="gray" aria-label={t('gpu.projects.groups.legacy.remove', { group: tokenLabel(token) })} onClick={() => onRemove(i, token)}><X size={12} /></ActionIcon>
-                                    </Group>
-                                </Paper>
-                            ))}
-                        </BoardColumn>
-                    ))}
-                </Group>
-            </ScrollArea>
-        </DndContext>
+        <Text size="xs" c="dimmed">
+            {people.length === 0 ? t('gpu.projects.groups.unassignedNone') : t('gpu.projects.groups.unassigned', { count: people.length, names: people.map(tokenLabel).join(', ') })}
+        </Text>
     );
 }
 
-// BoardColumn is one column of the board, a drop target, with its count of people and, with places in the group choice, the places (red when more people are in it).
-function BoardColumn({ id, title, count, max = 0, over = false, archived = false, onRemove = null, children }) {
-    const { t } = useTranslation();
-    const { setNodeRef, isOver } = useDroppable({ id });
-    return (
-        <Paper ref={setNodeRef} withBorder radius="md" p="xs" w={220} style={{ flexShrink: 0, minHeight: 120, background: isOver ? 'var(--mantine-color-blue-light)' : undefined }}
-            role="group" aria-label={title}>
-            <Group justify="space-between" gap={4} mb={6} wrap="nowrap">
-                <Text size="sm" fw={600} truncate>{title}</Text>
-                <Group gap={2} wrap="nowrap">
-                    <Badge size="sm" variant="light" color={over ? 'red' : 'gray'}>{max > 0 ? `${count}/${max}` : count}</Badge>
-                    {onRemove && <ActionIcon size="xs" variant="subtle" color="red" aria-label={t('gpu.projects.groups.removeOf', { name: title })} onClick={onRemove}><Trash2 size={12} /></ActionIcon>}
-                </Group>
-            </Group>
-            {archived && <Text size="xs" c="dimmed" mb={4}>{t('gpu.projects.groups.board.archived')}</Text>}
-            <Stack gap={4}>{children}</Stack>
-        </Paper>
-    );
-}
-
-// PersonCard is a person on the board: dragged by its handle or the card, or moved with its menu "Move to …".
-function PersonCard({ token, from, targets, onMove }) {
-    const { t } = useTranslation();
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `${from}:${token}`, data: { token, from } });
-    const style = { transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined, opacity: isDragging ? 0.6 : 1, zIndex: isDragging ? 10 : undefined, position: 'relative', touchAction: 'none' };
-    const label = tokenLabel(token);
-    return (
-        <Paper ref={setNodeRef} withBorder radius="sm" px={6} py={4} style={style}>
-            <Group gap={4} wrap="nowrap">
-                <span {...listeners} {...attributes} aria-label={t('gpu.projects.groups.board.drag', { person: label })} style={{ cursor: 'grab', display: 'flex' }}><GripVertical size={14} /></span>
-                <Text size="xs" style={{ flex: 1, minWidth: 0 }} truncate title={label}>{label}</Text>
-                <Menu position="bottom-end" withinPortal>
-                    <Menu.Target>
-                        <ActionIcon size="xs" variant="subtle" color="gray" aria-label={t('gpu.projects.groups.board.moveOf', { person: label })}><ArrowRightLeft size={12} /></ActionIcon>
-                    </Menu.Target>
-                    <Menu.Dropdown>
-                        <Menu.Label>{t('gpu.projects.groups.board.moveTo')}</Menu.Label>
-                        {targets.filter(x => x.id !== from).map(x => (
-                            <Menu.Item key={x.id} onClick={() => onMove(token, x.id)}>{x.label}</Menu.Item>
-                        ))}
-                    </Menu.Dropdown>
-                </Menu>
-            </Group>
-        </Paper>
-    );
-}
-
-// MemberSelect picks a group's people from the project's members and the people of its resolved course groups (under the group they come from); an e-mail address typed in is offered as a person too, for the people of a course group that cannot be looked up here. Groups are not offered: a group takes persons. capacity is "taken/places" of the group choice, when it has places.
-function MemberSelect({ value, choices, capacity, onChange }) {
+// MemberSelect picks a group's people from the project's members and the people of its resolved course groups (under the group they come from); an e-mail address typed in is offered as a person too, for the people of a course group that cannot be looked up here. Groups are not offered: a group takes persons. over marks more people than places of the group choice (the managers may).
+function MemberSelect({ value, choices, over = false, onChange }) {
     const { t } = useTranslation();
     const [search, setSearch] = useState('');
     const offered = new Set(choices.flatMap(c => (c.items ? c.items.map(x => x.value) : [c.value])));
@@ -268,8 +281,8 @@ function MemberSelect({ value, choices, capacity, onChange }) {
         ...(typed && !offered.has(typed) && !value.includes(typed) ? [{ value: typed, label: t('gpu.projects.groups.addPerson', { email: tokenLabel(typed) }) }] : []),
     ];
     return (
-        <MultiSelect style={{ flex: 1 }} label={capacity ? `${t('gpu.projects.groups.members')} (${capacity})` : t('gpu.projects.groups.members')} searchable clearable value={value} data={data} searchValue={search} onSearchChange={setSearch}
-            onChange={onChange} nothingFoundMessage={t('gpu.projects.groups.nothingFound')} placeholder={value.length ? undefined : t('gpu.projects.groups.membersPlaceholder')} />
+        <MultiSelect style={{ flex: 1 }} mt="xs" aria-label={t('gpu.projects.groups.members')} searchable clearable value={value} data={data} searchValue={search} onSearchChange={setSearch}
+            error={over ? t('gpu.projects.groups.overCapacity') : null} onChange={onChange} nothingFoundMessage={t('gpu.projects.groups.nothingFound')} placeholder={value.length ? undefined : t('gpu.projects.groups.membersPlaceholder')} />
     );
 }
 

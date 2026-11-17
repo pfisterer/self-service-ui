@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { renderView } from '/test/render-harness.jsx';
 
-// The members' side of the group choice: the groups of a project with their places, one's own with its members, and joining and leaving.
+// The members' side of the group choice: the groups of a project with their places, one's own with its members, and joining, binding and asked first; there is no leaving.
 vi.mock('/gpu/api-gpu.jsx', async (importOriginal) => {
     const actual = await importOriginal();
     return { ...actual, useGpuApi: () => globalThis.__gpuApi };
@@ -23,7 +23,7 @@ const PROJECTS = [
 ];
 
 beforeEach(() => {
-    globalThis.__gpuApi = { joinGroup: vi.fn(async () => ({ group_seats: [] })), leaveGroup: vi.fn(async () => ({ group_seats: [] })) };
+    globalThis.__gpuApi = { joinGroup: vi.fn(async () => ({ group_seats: [] })) };
 });
 afterEach(() => {
     cleanup();
@@ -45,10 +45,19 @@ describe('the group choice for members', () => {
         // In a group already: the others cannot be joined before leaving it.
         const joins = screen.getAllByRole('button', { name: /^(Beitreten|Join)$/ });
         expect(joins.slice(0, 2).every(b => b.disabled)).toBe(true);
-        fireEvent.click(screen.getByRole('button', { name: /^(Verlassen|Leave)$/ }));
-        await waitFor(() => expect(globalThis.__gpuApi.leaveGroup).toHaveBeenCalledWith('kurs', '0000bbbb'));
-        // In the other project, nothing is chosen yet: join.
+        expect(screen.queryByRole('button', { name: /^(Verlassen|Leave)$/ })).toBeNull();
+        expect(screen.getAllByText(/(Die Wahl ist verbindlich|The choice is binding)/).length).toBe(2);
+        // In the other project, nothing is chosen yet: join, after confirming; cancelling joins nothing.
         fireEvent.click(joins[2]);
+        let dialog = await screen.findByRole('dialog');
+        expect(within(dialog).getByText(/(Gruppe team-a beitreten|Join group team-a)/)).toBeTruthy();
+        fireEvent.click(within(dialog).getByRole('button', { name: /^(Abbrechen|Cancel)$/ }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        expect(globalThis.__gpuApi.joinGroup).not.toHaveBeenCalled();
+        fireEvent.click(joins[2]);
+        dialog = await screen.findByRole('dialog');
+        expect(within(dialog).getByText(/(nur durch die Verwaltenden|only the project’s managers)/)).toBeTruthy();
+        fireEvent.click(within(dialog).getByRole('button', { name: /^(Beitreten|Join)$/ }));
         await waitFor(() => expect(globalThis.__gpuApi.joinGroup).toHaveBeenCalledWith('frei', '0000dddd'));
     });
 
@@ -56,6 +65,7 @@ describe('the group choice for members', () => {
         globalThis.__gpuApi.joinGroup = async () => { throw new Error('Gruppe „gruppe-3“ ist voll (2 Plätze).'); };
         renderView(<GroupChoices projects={[{ ...PROJECTS[0], group_seats: PROJECTS[0].group_seats.map(s => ({ ...s, mine: false })) }]} />);
         fireEvent.click(screen.getAllByRole('button', { name: /^(Beitreten|Join)$/ })[2]);
+        fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: /^(Beitreten|Join)$/ }));
         expect(await screen.findByText(/ist voll/)).toBeTruthy();
     });
 });

@@ -167,20 +167,57 @@ describe('the GPU views render', () => {
     it('the workspace settings tab lets a manager make groups and deal out the members', async () => {
         globalThis.__llmIsAdmin = false;
         const project = { ...PROJECTS[0], storage_gb: 20, groups: [],
-            members: [{ token: 'user:a@dhbw.de', role: 'member' }, { token: 'user:b@dhbw.de', role: 'member' }, { token: 'user:c@dhbw.de', role: 'reader' }, { token: 'user:m@dhbw.de', role: 'manager' }] };
+            members: [{ token: 'user:a@dhbw.de', role: 'member' }, { token: 'user:b@dhbw.de', role: 'member' }, { token: 'user:c@dhbw.de', role: 'reader' }, { token: 'user:d@dhbw.de', role: 'member' }, { token: 'user:m@dhbw.de', role: 'manager' }] };
         globalThis.__gpuApi.listProjects = async () => [project, PROJECTS[1]];
         renderView(<SettingsTab nodeId="p_ml" />);
         fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
         expect(screen.getByText(/(Noch keine Gruppen|No groups yet)/)).toBeTruthy();
-        fireEvent.click(screen.getByRole('button', { name: /(Mitglieder verteilen|members dealt out)/ }));
+        fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal out …)$/ }));
+        let dialog = await screen.findByRole('dialog');
+        expect(within(dialog).getByText(/^4 (Personen sind noch in keiner Gruppe|people are in no group yet)/)).toBeTruthy();
+        // No places per group: only new groups are offered. Four of size 4 make one group; of size 2, two.
+        expect(within(dialog).queryByText(/(Freie Plätze|free places)/)).toBeNull();
+        expect(within(dialog).getByText(/→ 1 (neue Gruppe|new group): gruppe-1 \(4/)).toBeTruthy();
+        fireEvent.change(within(dialog).getByLabelText(/(Personen je neuer Gruppe|People per new group)/), { target: { value: '2' } });
+        expect(within(dialog).getByText(/→ 2 (neue Gruppen|new groups): gruppe-1, gruppe-2 \(2, 2/)).toBeTruthy();
+        // Cancel changes nothing.
+        fireEvent.click(within(dialog).getByRole('button', { name: /^(Abbrechen|Cancel)$/ }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        expect(screen.queryByDisplayValue('gruppe-1')).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal out …)$/ }));
+        dialog = await screen.findByRole('dialog');
+        fireEvent.change(within(dialog).getByLabelText(/(Personen je neuer Gruppe|People per new group)/), { target: { value: '2' } });
+        fireEvent.click(within(dialog).getByRole('button', { name: /^(Verteilen|Deal out)$/ }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         expect(screen.getByDisplayValue('gruppe-1')).toBeTruthy();
         expect(screen.getByDisplayValue('gruppe-2')).toBeTruthy();
         expect(screen.getByText('~/dhbw/groups/gruppe-1')).toBeTruthy();
-        // Two people in the first group, one in the second; the manager in none.
         expect(screen.getAllByText('a@dhbw.de').length).toBeGreaterThan(0);
         expect(screen.queryByText('m@dhbw.de')).toBeNull();
+        // Everyone placed: the button rests, with the reason beside it.
+        expect(screen.getByRole('button', { name: /^(Verteilen …|Deal out …)$/ }).disabled).toBe(true);
+        expect(screen.getAllByText(/(Alle sind bereits in einer Gruppe|Everyone is in a group already)/).length).toBeGreaterThan(0);
         fireEvent.change(screen.getByDisplayValue('gruppe-2'), { target: { value: 'gruppe-1' } });
         expect(screen.getAllByText(/(gibt es schon|is taken)/).length).toBe(2);
+        expectNoRenderFailure();
+    });
+
+    it('the deal-out dialog fills free places of the existing groups when there are places per group', async () => {
+        globalThis.__llmIsAdmin = false;
+        const project = { ...PROJECTS[0], storage_gb: 20, group_max_members: 2,
+            groups: [{ id: '0000aaaa', name: 'g1', members: ['user:a@dhbw.de'] }, { id: '0000bbbb', name: 'g2', members: [] }, { id: '0000cccc', name: 'alt', members: [], archived: true }],
+            members: ['a', 'b', 'c', 'd', 'e', 'f'].map(x => ({ token: `user:${x}@dhbw.de`, role: 'member' })) };
+        globalThis.__gpuApi.listProjects = async () => [project, PROJECTS[1]];
+        renderView(<SettingsTab nodeId="p_ml" />);
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
+        fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal out …)$/ }));
+        const dialog = await screen.findByRole('dialog');
+        fireEvent.click(within(dialog).getByRole('radio', { name: /(Freie Plätze|free places)/ }));
+        // Three free places for five people: g1 one, g2 two, two left; the archived group gets none.
+        expect(within(dialog).getByText(/→ g1 \+1, g2 \+2.*2 (Personen bleiben ohne Gruppe|people stay without a group)/)).toBeTruthy();
+        fireEvent.click(within(dialog).getByRole('button', { name: /^(Verteilen|Deal out)$/ }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        expect(screen.getByText(/(Noch in keiner Gruppe|Not in a group yet) \(2\): e@dhbw.de, f@dhbw.de$/)).toBeTruthy();
         expectNoRenderFailure();
     });
 
@@ -200,10 +237,13 @@ describe('the GPU views render', () => {
         fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
         expect(await screen.findByText(/^2 (Personen|people)/)).toBeTruthy();
         expect(await screen.findByText(/(Mitglieder von wwi25 sind hier nicht einsehbar|members of wwi25 are not visible)/)).toBeTruthy();
-        expect(screen.getByLabelText(/(Anzahl der neuen Gruppen|Number of new groups)/)).toBeTruthy();
         expect(screen.queryByText('s1@dhbw.de')).toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: /(Mitglieder verteilen|members dealt out)/ }));
-        // a, s1 and s2 dealt among the two new groups; not the lecturer, who holds another relation, nor the manager.
+        fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal out …)$/ }));
+        const dialog = await screen.findByRole('dialog');
+        fireEvent.change(within(dialog).getByLabelText(/(Personen je neuer Gruppe|People per new group)/), { target: { value: '1' } });
+        fireEvent.click(within(dialog).getByRole('button', { name: /^(Verteilen|Deal out)$/ }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        // a, s1 and s2 dealt into new groups; not the lecturer, who holds another relation, nor the manager.
         expect(screen.getAllByText('s1@dhbw.de').length).toBeGreaterThan(0);
         expect(screen.getAllByText('s2@dhbw.de').length).toBeGreaterThan(0);
         expect(screen.queryByText('doz@dhbw.de')).toBeNull();
@@ -211,40 +251,68 @@ describe('the GPU views render', () => {
         expectNoRenderFailure();
     });
 
-    it('the workspace settings tab has the group choice and a board to move people between groups', async () => {
+    it('the workspace settings tab has the group choice, places per group and who is in no group yet', async () => {
         globalThis.__llmIsAdmin = false;
         const project = { ...PROJECTS[0], storage_gb: 20, group_choice: true, group_max_members: 1,
-            groups: [{ id: '0000aaaa', name: 'g1', members: ['user:a@dhbw.de', 'group:alt'] }, { id: '0000bbbb', name: 'g2', members: [] }],
-            members: [{ token: 'user:a@dhbw.de', role: 'member' }, { token: 'user:b@dhbw.de', role: 'member' }, { token: 'user:m@dhbw.de', role: 'manager' }] };
+            groups: [{ id: '0000aaaa', name: 'g1', members: ['user:a@dhbw.de', 'user:c@dhbw.de', 'group:alt'] }, { id: '0000bbbb', name: 'g2', members: [] }],
+            members: [{ token: 'user:a@dhbw.de', role: 'member' }, { token: 'user:b@dhbw.de', role: 'member' }, { token: 'user:c@dhbw.de', role: 'member' }, { token: 'user:m@dhbw.de', role: 'manager' }] };
         globalThis.__gpuApi.listProjects = async () => [project, PROJECTS[1]];
         renderView(<SettingsTab nodeId="p_ml" />);
         fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
-        // While the choice runs, the managers are told that members have no group folders yet.
+        // While it runs, the managers are told that members join; the folders are mounted as always.
         expect(screen.getByText(/(Gruppenwahl läuft|Group choice is open)/)).toBeTruthy();
-        expect(screen.getByRole('switch', { name: /(Gruppenwahl durch Mitglieder|Members may choose)/ }).checked).toBe(true);
-        // A course group from before shows as an entry to remove, not as a choice.
+        expect(screen.queryByText(/noch nicht eingehängt|not mounted for members/)).toBeNull();
+        expect(screen.getByRole('switch', { name: /(Gruppenwahl durch Mitglieder|Members may join)/ }).checked).toBe(true);
+        // No board any more: one list, with who is in no group yet (not the manager).
+        expect(screen.queryByText('Board')).toBeNull();
+        expect(screen.getByText(/(Noch in keiner Gruppe|Not in a group yet) \(1\): b@dhbw.de$/)).toBeTruthy();
+        // Places: 2/1 in the group's badge, marked, the managers may.
+        expect(screen.getByText('2/1')).toBeTruthy();
+        expect(screen.getByText(/(Mehr Personen als Plätze|More people than places)/)).toBeTruthy();
+        // A course group from before shows as an entry to remove, not as a choice; it goes.
         expect(screen.getByText(/(Kursgruppe alt|Course group alt)/)).toBeTruthy();
-        fireEvent.click(screen.getByText('Board'));
-        const none = screen.getByRole('group', { name: /(Noch in keiner Gruppe|Not in a group yet)/ });
-        const g1 = screen.getByRole('group', { name: 'g1' });
-        expect(within(none).getByText('b@dhbw.de')).toBeTruthy();
-        expect(within(none).queryByText('m@dhbw.de')).toBeNull();
-        expect(within(g1).getByText('1/1')).toBeTruthy();
-        // Moving by the card's menu, as by keyboard or touch: b into g1, beyond its places (the managers may).
-        fireEvent.click(within(none).getByRole('button', { name: /b@dhbw.de (verschieben nach|to)/ }));
-        fireEvent.click(await screen.findByRole('menuitem', { name: 'g1' }));
-        expect(within(screen.getByRole('group', { name: 'g1' })).getByText('b@dhbw.de')).toBeTruthy();
-        expect(within(screen.getByRole('group', { name: 'g1' })).getByText('2/1')).toBeTruthy();
-        expect(within(screen.getByRole('group', { name: /(Noch in keiner Gruppe|Not in a group yet)/ })).queryByText('b@dhbw.de')).toBeNull();
-        // And back out of every group.
-        fireEvent.click(within(screen.getByRole('group', { name: 'g1' })).getByRole('button', { name: /a@dhbw.de (verschieben nach|to)/ }));
-        fireEvent.click(await screen.findByRole('menuitem', { name: /(Noch in keiner Gruppe|Not in a group yet)/ }));
-        expect(within(screen.getByRole('group', { name: /(Noch in keiner Gruppe|Not in a group yet)/ })).getByText('a@dhbw.de')).toBeTruthy();
-        // The earlier entry can go.
-        fireEvent.click(within(screen.getByRole('group', { name: 'g1' })).getByRole('button', { name: /alt (entfernen|Remove)|Remove alt/ }));
+        fireEvent.click(screen.getByRole('button', { name: /^(alt entfernen|Remove alt)$/ }));
         expect(screen.queryByText(/(Kursgruppe alt|Course group alt)/)).toBeNull();
         expectNoRenderFailure();
     });
+
+    for (const lang of ['de', 'en']) {
+        it(`the groups tab shows no raw translation keys (${lang})`, async () => {
+            const { default: i18n } = await import('/i18n/index.js');
+            const before = i18n.language;
+            await i18n.changeLanguage(lang);
+            try {
+                globalThis.__llmIsAdmin = false;
+                const project = { ...PROJECTS[0], storage_gb: 20, group_choice: true, group_max_members: 2,
+                    groups: [{ id: '0000aaaa', name: 'g1', members: ['user:a@dhbw.de', 'group:alt'], read_only: true, storage_gb: 5, used_gib: 1 }, { id: '0000bbbb', name: 'g2', members: [], archived: true }],
+                    members: [{ token: 'user:a@dhbw.de', role: 'member' }, { token: 'user:b@dhbw.de', role: 'member' }, { token: 'user:m@dhbw.de', role: 'manager' }] };
+                globalThis.__gpuApi.listProjects = async () => [project, PROJECTS[1]];
+                renderView(<SettingsTab nodeId="p_ml" />);
+                fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
+                const raw = /gpu\.projects\.|gpu\.groupChoice\./;
+                expect(document.body.textContent).not.toMatch(raw);
+                // Everything all assigned, and the dialogs and the menu, too.
+                fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal out …)$/ }));
+                const dialog = await screen.findByRole('dialog');
+                fireEvent.click(within(dialog).getByRole('radio', { name: /(Freie Plätze|free places)/ }));
+                expect(document.body.textContent).not.toMatch(raw);
+                fireEvent.click(within(dialog).getByRole('button', { name: /^(Abbrechen|Cancel)$/ }));
+                await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+                fireEvent.click(screen.getByRole('button', { name: /(Aktionen für Gruppe|Actions for group) g1$/ }));
+                await screen.findAllByRole('menuitem', { hidden: true });
+                expect(document.body.textContent).not.toMatch(raw);
+                const p2 = { ...project, groups: [{ id: '0000aaaa', name: 'g1', members: ['user:a@dhbw.de', 'user:b@dhbw.de'] }] };
+                cleanup();
+                globalThis.__gpuApi.listProjects = async () => [p2, PROJECTS[1]];
+                renderView(<SettingsTab nodeId="p_ml" />);
+                fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
+                expect(await screen.findByText(/(Alle Personen des Projekts sind in einer Gruppe|Everyone in the project is in a group)/)).toBeTruthy();
+                expect(document.body.textContent).not.toMatch(raw);
+            } finally {
+                await i18n.changeLanguage(before);
+            }
+        });
+    }
 
     it('removing a group asks first, says what its folder holds and offers archiving instead', async () => {
         globalThis.__llmIsAdmin = false;
@@ -254,41 +322,46 @@ describe('the GPU views render', () => {
         globalThis.__gpuApi.listProjects = async () => [project, PROJECTS[1]];
         renderView(<SettingsTab nodeId="p_ml" />);
         fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
-        const removeButtons = () => screen.getAllByRole('button', { name: /^(Gruppe entfernen|Remove the group)/ });
+        // Remove is in each group's menu.
+        const remove = async (name) => {
+            await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+            fireEvent.click(screen.getByRole('button', { name: new RegExp(`(Aktionen für Gruppe|Actions for group) ${name}$`) }));
+            // hidden: after a Mantine modal closes, jsdom may still see its aria-hidden on the menu's portal.
+            fireEvent.click(await screen.findByRole('menuitem', { name: /^(Entfernen …|Remove …)$/, hidden: true }));
+        };
         // Archive instead: the group stays, archived.
-        fireEvent.click(removeButtons()[0]);
+        await remove('g1');
         const dialog = await screen.findByRole('dialog');
         expect(within(dialog).getByText(/~\/dhbw\/groups\/g1 .*(gelöscht|deleted).*2\.5 GB/)).toBeTruthy();
         fireEvent.click(within(dialog).getByRole('button', { name: /^(Archivieren|Archive)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         expect(screen.getByDisplayValue('g1')).toBeTruthy();
-        expect(screen.getAllByRole('switch', { name: /^(Archiviert|Archived)/ })[0].checked).toBe(true);
+        expect(within(screen.getByRole('group', { name: /(Gruppe|Group) g1$/ })).getByText(/^(archiviert|archived)$/)).toBeTruthy();
         // Cancel keeps it; delete takes it out of the draft. Without a known size, no number.
-        fireEvent.click(removeButtons()[1]);
+        await remove('g2');
         let d = await screen.findByRole('dialog');
         expect(within(d).queryByText(/GB/)).toBeNull();
         fireEvent.click(within(d).getByRole('button', { name: /^(Abbrechen|Cancel)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         expect(screen.getByDisplayValue('g2')).toBeTruthy();
-        fireEvent.click(removeButtons()[1]);
+        await remove('g2');
         d = await screen.findByRole('dialog');
         fireEvent.click(within(d).getByRole('button', { name: /^(Löschen|Delete)$/ }));
         await waitFor(() => expect(screen.queryByDisplayValue('g2')).toBeNull());
-        // An archived group: no archiving offered, deleting still asked; from the board too.
-        fireEvent.click(screen.getByText('Board'));
-        fireEvent.click(screen.getByRole('button', { name: /(Gruppe g3 entfernen|Remove group g3)/ }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        // An archived group: no archiving offered, deleting still asked.
+        await remove('g3');
         d = await screen.findByRole('dialog');
         expect(within(d).queryByRole('button', { name: /^(Archivieren|Archive)$/ })).toBeNull();
         fireEvent.click(within(d).getByRole('button', { name: /^(Löschen|Delete)$/ }));
-        await waitFor(() => expect(screen.queryByRole('group', { name: 'g3' })).toBeNull());
+        await waitFor(() => expect(screen.queryByDisplayValue('g3')).toBeNull());
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         // A group not saved yet has no folder: it goes without asking.
-        fireEvent.click(screen.getByText(/^(Liste|List)$/));
         fireEvent.click(screen.getByRole('button', { name: /(Gruppe hinzufügen|Add group)/ }));
-        const before = removeButtons().length;
-        fireEvent.click(removeButtons()[before - 1]);
+        const added = screen.getAllByRole('textbox', { name: /^(Name \(Ordner\)|Name \(folder\))$/ }).at(-1).value;
+        await remove(added);
         expect(screen.queryByRole('dialog')).toBeNull();
-        expect(removeButtons().length).toBe(before - 1);
+        expect(screen.queryByDisplayValue(added)).toBeNull();
         expectNoRenderFailure();
     });
 

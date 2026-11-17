@@ -39,18 +39,7 @@ export function peopleCount(group) {
     return (group?.members ?? []).filter(isPerson).length;
 }
 
-// sameToken compares tokens as the service does: e-mail addresses without case.
-const sameToken = (a, b) => (a ?? '').toLowerCase() === (b ?? '').toLowerCase();
-
-// moveMember takes a person out of every group and puts them into the group at index to (null: into none), as dragging a card on the board does; the other members stay in their order.
-export function moveMember(groups, token, to) {
-    return groups.map((g, i) => {
-        const rest = (g.members ?? []).filter(m => !sameToken(m, token));
-        return i === to ? { ...g, members: [...rest, token] } : (rest.length === (g.members ?? []).length ? g : { ...g, members: rest });
-    });
-}
-
-// overCapacity tells whether a group has more people than the group choice gives it places (max 0 = no limit): the managers may put more in, the board shows it.
+// overCapacity tells whether a group has more people than the group choice gives it places (max 0 = no limit): the managers may put more in, the list marks it.
 export function overCapacity(group, max) {
     return max > 0 && peopleCount(group) > max;
 }
@@ -63,19 +52,48 @@ export function nextGroupName(groups, prefix = 'gruppe') {
     return `${prefix}-${n}`;
 }
 
-// distribute makes count new groups <prefix>-1… and deals the people (user tokens) among them in turn, in the order given (dealablePeople); a group token is never dealt, groups take persons only (a course comes in as its people, resolved beforehand). Existing groups stay as they are; names already taken are skipped.
-export function distribute(groups, people, count, prefix = 'gruppe') {
+// groupSizes splits n people into groups of about size each: as many groups as size fits in full, the rest spread over them, so there is no tiny last group (13 by 4: 4, 4, 5); fewer people than size make one group; none, none.
+export function groupSizes(n, size) {
+    if (n <= 0) return [];
+    const count = Math.max(1, Math.floor(n / Math.max(1, size)));
+    const base = Math.floor(n / count);
+    const extra = n % count;
+    return Array.from({ length: count }, (_, i) => base + (i >= count - extra ? 1 : 0));
+}
+
+// newGroupsBySize makes new groups <prefix>-n… of about size people each (groupSizes) from the people given (dealablePeople, in that order; persons only: a group takes no group token) and adds them after the existing groups, which stay as they are; names already taken are skipped, at most MAX_GROUPS groups in all. made are the new groups.
+export function newGroupsBySize(groups, people, size, prefix = 'gruppe') {
+    const persons = people.filter(isPerson);
     const out = [...groups];
     const made = [];
-    for (let i = 0; i < count && out.length < MAX_GROUPS; i++) {
-        const g = { name: nextGroupName(out, prefix), members: [], read_only: false, archived: false };
+    let at = 0;
+    for (const n of groupSizes(persons.length, size)) {
+        if (out.length >= MAX_GROUPS) break;
+        const g = { name: nextGroupName(out, prefix), members: persons.slice(at, at + n), read_only: false, archived: false };
+        at += n;
         out.push(g);
         made.push(g);
     }
-    people.filter(isPerson).forEach((t, i) => {
-        if (made.length) made[i % made.length].members.push(t);
-    });
-    return out;
+    return { groups: out, made };
+}
+
+// fillFreePlaces puts the people given into the free places of the existing groups that are not archived (places: max, the group choice's places per group), in turn, one group after the other; nobody beyond the places. added is how many each group got (by index), left how many found no place.
+export function fillFreePlaces(groups, people, max) {
+    const persons = people.filter(isPerson);
+    const out = groups.map(g => ({ ...g, members: [...(g.members ?? [])] }));
+    const added = out.map(() => 0);
+    const open = () => out.map((g, i) => i).filter(i => !out[i].archived && peopleCount(out[i]) < max);
+    let left = 0;
+    let turn = 0;
+    for (const t of persons) {
+        const free = open();
+        if (max <= 0 || free.length === 0) { left++; continue; }
+        const i = free[turn % free.length];
+        out[i].members.push(t);
+        added[i]++;
+        turn++;
+    }
+    return { groups: out.map((g, i) => (added[i] ? g : groups[i])), added, left };
 }
 
 // splitGroupToken parses group:<id> or group:<id>#<relation> (the role provider's member tokens); the plain group is relation "member", everyone in it whatever their relation.
@@ -116,7 +134,7 @@ export function resolvedChoices(taken, resolved) {
     })).filter(r => r.people.length > 0);
 }
 
-// dealablePeople are the people not in a group yet, whom distribute deals out and the board shows under "not in a group": the project's own members (user tokens, managers left out), then the people of the resolved course groups (resolved: [{ token, people }]), each once (e-mail addresses compared without case), without the managers and the ones already in a group.
+// dealablePeople are the people not in a group yet, whom distribute deals out and the list names as not in a group yet: the project's own members (user tokens, managers left out), then the people of the resolved course groups (resolved: [{ token, people }]), each once (e-mail addresses compared without case), without the managers and the ones already in a group.
 export function dealablePeople(members, groups, resolved = []) {
     const skip = new Set([
         ...(members ?? []).filter(m => m.role === 'manager').map(m => m.token),
@@ -149,7 +167,7 @@ export function choosing(projects) {
     return (projects ?? []).filter(p => Array.isArray(p.group_seats) && (p.role === 'member' || p.role === 'reader'));
 }
 
-// seatState is what a group offers the person: their own ('mine', to leave), full, closed to them while they are in another group ('taken'), or open to join.
+// seatState is what a group offers the person: their own ('mine'), full, closed to them since they are in another group already ('taken'; joining is binding), or open to join.
 export function seatState(seat, seats) {
     if (seat.mine) return 'mine';
     if (seats.some(s => s.mine)) return 'taken';

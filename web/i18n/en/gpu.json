@@ -231,41 +231,23 @@
                 "failed": "The members of {{group}} cannot be fetched right now. People can also be added by their e-mail address.",
                 "unavailable": "The people in course groups cannot be shown here. People can be added by their e-mail address."
             },
-            "readOnly": "Members only read",
-            "archived": "Archived (only managers see the folder, read-only)",
-            "remove": "Remove the group (its folder is deleted; asks first)",
             "add": "Add group",
-            "count": "Number of new groups",
-            "distribute": "new groups, members dealt out",
-            "hint": "Changes apply from the next start of a workspace or job. The group folders count against the project’s storage. Dealing out splits the people not yet in a group among the new groups in turn: members entered one by one and the people of the course groups shown, each once.",
+            "hint": "Changes apply from the next start of a workspace or job. The group folders count against the project’s storage. “Deal out …” puts the people not yet in a group into new groups or free places: members entered one by one and the people of the course groups shown, each once.",
             "noStorage": "Groups need workspace storage in the project; without it there are no folders.",
             "storage": "Storage limit of the group",
             "storageNone": "none",
-            "storageShort": "Limit",
-            "view": {
-                "list": "List",
-                "board": "Board"
-            },
             "choice": {
-                "switch": "Members may choose their group",
+                "switch": "Members may join a group",
                 "max": "Places per group",
                 "noLimit": "no limit",
-                "hint": "The project’s members and readers then choose a group themselves and can leave it again, at most one each. The managers still assign people, also beyond the places.",
-                "running": "Group choice is open: the group folders are not mounted for members yet, only for the managers. Once it is switched off, members get their group’s folder from the next start of a workspace or job; workspaces already running keep their folders until then."
+                "hint": "While this is on, members and readers of the project who are in no group yet join a group with a free place themselves. Joining is binding; the managers make a change here, also beyond the places. Switched off, nobody joins any more.",
+                "running": "Group choice is open: members can join a group. Group folders are mounted for a group’s members as always, from the next start of a workspace or job."
             },
             "legacy": {
                 "label": "Course group {{group}} (earlier entry)",
                 "remove": "Remove {{group}}",
                 "hint": "Groups take persons only now; assign the people of a course one by one. Earlier entries keep working until they are removed."
             },
-            "board": {
-                "none": "Not in a group yet",
-                "archived": "archived",
-                "drag": "Drag {{person}}",
-                "moveOf": "Move {{person}} to …",
-                "moveTo": "Move to …"
-            },
-            "removeOf": "Remove group {{name}}",
             "removeConfirm": {
                 "title": "Remove group {{name}}?",
                 "text": "Its folder ~/dhbw/groups/{{name}} is deleted with all its files{{used}}. The deletion happens once the project is saved.",
@@ -275,6 +257,47 @@
                 "delete": "Delete",
                 "archive": "Archive",
                 "cancel": "Cancel"
+            },
+            "unassigned": "Not in a group yet ({{count}}): {{names}}",
+            "unassignedNone": "Everyone in the project is in a group.",
+            "overCapacity": "More people than places (allowed for managers)",
+            "card": "Group {{name}}",
+            "menu": "Actions for group {{name}}",
+            "countTitle": "People in the group (of the places)",
+            "badge": {
+                "readOnly": "read-only",
+                "archived": "archived",
+                "storage": "max. {{gb}} GB"
+            },
+            "action": {
+                "storage": "Storage limit …",
+                "readOnly": "Members only read",
+                "archive": "Archive",
+                "restore": "Restore",
+                "remove": "Remove …"
+            },
+            "storageTitle": "Storage limit of group {{name}}",
+            "storageHint": "Empty = no limit; at most {{gb}} GB (the project’s storage).",
+            "storageApply": "Apply",
+            "deal": {
+                "button": "Deal out …",
+                "title": "Deal people out to groups",
+                "allAssigned": "Everyone is in a group already.",
+                "people_one": "{{count}} person is in no group yet.",
+                "people_other": "{{count}} people are in no group yet.",
+                "newGroups": "Into new groups of",
+                "size": "People per new group",
+                "persons": "people each",
+                "previewNew_one": "→ {{count}} new group: {{names}} ({{sizes}} people)",
+                "previewNew_other": "→ {{count}} new groups: {{names}} ({{sizes}} people)",
+                "fill": "Fill the free places of existing groups",
+                "previewFill": "→ {{groups}}",
+                "noPlaces": "No free places in the existing groups.",
+                "left_one": "{{count}} person stays without a group.",
+                "left_other": "{{count}} people stay without a group.",
+                "hint": "Only people without a group are dealt out; existing assignments stay. Takes effect when the project is saved.",
+                "cancel": "Cancel",
+                "apply": "Deal out"
             }
         },
         "storageLimits": {
@@ -627,15 +650,17 @@
     },
     "groupChoice": {
         "title": "Choose a group: {{project}}",
-        "intro": "In this project the groups are chosen by their members: choose a group and leave it again if needed, everyone is in one group at most. The group’s folder ~/dhbw/groups/<name> appears in workspaces and jobs once the managers close the choice.",
+        "intro": "In this project the members choose their group themselves. The choice is binding; the project’s managers make a change. The group’s folder ~/dhbw/groups/<name> appears from the next start of a workspace or job.",
         "places": "{{count}} of {{max}} places taken",
         "people_one": "{{count}} person",
         "people_other": "{{count}} people",
         "mine": "Own group",
         "members": "Members: {{names}}",
         "join": "Join",
-        "leave": "Leave",
         "full": "full",
-        "none": "No groups yet."
+        "none": "No groups yet.",
+        "confirmTitle": "Join group {{name}}?",
+        "confirmText": "Afterwards only the project’s managers can change this.",
+        "cancel": "Cancel"
     }
 }
