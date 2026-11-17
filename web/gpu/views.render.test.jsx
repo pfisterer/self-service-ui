@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { renderView } from '/test/render-harness.jsx';
@@ -73,7 +73,7 @@ const { GpuServers } = await import('/gpu/servers.jsx');
 const { GpuJobs, GpuJobDetail } = await import('/gpu/jobs.jsx');
 const { GpuJobSubmit } = await import('/gpu/job-submit.jsx');
 const { GpuUsage, groupUsage } = await import('/gpu/usage.jsx');
-const { useWorkspaceSettings, workspaceSettingsItems } = await import('/gpu/workspace-settings.jsx');
+const { rebaseDraft, useWorkspaceSettings, workspaceSettingsItems } = await import('/gpu/workspace-settings.jsx');
 const { FormSections } = await import('/projects/component-form-modal.jsx');
 const { ProjectId } = await import('/gpu/project-id.jsx');
 
@@ -209,6 +209,81 @@ describe('the GPU views render', () => {
         expect(screen.queryByText('doz@dhbw.de')).toBeNull();
         expect(screen.queryByText('m@dhbw.de')).toBeNull();
         expectNoRenderFailure();
+    });
+
+    it('the workspace settings tab has the group choice and a board to move people between groups', async () => {
+        globalThis.__llmIsAdmin = false;
+        const project = { ...PROJECTS[0], storage_gb: 20, group_choice: true, group_max_members: 1,
+            groups: [{ id: '0000aaaa', name: 'g1', members: ['user:a@dhbw.de', 'group:alt'] }, { id: '0000bbbb', name: 'g2', members: [] }],
+            members: [{ token: 'user:a@dhbw.de', role: 'member' }, { token: 'user:b@dhbw.de', role: 'member' }, { token: 'user:m@dhbw.de', role: 'manager' }] };
+        globalThis.__gpuApi.listProjects = async () => [project, PROJECTS[1]];
+        renderView(<SettingsTab nodeId="p_ml" />);
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
+        // While the choice runs, the managers are told that members have no group folders yet.
+        expect(screen.getByText(/(Gruppenwahl läuft|Group choice is open)/)).toBeTruthy();
+        expect(screen.getByRole('switch', { name: /(Gruppenwahl durch Mitglieder|Members may choose)/ }).checked).toBe(true);
+        // A course group from before shows as an entry to remove, not as a choice.
+        expect(screen.getByText(/(Kursgruppe alt|Course group alt)/)).toBeTruthy();
+        fireEvent.click(screen.getByText('Board'));
+        const none = screen.getByRole('group', { name: /(Noch in keiner Gruppe|Not in a group yet)/ });
+        const g1 = screen.getByRole('group', { name: 'g1' });
+        expect(within(none).getByText('b@dhbw.de')).toBeTruthy();
+        expect(within(none).queryByText('m@dhbw.de')).toBeNull();
+        expect(within(g1).getByText('1/1')).toBeTruthy();
+        // Moving by the card's menu, as by keyboard or touch: b into g1, beyond its places (the managers may).
+        fireEvent.click(within(none).getByRole('button', { name: /b@dhbw.de (verschieben nach|to)/ }));
+        fireEvent.click(await screen.findByRole('menuitem', { name: 'g1' }));
+        expect(within(screen.getByRole('group', { name: 'g1' })).getByText('b@dhbw.de')).toBeTruthy();
+        expect(within(screen.getByRole('group', { name: 'g1' })).getByText('2/1')).toBeTruthy();
+        expect(within(screen.getByRole('group', { name: /(Noch in keiner Gruppe|Not in a group yet)/ })).queryByText('b@dhbw.de')).toBeNull();
+        // And back out of every group.
+        fireEvent.click(within(screen.getByRole('group', { name: 'g1' })).getByRole('button', { name: /a@dhbw.de (verschieben nach|to)/ }));
+        fireEvent.click(await screen.findByRole('menuitem', { name: /(Noch in keiner Gruppe|Not in a group yet)/ }));
+        expect(within(screen.getByRole('group', { name: /(Noch in keiner Gruppe|Not in a group yet)/ })).getByText('a@dhbw.de')).toBeTruthy();
+        // The earlier entry can go.
+        fireEvent.click(within(screen.getByRole('group', { name: 'g1' })).getByRole('button', { name: /alt (entfernen|Remove)|Remove alt/ }));
+        expect(screen.queryByText(/(Kursgruppe alt|Course group alt)/)).toBeNull();
+        expectNoRenderFailure();
+    });
+
+    it('a save sends the version loaded; changed meanwhile, the draft is offered to be loaded again', async () => {
+        globalThis.__llmIsAdmin = false;
+        const project = { ...PROJECTS[0], updated_at: '2026-11-17T08:00:00.123456Z' };
+        globalThis.__gpuApi.listProjects = async () => [project, PROJECTS[1]];
+        const sent = [];
+        globalThis.__gpuApi.updateProject = async (p) => { sent.push(p); throw Object.assign(new Error('Das Projekt wurde inzwischen geändert, bitte neu laden.'), { status: 409, code: 'conflict' }); };
+        function Harness() {
+            const draft = useWorkspaceSettings('p_ml', true);
+            const [error, setError] = useState(null);
+            if (!draft.value) return null;
+            return (
+                <div>
+                    <button type="button" onClick={() => draft.update(cur => ({ ...cur, description: 'neu' }))}>edit</button>
+                    <button type="button" onClick={() => draft.save().catch(setError)}>save</button>
+                    <button type="button" onClick={() => { setError(null); draft.reload(); }}>reload</button>
+                    <span>{draft.changed ? 'changed' : 'unchanged'}</span>
+                    {error && <span>{`${error.message} stale=${!!error.stale} status=${error.status}`}</span>}
+                </div>
+            );
+        }
+        renderView(<Harness />);
+        fireEvent.click(await screen.findByText('edit'));
+        expect(screen.getByText('changed')).toBeTruthy();
+        fireEvent.click(screen.getByText('save'));
+        // Not a 409 about the dialog's node (which would close it): a stale draft, to be loaded again.
+        expect(await screen.findByText(/inzwischen geändert.* stale=true status=undefined/)).toBeTruthy();
+        expect(sent[0].updated_at).toBe('2026-11-17T08:00:00.123456Z');
+        expect(sent[0].group_seats).toBeUndefined();
+        fireEvent.click(screen.getByText('reload'));
+        expect(await screen.findByText('unchanged')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('rebases a draft on what the dialog itself saved meanwhile', () => {
+        const base = { updated_at: 'v1', description: 'alt', image_digest: 'sha256:1', groups: [] };
+        const value = { ...base, description: 'neu' };
+        const now = { ...base, updated_at: 'v2', image_digest: 'sha256:2' };
+        expect(rebaseDraft(base, value, now)).toEqual({ updated_at: 'v2', description: 'neu', image_digest: 'sha256:2', groups: [] });
     });
 
     it('the workspace settings tab lets a manager set the storage limits and who writes the shared folder', async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dealablePeople, distribute, groupNameError, groupTokens, memberChoices, nextGroupName, resolveGroupToken, resolvedChoices, splitGroupToken, tokenLabel, typedPerson } from '/gpu/groups.js';
+import { choosing, dealablePeople, distribute, groupNameError, groupTokens, legacyTokens, memberChoices, moveMember, nextGroupName, overCapacity, peopleCount, personChoices, resolveGroupToken, resolvedChoices, seatState, splitGroupToken, tokenLabel, typedPerson } from '/gpu/groups.js';
 import { uploadPath, uploadTargets } from '/gpu/jobs.js';
 
 describe('groups', () => {
@@ -15,6 +15,35 @@ describe('groups', () => {
     it('offers members but not managers', () => {
         expect(memberChoices([{ token: 'user:a@dhbw.de', role: 'member' }, { token: 'group:kurs', role: 'reader' }, { token: 'user:m@dhbw.de', role: 'manager' }])).toEqual(['user:a@dhbw.de', 'group:kurs']);
         expect(tokenLabel('user:a@dhbw.de')).toBe('a@dhbw.de');
+    });
+    it('offers persons only for a group and shows group tokens from before apart', () => {
+        const members = [{ token: 'user:a@dhbw.de', role: 'member' }, { token: 'group:kurs', role: 'reader' }, { token: 'user:m@dhbw.de', role: 'manager' }];
+        expect(personChoices(members)).toEqual(['user:a@dhbw.de']);
+        const g = { name: 'g1', members: ['user:a@dhbw.de', 'group:kurs', 'user:b@dhbw.de'] };
+        expect(legacyTokens(g)).toEqual(['group:kurs']);
+        expect(peopleCount(g)).toBe(2);
+        expect(overCapacity(g, 2)).toBe(false);
+        expect(overCapacity(g, 1)).toBe(true);
+        expect(overCapacity(g, 0)).toBe(false);
+    });
+    it('moves a person between groups as the board does', () => {
+        const groups = [{ name: 'g1', members: ['user:a@dhbw.de', 'group:kurs'] }, { name: 'g2', members: ['user:b@dhbw.de'] }];
+        const moved = moveMember(groups, 'user:A@dhbw.de', 1);
+        expect(moved[0].members).toEqual(['group:kurs']);
+        expect(moved[1].members).toEqual(['user:b@dhbw.de', 'user:A@dhbw.de']);
+        // Into no group: out of every one; an untouched group stays the same object.
+        const out = moveMember(groups, 'user:b@dhbw.de', null);
+        expect(out[1].members).toEqual([]);
+        expect(out[0]).toBe(groups[0]);
+        // From nowhere into a group (a person of a course group).
+        expect(moveMember(groups, 'user:s1@dhbw.de', 0)[0].members).toEqual(['user:a@dhbw.de', 'group:kurs', 'user:s1@dhbw.de']);
+    });
+    it('tells a member what each group offers in the group choice', () => {
+        const seats = [{ id: 'a', count: 2, max: 2 }, { id: 'b', count: 0, max: 2 }, { id: 'c', count: 5, max: 0 }];
+        expect(seats.map(x => seatState(x, seats))).toEqual(['full', 'open', 'open']);
+        const mine = [{ id: 'a', count: 2, max: 2 }, { id: 'b', count: 1, max: 2, mine: true }];
+        expect(mine.map(x => seatState(x, mine))).toEqual(['taken', 'mine']);
+        expect(choosing([{ slug: 'x', role: 'member', group_seats: [] }, { slug: 'y', role: 'manager', group_seats: [] }, { slug: 'z', role: 'reader' }, { slug: 'r', role: 'reader', group_seats: [] }]).map(p => p.slug)).toEqual(['x', 'r']);
     });
     it('names and deals out new groups', () => {
         expect(nextGroupName([{ name: 'gruppe-1' }, { name: 'gruppe-3' }])).toBe('gruppe-2');

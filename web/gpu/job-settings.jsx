@@ -14,6 +14,7 @@ export function JobSettingsModal({ project, opened, onClose }) {
     const catalog = useQuery({ queryKey: gpuKeys.catalog(), queryFn: () => api.catalog(), staleTime: 10 * 60 * 1000, enabled: opened });
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
+    const [conflict, setConflict] = useState(false);
     const p = draft.value;
     const setLimit = (k, v) => draft.update(cur => ({ ...cur, limits: { ...cur.limits, [k]: Number(v) || 0 } }));
     const save = async () => {
@@ -23,6 +24,7 @@ export function JobSettingsModal({ project, opened, onClose }) {
             onClose();
         } catch (e) {
             setError(e.message);
+            setConflict(!!e.stale);
         } finally {
             setBusy(false);
         }
@@ -32,7 +34,12 @@ export function JobSettingsModal({ project, opened, onClose }) {
             {p && (
                 <Stack gap="md">
                     <BatchJobsBox p={p} setLimit={setLimit} locked={false} classes={catalog.data?.gpuClasses ?? []} />
-                    {error && <Alert color="red" variant="light">{error}</Alert>}
+                    {error && (
+                        <Alert color="red" variant="light">
+                            {error}
+                            {conflict && <Button ml="sm" size="compact-xs" variant="light" onClick={async () => { setError(''); setConflict(false); await draft.reload(); }}>{t('gpu.projects.conflictReload')}</Button>}
+                        </Alert>
+                    )}
                     <Group justify="flex-end">
                         <Button variant="default" onClick={onClose}>{t('gpu.projects.cancel')}</Button>
                         <Button onClick={save} loading={busy} disabled={!draft.changed}>{t('gpu.projects.save')}</Button>

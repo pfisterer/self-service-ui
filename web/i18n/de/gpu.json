@@ -218,7 +218,7 @@
                 "duplicate": "Den Namen gibt es schon."
             },
             "members": "Mitglieder",
-            "membersPlaceholder": "Mitglieder des Projekts wählen oder E-Mail-Adresse eingeben",
+            "membersPlaceholder": "Personen des Projekts wählen oder E-Mail-Adresse eingeben",
             "fromGroup": "aus {{group}}",
             "addPerson": "{{email}} eintragen",
             "nothingFound": "Niemand gefunden; eine Person lässt sich mit ihrer E-Mail-Adresse eintragen.",
@@ -241,7 +241,30 @@
             "noStorage": "Gruppen brauchen Workspace-Speicher im Projekt; ohne ihn gibt es keine Ordner.",
             "storage": "Speichergrenze der Gruppe",
             "storageNone": "keine",
-            "storageShort": "Grenze"
+            "storageShort": "Grenze",
+            "view": {
+                "list": "Liste",
+                "board": "Board"
+            },
+            "choice": {
+                "switch": "Gruppenwahl durch Mitglieder möglich",
+                "max": "Plätze je Gruppe",
+                "noLimit": "keine Grenze",
+                "hint": "Mitglieder und Lesende des Projekts wählen dann selbst eine Gruppe und können sie wieder verlassen, jede Person höchstens eine. Die Verwaltung ordnet weiter zu, auch über die Plätze hinaus.",
+                "running": "Gruppenwahl läuft: Die Gruppenordner sind für Mitglieder noch nicht eingehängt, nur für die Verwaltung. Nach dem Ausschalten bekommen die Mitglieder ihren Gruppenordner beim nächsten Start eines Workspaces oder Jobs; schon laufende Workspaces behalten bis dahin ihre Ordner."
+            },
+            "legacy": {
+                "label": "Kursgruppe {{group}} (früherer Eintrag)",
+                "remove": "{{group}} entfernen",
+                "hint": "Gruppen nehmen nur noch Personen auf; die Personen eines Kurses einzeln zuordnen. Frühere Einträge gelten weiter, bis sie entfernt werden."
+            },
+            "board": {
+                "none": "Noch in keiner Gruppe",
+                "archived": "archiviert",
+                "drag": "{{person}} ziehen",
+                "moveOf": "{{person}} verschieben nach …",
+                "moveTo": "Verschieben nach …"
+            }
         },
         "storageLimits": {
             "noStorage": "Das Projekt hat keinen Workspace-Speicher; ohne ihn gibt es keine Grenzen.",
@@ -261,7 +284,8 @@
             "environment": "Die Workspace-Arten legen Admins fest.",
             "limits": "Grenzen und Verbrauchsgrenzen legen Admins fest."
         },
-        "settingsInstant": "Workspace-Einstellungen: gilt sofort."
+        "settingsInstant": "Workspace-Einstellungen: gilt sofort.",
+        "conflictReload": "Neu laden"
     },
     "storage": {
         "title": "Speicher (Admins)",
@@ -589,5 +613,18 @@
             "submit": "Hochladen",
             "group": "Ordner der Gruppe (~/{{dir}})"
         }
+    },
+    "groupChoice": {
+        "title": "Gruppenwahl: {{project}}",
+        "intro": "Im Projekt werden die Gruppen selbst gewählt: eine Gruppe wählen und bei Bedarf wieder verlassen, jede Person ist in höchstens einer. Den Ordner ~/dhbw/groups/<Name> der Gruppe gibt es in Workspaces und Jobs, sobald die Verwaltung die Gruppenwahl beendet.",
+        "places": "{{count}} von {{max}} Plätzen belegt",
+        "people_one": "{{count}} Person",
+        "people_other": "{{count}} Personen",
+        "mine": "Eigene Gruppe",
+        "members": "Mitglieder: {{names}}",
+        "join": "Beitreten",
+        "leave": "Verlassen",
+        "full": "voll",
+        "none": "Noch keine Gruppen angelegt."
     }
 }

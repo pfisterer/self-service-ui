@@ -218,7 +218,7 @@
                 "duplicate": "This name is taken."
             },
             "members": "Members",
-            "membersPlaceholder": "Choose members of the project or type an e-mail address",
+            "membersPlaceholder": "Choose people of the project or type an e-mail address",
             "fromGroup": "from {{group}}",
             "addPerson": "Add {{email}}",
             "nothingFound": "Nobody found; a person can be added by their e-mail address.",
@@ -241,7 +241,30 @@
             "noStorage": "Groups need workspace storage in the project; without it there are no folders.",
             "storage": "Storage limit of the group",
             "storageNone": "none",
-            "storageShort": "Limit"
+            "storageShort": "Limit",
+            "view": {
+                "list": "List",
+                "board": "Board"
+            },
+            "choice": {
+                "switch": "Members may choose their group",
+                "max": "Places per group",
+                "noLimit": "no limit",
+                "hint": "The project’s members and readers then choose a group themselves and can leave it again, at most one each. The managers still assign people, also beyond the places.",
+                "running": "Group choice is open: the group folders are not mounted for members yet, only for the managers. Once it is switched off, members get their group’s folder from the next start of a workspace or job; workspaces already running keep their folders until then."
+            },
+            "legacy": {
+                "label": "Course group {{group}} (earlier entry)",
+                "remove": "Remove {{group}}",
+                "hint": "Groups take persons only now; assign the people of a course one by one. Earlier entries keep working until they are removed."
+            },
+            "board": {
+                "none": "Not in a group yet",
+                "archived": "archived",
+                "drag": "Drag {{person}}",
+                "moveOf": "Move {{person}} to …",
+                "moveTo": "Move to …"
+            }
         },
         "storageLimits": {
             "noStorage": "The project has no workspace storage; without it there are no limits.",
@@ -261,7 +284,8 @@
             "environment": "Workspace types are set by admins.",
             "limits": "Limits and usage limits are set by admins."
         },
-        "settingsInstant": "Workspace settings: apply at once."
+        "settingsInstant": "Workspace settings: apply at once.",
+        "conflictReload": "Reload"
     },
     "storage": {
         "title": "Storage (admins)",
@@ -589,5 +613,18 @@
             "submit": "Upload",
             "group": "Group folder (~/{{dir}})"
         }
+    },
+    "groupChoice": {
+        "title": "Choose a group: {{project}}",
+        "intro": "In this project the groups are chosen by their members: choose a group and leave it again if needed, everyone is in one group at most. The group’s folder ~/dhbw/groups/<name> appears in workspaces and jobs once the managers close the choice.",
+        "places": "{{count}} of {{max}} places taken",
+        "people_one": "{{count}} person",
+        "people_other": "{{count}} people",
+        "mine": "Own group",
+        "members": "Members: {{names}}",
+        "join": "Join",
+        "leave": "Leave",
+        "full": "full",
+        "none": "No groups yet."
     }
 }

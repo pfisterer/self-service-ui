@@ -22,6 +22,7 @@ import { llmEnabled } from '/features.js';
 import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { jobMaxHours, projectHasJobs } from '/gpu/jobs.js';
+import { GroupChoices } from '/gpu/group-choice.jsx';
 import { COLOR, PROJECT_SORTS, budgetKinds, deletionRequested, getAuthUserEmail, isRetired, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
 
 // MyProjectsView lists the projects of one area (cloud, workspaces, llm) the
@@ -172,6 +173,9 @@ export function MyProjectsView({ area = 'cloud' }) {
                     </Alert>
                 )
             )}
+
+            {/* Workspaces: projects where the person chooses a group themself right now, above the cards, so it is not missed. */}
+            {area === 'workspaces' && <GroupChoices projects={workspaceProjects.data} />}
 
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 {/* Own projects first, then the ones administered with others, then those the viewer is a member of. */}

@@ -1,4 +1,4 @@
-// Groups of a workspace project (aiaas-deployment docs/todo.md areas_groups): members with their own folder ~/dhbw/groups/<name>, kept by the project's managers. The service checks the same rules (llm-management-api, workspace/groups.go); these are for the form.
+// Groups of a workspace project (aiaas-deployment docs/todo.md areas_groups): people of the project with their own folder ~/dhbw/groups/<name>, kept by the project's managers or, while the group choice is open, chosen by the members themselves. A group holds persons (user tokens) only; a course group among the project's members is resolved to its people to put them in one by one. A group token a group had before stays until it is removed (the service refuses only a new one). The service checks the same rules (llm-management-api, workspace/groups.go); these are for the form.
 
 // GROUP_NAME is a group's name as the service takes it: it becomes the folder's name.
 export const GROUP_NAME = /^[a-z0-9]([a-z0-9._-]{0,38}[a-z0-9])?$/;
@@ -13,9 +13,46 @@ export function groupNameError(name, groups, index) {
     return null;
 }
 
-// memberChoices are the project's members a group can take: people and groups of the role provider, managers left out (they see every group anyway).
+// MAX_GROUP_MEMBERS bounds the places per group of the group choice, as the service does.
+export const MAX_GROUP_MEMBERS = 1000;
+
+// memberChoices are the project's members apart from its managers (they see every group anyway): people and course groups of the role provider, the course groups to be resolved to their people.
 export function memberChoices(members) {
     return (members ?? []).filter(m => m.role !== 'manager').map(m => m.token);
+}
+
+// personChoices are the people among memberChoices: what a group takes directly.
+export function personChoices(members) {
+    return memberChoices(members).filter(t => t.startsWith('user:'));
+}
+
+// isPerson tells a person's token (user:<e-mail>) from a group token.
+export const isPerson = (t) => (t ?? '').startsWith('user:');
+
+// legacyTokens are the group tokens a group still has from before groups took persons only: shown to be removed, never offered.
+export function legacyTokens(group) {
+    return (group?.members ?? []).filter(t => !isPerson(t));
+}
+
+// peopleCount is how many persons a group has: what the group choice counts against its places.
+export function peopleCount(group) {
+    return (group?.members ?? []).filter(isPerson).length;
+}
+
+// sameToken compares tokens as the service does: e-mail addresses without case.
+const sameToken = (a, b) => (a ?? '').toLowerCase() === (b ?? '').toLowerCase();
+
+// moveMember takes a person out of every group and puts them into the group at index to (null: into none), as dragging a card on the board does; the other members stay in their order.
+export function moveMember(groups, token, to) {
+    return groups.map((g, i) => {
+        const rest = (g.members ?? []).filter(m => !sameToken(m, token));
+        return i === to ? { ...g, members: [...rest, token] } : (rest.length === (g.members ?? []).length ? g : { ...g, members: rest });
+    });
+}
+
+// overCapacity tells whether a group has more people than the group choice gives it places (max 0 = no limit): the managers may put more in, the board shows it.
+export function overCapacity(group, max) {
+    return max > 0 && peopleCount(group) > max;
 }
 
 // nextGroupName is the first free name of the form <prefix>-<n>.
@@ -26,7 +63,7 @@ export function nextGroupName(groups, prefix = 'gruppe') {
     return `${prefix}-${n}`;
 }
 
-// distribute makes count new groups <prefix>-1… and deals the people (user tokens) among them in turn, in the order given (dealablePeople); group tokens are not dealt, they are a whole course. Existing groups stay as they are; names already taken are skipped.
+// distribute makes count new groups <prefix>-1… and deals the people (user tokens) among them in turn, in the order given (dealablePeople); a group token is never dealt, groups take persons only (a course comes in as its people, resolved beforehand). Existing groups stay as they are; names already taken are skipped.
 export function distribute(groups, people, count, prefix = 'gruppe') {
     const out = [...groups];
     const made = [];
@@ -35,7 +72,7 @@ export function distribute(groups, people, count, prefix = 'gruppe') {
         out.push(g);
         made.push(g);
     }
-    people.filter(t => t.startsWith('user:')).forEach((t, i) => {
+    people.filter(isPerson).forEach((t, i) => {
         if (made.length) made[i % made.length].members.push(t);
     });
     return out;
@@ -47,7 +84,7 @@ export function splitGroupToken(token) {
     return { id, relation: relation || 'member' };
 }
 
-// groupTokens are the course groups (group: tokens) among the project's members, managers left out, and among the members of its groups: the ones whose people can be looked up to pick or deal them out.
+// groupTokens are the course groups (group: tokens) among the project's members, managers left out, and those a group still has from before: the ones whose people can be looked up to pick or deal them out.
 export function groupTokens(members, groups) {
     const all = [...memberChoices(members), ...(groups ?? []).flatMap(g => g.members ?? [])];
     return [...new Set(all.filter(t => t.startsWith('group:')))];
@@ -79,7 +116,7 @@ export function resolvedChoices(taken, resolved) {
     })).filter(r => r.people.length > 0);
 }
 
-// dealablePeople are the people distribute deals out: the project's own members (user tokens, managers left out), then the people of the resolved course groups (resolved: [{ token, people }]), each once (e-mail addresses compared without case), without the ones already in a group.
+// dealablePeople are the people not in a group yet, whom distribute deals out and the board shows under "not in a group": the project's own members (user tokens, managers left out), then the people of the resolved course groups (resolved: [{ token, people }]), each once (e-mail addresses compared without case), without the managers and the ones already in a group.
 export function dealablePeople(members, groups, resolved = []) {
     const skip = new Set([
         ...(members ?? []).filter(m => m.role === 'manager').map(m => m.token),
@@ -106,3 +143,16 @@ export function typedPerson(search) {
 
 // tokenLabel shows a member token without its prefix.
 export const tokenLabel = (t) => (t ?? '').replace(/^(user|group):/, '');
+
+// choosing are the workspace projects whose group choice is open to the person: a member or reader there (the managers assign in the settings), with the groups to choose from (group_seats, only while the choice is open).
+export function choosing(projects) {
+    return (projects ?? []).filter(p => Array.isArray(p.group_seats) && (p.role === 'member' || p.role === 'reader'));
+}
+
+// seatState is what a group offers the person: their own ('mine', to leave), full, closed to them while they are in another group ('taken'), or open to join.
+export function seatState(seat, seats) {
+    if (seat.mine) return 'mine';
+    if (seats.some(s => s.mine)) return 'taken';
+    if (seat.max > 0 && seat.count >= seat.max) return 'full';
+    return 'open';
+}

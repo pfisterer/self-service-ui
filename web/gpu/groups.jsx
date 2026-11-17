@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
-import { ActionIcon, Alert, Button, Code, Group, Loader, MultiSelect, NumberInput, Paper, Stack, Switch, Text, TextInput, Tooltip } from '@mantine/core';
-import { Plus, Trash2, Users } from 'lucide-react';
+import { ActionIcon, Alert, Badge, Button, Code, Group, Loader, Menu, MultiSelect, NumberInput, Paper, ScrollArea, SegmentedControl, Stack, Switch, Text, TextInput, Tooltip } from '@mantine/core';
+import { DndContext, KeyboardSensor, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
+import { ArrowRightLeft, GripVertical, Info, Plus, Trash2, Users, X } from 'lucide-react';
 import { groupsEnabled } from '/features.js';
 import { useGroupsApi } from '/groups/api-groups.jsx';
 import { groupsKeys } from '/groups/query-keys.js';
-import { MAX_GROUPS, dealablePeople, distribute, groupNameError, groupTokens, memberChoices, nextGroupName, resolveGroupToken, resolvedChoices, tokenLabel, typedPerson } from '/gpu/groups.js';
+import { MAX_GROUPS, MAX_GROUP_MEMBERS, dealablePeople, distribute, groupNameError, groupTokens, isPerson, legacyTokens, moveMember, nextGroupName, overCapacity, peopleCount, personChoices, resolveGroupToken, resolvedChoices, tokenLabel, typedPerson } from '/gpu/groups.js';
 
 // AUTO_RESOLVE: up to this many course groups their people are looked up as soon as the tab opens; with more, on request, so a big project does not fire a request per group unasked.
 const AUTO_RESOLVE = 3;
@@ -31,12 +32,12 @@ function useResolvedGroups(tokens, enabled) {
     });
 }
 
-// GroupsPanel edits a workspace project's groups (groups.js): name, members, read-only, archived; and makes several at once with the members dealt among them. Course groups among the members can be resolved to their people, to pick them or deal them out one by one. Saved with the rest of the settings; a group's folder is ~/dhbw/groups/<name>, mounted for its members and the project's managers from the next start of a workspace or job.
+// GroupsPanel edits a workspace project's groups (groups.js): the group choice by the members, then name, members, storage, read-only and archived per group, in a list or as a board to drag people between groups; and makes several at once with the people dealt among them. Groups take persons: course groups among the members can be resolved to their people, to pick them, drag them or deal them out one by one; a group token a group has from before shows as such, to be removed. Saved with the rest of the settings; a group's folder is ~/dhbw/groups/<name>, mounted for its members (not while the group choice is open) and the project's managers from the next start of a workspace or job.
 export function GroupsPanel({ draft }) {
     const { t } = useTranslation();
     const p = draft.value;
     const groups = p.groups ?? [];
-    const direct = memberChoices(p.members);
+    const direct = personChoices(p.members);
     const tokens = groupTokens(p.members, groups);
     const [resolveAsked, setResolveAsked] = useState(false);
     const resolving = resolveAsked || tokens.length <= AUTO_RESOLVE;
@@ -50,6 +51,8 @@ export function GroupsPanel({ draft }) {
     const set = (groups) => draft.update(cur => ({ ...cur, groups }));
     const setGroup = (i, patch) => set(groups.map((g, j) => (j === i ? { ...g, ...patch } : g)));
     const [count, setCount] = useState(2);
+    const [view, setView] = useState('list');
+    const max = p.group_max_members || 0;
 
     if (!(p.storage_gb > 0)) {
         return <Alert color="gray" icon={<Users size={16} />}>{t('gpu.projects.groups.noStorage')}</Alert>;
@@ -57,20 +60,34 @@ export function GroupsPanel({ draft }) {
     return (
         <Stack gap="md">
             <Text size="sm" c="dimmed">{t('gpu.projects.groups.intro')}</Text>
+            <GroupChoiceSettings p={p} update={draft.update} />
             {tokens.length > 0 && <CourseGroups tokens={tokens} queries={queries} resolving={resolving} onResolve={() => setResolveAsked(true)} />}
             {groups.length === 0 && <Text size="sm">{t('gpu.projects.groups.none')}</Text>}
-            {groups.map((g, i) => {
+            {groups.length > 0 && (
+                <SegmentedControl size="xs" w="fit-content" value={view} onChange={setView} data={[
+                    { value: 'list', label: t('gpu.projects.groups.view.list') },
+                    { value: 'board', label: t('gpu.projects.groups.view.board') },
+                ]} />
+            )}
+            {view === 'board' && groups.length > 0 && (
+                <GroupBoard groups={groups} people={dealablePeople(p.members, groups, resolved)} max={max}
+                    onMove={(token, to) => set(moveMember(groups, token, to))}
+                    onRemove={(i, token) => setGroup(i, { members: (groups[i].members ?? []).filter(m => m !== token) })} />
+            )}
+            {view === 'list' && groups.map((g, i) => {
                 const err = groupNameError(g.name, groups, i);
                 return (
                     <Paper key={g.id || `new-${i}`} withBorder radius="md" p="sm">
                         <Group align="flex-start" wrap="nowrap" gap="sm">
                             <TextInput w={200} label={t('gpu.projects.groups.name')} value={g.name ?? ''} onChange={e => setGroup(i, { name: e.currentTarget.value })}
                                 error={err ? t(`gpu.projects.groups.nameError.${err}`) : null} description={<Code fz="xs">~/dhbw/groups/{(g.name ?? '').trim().toLowerCase() || '…'}</Code>} />
-                            <MemberSelect value={g.members ?? []} choices={choices} onChange={v => setGroup(i, { members: v })} />
+                            <MemberSelect value={(g.members ?? []).filter(isPerson)} choices={choices} capacity={max > 0 ? `${peopleCount(g)}/${max}` : null}
+                                onChange={v => setGroup(i, { members: [...v, ...legacyTokens(g)] })} />
                             <Tooltip label={t('gpu.projects.groups.remove')}>
                                 <ActionIcon mt={26} variant="subtle" color="red" aria-label={t('gpu.projects.groups.remove')} onClick={() => set(groups.filter((_, j) => j !== i))}><Trash2 size={16} /></ActionIcon>
                             </Tooltip>
                         </Group>
+                        <LegacyEntries tokens={legacyTokens(g)} onRemove={token => setGroup(i, { members: (g.members ?? []).filter(m => m !== token) })} />
                         <Group gap="lg" mt="xs" align="center">
                             <NumberInput size="xs" w={150} min={0} max={p.storage_gb} suffix=" GB" aria-label={t('gpu.projects.groups.storage')} placeholder={t('gpu.projects.groups.storageNone')}
                                 value={g.storage_gb || ''} onChange={v => setGroup(i, { storage_gb: Math.max(0, Math.min(p.storage_gb, Math.floor(Number(v) || 0))) })} leftSection={<Text size="xs" c="dimmed" pl={4}>{t('gpu.projects.groups.storageShort')}</Text>} leftSectionWidth={70} />
@@ -94,8 +111,126 @@ export function GroupsPanel({ draft }) {
     );
 }
 
-// MemberSelect picks a group's members from the project's members and the people of its resolved course groups (under the group they come from); an e-mail address typed in is offered as a person too, for the people of a course group that cannot be looked up here.
-function MemberSelect({ value, choices, onChange }) {
+// GroupChoiceSettings is the managers' switch for the group choice (group_choice) and the places per group (group_max_members, empty = no limit), with what it means while it is on: the members choose, their group folders wait.
+function GroupChoiceSettings({ p, update }) {
+    const { t } = useTranslation();
+    return (
+        <Paper withBorder radius="md" p="sm">
+            <Group gap="lg" align="center">
+                <Switch label={t('gpu.projects.groups.choice.switch')} checked={!!p.group_choice} onChange={e => { const on = e.currentTarget.checked; update(cur => ({ ...cur, group_choice: on })); }} />
+                <NumberInput size="xs" w={190} min={0} max={MAX_GROUP_MEMBERS} label={t('gpu.projects.groups.choice.max')} placeholder={t('gpu.projects.groups.choice.noLimit')}
+                    value={p.group_max_members || ''} onChange={v => update(cur => ({ ...cur, group_max_members: Math.max(0, Math.min(MAX_GROUP_MEMBERS, Math.floor(Number(v) || 0))) }))} />
+            </Group>
+            <Text size="xs" c="dimmed" mt={6}>{t('gpu.projects.groups.choice.hint')}</Text>
+            {p.group_choice && (
+                <Alert mt="xs" color="yellow" variant="light" icon={<Info size={16} />} p="xs">{t('gpu.projects.groups.choice.running')}</Alert>
+            )}
+        </Paper>
+    );
+}
+
+// LegacyEntries are the group tokens a group has from before groups took persons only: they still count their people in, but are no longer offered; each can be removed.
+function LegacyEntries({ tokens, onRemove }) {
+    const { t } = useTranslation();
+    if (tokens.length === 0) return null;
+    return (
+        <Group gap={6} mt={6} align="center">
+            {tokens.map(token => (
+                <Badge key={token} variant="outline" color="gray" style={{ textTransform: 'none' }}
+                    rightSection={<ActionIcon size="xs" variant="transparent" color="gray" aria-label={t('gpu.projects.groups.legacy.remove', { group: tokenLabel(token) })} onClick={() => onRemove(token)}><X size={12} /></ActionIcon>}>
+                    {t('gpu.projects.groups.legacy.label', { group: tokenLabel(token) })}
+                </Badge>
+            ))}
+            <Text size="xs" c="dimmed">{t('gpu.projects.groups.legacy.hint')}</Text>
+        </Group>
+    );
+}
+
+// NONE is the board's column of the people in no group yet.
+const NONE = 'none';
+
+// GroupBoard shows the groups as columns of people, next to a column of those in no group yet (dealablePeople: the project's members and the people of its resolved course groups, without managers); a card is dragged to another column, or moved with its menu (keyboard, touch). Moving into "not in a group" takes the person out of their group. A column shows how many places of the group choice are taken; managers may put more in. The board edits the same draft as the list.
+function GroupBoard({ groups, people, max, onMove, onRemove }) {
+    const { t } = useTranslation();
+    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor));
+    const targets = [{ id: NONE, label: t('gpu.projects.groups.board.none') }, ...groups.map((g, i) => ({ id: String(i), label: g.name || '…' }))];
+    const move = (token, target) => onMove(token, target === NONE ? null : Number(target));
+    const onDragEnd = ({ active, over }) => {
+        if (!over || over.id === active.data.current?.from) return;
+        move(active.data.current.token, over.id);
+    };
+    return (
+        <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+            <ScrollArea type="auto" offsetScrollbars>
+                <Group align="flex-start" wrap="nowrap" gap="sm" pb="xs">
+                    <BoardColumn id={NONE} title={t('gpu.projects.groups.board.none')} count={people.length}>
+                        {people.map(token => <PersonCard key={token} token={token} from={NONE} targets={targets} onMove={move} />)}
+                    </BoardColumn>
+                    {groups.map((g, i) => (
+                        <BoardColumn key={g.id || `new-${i}`} id={String(i)} title={g.name || '…'} count={peopleCount(g)} max={max} over={overCapacity(g, max)} archived={!!g.archived}>
+                            {(g.members ?? []).filter(isPerson).map(token => <PersonCard key={token} token={token} from={String(i)} targets={targets} onMove={move} />)}
+                            {legacyTokens(g).map(token => (
+                                <Paper key={token} withBorder radius="sm" px={6} py={4} bg="var(--mantine-color-gray-light)">
+                                    <Group gap={4} wrap="nowrap" justify="space-between">
+                                        <Text size="xs" c="dimmed" truncate>{t('gpu.projects.groups.legacy.label', { group: tokenLabel(token) })}</Text>
+                                        <ActionIcon size="xs" variant="subtle" color="gray" aria-label={t('gpu.projects.groups.legacy.remove', { group: tokenLabel(token) })} onClick={() => onRemove(i, token)}><X size={12} /></ActionIcon>
+                                    </Group>
+                                </Paper>
+                            ))}
+                        </BoardColumn>
+                    ))}
+                </Group>
+            </ScrollArea>
+        </DndContext>
+    );
+}
+
+// BoardColumn is one column of the board, a drop target, with its count of people and, with places in the group choice, the places (red when more people are in it).
+function BoardColumn({ id, title, count, max = 0, over = false, archived = false, children }) {
+    const { t } = useTranslation();
+    const { setNodeRef, isOver } = useDroppable({ id });
+    return (
+        <Paper ref={setNodeRef} withBorder radius="md" p="xs" w={220} style={{ flexShrink: 0, minHeight: 120, background: isOver ? 'var(--mantine-color-blue-light)' : undefined }}
+            role="group" aria-label={title}>
+            <Group justify="space-between" gap={4} mb={6} wrap="nowrap">
+                <Text size="sm" fw={600} truncate>{title}</Text>
+                <Badge size="sm" variant="light" color={over ? 'red' : 'gray'}>{max > 0 ? `${count}/${max}` : count}</Badge>
+            </Group>
+            {archived && <Text size="xs" c="dimmed" mb={4}>{t('gpu.projects.groups.board.archived')}</Text>}
+            <Stack gap={4}>{children}</Stack>
+        </Paper>
+    );
+}
+
+// PersonCard is a person on the board: dragged by its handle or the card, or moved with its menu "Move to …".
+function PersonCard({ token, from, targets, onMove }) {
+    const { t } = useTranslation();
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `${from}:${token}`, data: { token, from } });
+    const style = { transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined, opacity: isDragging ? 0.6 : 1, zIndex: isDragging ? 10 : undefined, position: 'relative', touchAction: 'none' };
+    const label = tokenLabel(token);
+    return (
+        <Paper ref={setNodeRef} withBorder radius="sm" px={6} py={4} style={style}>
+            <Group gap={4} wrap="nowrap">
+                <span {...listeners} {...attributes} aria-label={t('gpu.projects.groups.board.drag', { person: label })} style={{ cursor: 'grab', display: 'flex' }}><GripVertical size={14} /></span>
+                <Text size="xs" style={{ flex: 1, minWidth: 0 }} truncate title={label}>{label}</Text>
+                <Menu position="bottom-end" withinPortal>
+                    <Menu.Target>
+                        <ActionIcon size="xs" variant="subtle" color="gray" aria-label={t('gpu.projects.groups.board.moveOf', { person: label })}><ArrowRightLeft size={12} /></ActionIcon>
+                    </Menu.Target>
+                    <Menu.Dropdown>
+                        <Menu.Label>{t('gpu.projects.groups.board.moveTo')}</Menu.Label>
+                        {targets.filter(x => x.id !== from).map(x => (
+                            <Menu.Item key={x.id} onClick={() => onMove(token, x.id)}>{x.label}</Menu.Item>
+                        ))}
+                    </Menu.Dropdown>
+                </Menu>
+            </Group>
+        </Paper>
+    );
+}
+
+// MemberSelect picks a group's people from the project's members and the people of its resolved course groups (under the group they come from); an e-mail address typed in is offered as a person too, for the people of a course group that cannot be looked up here. Groups are not offered: a group takes persons. capacity is "taken/places" of the group choice, when it has places.
+function MemberSelect({ value, choices, capacity, onChange }) {
     const { t } = useTranslation();
     const [search, setSearch] = useState('');
     const offered = new Set(choices.flatMap(c => (c.items ? c.items.map(x => x.value) : [c.value])));
@@ -106,7 +241,7 @@ function MemberSelect({ value, choices, onChange }) {
         ...(typed && !offered.has(typed) && !value.includes(typed) ? [{ value: typed, label: t('gpu.projects.groups.addPerson', { email: tokenLabel(typed) }) }] : []),
     ];
     return (
-        <MultiSelect style={{ flex: 1 }} label={t('gpu.projects.groups.members')} searchable clearable value={value} data={data} searchValue={search} onSearchChange={setSearch}
+        <MultiSelect style={{ flex: 1 }} label={capacity ? `${t('gpu.projects.groups.members')} (${capacity})` : t('gpu.projects.groups.members')} searchable clearable value={value} data={data} searchValue={search} onSearchChange={setSearch}
             onChange={onChange} nothingFoundMessage={t('gpu.projects.groups.nothingFound')} placeholder={value.length ? undefined : t('gpu.projects.groups.membersPlaceholder')} />
     );
 }

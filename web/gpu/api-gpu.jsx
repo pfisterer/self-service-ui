@@ -13,6 +13,15 @@ import {
     cancelGpuJob, downloadGpuJobFile, getGpuJob, getGpuJobLog, listGpuJobFiles, listGpuJobs, submitGpuJob,
 } from '@dhbw-cloud/llm-client';
 
+// groupMembership is the group choice's call (POST to join, DELETE to leave; llm-management-api joinWorkspaceGroup / leaveWorkspaceGroup) written the way the generated client writes its operations, because the client this UI takes from npm predates it; once a client with joinWorkspaceGroup is taken, the named imports replace it.
+const groupMembership = (method) => (options) => options.client[method]({
+    security: [{ name: 'Authorization', type: 'apiKey' }],
+    url: '/v1/workspaces/projects/{slug}/groups/{group}/membership',
+    ...options,
+});
+const joinWorkspaceGroup = groupMembership('post');
+const leaveWorkspaceGroup = groupMembership('delete');
+
 function unwrap(res) {
     if (apiErrorMessage(res)) throw apiError(res);
     return res?.data;
@@ -41,7 +50,11 @@ export function useGpuApi() {
             // Projects (W2): own projects, or all for admins.
             listProjects: (all) => allPages((page) => call(listWorkspaceProjects, { query: all ? { all: true, ...page } : page })),
             catalog: () => call(getWorkspaceCatalog),
+            // updated_at in p is the version loaded: a project changed since is refused with 409, code "conflict" (reload, then change again).
             updateProject: (p) => call(updateWorkspaceProject, { path: { slug: p.slug }, body: p, headers: JSON_HEADERS }),
+            // The group choice of a project, for its members: join or leave a group with one's own token; both answer { group_seats } as the person sees them now.
+            joinGroup: (slug, group) => call(joinWorkspaceGroup, { path: { slug, group } }),
+            leaveGroup: (slug, group) => call(leaveWorkspaceGroup, { path: { slug, group } }),
             deleteProject: (slug) => call(deleteWorkspaceProject, { path: { slug } }),
             // The project image from Git (docs/bauplan.md 10.12): build again, and the build's log.
             rebuildProjectImage: (slug) => call(rebuildProjectImage, { path: { slug } }),

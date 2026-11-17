@@ -16,6 +16,7 @@
     "@dhbw-cloud/llm-client": "^0.2.77",
     "@dhbw-cloud/os-mgt-client": "^0.8.73",
     "@dhbw-cloud/role-provider-client": "^0.12.0",
+    "@dnd-kit/core": "6.3.1",
     "@mantine/charts": "^9.5.2",
     "@mantine/core": "^9.4.1",
     "@mantine/dates": "^9.4.1",

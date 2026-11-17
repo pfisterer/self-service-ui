@@ -66,27 +66,57 @@ export function useWorkspaceSettings(nodeId, active) {
     });
     const project = (projects.data ?? []).find(p => p.tree_node === nodeId) ?? null;
     const available = !!project && (isAdmin || project.role === 'manager' || project.role === 'admin');
+    // The draft is { base, value }: base is the project as it was when the draft began, whose updated_at goes along as the version (the service refuses a save over a project changed since: 409, code "conflict").
     const [draft, setDraft] = useState(null);
     const initial = project ? editable(project) : null;
-    const current = draft ?? initial;
+    const current = draft?.value ?? initial;
+    const fresh = () => (queryClient.getQueryData(gpuKeys.projects(false)) ?? []).find(p => p.tree_node === nodeId);
     return {
         available,
         project,
         value: current,
         // What was loaded, to tell which section the draft changed (sectionChanged).
         initial,
-        update: (fn) => setDraft(fn(current)),
-        changed: available && draft !== null && JSON.stringify(draft) !== JSON.stringify(initial),
+        update: (fn) => setDraft({ base: draft?.base ?? initial, value: fn(current) }),
+        changed: available && draft !== null && JSON.stringify(withoutVersion(draft.value)) !== JSON.stringify(withoutVersion(initial)),
         save: async () => {
-            await api.updateProject({ ...editable(project), ...draft });
+            try {
+                await api.updateProject({ ...editable(project), ...draft?.value });
+            } catch (e) {
+                // Changed meanwhile: not a conflict about the dialog's node (which would close it), but a draft to load again; the dialog offers reload().
+                if (e?.code === 'conflict') throw Object.assign(new Error(e.message), { code: 'conflict', stale: true });
+                throw e;
+            }
             await queryClient.invalidateQueries({ queryKey: ['gpu', 'projects'] });
+        },
+        // reload drops the draft and loads the project again, after a save refused as changed meanwhile.
+        reload: async () => {
+            setDraft(null);
+            await queryClient.invalidateQueries({ queryKey: ['gpu', 'projects'] });
+        },
+        // rebase takes in what an action of the dialog itself just saved (a rebuild, a newer image): the draft keeps its own changes, takes everything else from the project as it is now, and its version.
+        rebase: () => {
+            const now = fresh();
+            if (now) setDraft(d => (d ? { base: editable(now), value: rebaseDraft(d.base, d.value, editable(now)) } : d));
         },
     };
 }
 
-// The part of a workspace project its settings change; the rest (name, members, end, quotas) belongs to the tree and is sent back as it is.
+// withoutVersion is a draft without its version, to tell whether anything was changed.
+const withoutVersion = (v) => (v ? { ...v, updated_at: null } : v);
+
+// rebaseDraft is the draft on top of a newer state of the project: a field the draft changed against its base stays the draft's, every other one (the version among them) is the newer state's.
+export function rebaseDraft(base, value, now) {
+    const out = { ...now };
+    for (const k of Object.keys(value)) {
+        if (JSON.stringify(value[k]) !== JSON.stringify(base?.[k])) out[k] = value[k];
+    }
+    return out;
+}
+
+// The part of a workspace project its settings change; the rest (name, members, end, quotas) belongs to the tree and is sent back as it is, updated_at as the version loaded.
 function editable(project) {
-    const { role: _role, budget_status: _status, image_build: _build, release_ceiling: _ceiling, release_effective: _effective, areas: _areas, ...rest } = project;
+    const { role: _role, budget_status: _status, image_build: _build, release_ceiling: _ceiling, release_effective: _effective, areas: _areas, group_seats: _seats, ...rest } = project;
     return { ...rest, limits: { ...DEFAULT_LIMITS, ...(project.limits ?? {}) } };
 }
 
@@ -127,6 +157,7 @@ function ProjectImage({ draft, set, bases }) {
         try {
             await api.rebuildProjectImage(saved.slug);
             await queryClient.invalidateQueries({ queryKey: ['gpu', 'projects'] });
+            draft.rebase();
         } catch (e) {
             setError(e.message);
         } finally {
@@ -138,6 +169,7 @@ function ProjectImage({ draft, set, bases }) {
         try {
             await api.updateProjectImage(saved.slug);
             await queryClient.invalidateQueries({ queryKey: ['gpu', 'projects'] });
+            draft.rebase();
         } catch (e) {
             setError(e.message);
         } finally {
@@ -329,7 +361,7 @@ function ReleaseTimes({ draft, defaults }) {
 // WORKSPACE_SECTIONS are the entries of a project's workspace settings in its dialog (modal-project-form.jsx), in their order, with the fields of the draft each one sets: what marks an entry as changed. A key with a dot is one of the limits.
 export const WORKSPACE_SECTIONS = [
     { key: 'environment', fields: ['profiles', 'image_base', 'image_git_url', 'image_git_ref', 'project_image', 'image_auto_update', 'material_git_url', 'material_git_ref', 'default_llm_project'] },
-    { key: 'groups', fields: ['groups'] },
+    { key: 'groups', fields: ['groups', 'group_choice', 'group_max_members'] },
     { key: 'storage', fields: ['shared_write', 'storage_project_gb', 'storage_home_gb'] },
     { key: 'limits', fields: ['limits.servers_per_person', 'limits.cpu_per_person', 'limits.ram_gb_per_person', 'limits.gpus_per_person', 'budgets'] },
     { key: 'jobs', fields: ['limits.jobs_per_person', 'limits.job_max_hours'] },

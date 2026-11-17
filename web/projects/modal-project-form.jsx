@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Group, Paper, Stack, Table, Text, TextInput } from '@mantine/core';
+import { Alert, Button, Group, Paper, Stack, Table, Text, TextInput } from '@mantine/core';
 import { Clock, Gift, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
@@ -769,7 +769,10 @@ export function ProjectFormModal({ opened, onClose, onDone, resources, roles, no
             }, handleInvalid)}
             submitting={save.isPending}
             submitDisabled={outcome === 'blocked'}
-            submitError={attrs.error || (save.error && formatError(save.error))}
+            submitError={attrs.error || (save.error && (save.error.stale && workspaces.available
+                // The AI service's part changed meanwhile (another manager, a member choosing a group): its draft is loaded again, the dialog's other changes stay.
+                ? <>{formatError(save.error)} <Button size="compact-xs" variant="light" onClick={async () => { save.reset(); await workspaces.reload(); }}>{t('gpu.projects.conflictReload')}</Button></>
+                : formatError(save.error)))}
             submitColor={isAdopt ? COLOR.outside : undefined}
             // What the button will do, beside it.
             note={<OutcomeNote
