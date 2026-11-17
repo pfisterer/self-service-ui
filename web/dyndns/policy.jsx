@@ -11,7 +11,7 @@ import { useConfirm } from '/providers/confirm.jsx';
 import { isValidDnsName, isValidZonePattern, isValidUserFilter, localPartFilterOk, zoneWithinAnySuffix } from '/helper/dns-validation.js';
 import { Trash2, Edit, Plus, Search, X, AlertCircle } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
-import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, SimpleGrid, Card, Modal, Alert, ActionIcon, Paper, Tabs, Badge, Table } from '@mantine/core';
+import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, Switch, SimpleGrid, Card, Modal, Alert, ActionIcon, Paper, Tabs, Badge, Table } from '@mantine/core';
 
 
 // --- Main Component: DnsPolicy ---
@@ -171,7 +171,7 @@ function RuleFilter({ searchFilter, onSearchChange, filteredCount, totalCount })
 }
 
 // --- Rule List Component ---
-function RuleList({ rules, isSuperAdmin, onEdit }) {
+export function RuleList({ rules, isSuperAdmin, onEdit }) {
     const { t } = useTranslation();
     const api = useZonesApi();
     const confirm = useConfirm();
@@ -233,7 +233,14 @@ function RuleList({ rules, isSuperAdmin, onEdit }) {
                 <Table.Tbody>
                     {rules.map(rule => (
                         <Table.Tr key={rule.id}>
-                            <Table.Td><Text fw={600} component="code" style={codeStyle}>{rule.zone_pattern}</Text></Table.Td>
+                            <Table.Td>
+                                <Group gap={6} wrap="nowrap">
+                                    <Text fw={600} component="code" style={codeStyle} c={rule.deprecated ? 'dimmed' : undefined}>{rule.zone_pattern}</Text>
+                                    {rule.deprecated && (
+                                        <Badge size="sm" variant="light" color="orange" title={t('dyndns.policy.deprecatedTooltip')}>{t('dyndns.policy.deprecatedBadge')}</Badge>
+                                    )}
+                                </Group>
+                            </Table.Td>
                             <Table.Td><code style={codeStyle}>{rule.zone_soa}</code></Table.Td>
                             <Table.Td><code style={codeStyle}>{rule.target_user_filter}</code></Table.Td>
                             <Table.Td>
@@ -302,6 +309,7 @@ export function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose
         target_user_filter: '',
         allow_subdomains: false,
         sharing_allowed: false,
+        deprecated: false,
         description: '',
         ...(ruleToEdit || {})
     }));
@@ -353,6 +361,7 @@ export function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose
             target_user_filter: rule.target_user_filter,
             allow_subdomains: !!rule.allow_subdomains,
             sharing_allowed: !!rule.sharing_allowed,
+            deprecated: !!rule.deprecated,
             description: rule.description || undefined,
         });
     };
@@ -411,6 +420,14 @@ export function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose
                             description={t('dyndns.ruleForm.allowSharingDescription')}
                             checked={!!rule.sharing_allowed}
                             onChange={(e) => { const v = e.currentTarget.checked; setRule(prev => ({ ...prev, sharing_allowed: v })); }}
+                        />
+
+                        <Switch
+                            label={t('dyndns.ruleForm.deprecated')}
+                            description={t('dyndns.ruleForm.deprecatedDescription')}
+                            color="orange"
+                            checked={!!rule.deprecated}
+                            onChange={(e) => { const v = e.currentTarget.checked; setRule(prev => ({ ...prev, deprecated: v })); }}
                         />
 
                         <TextInput

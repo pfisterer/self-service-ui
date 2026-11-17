@@ -231,7 +231,9 @@
         "aboutToDelete": "You are about to delete:",
         "noDescription": "(no description)",
         "fieldZonePattern": "Zone pattern",
-        "fieldAppliesTo": "Applies to"
+        "fieldAppliesTo": "Applies to",
+        "deprecatedBadge": "Deprecated",
+        "deprecatedTooltip": "Existing zones of this rule keep working, new ones are no longer offered."
     },
     "ruleForm": {
         "createTitle": "➕ Create New Rule",
@@ -255,6 +257,8 @@
         "allowSubdomainsDescription": "Owners of a matched zone may also create and manage delegated subzones under it (e.g. sub.example.com under example.com).",
         "allowSharing": "Allow sharing",
         "allowSharingDescription": "Owners may share a matched zone with additional users, and policy-entitled users can join it as co-owners (equal rights). Off = single-owner (the old behaviour).",
+        "deprecated": "Deprecated",
+        "deprecatedDescription": "Existing zones keep working (records, keys, subzones), new ones are no longer offered. For example for a %u rule next to which a %l rule grants shorter names.",
         "descriptionLabel": "Description (optional)",
         "descriptionPlaceholder": "e.g. Project zone for student group A",
         "save": "Save Changes",

@@ -231,7 +231,9 @@
         "aboutToDelete": "Gelöscht wird:",
         "noDescription": "(keine Beschreibung)",
         "fieldZonePattern": "Zonenmuster",
-        "fieldAppliesTo": "Gilt für"
+        "fieldAppliesTo": "Gilt für",
+        "deprecatedBadge": "Veraltet",
+        "deprecatedTooltip": "Bestehende Zonen dieser Regel funktionieren weiter, neue werden nicht mehr angeboten."
     },
     "ruleForm": {
         "createTitle": "➕ Neue Regel anlegen",
@@ -255,6 +257,8 @@
         "allowSubdomainsDescription": "Eigentümer einer passenden Zone dürfen darunter auch delegierte Subzonen anlegen und verwalten (z. B. sub.example.com unter example.com).",
         "allowSharing": "Teilen erlauben",
         "allowSharingDescription": "Eigentümer dürfen eine passende Zone mit weiteren Nutzern teilen, und berechtigte Nutzer können ihr als gleichberechtigte Mit-Eigentümer beitreten. Aus = nur ein Eigentümer (das alte Verhalten).",
+        "deprecated": "Veraltet",
+        "deprecatedDescription": "Bestehende Zonen funktionieren weiter (Einträge, Schlüssel, Subzonen), neue werden nicht mehr angeboten. Zum Beispiel für eine %u-Regel, neben der es eine %l-Regel mit kürzeren Namen gibt.",
         "descriptionLabel": "Beschreibung (optional)",
         "descriptionPlaceholder": "z. B. Projektzone für Studierendengruppe A",
         "save": "Änderungen speichern",
