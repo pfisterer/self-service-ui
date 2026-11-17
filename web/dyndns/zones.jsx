@@ -108,6 +108,8 @@ export function DynDnsZones() {
             master={tree}
             // Zone names are short in the tree, and the DNS records beside it want the room.
             masterSpan={{ base: 12, md: 4, lg: 3 }}
+            // A person has a handful of zones: the tree grows with them instead of scrolling on its own.
+            masterScrolls={false}
             scrollKey={activeZoneName}
             detail={(
                 <>
