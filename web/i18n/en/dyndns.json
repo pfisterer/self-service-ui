@@ -41,8 +41,8 @@
         "submit": "Create subzone",
         "wildcardRemaining_one": "{{count}} character left for a wildcard certificate from certificates.dhbw.cloud (*.{{zone}} may have at most {{max}} characters).",
         "wildcardRemaining_other": "{{count}} characters left for a wildcard certificate from certificates.dhbw.cloud (*.{{zone}} may have at most {{max}} characters).",
-        "wildcardTooLong_one": "*.{{zone}} is {{count}} character over the {{max}} that certificates.dhbw.cloud issues for wildcard certificates; the order would be refused when the certificate is issued. The zone itself works, and so do certificates for single names in it as long as one of them has at most {{max}} characters. Choose a shorter name for a wildcard certificate.",
-        "wildcardTooLong_other": "*.{{zone}} is {{count}} characters over the {{max}} that certificates.dhbw.cloud issues for wildcard certificates; the order would be refused when the certificate is issued. The zone itself works, and so do certificates for single names in it as long as one of them has at most {{max}} characters. Choose a shorter name for a wildcard certificate."
+        "wildcardTooLong_one": "*.{{zone}} is {{count}} character over the {{max}} that certificates.dhbw.cloud issues for wildcard certificates; the order would be refused when the certificate is issued. The zone itself works; a certificate that contains *.{{zone}} is still possible when the order lists a name of at most {{max}} characters first (it becomes the commonName). Choose a shorter name for a wildcard certificate.",
+        "wildcardTooLong_other": "*.{{zone}} is {{count}} characters over the {{max}} that certificates.dhbw.cloud issues for wildcard certificates; the order would be refused when the certificate is issued. The zone itself works; a certificate that contains *.{{zone}} is still possible when the order lists a name of at most {{max}} characters first (it becomes the commonName). Choose a shorter name for a wildcard certificate."
     },
     "zoneDetail": {
         "takenByOther": "This zone is already taken by someone else.",
