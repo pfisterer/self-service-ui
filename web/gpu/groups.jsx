@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
-import { ActionIcon, Alert, Badge, Button, Code, Group, Loader, Menu, MultiSelect, NumberInput, Paper, ScrollArea, SegmentedControl, Stack, Switch, Text, TextInput, Tooltip } from '@mantine/core';
+import { ActionIcon, Alert, Badge, Button, Code, Group, Loader, Menu, Modal, MultiSelect, NumberInput, Paper, ScrollArea, SegmentedControl, Stack, Switch, Text, TextInput, Tooltip } from '@mantine/core';
 import { DndContext, KeyboardSensor, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { ArrowRightLeft, GripVertical, Info, Plus, Trash2, Users, X } from 'lucide-react';
 import { groupsEnabled } from '/features.js';
@@ -53,6 +53,9 @@ export function GroupsPanel({ draft }) {
     const [count, setCount] = useState(2);
     const [view, setView] = useState('list');
     const max = p.group_max_members || 0;
+    // removing is the index of the group whose removal is being confirmed; a group not saved yet has no folder and goes at once.
+    const [removing, setRemoving] = useState(null);
+    const askRemove = (i) => (groups[i]?.id ? setRemoving(i) : set(groups.filter((_, j) => j !== i)));
 
     if (!(p.storage_gb > 0)) {
         return <Alert color="gray" icon={<Users size={16} />}>{t('gpu.projects.groups.noStorage')}</Alert>;
@@ -72,7 +75,7 @@ export function GroupsPanel({ draft }) {
             {view === 'board' && groups.length > 0 && (
                 <GroupBoard groups={groups} people={dealablePeople(p.members, groups, resolved)} max={max}
                     onMove={(token, to) => set(moveMember(groups, token, to))}
-                    onRemove={(i, token) => setGroup(i, { members: (groups[i].members ?? []).filter(m => m !== token) })} />
+                    onRemove={(i, token) => setGroup(i, { members: (groups[i].members ?? []).filter(m => m !== token) })} onRemoveGroup={askRemove} />
             )}
             {view === 'list' && groups.map((g, i) => {
                 const err = groupNameError(g.name, groups, i);
@@ -84,7 +87,7 @@ export function GroupsPanel({ draft }) {
                             <MemberSelect value={(g.members ?? []).filter(isPerson)} choices={choices} capacity={max > 0 ? `${peopleCount(g)}/${max}` : null}
                                 onChange={v => setGroup(i, { members: [...v, ...legacyTokens(g)] })} />
                             <Tooltip label={t('gpu.projects.groups.remove')}>
-                                <ActionIcon mt={26} variant="subtle" color="red" aria-label={t('gpu.projects.groups.remove')} onClick={() => set(groups.filter((_, j) => j !== i))}><Trash2 size={16} /></ActionIcon>
+                                <ActionIcon mt={26} variant="subtle" color="red" aria-label={t('gpu.projects.groups.remove')} onClick={() => askRemove(i)}><Trash2 size={16} /></ActionIcon>
                             </Tooltip>
                         </Group>
                         <LegacyEntries tokens={legacyTokens(g)} onRemove={token => setGroup(i, { members: (g.members ?? []).filter(m => m !== token) })} />
@@ -107,7 +110,28 @@ export function GroupsPanel({ draft }) {
                 </Group>
             </Group>
             <Text size="xs" c="dimmed">{t('gpu.projects.groups.hint')}</Text>
+            <RemoveGroupModal group={removing === null ? null : groups[removing]} onClose={() => setRemoving(null)}
+                onDelete={() => { set(groups.filter((_, j) => j !== removing)); setRemoving(null); }}
+                onArchive={() => { setGroup(removing, { archived: true }); setRemoving(null); }} />
         </Stack>
+    );
+}
+
+// RemoveGroupModal asks before a saved group is removed, since that deletes its folder ~/dhbw/groups/<name> with every file in it (the service's job does it once the project is saved); with the size the last listing of the folders gave (used_gib), and archiving as the way to keep it.
+export function RemoveGroupModal({ group, onClose, onDelete, onArchive }) {
+    const { t } = useTranslation();
+    const name = (group?.name ?? '').trim().toLowerCase() || '…';
+    const used = typeof group?.used_gib === 'number' ? t('gpu.projects.groups.removeConfirm.used', { gb: Math.round(group.used_gib * 10) / 10 }) : '';
+    return (
+        <Modal opened={!!group} onClose={onClose} title={t('gpu.projects.groups.removeConfirm.title', { name })} size="md">
+            <Text size="sm">{t('gpu.projects.groups.removeConfirm.text', { name, used })}</Text>
+            <Text size="sm" mt="xs" c="dimmed">{t(group?.archived ? 'gpu.projects.groups.removeConfirm.archivedHint' : 'gpu.projects.groups.removeConfirm.archiveHint')}</Text>
+            <Group justify="flex-end" mt="md" gap="sm">
+                <Button variant="default" onClick={onClose}>{t('gpu.projects.groups.removeConfirm.cancel')}</Button>
+                {!group?.archived && <Button variant="light" onClick={onArchive}>{t('gpu.projects.groups.removeConfirm.archive')}</Button>}
+                <Button color="red" onClick={onDelete}>{t('gpu.projects.groups.removeConfirm.delete')}</Button>
+            </Group>
+        </Modal>
     );
 }
 
@@ -149,8 +173,8 @@ function LegacyEntries({ tokens, onRemove }) {
 // NONE is the board's column of the people in no group yet.
 const NONE = 'none';
 
-// GroupBoard shows the groups as columns of people, next to a column of those in no group yet (dealablePeople: the project's members and the people of its resolved course groups, without managers); a card is dragged to another column, or moved with its menu (keyboard, touch). Moving into "not in a group" takes the person out of their group. A column shows how many places of the group choice are taken; managers may put more in. The board edits the same draft as the list.
-function GroupBoard({ groups, people, max, onMove, onRemove }) {
+// GroupBoard shows the groups as columns of people (a group removed from its column's header, asked first like in the list), next to a column of those in no group yet (dealablePeople: the project's members and the people of its resolved course groups, without managers); a card is dragged to another column, or moved with its menu (keyboard, touch). Moving into "not in a group" takes the person out of their group. A column shows how many places of the group choice are taken; managers may put more in. The board edits the same draft as the list.
+function GroupBoard({ groups, people, max, onMove, onRemove, onRemoveGroup }) {
     const { t } = useTranslation();
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor));
     const targets = [{ id: NONE, label: t('gpu.projects.groups.board.none') }, ...groups.map((g, i) => ({ id: String(i), label: g.name || '…' }))];
@@ -167,7 +191,7 @@ function GroupBoard({ groups, people, max, onMove, onRemove }) {
                         {people.map(token => <PersonCard key={token} token={token} from={NONE} targets={targets} onMove={move} />)}
                     </BoardColumn>
                     {groups.map((g, i) => (
-                        <BoardColumn key={g.id || `new-${i}`} id={String(i)} title={g.name || '…'} count={peopleCount(g)} max={max} over={overCapacity(g, max)} archived={!!g.archived}>
+                        <BoardColumn key={g.id || `new-${i}`} id={String(i)} title={g.name || '…'} count={peopleCount(g)} max={max} over={overCapacity(g, max)} archived={!!g.archived} onRemove={() => onRemoveGroup(i)}>
                             {(g.members ?? []).filter(isPerson).map(token => <PersonCard key={token} token={token} from={String(i)} targets={targets} onMove={move} />)}
                             {legacyTokens(g).map(token => (
                                 <Paper key={token} withBorder radius="sm" px={6} py={4} bg="var(--mantine-color-gray-light)">
@@ -186,7 +210,7 @@ function GroupBoard({ groups, people, max, onMove, onRemove }) {
 }
 
 // BoardColumn is one column of the board, a drop target, with its count of people and, with places in the group choice, the places (red when more people are in it).
-function BoardColumn({ id, title, count, max = 0, over = false, archived = false, children }) {
+function BoardColumn({ id, title, count, max = 0, over = false, archived = false, onRemove = null, children }) {
     const { t } = useTranslation();
     const { setNodeRef, isOver } = useDroppable({ id });
     return (
@@ -194,7 +218,10 @@ function BoardColumn({ id, title, count, max = 0, over = false, archived = false
             role="group" aria-label={title}>
             <Group justify="space-between" gap={4} mb={6} wrap="nowrap">
                 <Text size="sm" fw={600} truncate>{title}</Text>
-                <Badge size="sm" variant="light" color={over ? 'red' : 'gray'}>{max > 0 ? `${count}/${max}` : count}</Badge>
+                <Group gap={2} wrap="nowrap">
+                    <Badge size="sm" variant="light" color={over ? 'red' : 'gray'}>{max > 0 ? `${count}/${max}` : count}</Badge>
+                    {onRemove && <ActionIcon size="xs" variant="subtle" color="red" aria-label={t('gpu.projects.groups.removeOf', { name: title })} onClick={onRemove}><Trash2 size={12} /></ActionIcon>}
+                </Group>
             </Group>
             {archived && <Text size="xs" c="dimmed" mb={4}>{t('gpu.projects.groups.board.archived')}</Text>}
             <Stack gap={4}>{children}</Stack>

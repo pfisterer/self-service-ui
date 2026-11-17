@@ -233,7 +233,7 @@
             },
             "readOnly": "Members only read",
             "archived": "Archived (only managers see the folder, read-only)",
-            "remove": "Remove the group (its folder stays in the project’s storage but is mounted for nobody)",
+            "remove": "Remove the group (its folder is deleted; asks first)",
             "add": "Add group",
             "count": "Number of new groups",
             "distribute": "new groups, members dealt out",
@@ -264,6 +264,17 @@
                 "drag": "Drag {{person}}",
                 "moveOf": "Move {{person}} to …",
                 "moveTo": "Move to …"
+            },
+            "removeOf": "Remove group {{name}}",
+            "removeConfirm": {
+                "title": "Remove group {{name}}?",
+                "text": "Its folder ~/dhbw/groups/{{name}} is deleted with all its files{{used}}. The deletion happens once the project is saved.",
+                "used": " ({{gb}} GB used)",
+                "archiveHint": "To keep it, archive the group instead: its members lose the folder, the managers keep reading it.",
+                "archivedHint": "The group is archived; removing it deletes its folder too.",
+                "delete": "Delete",
+                "archive": "Archive",
+                "cancel": "Cancel"
             }
         },
         "storageLimits": {

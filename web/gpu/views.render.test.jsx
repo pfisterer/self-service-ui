@@ -246,6 +246,52 @@ describe('the GPU views render', () => {
         expectNoRenderFailure();
     });
 
+    it('removing a group asks first, says what its folder holds and offers archiving instead', async () => {
+        globalThis.__llmIsAdmin = false;
+        const project = { ...PROJECTS[0], storage_gb: 20,
+            groups: [{ id: '0000aaaa', name: 'g1', members: [], used_gib: 2.54 }, { id: '0000bbbb', name: 'g2', members: [] }, { id: '0000cccc', name: 'g3', members: [], archived: true }],
+            members: [{ token: 'user:a@dhbw.de', role: 'member' }] };
+        globalThis.__gpuApi.listProjects = async () => [project, PROJECTS[1]];
+        renderView(<SettingsTab nodeId="p_ml" />);
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
+        const removeButtons = () => screen.getAllByRole('button', { name: /^(Gruppe entfernen|Remove the group)/ });
+        // Archive instead: the group stays, archived.
+        fireEvent.click(removeButtons()[0]);
+        const dialog = await screen.findByRole('dialog');
+        expect(within(dialog).getByText(/~\/dhbw\/groups\/g1 .*(gelöscht|deleted).*2\.5 GB/)).toBeTruthy();
+        fireEvent.click(within(dialog).getByRole('button', { name: /^(Archivieren|Archive)$/ }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        expect(screen.getByDisplayValue('g1')).toBeTruthy();
+        expect(screen.getAllByRole('switch', { name: /^(Archiviert|Archived)/ })[0].checked).toBe(true);
+        // Cancel keeps it; delete takes it out of the draft. Without a known size, no number.
+        fireEvent.click(removeButtons()[1]);
+        let d = await screen.findByRole('dialog');
+        expect(within(d).queryByText(/GB/)).toBeNull();
+        fireEvent.click(within(d).getByRole('button', { name: /^(Abbrechen|Cancel)$/ }));
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        expect(screen.getByDisplayValue('g2')).toBeTruthy();
+        fireEvent.click(removeButtons()[1]);
+        d = await screen.findByRole('dialog');
+        fireEvent.click(within(d).getByRole('button', { name: /^(Löschen|Delete)$/ }));
+        await waitFor(() => expect(screen.queryByDisplayValue('g2')).toBeNull());
+        // An archived group: no archiving offered, deleting still asked; from the board too.
+        fireEvent.click(screen.getByText('Board'));
+        fireEvent.click(screen.getByRole('button', { name: /(Gruppe g3 entfernen|Remove group g3)/ }));
+        d = await screen.findByRole('dialog');
+        expect(within(d).queryByRole('button', { name: /^(Archivieren|Archive)$/ })).toBeNull();
+        fireEvent.click(within(d).getByRole('button', { name: /^(Löschen|Delete)$/ }));
+        await waitFor(() => expect(screen.queryByRole('group', { name: 'g3' })).toBeNull());
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+        // A group not saved yet has no folder: it goes without asking.
+        fireEvent.click(screen.getByText(/^(Liste|List)$/));
+        fireEvent.click(screen.getByRole('button', { name: /(Gruppe hinzufügen|Add group)/ }));
+        const before = removeButtons().length;
+        fireEvent.click(removeButtons()[before - 1]);
+        expect(screen.queryByRole('dialog')).toBeNull();
+        expect(removeButtons().length).toBe(before - 1);
+        expectNoRenderFailure();
+    });
+
     it('a save sends the version loaded; changed meanwhile, the draft is offered to be loaded again', async () => {
         globalThis.__llmIsAdmin = false;
         const project = { ...PROJECTS[0], updated_at: '2026-11-17T08:00:00.123456Z' };

@@ -233,7 +233,7 @@
             },
             "readOnly": "Mitglieder lesen nur",
             "archived": "Archiviert (nur Verwaltende sehen den Ordner, lesend)",
-            "remove": "Gruppe entfernen (der Ordner bleibt im Speicher des Projekts, ist aber für niemanden mehr eingehängt)",
+            "remove": "Gruppe entfernen (ihr Ordner wird gelöscht; vorher kommt eine Rückfrage)",
             "add": "Gruppe hinzufügen",
             "count": "Anzahl der neuen Gruppen",
             "distribute": "Gruppen anlegen und Mitglieder verteilen",
@@ -264,6 +264,17 @@
                 "drag": "{{person}} ziehen",
                 "moveOf": "{{person}} verschieben nach …",
                 "moveTo": "Verschieben nach …"
+            },
+            "removeOf": "Gruppe {{name}} entfernen",
+            "removeConfirm": {
+                "title": "Gruppe {{name}} entfernen?",
+                "text": "Ihr Ordner ~/dhbw/groups/{{name}} wird mit allen Dateien gelöscht{{used}}. Gelöscht wird nach dem Speichern des Projekts.",
+                "used": " ({{gb}} GB belegt)",
+                "archiveHint": "Zum Aufbewahren stattdessen archivieren: Die Mitglieder verlieren den Ordner, die Verwaltung behält ihn lesend.",
+                "archivedHint": "Die Gruppe ist archiviert; mit dem Entfernen geht auch ihr Ordner.",
+                "delete": "Löschen",
+                "archive": "Archivieren",
+                "cancel": "Abbrechen"
             }
         },
         "storageLimits": {
