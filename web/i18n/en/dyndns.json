@@ -39,10 +39,10 @@
         "labelField": "Subzone label",
         "fullNameLabel": "Full name:",
         "submit": "Create subzone",
-        "wildcardRemaining_one": "{{count}} character left for a wildcard certificate (*.{{zone}} has at most {{max}} characters as commonName).",
-        "wildcardRemaining_other": "{{count}} characters left for a wildcard certificate (*.{{zone}} has at most {{max}} characters as commonName).",
-        "wildcardTooLong_one": "*.{{zone}} is {{count}} character over the {{max}} that a certificate's commonName allows. Wildcard certificates with a commonName are not possible for this zone (Let's Encrypt refuses longer names); certificates that carry the name only as a SAN still work. Choose a shorter name if you need one.",
-        "wildcardTooLong_other": "*.{{zone}} is {{count}} characters over the {{max}} that a certificate's commonName allows. Wildcard certificates with a commonName are not possible for this zone (Let's Encrypt refuses longer names); certificates that carry the name only as a SAN still work. Choose a shorter name if you need one."
+        "wildcardRemaining_one": "{{count}} character left for a wildcard certificate from certificates.dhbw.cloud (*.{{zone}} may have at most {{max}} characters).",
+        "wildcardRemaining_other": "{{count}} characters left for a wildcard certificate from certificates.dhbw.cloud (*.{{zone}} may have at most {{max}} characters).",
+        "wildcardTooLong_one": "*.{{zone}} is {{count}} character over the {{max}} that certificates.dhbw.cloud issues for wildcard certificates; the order would be refused when the certificate is issued. The zone itself works, and so do certificates for single names in it as long as one of them has at most {{max}} characters. Choose a shorter name for a wildcard certificate.",
+        "wildcardTooLong_other": "*.{{zone}} is {{count}} characters over the {{max}} that certificates.dhbw.cloud issues for wildcard certificates; the order would be refused when the certificate is issued. The zone itself works, and so do certificates for single names in it as long as one of them has at most {{max}} characters. Choose a shorter name for a wildcard certificate."
     },
     "zoneDetail": {
         "takenByOther": "This zone is already taken by someone else.",

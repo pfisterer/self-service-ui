@@ -75,7 +75,7 @@ export function subzoneLabelError(label, parent, t) {
     return null;
 }
 
-// X.509 limits a certificate's commonName to 64 characters (RFC 5280, ub-common-name), and Let's Encrypt refuses longer ones. A wildcard certificate that carries `*.<zone>` as its commonName therefore needs `*.` + zone ≤ 64; names only in the SAN have no such limit, so this is a warning, not a DNS error.
+// X.509 limits a certificate's commonName to 64 characters (RFC 5280, ub-common-name). Let's Encrypt then issues without a commonName, but HARICA, the CA behind certificates.dhbw.cloud, refuses at finalize when no requested name fits into the commonName (17.11.2026: 63 characters issued, 68 refused without a reason). A wildcard certificate for `*.<zone>` therefore needs `*.` + zone ≤ 64; the zone itself works in DNS, so this is a warning, not an error.
 export const WILDCARD_CN_MAX = 64;
 
 // wildcardCnRemaining is how many characters are left for `*.<label>.<parent>` within WILDCARD_CN_MAX; negative when the subzone is too long for a wildcard commonName. With an empty label it is the room the label has (its separating dot counted). The fixed parent (e.g. `<user>.users.dhbw.site`) differs per person, which is why the form shows this number live.
