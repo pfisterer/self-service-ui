@@ -1,6 +1,6 @@
 // Shared DNS validation. The primitives (IP, FQDN, email) come from the
 // `validator` library; only the DNS-policy-specific rules that no general
-// library covers (%u zone patterns, wildcard-email filters, lowercase subzone
+// library covers (%u/%l zone patterns, wildcard-email filters, lowercase subzone
 // labels) are kept as thin wrappers around it.
 
 import isIP from 'validator/lib/isIP.js';
@@ -25,10 +25,33 @@ export function isValidDnsName(value) {
     return isFQDN((value || '').trim());
 }
 
-// A zone pattern that may contain '%u' inside labels (e.g. student-%u.users.example.com).
+// A zone pattern that may contain the placeholders '%u' (the whole e-mail address) and '%l' (its local part) inside labels (e.g. student-%u.users.example.com, %l-stma.users.dhbw.site).
 export function isValidZonePattern(value) {
     if (!value) return false;
-    return isFQDN(value.replaceAll('%u', 'a').trim());
+    return isFQDN(value.replaceAll('%u', 'a').replaceAll('%l', 'a').trim());
+}
+
+// singleFilterDomain is the one e-mail domain every entry of a comma-separated user filter is limited to (lowercase), or null when an entry leaves the domain open ('*', '*.dhbw.de', a wildcard in the domain) or the entries name different domains. The client-side twin of the server's singleFilterDomain.
+export function singleFilterDomain(filter) {
+    let domain = null;
+    for (const raw of (filter || '').split(',')) {
+        const p = raw.trim().toLowerCase();
+        if (p === '') continue;
+        const at = p.lastIndexOf('@');
+        if (at < 0) return null;
+        const local = p.slice(0, at);
+        const d = p.slice(at + 1);
+        if (d === '' || d.includes('*') || (local.includes('*') && local.includes('@'))) return null;
+        if (domain !== null && d !== domain) return null;
+        domain = d;
+    }
+    return domain;
+}
+
+// localPartFilterOk: '%l' drops the domain of the address, so a pattern with '%l' needs a user filter limited to one e-mail domain — otherwise max@a.de and max@b.de would get the same zone. Patterns without '%l' are always fine. The server refuses the same.
+export function localPartFilterOk(pattern, filter) {
+    if (!(pattern || '').includes('%l')) return true;
+    return singleFilterDomain(filter) !== null;
 }
 
 // An email or wildcard-email pattern, or a comma-separated list of them

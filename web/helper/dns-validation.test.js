@@ -5,6 +5,8 @@ import {
     isValidDnsName,
     isValidZonePattern,
     isValidUserFilter,
+    singleFilterDomain,
+    localPartFilterOk,
     zoneWithinAnySuffix,
     subzoneLabelError,
     wildcardCnRemaining,
@@ -70,6 +72,34 @@ describe('isValidZonePattern', () => {
     it('still rejects what is not a name once %u is filled in', () => {
         expect(isValidZonePattern('%u')).toBe(false);
         expect(isValidZonePattern('')).toBe(false);
+    });
+});
+
+describe('%l in zone patterns', () => {
+    it('accepts %l like %u', () => {
+        expect(isValidZonePattern('%l.users.dhbw.site')).toBe(true);
+        expect(isValidZonePattern('%l-stma.users.dhbw.site')).toBe(true);
+        expect(isValidZonePattern('%l')).toBe(false);
+        expect(isValidZonePattern('%l..users.dhbw.site')).toBe(false);
+    });
+
+    it('finds the one domain a filter is limited to', () => {
+        expect(singleFilterDomain('*@student.dhbw-mannheim.de')).toBe('student.dhbw-mannheim.de');
+        expect(singleFilterDomain(' *@DHBW.de , x@dhbw.DE,')).toBe('dhbw.de');
+        expect(singleFilterDomain('a@dhbw.de, b@dhbw.de')).toBe('dhbw.de');
+        expect(singleFilterDomain('*')).toBe(null);
+        expect(singleFilterDomain('*.dhbw.de')).toBe(null);
+        expect(singleFilterDomain('a@*.dhbw.de')).toBe(null);
+        expect(singleFilterDomain('*@dhbw.de,*@cas.dhbw.de')).toBe(null);
+        expect(singleFilterDomain('')).toBe(null);
+    });
+
+    it('requires a single-domain filter for %l only', () => {
+        expect(localPartFilterOk('%l-stma.users.dhbw.site', '*@student.dhbw-mannheim.de')).toBe(true);
+        expect(localPartFilterOk('%l.users.dhbw.site', '*@dhbw.de,*@cas.dhbw.de')).toBe(false);
+        expect(localPartFilterOk('%l.users.dhbw.site', '*')).toBe(false);
+        expect(localPartFilterOk('%u.users.dhbw.site', '*@dhbw.de,*@cas.dhbw.de')).toBe(true);
+        expect(localPartFilterOk('%u.users.dhbw.site', '*')).toBe(true);
     });
 });
 

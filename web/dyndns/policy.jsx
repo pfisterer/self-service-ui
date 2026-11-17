@@ -8,7 +8,7 @@ import { ZoneEventsAdminPanel } from '/dyndns/zone-events-admin.jsx';
 import { dyndnsKeys } from '/dyndns/query-keys.js';
 import { Loading, LoadError, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
-import { isValidDnsName, isValidZonePattern, isValidUserFilter, zoneWithinAnySuffix } from '/helper/dns-validation.js';
+import { isValidDnsName, isValidZonePattern, isValidUserFilter, localPartFilterOk, zoneWithinAnySuffix } from '/helper/dns-validation.js';
 import { Trash2, Edit, Plus, Search, X, AlertCircle } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Container, Title, Text, Button, Group, Stack, TextInput, Checkbox, SimpleGrid, Card, Modal, Alert, ActionIcon, Paper, Tabs, Badge, Table } from '@mantine/core';
@@ -272,7 +272,7 @@ function RuleList({ rules, isSuperAdmin, onEdit }) {
 }
 
 // --- Rule Form Modal ---
-function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
+export function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
     const { t } = useTranslation();
     const api = useZonesApi();
     const isEditMode = ruleToEdit !== null;
@@ -313,6 +313,8 @@ function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
     const zoneValid = isValidZonePattern(rule.zone_pattern);
     const zoneSoaValid = isValidDnsName(rule.zone_soa);
     const userFilterValid = isValidUserFilter(rule.target_user_filter);
+    // %l (local part without the domain) only on a rule for one e-mail domain; shown on the filter field once the filter itself is valid.
+    const localPartOk = localPartFilterOk(rule.zone_pattern, rule.target_user_filter);
     const soaInScope = delegationSuffixes.length === 0 || zoneWithinAnySuffix(rule.zone_soa, delegationSuffixes);
 
     const saveRule = useApiMutation({
@@ -340,7 +342,7 @@ function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
         e.preventDefault();
         setMessage(null);
 
-        if (!zoneValid || !zoneSoaValid || !userFilterValid || !soaInScope) {
+        if (!zoneValid || !zoneSoaValid || !userFilterValid || !localPartOk || !soaInScope) {
             setMessage(<Alert icon={<AlertCircle size="16" />} title={t('dyndns.messages.validationError')} color="red">{t('dyndns.ruleForm.invalidFields')}</Alert>);
             return;
         }
@@ -393,7 +395,8 @@ function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
                             required
                             placeholder={t('dyndns.ruleForm.userFilterPlaceholder')}
                             description={t('dyndns.ruleForm.userFilterDescription')}
-                            error={!userFilterValid && t('dyndns.validation.userFilter')}
+                            error={(!userFilterValid && t('dyndns.validation.userFilter'))
+                                || (!localPartOk && t('dyndns.ruleForm.localPartNeedsSingleDomain'))}
                         />
 
                         <Checkbox
@@ -423,7 +426,7 @@ function RuleFormModal({ ruleToEdit, isSuperAdmin, onFormSuccess, onClose }) {
                             <Button
                                 type="submit"
                                 loading={saveRule.isPending}
-                                disabled={!zoneValid || !zoneSoaValid || !userFilterValid || !soaInScope}>
+                                disabled={!zoneValid || !zoneSoaValid || !userFilterValid || !localPartOk || !soaInScope}>
                                 {isEditMode ? t('dyndns.ruleForm.save') : t('dyndns.ruleForm.create')}
                             </Button>
                         </Group>
