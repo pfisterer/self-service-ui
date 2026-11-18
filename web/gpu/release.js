@@ -1,6 +1,6 @@
 import { formatDuration } from '/helper/duration.js';
 
-// Release times of a project (dhbw-deployment/__TODOS.md idle_release): what its servers per profile and its GPU kernels enforce, in seconds, as the AI service sends them with the project (release in the start options, release_effective in the project list). max 0 = no upper bound.
+// Release times of a project: what its servers per profile and its GPU kernels enforce, in seconds, as the AI service sends them with the project (release in the start options, release_effective in the project list). max 0 = no upper bound.
 
 // releaseOf is what a server of the profile in the project enforces; null when the AI service sends no release times (then the profile's own limits apply).
 export function releaseOf(project, profile) {

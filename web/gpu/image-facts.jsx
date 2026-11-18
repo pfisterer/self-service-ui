@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Anchor, Badge, Group, Stack, Text } from '@mantine/core';
 import { formatDate } from '/format-date.js';
 
-// What the AI service found about the image a project runs (dhbw-deployment/__TODOS.md image_hardening): its download size, the warnings of its checks (root or another user, HOME elsewhere, own entrypoint, jupyterhub-singleuser not recognisable, large; written by the service in German) and Harbor's vulnerability scan. Nothing of it blocks; it says why a start may fail or take long.
+// What the AI service found about the image a project runs: its download size, the warnings of its checks (root or another user, HOME elsewhere, own entrypoint, jupyterhub-singleuser not recognisable, large; written by the service in German) and Harbor's vulnerability scan. Nothing of it blocks; it says why a start may fail or take long.
 
 // formatSize writes bytes as gigabytes with one decimal in the reader's language ("2,0 GB" / "2.0 GB"), below one gigabyte as whole megabytes ("160 MB"); '' when unknown.
 export function formatSize(bytes, language = 'de') {

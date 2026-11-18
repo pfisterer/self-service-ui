@@ -333,7 +333,7 @@ export function ReleaseRow({ kind, value, inherited, ceiling, defaults, unlimite
     );
 }
 
-// ReleaseTimes is the project's release times (dhbw-deployment/__TODOS.md idle_release): the project chooses within the budget's maximums, which the budget tree sets and which show as placeholders and limits; below what the servers and GPU kernels enforce now.
+// ReleaseTimes is the project's release times: the project chooses within the budget's maximums, which the budget tree sets and which show as placeholders and limits; below what the servers and GPU kernels enforce now.
 function ReleaseTimes({ draft, defaults }) {
     const { t, i18n } = useTranslation();
     const p = draft.value;
