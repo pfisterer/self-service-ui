@@ -12,7 +12,7 @@ for var in $required_vars; do
   fi
 done
 
-
+# BACK_HOSTS: the hosts other than this UI that may send people to /projects/start with a return address (?back=), comma-separated, exact host names. Unset -> the production JupyterHub and chat; set but empty -> only this UI itself.
 
 # Dynamically generate the config file
 cat > /srv/www/config.js << EOF
@@ -24,6 +24,7 @@ window.appconfig = {
   llmBaseUrl: "${LLM_BASE_URL}",
   groupsBaseUrl: "${GROUPS_BASE_URL}",
   acmeServer: "${ACME_SERVER:-https://certificates.dhbw.cloud}",
+  backHosts: "${BACK_HOSTS-jupyter.gpu.services.dhbw.cloud,chat.gpu.services.dhbw.cloud}",
   dummyAuth: ${DUMMY_AUTH:-false},
   "oidc": {
     "client_id": "${OIDC_CLIENT_ID}",

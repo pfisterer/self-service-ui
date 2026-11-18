@@ -74,6 +74,9 @@ spec:
               value: "{{ .Values.selfServiceUI.groupsBaseUrl }}"
             - name: ACME_SERVER
               value: "{{ .Values.selfServiceUI.acmeServer }}"
+            # Hosts allowed as return address (?back=) of /projects/start, besides the UI itself.
+            - name: BACK_HOSTS
+              value: "{{ .Values.selfServiceUI.backHosts | default list | join "," }}"
             {{- if .Values.selfServiceUI.dynamicZonesUpstream }}
             - name: DYN_ZONES_UPSTREAM
               value: "{{ .Values.selfServiceUI.dynamicZonesUpstream }}"

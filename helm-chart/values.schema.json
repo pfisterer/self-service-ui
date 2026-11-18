@@ -57,6 +57,7 @@
         "cloudResourcesBaseUrl": { "type": "string" },
         "cloudResourcesMcpUrl": { "type": "string" },
         "acmeServer": { "type": "string" },
+        "backHosts": { "type": "array", "items": { "type": "string", "pattern": "^[a-z0-9.-]+(:[0-9]+)?$" }, "description": "Hosts allowed as return address (?back=) of /projects/start besides the UI itself: exact host names, optionally host:port." },
         "dynamicZonesUpstream": { "type": "string" },
         "cloudResourcesUpstream": { "type": "string" },
         "llmBaseUrl": { "type": "string" },

@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => {
       llmBaseUrl: env.LLM_BASE_URL || '',
       groupsBaseUrl: env.GROUPS_BASE_URL || '',
       acmeServer: env.ACME_SERVER || 'https://certificates.dhbw.cloud',
+      backHosts: env.BACK_HOSTS ?? 'jupyter.gpu.services.dhbw.cloud,chat.gpu.services.dhbw.cloud',
       dummyAuth: env.DUMMY_AUTH === 'true',
       oidc: {
         client_id: env.OIDC_CLIENT_ID || '',

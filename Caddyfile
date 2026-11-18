@@ -15,13 +15,8 @@
         # Prevent framing (clickjacking protection).
         X-Frame-Options DENY
 
-        # Content-Security-Policy. In BFF mode the SPA talks to the APIs SAME-ORIGIN
-        # via /api/*, so 'self' already covers app JS, the dynamically import()'d SDK
-        # and the API fetches. https://*.dhbw.cloud is kept as a margin
-        # for the pre-BFF (direct-to-API) config and can be dropped to 'self' once the
-        # BFF migration is complete everywhere. style-src 'unsafe-inline' is required
-        # by Mantine / swagger-ui inline styles.
-        Content-Security-Policy "default-src 'self'; script-src 'self' https://*.dhbw.cloud; connect-src 'self' https://*.dhbw.cloud; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+        # Content-Security-Policy. The SPA talks to the APIs SAME-ORIGIN via /api/* (BFF: oauth2-proxy in front of this Caddy), so 'self' covers app JS, the lazily import()'d chunks, the API fetches and uploads, the APIs' config.json and swagger.json (resolved against the /api/<svc>/ base URLs) and the proxy's /oauth2/* endpoints. Links to other hosts (JupyterHub, Keycloak logout, docs) are navigations and not governed by script-src/connect-src. The former https://*.dhbw.cloud margin was for the pre-BFF config, where the SPA called the API hosts directly; no deployment runs that mode any more. style-src 'unsafe-inline' is required by Mantine / swagger-ui inline styles.
+        Content-Security-Policy "default-src 'self'; script-src 'self'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     }
 
     # The self-service oauth2-proxy sits IN FRONT of this Caddy and

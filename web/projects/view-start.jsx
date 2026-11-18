@@ -9,6 +9,7 @@ import { projectKeys } from './query-keys.js';
 import { useProjectConfig } from './projects.jsx';
 import { autoApproveHeadroom, defaultsWithin, isAvailability, kindOfResource, latestProjectEnd, endDay, PROJECT_KINDS, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
 import { AREA_PROJECTS } from './start-link.js';
+import { safeBack } from './safe-back.js';
 
 // Where somebody comes who has no project with resources of a provider yet —
 // sent here from Jupyter, the chat or the keys page (/projects/start?for=aiaas).
@@ -132,19 +133,4 @@ export function StartView() {
             )}
         </Stack>
     );
-}
-
-// safeBack keeps a return address only when it is a URL of a DHBW service, so
-// the page cannot be used to send people anywhere.
-function safeBack(raw) {
-    if (!raw) return null;
-    try {
-        const u = new URL(raw, window.location.origin);
-        const host = u.hostname;
-        if (u.protocol !== 'https:' && u.origin !== window.location.origin) return null;
-        if (u.origin === window.location.origin || host === 'dhbw.cloud' || host.endsWith('.dhbw.cloud')) return u.toString();
-    } catch {
-        return null;
-    }
-    return null;
 }

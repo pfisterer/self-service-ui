@@ -233,6 +233,7 @@ The image serves `dist/` through Caddy and generates `config.js` at container st
 | `OIDC_CLIENT_ID`, `OIDC_ISSUER_URL` | yes | The login itself is done by the proxy in front; the app uses these for sign-out, sending the browser on to the issuer's logout endpoint (Keycloak's `/protocol/openid-connect/logout` path) with this client ID |
 | `OIDC_END_SESSION_URL` | no | The issuer's logout endpoint, where it is not Keycloak's path below `OIDC_ISSUER_URL` |
 | `ACME_SERVER` | no | ACME endpoint advertised in the certificate instructions (default `https://certificates.dhbw.cloud`) |
+| `BACK_HOSTS` | no | Hosts other than this UI that may send people to `/projects/start` with a return address (`?back=`): comma-separated exact host names (optionally `host:port`), https only, no wildcards or subdomains. Unset: `jupyter.gpu.services.dhbw.cloud,chat.gpu.services.dhbw.cloud`; set but empty: only this UI itself. Chart value `selfServiceUI.backHosts` (a list) |
 | `DUMMY_AUTH` | no | Ignored by production builds (see above) |
 | `LLM_BASE_URL` | no | Base URL of llm-management-api as the browser reaches it (normally this app's `/api/llm/`); empty hides the Workspaces and LLM sections |
 | `LLM_UPSTREAM`, `LLM_HOST` | no | Where Caddy forwards `/api/llm/` to: `host:port` of the ingress in front of the LLM service, always over TLS, and the host name to ask it for, which is also checked against its certificate. Two values because the address to connect to and the name to ask for differ there |
