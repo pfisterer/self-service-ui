@@ -1,6 +1,6 @@
 {
   "name": "dynamic-zones-ui",
-  "version": "0.8.211",
+  "version": "0.8.212",
   "type": "module",
   "scripts": {
     "dev": "npx vite",
