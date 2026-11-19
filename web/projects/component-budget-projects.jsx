@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, ArrowDown, ArrowUp, ArrowUpDown, Eye, Gift, LogOut, Package, Pencil, Rocket, Scale, Search, Server, Sparkles, SquareTerminal, Trash2, X } from 'lucide-react';
+import { Activity, ArrowDown, ArrowUp, Eye, Gift, LogOut, Package, Pencil, Rocket, Scale, Search, Server, Sparkles, SquareTerminal, Trash2, X } from 'lucide-react';
 import { ActionIcon, Badge, Box, Group, Loader, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { useDebouncedValue, useElementSize, useLocalStorage } from '@mantine/hooks';
 import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
@@ -13,6 +13,7 @@ import { useProjectConfig } from './projects.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
 import { formatDate } from '../format-date.js';
+import { SortButton } from '/helper/sort-button.jsx';
 
 // Rows per page. A table, unlike the tree it replaces for projects, pages
 // instead of growing: a budget for all students of a location holds hundreds.
@@ -364,24 +365,6 @@ function ResourceSort({ icon: Icon, label, sortKey, sort, onSort }) {
                 {active && <Arrow size={10} />}
             </UnstyledButton>
         </Tooltip>
-    );
-}
-
-// SortButton is one sortable label in a header cell; a cell may hold two when
-// the column shows two values stacked. `dimmed` marks the second one, the value
-// on the quieter line below.
-function SortButton({ label, sortKey, sort, onSort, dimmed = false }) {
-    const active = sort.key === sortKey;
-    const Icon = !active ? ArrowUpDown : sort.order === 'asc' ? ArrowUp : ArrowDown;
-    return (
-        <UnstyledButton onClick={() => onSort(sortKey)}
-            aria-sort={active ? (sort.order === 'asc' ? 'ascending' : 'descending') : undefined}>
-            <Group gap="4" wrap="nowrap">
-                <Text size="sm" fw={dimmed ? 500 : 600} c={dimmed && !active ? 'dimmed' : undefined}
-                    style={{ whiteSpace: 'nowrap' }}>{label}</Text>
-                <Icon size="12" color={active ? undefined : 'var(--mantine-color-gray-5)'} />
-            </Group>
-        </UnstyledButton>
     );
 }
 

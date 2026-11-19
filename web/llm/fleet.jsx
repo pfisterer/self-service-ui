@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocalStorage } from '@mantine/hooks';
 import { Redirect } from 'wouter';
 import { Trans, useTranslation } from 'react-i18next';
 import { Alert, Anchor, Autocomplete, Badge, Button, Checkbox, Code, Container, Group, Paper, Stack, Table, Text, TextInput, Title, Tooltip } from '@mantine/core';
@@ -8,11 +9,13 @@ import { formatDateTime } from '/format-date.js';
 import { SubNavItem } from '/header.jsx';
 import { SUBNAV_HEIGHT } from '/nav.jsx';
 import { CodeBlock } from '/helper/codeblock.jsx';
+import { SortButton, validSort } from '/helper/sort-button.jsx';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { llmDownloadUrl, useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
+import { DEFAULT_FLEET_SORT, FLEET_SORT_KEYS, sortPeers } from '/llm/fleet-sort.js';
 
 // The API reports states as the German words the old portal showed. They are
 // mapped to translation keys here — one table per column, so a value the API
@@ -308,7 +311,23 @@ function Machines({ f }) {
     const { t } = useTranslation();
     const api = useLlmApi();
     const confirm = useConfirm();
-    const peers = f.peers ?? [];
+    // Remembered per browser, like the sort of the budget projects table; what the browser kept that no longer fits falls back to the name.
+    const [storedSort, setSort] = useLocalStorage({
+        key: 'self-service.llm-fleet.sort',
+        defaultValue: DEFAULT_FLEET_SORT,
+        getInitialValueInEffect: false,
+    });
+    const sort = validSort(storedSort, FLEET_SORT_KEYS, DEFAULT_FLEET_SORT);
+    const toggleSort = (key) => setSort(prev => {
+        const current = validSort(prev, FLEET_SORT_KEYS, DEFAULT_FLEET_SORT);
+        return current.key === key ? { key, order: current.order === 'asc' ? 'desc' : 'asc' } : { key, order: 'asc' };
+    });
+    const badgeLabel = (column, p) => {
+        const [table, value] = column === 'scripts' ? [SCRIPTS, p.script_state] : [STATE, p.state];
+        const [key] = table[value] ?? [null];
+        return key ? t(`llm.fleet.${column}.${key}`) : (value || '');
+    };
+    const peers = sortPeers(f.peers ?? [], sort, badgeLabel);
 
     const act = useApiMutation({
         mutationFn: ({ action, serial }) => ({
@@ -418,7 +437,11 @@ function Machines({ f }) {
                                     onChange={() => setChosen(chosen.length === controlled.length ? [] : controlled.map(p => p.serial))} />
                             </Table.Th>
                             {['name', 'address', 'profile', 'model', 'lastSeen', 'scripts', 'state', 'inference'].map(c => (
-                                <Table.Th key={c}>{t(`llm.fleet.col.${c}`)}</Table.Th>
+                                <Table.Th key={c}>
+                                    {FLEET_SORT_KEYS.includes(c)
+                                        ? <SortButton label={t(`llm.fleet.col.${c}`)} sortKey={c} sort={sort} onSort={toggleSort} />
+                                        : t(`llm.fleet.col.${c}`)}
+                                </Table.Th>
                             ))}
                             <Table.Th />
                         </Table.Tr>

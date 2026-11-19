@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import { renderView } from '/test/render-harness.jsx';
 
 // Does each LLM view render at all, with data in it? Same question and same
@@ -72,7 +72,10 @@ const { LlmFleet } = await import('/llm/fleet.jsx');
 const { ToolSetup } = await import('/llm/tool-setup.jsx');
 
 let consoleErrors = [];
+const store = new Map();
 beforeEach(() => {
+    store.clear();
+    vi.stubGlobal('localStorage', { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k), clear: () => store.clear() });
     globalThis.__llmApi = {
         getUsage: async () => USAGE,
         getFleet: async () => FLEET,
@@ -85,6 +88,7 @@ beforeEach(() => {
 afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
 });
 
 function expectNoRenderFailure() {
@@ -161,6 +165,59 @@ describe('the LLM views render', () => {
         expect(screen.getByText(/nur per Schlüssel erkannt|recognised by key only/)).toBeTruthy();
         // Its address is not handed out before the approval.
         expect(screen.queryByText('10.90.4.4')).toBeNull();
+        expectNoRenderFailure();
+    });
+
+    // The service lists machines by tunnel address, the ones waiting for approval (no address yet) first; the table orders them itself.
+    const SORT_FLEET = {
+        ...FLEET,
+        peers: [
+            { serial: 'P1', name: 'wimac10', state: 'wartet auf Freigabe', pending: true, profile: 'm4-16', model: 'qwen3:8b' },
+            { serial: 'A1', name: 'dmmac17-10', address: '10.90.4.20', profile: 'm4-16', model: 'qwen3:8b', state: 'aktiv' },
+            { serial: 'A2', name: 'Wimac2', address: '10.90.4.100', profile: 'm4-24', model: 'gemma3', state: 'aktiv' },
+            { serial: 'A3', name: 'dmmac17-2', address: '10.90.4.9', profile: 'm4-16', model: 'qwen3:14b', state: 'gesperrt', blocked: true },
+        ],
+    };
+    const machineOrder = () => screen.getAllByRole('row').slice(1).map(r => within(r).getAllByText(/mac/i)[0].textContent);
+    const header = (name) => screen.getByRole('button', { name: new RegExp(`^${name}`) });
+
+    it('Fleet lists the machines by name in natural order, not in the service\'s order', async () => {
+        globalThis.__llmApi.getFleet = async () => SORT_FLEET;
+        renderView(<LlmFleet params={{ page: 'machines' }} />);
+        await screen.findByText('wimac10');
+        expect(machineOrder()).toEqual(['dmmac17-2', 'dmmac17-10', 'Wimac2', 'wimac10']);
+        expect(header('Name').getAttribute('aria-sort')).toBe('ascending');
+        expectNoRenderFailure();
+    });
+
+    it('Fleet sorts by address numerically, machines without one last, and toggles the direction', async () => {
+        globalThis.__llmApi.getFleet = async () => SORT_FLEET;
+        renderView(<LlmFleet params={{ page: 'machines' }} />);
+        await screen.findByText('wimac10');
+        fireEvent.click(header('(Adresse|Address)'));
+        expect(machineOrder()).toEqual(['dmmac17-2', 'dmmac17-10', 'Wimac2', 'wimac10']);
+        fireEvent.click(header('(Adresse|Address)'));
+        expect(machineOrder()).toEqual(['Wimac2', 'dmmac17-10', 'dmmac17-2', 'wimac10']);
+        expect(header('(Adresse|Address)').getAttribute('aria-sort')).toBe('descending');
+        // Remembered for the next visit.
+        expect(JSON.parse(localStorage.getItem('self-service.llm-fleet.sort'))).toEqual({ key: 'address', order: 'desc' });
+        fireEvent.click(header('Name'));
+        expect(machineOrder()).toEqual(['dmmac17-2', 'dmmac17-10', 'Wimac2', 'wimac10']);
+        fireEvent.click(header('Name'));
+        expect(machineOrder()).toEqual(['wimac10', 'Wimac2', 'dmmac17-10', 'dmmac17-2']);
+        expectNoRenderFailure();
+    });
+
+    it('Fleet starts with the sort the browser kept and picks the same machines whatever the order', async () => {
+        globalThis.__llmApi.getFleet = async () => SORT_FLEET;
+        localStorage.setItem('self-service.llm-fleet.sort', JSON.stringify({ key: 'model', order: 'desc' }));
+        renderView(<LlmFleet params={{ page: 'machines' }} />);
+        await screen.findByText('wimac10');
+        expect(machineOrder()).toEqual(['dmmac17-2', 'dmmac17-10', 'wimac10', 'Wimac2']);
+        fireEvent.click(screen.getByRole('checkbox', { name: 'Wimac2' }));
+        fireEvent.click(header('Name'));
+        expect(screen.getByRole('checkbox', { name: 'Wimac2' }).checked).toBe(true);
+        expect(screen.getByRole('checkbox', { name: 'dmmac17-2' }).checked).toBe(false);
         expectNoRenderFailure();
     });
 
