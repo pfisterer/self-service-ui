@@ -326,7 +326,8 @@
             "all": "Select all",
             "hint": "Takes precedence over the class model (by memory); context and memory limit stay the class's. A model that does not exist or clearly exceeds the memory limit is refused. The machines pull the model at their next enrolment, within {{minutes}} minutes, try it once and then remove their other models; if that fails, the error shows at the machine and the old model stays. Externally managed machines cannot be chosen.",
             "override": "set",
-            "overrideTip": "Set by hand. The class model would be {{model}}."
+            "overrideTip": "Set by hand. The class model would be {{model}}.",
+            "strataHint": "Strata instead of Ollama: {{names}} replaces Ollama with Strata on Macs with 48 GB or more (Qwen3.8-Flash-Next, a download of about 58 GB, experts read from the SSD). The machine downloads and sets up, up to a few hours, and counts as busy meanwhile; then it serves only under chat-large with a low weight. “Back to the class model” or an Ollama model removes Strata and its data again."
         },
         "approve": "approve",
         "approveTip": "Admit the machine to the fleet. It gets its tunnel with its next hourly run.",

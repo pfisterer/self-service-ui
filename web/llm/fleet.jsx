@@ -329,8 +329,10 @@ function Machines({ f }) {
     const controlled = peers.filter(p => p.controls !== false);
     const toggle = (serial) => setChosen(c => c.includes(serial) ? c.filter(x => x !== serial) : [...c, serial]);
     const profileModel = (p) => (f.profiles ?? []).find(pr => pr.name === p.profile)?.model;
+    // strata_models: reserved names (strata:gyro-s) that run Strata instead of Ollama on a 48 GB Mac; offered even before any machine runs one.
     const suggestions = [...new Set([
         ...(f.profiles ?? []).map(pr => pr.model),
+        ...(f.strata_models ?? []),
         ...peers.flatMap(p => [p.model, ...(p.models ?? [])]),
     ].filter(Boolean))].sort();
 
@@ -400,6 +402,9 @@ function Machines({ f }) {
                         onClick={() => setMachineModel.mutate({ serials: chosen, model: '' })}>{t('llm.fleet.setModel.reset')}</Button>
                 </Group>
                 <Text size="xs" c="dimmed" mt={6}>{t('llm.fleet.setModel.hint', { minutes: Math.round((f.reenroll_seconds || 3600) / 60) })}</Text>
+                {(f.strata_models ?? []).length > 0 && (
+                    <Text size="xs" c="dimmed" mt={4}>{t('llm.fleet.setModel.strataHint', { names: f.strata_models.join(', ') })}</Text>
+                )}
             </Paper>
 
             <Table.ScrollContainer minWidth={1100} mt="md">

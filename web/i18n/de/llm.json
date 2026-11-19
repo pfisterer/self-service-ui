@@ -326,7 +326,8 @@
             "all": "Alle auswählen",
             "hint": "Gilt vor dem Modell der Klasse (nach Arbeitsspeicher); Kontext und Speichergrenze bleiben die der Klasse. Ein Modell, das es nicht gibt oder das grob nicht in die Speichergrenze passt, wird abgelehnt. Die Maschinen laden das Modell beim nächsten Abgleich, spätestens nach {{minutes}} Minuten, probieren es einmal aus und entfernen dann die übrigen Modelle; scheitert das, steht der Fehler bei der Maschine und das alte Modell bleibt. Fremdverwaltete Rechner sind nicht wählbar.",
             "override": "gesetzt",
-            "overrideTip": "Von Hand gesetzt. Das Modell der Klasse wäre {{model}}."
+            "overrideTip": "Von Hand gesetzt. Das Modell der Klasse wäre {{model}}.",
+            "strataHint": "Strata statt Ollama: {{names}} ersetzt auf Macs mit 48 GB oder mehr Ollama durch Strata (Qwen3.8-Flash-Next, gut 58 GB Download, Experten von der SSD). Die Maschine lädt und richtet ein, bis zu einigen Stunden, und gilt so lange als belegt; danach dient sie nur unter chat-large mit niedrigem Gewicht. „Zurück zum Klassenmodell“ oder ein Ollama-Modell entfernt Strata samt Daten wieder."
         },
         "approve": "freigeben",
         "approveTip": "Maschine in die Flotte aufnehmen. Den Tunnel bekommt sie mit ihrem nächsten stündlichen Lauf.",
