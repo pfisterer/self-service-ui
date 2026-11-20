@@ -497,7 +497,7 @@ function Machines({ f }) {
                                                     </Tooltip>
                                                 )}
                                             </Group>
-                                            {p.model_error && <Text size="xs" c="red" maw={320}>{p.model_error}</Text>}
+                                            {p.model_error && <Text size="xs" c={p.model_setup ? 'dimmed' : 'red'} maw={320}>{p.model_error}</Text>}
                                             {p.model_state === 'abweichend' && !p.model_error && (
                                                 <Tooltip multiline w={300} withArrow label={t('llm.fleet.differsTip', { model: p.model })}>
                                                     <Text size="xs" c="orange" ff="monospace">
