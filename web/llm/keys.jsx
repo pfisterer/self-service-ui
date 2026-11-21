@@ -13,7 +13,7 @@ import { useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { units } from '/llm/format.js';
-import { ToolSetup } from '/llm/tool-setup.jsx';
+import { ToolsButton } from '/llm/tool-setup.jsx';
 import { LlmPoolWarnings } from '/projects/component-llm-limits.jsx';
 
 // Names that contain at least one letter or digit, as the API requires.
@@ -179,11 +179,12 @@ export function LlmKeys() {
                         <Text size="sm" fw={600} mt="lg">{t('llm.keys.shellTitle')}</Text>
                         <Text size="xs" c="dimmed" mb={4}>{t('llm.keys.shellHint')}</Text>
                         <CodeBlock language="bash" code={env} />
-                        <ToolSetup apiUrl={apiUrl} apiKey={fresh ?? ''} />
                     </>
                 )}
 
                 <Group mt="lg" justify="flex-end">
+                    {/* The setup of the tools with the fresh key filled in; the key stays in this dialog's memory only. */}
+                    {fresh && <ToolsButton apiUrl={apiUrl} apiKey={fresh} variant="light" />}
                     <Button variant="default" onClick={() => setFresh(null)}>{t('llm.keys.close')}</Button>
                 </Group>
             </Modal>

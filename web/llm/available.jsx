@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Alert, Anchor, Badge, Code, Collapse, Container, Divider, Group, Modal, Paper, SimpleGrid, Stack, Table, Text, Title, Tooltip, Typography, UnstyledButton } from '@mantine/core';
+import { Alert, Anchor, Badge, Code, Collapse, Container, Group, Modal, Paper, SimpleGrid, Stack, Table, Text, Title, Tooltip, Typography, UnstyledButton } from '@mantine/core';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { ExternalLink } from '/helper/external-link.jsx';
 import { markdownToHtml } from '/helper/markdown.js';
@@ -9,10 +9,10 @@ import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { llmKeys } from '/llm/query-keys.js';
-import { ModelToolSetup } from '/llm/tool-setup.jsx';
+import { ToolsButton } from '/llm/tool-setup.jsx';
 import { contextLabel, healthState, summaryOf } from '/llm/usable-models.js';
 
-// The model names the person can use (llm-management-api getUsableModels): the base aliases and what their projects were granted, each with a short description, its context, how it is doing and the projects it comes through. A row opens the details: the short description, origin and licence, the longer description of each model behind it on request, and the setup of the tools on this name (the same as after a new key). Never a machine or site: the service names only device classes.
+// The model names the person can use (llm-management-api getUsableModels): the base aliases and what their projects were granted, each with a short description, its context, how it is doing and the projects it comes through. A row opens the details: the short description, origin and licence and the longer description of each model behind it on request. The button above opens the setup of the tools for all these names. Never a machine or site: the service names only device classes.
 
 const HEALTH_COLOR = { ok: 'teal', partial: 'yellow', down: 'red', none: 'gray', unknown: 'gray' };
 
@@ -87,8 +87,8 @@ function ModelDetails({ model, withOrigin }) {
     );
 }
 
-// The dialog of one usable name: a compact header (short description, origin, licence, context, state, projects), the longer description folded away, and below the setup of the tools on this name, made by the same code as after a new key.
-export function UsableNameModal({ entry, healthKnown, apiUrl, onClose }) {
+// The dialog of one usable name: a compact header (short description, origin, licence, context, state, projects) and the longer description folded away. The setup of the tools is one dialog for all names (ToolsButton above the table).
+export function UsableNameModal({ entry, healthKnown, onClose }) {
     const { t } = useTranslation();
     const [more, setMore] = useState(false);
     const context = contextLabel(entry.limits);
@@ -127,9 +127,6 @@ export function UsableNameModal({ entry, healthKnown, apiUrl, onClose }) {
                         </Collapse>
                     </div>
                 )}
-                <Divider />
-                <Text size="sm" fw={600}>{t('llm.tools.title')}</Text>
-                <ModelToolSetup apiUrl={apiUrl} entry={entry} />
             </Stack>
         </Modal>
     );
@@ -152,10 +149,13 @@ export function LlmAvailableModels() {
     return (
         <Container size="lg" py="md">
             <Stack gap="md">
-                <div>
-                    <Title order={2}>{t('llm.available.title')}</Title>
-                    <Text size="sm" c="dimmed" maw={780}>{t('llm.available.intro')}</Text>
-                </div>
+                <Group justify="space-between" align="flex-start" wrap="wrap">
+                    <div>
+                        <Title order={2}>{t('llm.available.title')}</Title>
+                        <Text size="sm" c="dimmed" maw={780}>{t('llm.available.intro')}</Text>
+                    </div>
+                    <ToolsButton apiUrl={me?.api_url} />
+                </Group>
                 <Alert color="blue" variant="light">{t('llm.available.stability')}</Alert>
                 <Paper withBorder radius="md" p="md">
                     <Table.ScrollContainer minWidth={720}>
@@ -187,7 +187,7 @@ export function LlmAvailableModels() {
                     <Text size="xs" c="dimmed" mt="xs">{t('llm.available.contextHint')}</Text>
                 </Paper>
             </Stack>
-            {selected && <UsableNameModal entry={selected} healthKnown={healthKnown} apiUrl={me?.api_url} onClose={() => setOpen(null)} />}
+            {selected && <UsableNameModal entry={selected} healthKnown={healthKnown} onClose={() => setOpen(null)} />}
         </Container>
     );
 }

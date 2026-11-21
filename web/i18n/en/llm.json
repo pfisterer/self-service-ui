@@ -26,9 +26,9 @@
         "scope": "Built in since VS Code 1.122, no GitHub account or Copilot subscription needed. Applies to chat and agent mode, not to inline completions.",
         "steps": {
             "palette": "Open the command palette (<2>⇧⌘P</2> or <3>Ctrl+Shift+P</3>) and choose <1>Chat: Manage Language Models</1>.",
-            "add": "<1>Add Models</1> → <1>Custom Endpoint</1>. Enter <2>DHBW</2> as the name, paste the API key from above, API type <1>Chat Completions</1>.",
+            "add": "<1>Add Models</1> → <1>Custom Endpoint</1>. Enter <2>DHBW</2> as the name, paste the API key, API type <1>Chat Completions</1>.",
             "json": "Click the gear next to <1>DHBW</1> — the file <2>chatLanguageModels.json</2> opens. In the “DHBW” entry, replace <3>\"models\": [ … ]</3> with the JSON below; keep the API key line. Save.",
-            "select": "Pick the model <1>DHBW Code</1> at the top of the chat window, <1>DHBW Agent</1> for agent mode with long tasks."
+            "select": "Pick the model <1>{{chat}}</1> at the top of the chat window, <1>{{agent}}</1> for agent mode with long tasks."
         },
         "keepIds": "Do not change the model names: <2>\"id\"</2> must be exactly one of {{ids}}. maxInputTokens is what every model behind the name takes; beyond it VS Code shortens the history itself.",
         "docs": "VS Code guide",
@@ -37,24 +37,19 @@
             "agent": "DHBW Agent",
             "chat": "DHBW Chat",
             "fast": "DHBW Fast"
-        },
-        "stepsModel": {
-            "add": "<1>Add Models</1> → <1>Custom Endpoint</1>. Enter <2>DHBW</2> as the name, paste your own API key, API type <1>Chat Completions</1>.",
-            "select": "Pick the model <1>{{name}}</1> at the top of the chat window."
         }
     },
     "tools": {
-        "title": "For coding tools",
-        "intro": "Ready-made settings with the new API key, to copy or download. Agents use the model agent (large context, tool calls); the context sizes come from the current model catalogue.",
+        "intro": "Ready-made settings with every usable model name, each with the context all its deployments take, to copy or download. Coding agents are set to <1>{{agent}}</1> (tool calls), the other tools to <1>{{chat}}</1>. Names without tool calls are listed but never preset.",
         "hint": {
-            "opencode": "Save as <1>{{path}}</1>; with an existing file, take over the entry “dhbw” under “provider”. Then start <1>opencode</1>; the model is dhbw/agent.",
-            "claude-code": "Save as <1>{{path}}</1>; with an existing file, take over the “env” block. No Anthropic sign-in is needed; telemetry and error reports to Anthropic are switched off.",
-            "codex": "Save as <1>{{path}}</1>. Codex reads the API key from the environment variable DHBW_API_KEY and speaks the Responses API only.",
-            "continue": "Save as <1>{{path}}</1> or take the two models over into the existing file.",
-            "kilo": "Save as <1>{{path}}</1>; with an existing file, take over the entry “dhbw” under “provider”. The VS Code extension and the command line <1>kilo</1> read the same file; the model is dhbw/agent.",
-            "zed": "Take the content over into <1>{{path}}</1> (command “zed: open settings”), existing settings stay. Zed does not read the API key from the file but from the environment variable DHBW_API_KEY or from the agent settings of the provider “dhbw”.",
-            "cline": "In Cline's settings, choose the API provider <1>OpenAI Compatible</1> and fill in the fields; Cline reads no configuration file.",
-            "roo": "In Roo Code's settings, choose the API provider <1>OpenAI Compatible</1> and fill in the fields; for another model, create a configuration profile of its own."
+            "opencode": "Save as <1>{{path}}</1>; with an existing file, take over the entry “dhbw” under “provider”. Then start <1>opencode</1>; the model is dhbw/{{agent}}, all other names are in the picker.",
+            "claude-code": "Save as <1>{{path}}</1>; with an existing file, take over the “env” block. Claude Code takes a single name here, {{agent}}, for all its model slots, since it calls tools in each of them and knows one context size only. No Anthropic sign-in is needed; telemetry and error reports to Anthropic are switched off.",
+            "codex": "Save as <1>{{path}}</1>. The model is {{agent}}; the other names with tool calls are profiles in the file (<1>codex --profile NAME</1>), names without tool calls are left out since Codex cannot use them. Codex reads the API key from the environment variable DHBW_API_KEY and speaks the Responses API only.",
+            "continue": "Save as <1>{{path}}</1> or take the models over into the existing file. The first, {{chat}}, is preset; the others are in the picker.",
+            "kilo": "Save as <1>{{path}}</1>; with an existing file, take over the entry “dhbw” under “provider”. The VS Code extension and the command line <1>kilo</1> read the same file; the model is dhbw/{{agent}}, all other names are in the picker.",
+            "zed": "Take the content over into <1>{{path}}</1> (command “zed: open settings”), existing settings stay. The agent is set to {{agent}}, all names are in the picker. Zed does not read the API key from the file but from the environment variable DHBW_API_KEY or from the agent settings of the provider “dhbw”.",
+            "cline": "In Cline's settings, choose the API provider <1>OpenAI Compatible</1> and fill in the fields; Cline reads no configuration file. A profile takes one model only, here {{agent}} for agent mode.",
+            "roo": "In Roo Code's settings, choose the API provider <1>OpenAI Compatible</1> and fill in the fields. A profile takes one model only, here {{agent}} for agent mode; for another name, create a configuration profile of its own."
         },
         "env": "Set the API key in the shell, e.g. in ~/.bashrc or ~/.zshrc:",
         "docs": "Project guide",
@@ -67,16 +62,14 @@
             "maxOutput": "Max Output Tokens"
         },
         "fieldsRest": "Under “Model Configuration”, leave Image Support and Computer Use off and the prices empty.",
-        "otherModels": "All models with their limits, e.g. for a further profile:",
+        "otherModels": "All usable names with their limits, e.g. for a further profile:",
         "copy": "Copy",
         "copied": "Copied",
-        "introModel": "Ready-made settings for <1>{{model}}</1> with the context every deployment of this name takes, to copy or download. Put your own API key in place of <1>{{key}}</1>; a new one is available under “API keys”.",
         "curlHint": "A call of the chat completions with the API key from the environment variable DHBW_API_KEY. OpenAI SDKs and other tools need the same base URL and the same model name.",
-        "hintModel": {
-            "opencode": "Save as <1>{{path}}</1>; with an existing file, take over the entry “dhbw” under “provider”. Then start <1>opencode</1>; the model is dhbw/{{model}}.",
-            "continue": "Save as <1>{{path}}</1> or take the model over into the existing file.",
-            "kilo": "Save as <1>{{path}}</1>; with an existing file, take over the entry “dhbw” under “provider”. The VS Code extension and the command line <1>kilo</1> read the same file; the model is dhbw/{{model}}."
-        }
+        "setup": "Set up tools",
+        "noToolCalls": "No name has tool calls confirmed in its description, so the agents' preset is unchecked.",
+        "withKey": "The new API key is filled in. It is stored nowhere and cannot be shown again after closing.",
+        "withPlaceholder": "Put your own API key in place of <1>{{key}}</1>; a new one is available under “API keys”."
     },
     "keys": {
         "title": "API keys",
@@ -417,7 +410,7 @@
     },
     "available": {
         "title": "Available models",
-        "intro": "The model names usable with one's projects: the shared aliases and what individual projects were granted on top. A click on a row shows a short description of the model and ready-made settings for the tools under this name.",
+        "intro": "The model names usable with one's projects: the shared aliases and what individual projects were granted on top. A click on a row shows the model's description, origin and licence; “Set up tools” gives ready-made settings for all these names.",
         "stability": "An alias such as chat-default stays; the model behind it may change. A model name stays the same as long as the model is offered; after that it is gone.",
         "name": "Name",
         "kind": "Kind",

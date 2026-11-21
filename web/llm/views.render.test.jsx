@@ -91,7 +91,7 @@ const { ModelDescriptionsAdmin } = await import('/llm/model-descriptions.jsx');
 const { LlmKeys } = await import('/llm/keys.jsx');
 const { LlmUsage } = await import('/llm/usage.jsx');
 const { LlmFleet } = await import('/llm/fleet.jsx');
-const { ToolSetup } = await import('/llm/tool-setup.jsx');
+const { ToolsDialog } = await import('/llm/tool-setup.jsx');
 
 let consoleErrors = [];
 const store = new Map();
@@ -145,26 +145,33 @@ describe('the LLM views render', () => {
         expectNoRenderFailure();
     });
 
-    it('The setup after a new key offers VS Code and the agents with the key filled in', async () => {
-        globalThis.__llmApi.getModelAliases = async () => ({ ...ALIASES, aliases: [...ALIASES.aliases, { alias: 'agent', models: [], limit: { max_input_tokens: 57344, max_output_tokens: 8192 } }] });
-        renderView(<ToolSetup apiUrl="https://api.example/v1" apiKey="sk-new" />);
-        for (const name of ['VS Code', 'OpenCode', 'Claude Code', 'Codex', 'Continue', 'Kilo Code', 'Zed', 'Cline', 'Roo Code']) expect(await screen.findByRole('tab', { name })).toBeTruthy();
-        // VS Code is open first, with the limits the service names for agent.
-        expect(await screen.findByText(/57344/)).toBeTruthy();
+    it('The tools dialog offers every tool with every usable name and the placeholder', async () => {
+        renderView(<ToolsDialog opened onClose={() => {}} apiUrl="https://api.example/v1" />);
+        const dialog = await screen.findByRole('dialog');
+        for (const name of ['VS Code', 'OpenCode', 'Claude Code', 'Codex', 'Continue', 'Kilo Code', 'Zed', 'Cline', 'Roo Code', 'curl']) expect(await within(dialog).findByRole('tab', { name })).toBeTruthy();
+        // VS Code is open first, with every usable name and its smallest limits.
+        const text = dialog.textContent.replace(/\s+/g, ' ');
+        for (const id of ['chat-default', 'chat-large', 'qwen3.8-flash-next-iq3_s']) expect(text).toContain(`"id": "${id}"`);
+        expect(text).toContain('"maxInputTokens": 24576');
+        fireEvent.click(within(dialog).getByRole('tab', { name: 'Cline' }));
+        expect((await within(dialog).findAllByText('$DHBW_API_KEY')).length).toBe(2);
+        expect(within(dialog).getByText('https://api.example/v1')).toBeTruthy();
         expectNoRenderFailure();
     });
 
-    it('The setup lists the fields for Cline, which reads no file', async () => {
-        renderView(<ToolSetup apiUrl="https://api.example/v1" apiKey="sk-new" />);
-        fireEvent.click(await screen.findByRole('tab', { name: 'Cline' }));
-        expect(await screen.findByText('sk-new')).toBeTruthy();
-        expect(screen.getByText('https://api.example/v1')).toBeTruthy();
+    it('The tools dialog fills in a key it is given', async () => {
+        renderView(<ToolsDialog opened onClose={() => {}} apiUrl="https://api.example/v1" apiKey="sk-new" />);
+        const dialog = await screen.findByRole('dialog');
+        fireEvent.click(await within(dialog).findByRole('tab', { name: 'Cline' }));
+        expect(await within(dialog).findByText('sk-new')).toBeTruthy();
+        expect(within(dialog).queryByText('$DHBW_API_KEY')).toBeNull();
         expectNoRenderFailure();
     });
 
     it('Available models lists the usable names with kind, context, state and project', async () => {
         renderView(<LlmAvailableModels />);
         expect(await screen.findByText('chat-large')).toBeTruthy();
+        expect(screen.getByRole('button', { name: /(Werkzeuge einrichten|Set up tools)/ })).toBeTruthy();
         expect(screen.getByText('24k–96k / 8k–32k')).toBeTruthy();
         expect(screen.getAllByText('KI-Labor')).toHaveLength(2);
         // The short description is the first paragraph, as plain text.
@@ -174,7 +181,7 @@ describe('the LLM views render', () => {
         expectNoRenderFailure();
     });
 
-    it('A row opens a compact header, the sanitised description on request and the tool setup for this name', async () => {
+    it('A row opens a compact header and the sanitised description on request, without the tools', async () => {
         renderView(<LlmAvailableModels />);
         fireEvent.click(await screen.findByRole('button', { name: 'chat-large' }));
         const dialog = await screen.findByRole('dialog');
@@ -193,17 +200,8 @@ describe('the LLM views render', () => {
         expect(html).not.toContain('<script');
         expect(html).not.toContain('onerror');
         expect(window.__pwned).toBeUndefined();
-        // The tools, made by the same code as after a new key, on this name with its smallest limits (24k + 8k) and the key as a placeholder.
-        for (const name of ['VS Code', 'OpenCode', 'Claude Code', 'Codex', 'Continue', 'Kilo Code', 'Zed', 'Cline', 'Roo Code', 'curl']) expect(within(dialog).getByRole('tab', { name })).toBeTruthy();
-        const vscode = dialog.textContent.replace(/\s+/g, ' ');
-        expect(vscode).toContain('"id": "chat-large"');
-        expect(vscode).toContain('"maxInputTokens": 24576');
-        fireEvent.click(within(dialog).getByRole('tab', { name: 'Cline' }));
-        // In the intro and in the field API Key.
-        expect((await within(dialog).findAllByText('$DHBW_API_KEY')).length).toBe(2);
-        expect(within(dialog).getByText('32768')).toBeTruthy();
-        fireEvent.click(within(dialog).getByRole('tab', { name: 'curl' }));
-        expect(await within(dialog).findByText(/chat\/completions/)).toBeTruthy();
+        // The setup of the tools is not in here.
+        expect(within(dialog).queryByRole('tab')).toBeNull();
         expectNoRenderFailure();
     });
 
@@ -219,6 +217,23 @@ describe('the LLM views render', () => {
     it('API keys lists the keys', async () => {
         renderView(<LlmKeys />);
         expect(await screen.findByText('vscode')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('A new key shows its secret once, without tool tabs, and hands it to the tools dialog', async () => {
+        globalThis.__llmApi.createKey = async () => ({ key: 'sk-fresh-123' });
+        renderView(<LlmKeys />);
+        fireEvent.change(await screen.findByPlaceholderText(/(Name \(Pflicht\)|Name \(required\))/), { target: { value: 'laptop' } });
+        fireEvent.click(screen.getByRole('button', { name: /(API Key erstellen|Create API key)/ }));
+        const dialog = await screen.findByRole('dialog');
+        expect(within(dialog).getAllByText(/sk-fresh-123/).length).toBeGreaterThan(0);
+        expect(within(dialog).queryByRole('tab')).toBeNull();
+        fireEvent.click(within(dialog).getByRole('button', { name: /(Werkzeuge einrichten|Set up tools)/ }));
+        const tools = await screen.findByRole('dialog', { name: /(Werkzeuge einrichten|Set up tools)/ });
+        fireEvent.click(await within(tools).findByRole('tab', { name: 'Cline' }));
+        expect(await within(tools).findByText('sk-fresh-123')).toBeTruthy();
+        expect(within(tools).queryByText('$DHBW_API_KEY')).toBeNull();
+        expect(JSON.stringify([...store.values()])).not.toContain('sk-fresh-123');
         expectNoRenderFailure();
     });
 

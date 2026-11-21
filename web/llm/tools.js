@@ -51,65 +51,67 @@ export function limitOf(limits, alias) {
     return limits?.[alias] ?? DEFAULT_LIMITS[alias] ?? DEFAULT_LIMIT;
 }
 
-// limitsOfUsable is limitsFrom for one usable name (getUsableModels): the smallest limits of its deployments are what every one of them takes.
-export function limitsOfUsable(entry) {
-    return limitsFrom({ aliases: [{ alias: entry?.name, limit: entry?.limits?.min }] });
-}
-
-// What the files hold in place of the key when none was just created (the list of available models): the variable the shell examples set.
+// What the files hold in place of the key when none was just created: the variable the shell examples set.
 export const KEY_PLACEHOLDER = '$DHBW_API_KEY';
 
 // The display name of a model in the tools: the stable aliases by their own names, anything else as a granted group (chat-large → DHBW Large).
-const DISPLAY_NAMES = { agent: 'DHBW Agent', code: 'DHBW Code', 'chat-fast': 'DHBW Schnell' };
-const displayName = (id) => DISPLAY_NAMES[id] ?? grantedName(id);
+const DISPLAY_NAMES = { agent: 'DHBW Agent', code: 'DHBW Code', 'chat-default': 'DHBW Chat', 'chat-fast': 'DHBW Schnell' };
+export const displayName = (id) => DISPLAY_NAMES[id] ?? grantedName(id);
 
-// The models a configuration names: main is what the agents use, small the one for titles and summaries, list every model a tool offers, and continue the models of Continue with their roles. aliasModels is the setup after a new key (the stable aliases and what was granted), oneModel the setup for a single usable name.
-export function aliasModels(granted = []) {
-    return {
-        main: 'agent',
-        small: 'chat-fast',
-        list: ['agent', 'code', 'chat-fast', ...granted],
-        continue: [['agent', ['chat']], ['code', ['chat', 'edit', 'apply']], ...granted.map(a => [a, ['chat']])],
-    };
+// toolCallsOf says whether a usable name takes tool calls: true when every model behind it is described with tool_calls true, false when one is described without, null when that is not known.
+export function toolCallsOf(entry) {
+    const models = entry?.models ?? [];
+    if (models.some(m => m.description?.tool_calls === false)) return false;
+    if (models.length > 0 && models.every(m => m.description?.tool_calls === true)) return true;
+    return null;
 }
 
-export function oneModel(name) {
-    return { main: name, small: name, list: [name], continue: [[name, ['chat', 'edit', 'apply']]] };
+// modelPlan turns the usable names (getUsableModels) into what the configurations name: list holds every name the person may use, in the service's order, limits each one's smallest limits (what all its deployments take), tools whether it takes tool calls. agent is the default of the coding agents, only ever a name known to take tool calls: agent, else the first alias with them, else the first name with them; when none is known, a name not known to lack them stands in (agentKnown false). chat is the default of the other tools (chat-default), small the one for titles and summaries (chat-fast if usable).
+export function modelPlan(usable) {
+    const names = usable?.names ?? [];
+    const list = names.map(n => n.name);
+    const tools = Object.fromEntries(names.map(n => [n.name, toolCallsOf(n)]));
+    const limits = limitsFrom({ aliases: names.map(n => ({ alias: n.name, limit: n.limits?.min })) });
+    const has = (id) => list.includes(id);
+    const chat = has('chat-default') ? 'chat-default' : (list[0] ?? 'chat-default');
+    const withTools = names.filter(n => tools[n.name] === true);
+    const unknown = names.filter(n => tools[n.name] === null);
+    const agent = (tools.agent === true && 'agent') || withTools.find(n => n.kind !== 'model')?.name || withTools[0]?.name
+        || (tools.agent === null && 'agent') || unknown.find(n => n.kind !== 'model')?.name || chat;
+    const small = has('chat-fast') && tools['chat-fast'] !== false ? 'chat-fast' : chat;
+    return { list: list.length ? list : [chat], limits, tools, agent, chat, small, agentKnown: tools[agent] === true };
 }
 
 // The API base without a trailing slash, e.g. https://api.llm.services.dhbw.cloud/v1; Anthropic clients want the root without /v1.
 const base = (apiUrl) => apiUrl.replace(/\/+$/, '');
 const root = (apiUrl) => base(apiUrl).replace(/\/v1$/, '');
 
-// Model entries for VS Code (Copilot Chat, provider "Custom Endpoint", file chatLanguageModels.json). The id is the LiteLLM alias — the most common mistake was the provider's name there ("Invalid model name"). maxInputTokens is what every machine behind the alias takes; VS Code then summarises the history itself. With `only`, the entry of that one name.
+// A name takes tool calls unless one of its models is described without them.
+const takesTools = (plan, id) => plan.tools?.[id] !== false;
+
+// Model entries for VS Code (Copilot Chat, provider "Custom Endpoint", file chatLanguageModels.json), one per usable name, chat-default first. The id is the LiteLLM name — the most common mistake was the provider's name there ("Invalid model name"). maxInputTokens is what every deployment behind the name takes; VS Code then summarises the history itself.
 const VSCODE_NAME_KEYS = { code: 'code', agent: 'agent', 'chat-default': 'chat', 'chat-fast': 'fast' };
 export const vscodeName = (names, id) => (VSCODE_NAME_KEYS[id] ? names[VSCODE_NAME_KEYS[id]] : grantedName(id));
-export function vscodeModels(apiUrl, names, limits, granted = [], only) {
+export function vscodeModels(apiUrl, names, plan) {
     const url = `${base(apiUrl)}/chat/completions`;
-    const m = (id, name) => {
-        const l = limitOf(limits, id);
-        return { id, name, url, toolCalling: true, vision: false, maxInputTokens: l.input, maxOutputTokens: l.output };
+    const m = (id) => {
+        const l = limitOf(plan.limits, id);
+        return { id, name: vscodeName(names, id), url, toolCalling: takesTools(plan, id), vision: false, maxInputTokens: l.input, maxOutputTokens: l.output };
     };
-    if (only) return JSON.stringify({ models: [m(only, vscodeName(names, only))] }, null, 2).slice(2, -2).replace(/^ {2}/gm, '');
-    return JSON.stringify({
-        models: [
-            m('code', names.code),
-            m('agent', names.agent),
-            m('chat-default', names.chat),
-            m('chat-fast', names.fast),
-            ...granted.map(a => m(a, grantedName(a))),
-        ],
-    }, null, 2).slice(2, -2).replace(/^ {2}/gm, '');
+    return JSON.stringify({ models: [plan.chat, ...plan.list.filter(id => id !== plan.chat)].map(m) }, null, 2).slice(2, -2).replace(/^ {2}/gm, '');
 }
 
-// Ready-made configuration for the agents, with the key filled in: files for OpenCode, Claude Code, Codex, Continue, Kilo Code and Zed, each naming its file and the place it belongs (the code is what goes into it); for Cline and Roo Code, which read no file, the fields to fill in and the models with their limits. `models` says which names they use (aliasModels or oneModel); with KEY_PLACEHOLDER as key, the shell line for Codex and Zed asks for the key instead.
-export function toolConfigs(apiUrl, key, limits, granted = [], models = aliasModels(granted)) {
-    const main = limitOf(limits, models.main);
+// Ready-made configuration for the agents, with the key filled in: files for OpenCode, Claude Code, Codex, Continue, Kilo Code and Zed, each naming its file and the place it belongs (the code is what goes into it); for Cline and Roo Code, which read no file, the fields to fill in and every name with its limits. `plan` comes from modelPlan: every name a tool can hold, the agents on plan.agent, the others on plan.chat. With KEY_PLACEHOLDER as key, the shell line for Codex and Zed asks for the key instead.
+export function toolConfigs(apiUrl, key, plan) {
+    const main = limitOf(plan.limits, plan.agent);
     const envKey = key === KEY_PLACEHOLDER ? 'sk-…' : key;
+    const withTools = plan.list.filter(id => plan.tools?.[id] === true && id !== plan.agent);
 
     // OpenCode: provider "dhbw" through @ai-sdk/openai-compatible; limit.context is prompt plus answer, OpenCode compacts before it. Sharing a session would upload it to opencode.ai, so it is off.
-    const ocModel = (name, l) => ({ name, tool_call: true, limit: { context: l.input + l.output, output: l.output } });
-    const ocModels = () => Object.fromEntries(models.list.map(id => [id, ocModel(displayName(id), limitOf(limits, id))]));
+    const ocModels = () => Object.fromEntries(plan.list.map(id => {
+        const l = limitOf(plan.limits, id);
+        return [id, { name: displayName(id), tool_call: takesTools(plan, id), limit: { context: l.input + l.output, output: l.output } }];
+    }));
     const opencode = JSON.stringify({
         $schema: 'https://opencode.ai/config.json',
         provider: {
@@ -120,21 +122,21 @@ export function toolConfigs(apiUrl, key, limits, granted = [], models = aliasMod
                 models: ocModels(),
             },
         },
-        model: `dhbw/${models.main}`,
-        small_model: `dhbw/${models.small}`,
+        model: `dhbw/${plan.agent}`,
+        small_model: `dhbw/${plan.small}`,
         share: 'disabled',
     }, null, 2);
 
-    // Claude Code: the gateway speaks Anthropic's Messages API at its root. Every model slot names one of our aliases; without CLAUDE_CODE_MAX_CONTEXT_TOKENS it assumes 200k for an unknown name and compacts far too late. CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC keeps telemetry and error reports from going to Anthropic.
+    // Claude Code: the gateway speaks Anthropic's Messages API at its root. Every model slot names the agents' default, since Claude Code calls tools in each of them and keeps a single context setting; without CLAUDE_CODE_MAX_CONTEXT_TOKENS it assumes 200k for an unknown name and compacts far too late. CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC keeps telemetry and error reports from going to Anthropic.
     const claude = JSON.stringify({
         env: {
             ANTHROPIC_BASE_URL: root(apiUrl),
             ANTHROPIC_AUTH_TOKEN: key,
-            ANTHROPIC_MODEL: models.main,
-            ANTHROPIC_DEFAULT_OPUS_MODEL: models.main,
-            ANTHROPIC_DEFAULT_SONNET_MODEL: models.main,
-            ANTHROPIC_DEFAULT_HAIKU_MODEL: models.small,
-            CLAUDE_CODE_SUBAGENT_MODEL: models.main,
+            ANTHROPIC_MODEL: plan.agent,
+            ANTHROPIC_DEFAULT_OPUS_MODEL: plan.agent,
+            ANTHROPIC_DEFAULT_SONNET_MODEL: plan.agent,
+            ANTHROPIC_DEFAULT_HAIKU_MODEL: plan.agent,
+            CLAUDE_CODE_SUBAGENT_MODEL: plan.agent,
             CLAUDE_CODE_MAX_CONTEXT_TOKENS: String(main.input + main.output),
             CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(main.output),
             CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
@@ -142,9 +144,13 @@ export function toolConfigs(apiUrl, key, limits, granted = [], models = aliasMod
         },
     }, null, 2);
 
-    // Codex: only the Responses API (wire_api), the key from the environment variable DHBW_API_KEY; auto-compaction below the context of `agent`.
+    // Codex: only the Responses API (wire_api), the key from the environment variable DHBW_API_KEY; auto-compaction below the context of the default. Codex names one model per file; the other names with tool calls become profiles (codex --profile NAME), each with its own context.
+    const codexProfile = (id) => {
+        const l = limitOf(plan.limits, id);
+        return ['', `[profiles."${id}"]`, `model = "${id}"`, 'model_provider = "dhbw"', `model_context_window = ${l.input + l.output}`, `model_auto_compact_token_limit = ${l.input}`];
+    };
     const codex = [
-        `model = "${models.main}"`,
+        `model = "${plan.agent}"`,
         'model_provider = "dhbw"',
         `model_context_window = ${main.input + main.output}`,
         `model_auto_compact_token_limit = ${main.input}`,
@@ -154,18 +160,19 @@ export function toolConfigs(apiUrl, key, limits, granted = [], models = aliasMod
         `base_url = "${base(apiUrl)}"`,
         'env_key = "DHBW_API_KEY"',
         'wire_api = "responses"',
+        ...withTools.flatMap(codexProfile),
         '',
     ].join('\n');
 
-    // Continue (config.yaml): agent for chat and agent mode, code for edits; contextLength is prompt plus answer.
-    const cModel = (name, model, l, roles) => [
+    // Continue (config.yaml): every name, chat-default first, which Continue takes as the default for chat, edits and agent mode; tool_use only where the name takes tool calls. contextLength is prompt plus answer.
+    const cModel = (name, model, l, tools) => [
         `  - name: ${name}`,
         '    provider: openai',
         `    model: ${model}`,
         `    apiBase: ${base(apiUrl)}`,
         `    apiKey: ${key}`,
-        `    roles: [${roles.join(', ')}]`,
-        '    capabilities: [tool_use]',
+        '    roles: [chat, edit, apply]',
+        ...(tools ? ['    capabilities: [tool_use]'] : []),
         '    defaultCompletionOptions:',
         `      contextLength: ${l.input + l.output}`,
         `      maxTokens: ${l.output}`,
@@ -175,7 +182,7 @@ export function toolConfigs(apiUrl, key, limits, granted = [], models = aliasMod
         'version: 1.0.0',
         'schema: v1',
         'models:',
-        ...models.continue.flatMap(([id, roles]) => cModel(displayName(id), id, limitOf(limits, id), roles)),
+        ...[plan.chat, ...plan.list.filter(id => id !== plan.chat)].flatMap(id => cModel(displayName(id), id, limitOf(plan.limits, id), takesTools(plan, id))),
         '',
     ].join('\n');
 
@@ -190,41 +197,44 @@ export function toolConfigs(apiUrl, key, limits, granted = [], models = aliasMod
                 models: ocModels(),
             },
         },
-        model: `dhbw/${models.main}`,
-        small_model: `dhbw/${models.small}`,
+        model: `dhbw/${plan.agent}`,
+        small_model: `dhbw/${plan.small}`,
     }, null, 2);
 
     // Zed: an OpenAI-compatible provider "dhbw" in settings.json; Zed takes the key from the variable DHBW_API_KEY it derives from the provider's name (or from its agent settings) and never from the file. max_tokens is the whole context, prompt plus answer.
-    const zModel = (name, display, l) => ({
-        name, display_name: display, max_tokens: l.input + l.output, max_output_tokens: l.output,
-        capabilities: { tools: true, images: false, parallel_tool_calls: false, prompt_cache_key: false },
-    });
+    const zModel = (id) => {
+        const l = limitOf(plan.limits, id);
+        return {
+            name: id, display_name: displayName(id), max_tokens: l.input + l.output, max_output_tokens: l.output,
+            capabilities: { tools: takesTools(plan, id), images: false, parallel_tool_calls: false, prompt_cache_key: false },
+        };
+    };
     const zed = JSON.stringify({
         language_models: {
             openai_compatible: {
                 dhbw: {
                     api_url: base(apiUrl),
-                    available_models: models.list.map(id => zModel(id, displayName(id), limitOf(limits, id))),
+                    available_models: plan.list.map(zModel),
                 },
             },
         },
         agent: {
-            default_model: { provider: 'dhbw', model: models.main },
-            thread_summary_model: { provider: 'dhbw', model: models.small },
-            commit_message_model: { provider: 'dhbw', model: models.small },
+            default_model: { provider: 'dhbw', model: plan.agent },
+            thread_summary_model: { provider: 'dhbw', model: plan.small },
+            commit_message_model: { provider: 'dhbw', model: plan.small },
         },
     }, null, 2);
 
-    // Cline and Roo Code keep their providers in the extension's own storage and import no file: the fields of the provider "OpenAI Compatible" to fill in, for agent, and the other models with their limits for further profiles.
+    // Cline and Roo Code keep their providers in the extension's own storage and import no file: the fields of the provider "OpenAI Compatible" to fill in, for the agents' default (the agent mode), and every name with its limits for further profiles.
     const fields = [
         { key: 'baseUrl', value: base(apiUrl) },
         { key: 'apiKey', value: key },
-        { key: 'modelId', value: models.main },
+        { key: 'modelId', value: plan.agent },
         { key: 'contextWindow', value: String(main.input + main.output) },
         { key: 'maxOutput', value: String(main.output) },
     ];
-    const rows = models.list.map(id => {
-        const l = limitOf(limits, id);
+    const rows = plan.list.map(id => {
+        const l = limitOf(plan.limits, id);
         return { id, context: l.input + l.output, output: l.output };
     });
 
