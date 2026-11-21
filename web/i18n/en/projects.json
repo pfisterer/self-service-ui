@@ -964,6 +964,21 @@
             "short": "chat-large",
             "hint": "the largest model (Strata on the GB10): slower, few requests at a time, three times the tokens of chat-default"
         },
+        "llm-model-flash-next": {
+            "name": "LLM: Qwen3.8-Flash-Next (Macs)",
+            "short": "Qwen3.8-Flash-Next (Macs)",
+            "hint": "the large model on the Mac fleet, 32k context, three times the tokens of chat-default"
+        },
+        "llm-model-flash-next-long-context": {
+            "name": "LLM: Qwen3.8-Flash-Next long context (GB10)",
+            "short": "Qwen3.8-Flash-Next 128k (GB10)",
+            "hint": "the same model with 128k context on the GB10 for long documents, few requests at a time, plus the Mac variant for short requests; three times the tokens of chat-default"
+        },
+        "llm-model-gemma-4-31b": {
+            "name": "LLM: Gemma 4 31B (GPU)",
+            "short": "Gemma 4 31B",
+            "hint": "Google's Gemma 4 31B with 128k context on a GPU, test operation"
+        },
         "ws-profile-cpu": {
             "name": "Workspace type: CPU",
             "short": "Type: CPU",
