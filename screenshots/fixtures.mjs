@@ -75,6 +75,32 @@ export const README_CLOUD = {
     'projects GET /v1/nodes/b_lab': B_LAB,
 };
 
+// The model names one can use (Available models): the shared aliases, a group and a model name granted to the research project, with descriptions as admins write them. Device classes only, no machine.
+const lim = (i, o) => ({ max_input_tokens: i, max_output_tokens: o });
+const one = (i, o) => ({ min: lim(i, o), max: lim(i, o) });
+const QWEN_CODING = { model: 'qwen3.6:35b-a3b-coding-nvfp4', summary: 'Qwen3.6 35B-A3B für Code und Chat, 4-Bit für Apple Silicon.', description: 'Mixture-of-Experts-Modell von Qwen mit 35 Milliarden Parametern, davon 3 Milliarden aktiv je Token. Für Programmieraufgaben trainiert, gut auch für allgemeinen Chat.\n\n- schnelle Antworten auch auf einem Mac\n- Tool-Aufrufe für Agenten', source_url: 'https://huggingface.co/Qwen/Qwen3.6-35B-A3B', license: 'Apache-2.0', parameters: '35B (3B aktiv)', quantisation: 'NVFP4', tool_calls: true, reasoning: false };
+const QWEN_LARGE = { model: 'qwen3.8-flash-next-iq3_s', summary: '', description: 'Großes Mixture-of-Experts-Modell für anspruchsvolle Aufgaben mit langem Kontext.\n\nLäuft auf den GB10 mit Strata; bei Last nehmen Macs mit einer kleineren Variante die Anfragen an.', source_url: 'https://huggingface.co/Qwen', license: 'Apache-2.0', parameters: '80B (3B aktiv)', quantisation: 'IQ3_S', tool_calls: true, reasoning: true };
+const USABLE_MODELS = {
+    health_known: true,
+    names: [
+        { name: 'chat-default', kind: 'alias', base: true, projects: [], deployments: 28, healthy: 27, limits: one(24576, 8192),
+          models: [{ model: QWEN_CODING.model, deployments: 28, healthy: 27, description: QWEN_CODING, devices: [{ device: 'mac', engine: 'ollama', limits: one(24576, 8192), deployments: 28, healthy: 27 }] }] },
+        { name: 'chat-fast', kind: 'alias', base: true, projects: [], deployments: 0, healthy: 0, limits: one(0, 0), models: [] },
+        { name: 'code', kind: 'alias', base: true, projects: [], deployments: 28, healthy: 27, limits: one(24576, 8192),
+          models: [{ model: QWEN_CODING.model, deployments: 28, healthy: 27, description: QWEN_CODING, devices: [{ device: 'mac', engine: 'ollama', limits: one(24576, 8192), deployments: 28, healthy: 27 }] }] },
+        { name: 'agent', kind: 'alias', base: true, projects: [], deployments: 1, healthy: 1, limits: one(98304, 32768),
+          models: [{ model: 'Qwen/Qwen3.6-35B-A3B-FP8', deployments: 1, healthy: 1, description: null, devices: [{ device: 'gpu', engine: 'vllm', limits: one(98304, 32768), deployments: 1, healthy: 1 }] }] },
+        { name: 'embedding', kind: 'alias', base: true, projects: [], deployments: 0, healthy: 0, limits: one(0, 0), models: [] },
+        { name: 'chat-large', kind: 'alias', base: false, projects: [{ slug: 'bildanalyse', name: 'Bildanalyse' }], deployments: 27, healthy: 26, limits: { min: lim(24576, 8192), max: lim(98304, 32768) },
+          models: [
+              { model: QWEN_LARGE.model, deployments: 2, healthy: 2, description: QWEN_LARGE, devices: [{ device: 'gb10', engine: 'strata', limits: one(98304, 32768), deployments: 2, healthy: 2 }] },
+              { model: 'qwen3.8-flash-next-gyro-gyro-s', deployments: 25, healthy: 24, description: null, devices: [{ device: 'mac', engine: 'strata', limits: one(24576, 8192), deployments: 25, healthy: 24 }] },
+          ] },
+        { name: 'qwen3.8-flash-next-iq3_s', kind: 'model', base: false, projects: [{ slug: 'bildanalyse', name: 'Bildanalyse' }], deployments: 2, healthy: 2, limits: one(98304, 32768),
+          models: [{ model: QWEN_LARGE.model, deployments: 2, healthy: 2, description: QWEN_LARGE, devices: [{ device: 'gb10', engine: 'strata', limits: one(98304, 32768), deployments: 2, healthy: 2 }] }] },
+    ],
+};
+
 const at = (h) => new Date(Date.UTC(2026, 10, 10, h, 0)).toISOString();
 
 const DEFAULTS = {
@@ -97,6 +123,7 @@ const DEFAULTS = {
         own_keys: 1, max_keys: 5,
     },
     'llm GET /v1/keys': page([]),
+    'llm GET /v1/models/usable': USABLE_MODELS,
     'llm GET /v1/workspaces/projects/ml-grundlagen-wi24/credentials': page([]),
     'projects GET /v1/config': { resources: RESOURCES, providers: ['aiaas'], roles: ['member'], provisioningEnabled: true, retirement: { delete: 'after-grace', deleteGraceDays: 30, aiaasDeleteGraceDays: 30, chargeReleased: true } },
     'projects GET /config.json': {},

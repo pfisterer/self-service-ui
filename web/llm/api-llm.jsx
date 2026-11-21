@@ -10,6 +10,13 @@ import {
     putCatalogModel, putTierModel, setDefaultProject, setFleetModel, unblockMachine,
 } from '@dhbw-cloud/llm-client';
 
+// The model names a person can use and the admins' descriptions of the served models (llm-management-api getUsableModels, getModelDescriptions, putModelDescription, deleteModelDescription), written the way the generated client writes its operations, because the client this UI takes from npm predates them (as gpu/api-gpu.jsx does for joinWorkspaceGroup); once a client with them is taken, the named imports replace these.
+const SECURITY = [{ name: 'Authorization', type: 'apiKey' }];
+const getUsableModels = (options) => options.client.get({ security: SECURITY, url: '/v1/models/usable', ...options });
+const getModelDescriptions = (options) => options.client.get({ security: SECURITY, url: '/v1/models/descriptions', ...options });
+const putModelDescription = (options) => options.client.put({ security: SECURITY, url: '/v1/models/descriptions', ...options });
+const deleteModelDescription = (options) => options.client.delete({ security: SECURITY, url: '/v1/models/descriptions', ...options });
+
 // useLlmApi is the one place that knows the transport of the LLM section.
 // Every call returns clean data or throws an Error carrying the server's
 // message (and its status, so useApiMutation can recognise a 409).
@@ -43,6 +50,12 @@ export function useLlmApi() {
             deleteApiToken: (id) => call(deleteApiToken, { path: { id } }),
             // Which models currently stand behind each alias, with counts and health.
             getModelAliases: () => call(getModelAliases),
+            // Every name the person can use, with the models behind it, their descriptions and their configuration per device class.
+            getUsableModels: () => call(getUsableModels),
+            // Admins: the descriptions of the served models; every change answers with all of them and the names served right now.
+            getModelDescriptions: () => call(getModelDescriptions),
+            saveModelDescription: (d) => call(putModelDescription, { body: d, headers: JSON_HEADERS }),
+            deleteModelDescription: (model) => call(deleteModelDescription, { query: { model } }),
 
             getFleet: () => call(getFleet),
             getFleetInference: () => call(getFleetInference),

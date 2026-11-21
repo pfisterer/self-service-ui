@@ -16,6 +16,7 @@
         "pendingDot": "Anfragen warten auf eine Entscheidung",
         "llm": "LLM",
         "llmOverview": "Übersicht",
+        "llmAvailable": "Verfügbare Modelle",
         "llmKeys": "API Keys",
         "llmUsage": "Verbrauch",
         "llmFleet": "Flotte",

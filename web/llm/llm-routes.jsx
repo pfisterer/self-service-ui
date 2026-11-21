@@ -12,6 +12,8 @@ import { AreaProjects } from '/projects/projects.jsx';
 import { ApiTokens } from '/tokens/api-tokens.jsx';
 
 const LlmFleet = lazy(() => import('/llm/fleet.jsx').then(m => ({ default: m.LlmFleet })));
+// Lazy as well: it brings the Markdown renderer and its sanitiser.
+const LlmAvailableModels = lazy(() => import('/llm/available.jsx').then(m => ({ default: m.LlmAvailableModels })));
 const LlmModels = lazy(() => import('/llm/models.jsx').then(m => ({ default: m.LlmModels })));
 const LlmApiSwagger = lazy(() => import('/swagger/swagger.jsx').then(m => ({ default: m.LlmApiSwagger })));
 
@@ -46,6 +48,7 @@ export function LlmManagement() {
                 {projects}
                 {tokens}
                 <Route path="/overview" component={LlmOverview} />
+                <Route path="/available" component={LlmAvailableModels} />
                 <Route path="/keys" component={LlmKeys} />
                 <Route path="/usage" component={LlmUsage} />
                 {isFleetAdmin && <Route path="/fleet/:page?" component={LlmFleet} />}

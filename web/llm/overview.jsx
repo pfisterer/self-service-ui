@@ -1,7 +1,7 @@
 import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { Trans, useTranslation } from 'react-i18next';
-import { ActionIcon, Button, Code, Container, CopyButton, Group, Paper, Stack, Text, Title, Tooltip } from '@mantine/core';
+import { ActionIcon, Anchor, Button, Code, Container, CopyButton, Group, Paper, Stack, Text, Title, Tooltip } from '@mantine/core';
 import { ArrowRight, Check, Copy, MessageSquare, ShieldCheck } from 'lucide-react';
 import { ExternalLink } from '/helper/external-link.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
@@ -105,6 +105,7 @@ export function LlmOverview() {
                                 <Text size="xs" c="dimmed" mt={4} maw={780}>
                                     <Trans i18nKey="llm.overview.modelsHint" components={{ 1: <Code fz="xs" /> }} />
                                 </Text>
+                                <Anchor component={Link} to="/available" size="xs">{t('llm.overview.modelDetails')}</Anchor>
                             </div>
                         </Group>
                         <Group gap="xs" wrap="nowrap" align="flex-start">

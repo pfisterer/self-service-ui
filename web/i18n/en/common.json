@@ -16,6 +16,7 @@
         "pendingDot": "Requests are waiting for your decision",
         "llm": "LLM",
         "llmOverview": "Overview",
+        "llmAvailable": "Available models",
         "llmKeys": "API keys",
         "llmUsage": "Usage",
         "llmFleet": "Fleet",

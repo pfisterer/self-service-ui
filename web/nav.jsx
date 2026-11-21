@@ -83,6 +83,7 @@ export function useNav() {
             base: '/llm',
             items: [
                 { label: t('nav.llmOverview'), href: '/llm/overview' },
+                { label: t('nav.llmAvailable'), href: '/llm/available' },
                 cloudProjectsEnabled && { label: t('nav.projects'), href: '/llm/projects' },
                 { label: t('nav.llmKeys'), href: '/llm/keys' },
                 { label: t('nav.llmUsage'), href: '/llm/usage' },

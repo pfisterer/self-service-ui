@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
+import { ModelDescriptionsAdmin } from '/llm/model-descriptions.jsx';
 
 // For admins: the models the platform runs itself on its GPUs (llm-management-api, /v1/inference; docs/bauplan.md 10.16). The inference gap fillers of the GPU nodes run them: each tier's default, or the model chosen at a node (Workspaces → GPUs), with vLLM or, for large MoE models on little GPU memory (the GB10), Strata. The state comes from the replicas' pods, so arguments that do not fit the GPU (context length, memory share) show up here as restarts.
 
@@ -92,7 +93,8 @@ export function LlmModels() {
     const tier = useMutation({ mutationFn: ({ tier: tr, model }) => api.setTierModel(tr, model), onSuccess: done, onError: fail });
 
     if (query.isPending) return <Container size="lg" py="md"><Loading /></Container>;
-    if (query.isError) return <Container size="lg" py="md"><LoadError query={query} /></Container>;
+    // The descriptions do not depend on the GPU catalogue: they cover the Mac fleet's models too.
+    if (query.isError) return <Container size="lg" py="md"><Stack gap="md"><LoadError query={query} /><ModelDescriptionsAdmin /></Stack></Container>;
     const { models = [], tier_models: tierModels = {}, tiers = [], states = {}, enabled } = query.data ?? {};
     const used = new Set(Object.values(tierModels));
 
@@ -162,6 +164,8 @@ export function LlmModels() {
                         </Table>
                     </Stack>
                 </Paper>
+
+                <ModelDescriptionsAdmin />
             </Stack>
             {editing && <ModelForm initial={editing} saving={save.isPending} error={error} onClose={() => setEditing(null)} onSave={(m) => save.mutate(m)} />}
         </Container>

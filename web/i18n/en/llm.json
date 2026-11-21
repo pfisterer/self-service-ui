@@ -18,7 +18,8 @@
         "aliasModel": "{{model}} — deployed {{count}}×, {{healthy}} available",
         "aliasModelNoHealth": "{{model}} — deployed {{count}}×",
         "tools": "Tools",
-        "ownCode": "<1>your own code</1>"
+        "ownCode": "<1>your own code</1>",
+        "modelDetails": "Description and configuration of the models"
     },
     "vscode": {
         "tab": "VS Code",
@@ -402,5 +403,85 @@
         "categoryHint": "what it is for; measured later",
         "measured": "measured",
         "stated": "stated, not measured yet"
+    },
+    "available": {
+        "title": "Available models",
+        "intro": "The model names usable with one's own projects: the shared aliases and what individual projects are granted on top. Clicking a row shows the model's description, origin and configuration and an example call.",
+        "stability": "An alias such as chat-default stays; the model behind it may change. A model name stays the same as long as the model is offered; after that it is gone.",
+        "name": "Name",
+        "kind": "Kind",
+        "description": "Description",
+        "context": "Context",
+        "contextHint": "Context: longest prompt / longest answer in tokens that every deployment takes; with a range, some deployments take more.",
+        "state": "State",
+        "project": "Project",
+        "allProjects": "all projects",
+        "noSummary": "no description yet",
+        "kinds": {
+            "alias": "Alias",
+            "model": "Model"
+        },
+        "kindHintAlias": "Alias: the name stays, the model behind it may change.",
+        "kindHintModel": "Model name: fixed as long as the model is offered.",
+        "health": {
+            "ok": "reachable",
+            "partial": "{{healthy}} of {{count}} reachable",
+            "down": "not reachable",
+            "none": "not deployed at the moment",
+            "unknown": "deployed {{count}}×"
+        },
+        "severalModels_one": "{{count}} model currently stands behind this alias.",
+        "severalModels_other": "{{count}} models currently stand behind this alias; which one answers depends on load and reachability.",
+        "noModels": "No device serves this model at the moment.",
+        "noDescription": "There is no description for this model yet.",
+        "facts": {
+            "source": "Origin",
+            "sourceLink": "Model page",
+            "license": "Licence",
+            "parameters": "Parameters",
+            "quantisation": "Quantisation",
+            "toolCalls": "Tool calls",
+            "reasoning": "Reasoning mode"
+        },
+        "yes": "yes",
+        "no": "no",
+        "unknown": "unknown",
+        "device": "Device class",
+        "engine": "Engine",
+        "deployments": "Deployments",
+        "deployed": "{{healthy}} of {{count}} reachable",
+        "deployedNoHealth": "{{count}}",
+        "devices": {
+            "gpu": "GPU server",
+            "gb10": "GB10",
+            "mac": "Mac fleet",
+            "other": "Other server"
+        },
+        "engines": {
+            "vllm": "vLLM",
+            "strata": "Strata",
+            "ollama": "Ollama"
+        },
+        "example": "Example call"
+    },
+    "descriptions": {
+        "title": "Model descriptions",
+        "intro": "Per served model name (GPU catalogue and Mac fleet) a description in Markdown, origin, licence and a few facts. Everybody who can use the model sees it under “Available models”. Served models without a description are marked.",
+        "add": "Add description",
+        "edit": "Change description of {{model}}",
+        "model": "Model name",
+        "modelHint": "as the deployments report it, e.g. Qwen/Qwen3.6-35B-A3B-FP8 or qwen3.6:35b-a3b-coding-nvfp4",
+        "summary": "Summary",
+        "summaryHint": "one sentence for the list; empty = the first paragraph of the description",
+        "text": "Description",
+        "textHint": "Markdown; links open in a new tab, images and HTML are not shown.",
+        "write": "Write",
+        "preview": "Preview",
+        "empty": "No description.",
+        "source": "Origin (URL)",
+        "state": "State",
+        "missing": "no description",
+        "notServed": "not deployed at the moment",
+        "described": "described"
     }
 }

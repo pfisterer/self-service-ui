@@ -18,7 +18,8 @@
         "aliasModel": "{{model}} — {{count}}× bereitgestellt, {{healthy}} erreichbar",
         "aliasModelNoHealth": "{{model}} — {{count}}× bereitgestellt",
         "tools": "Werkzeuge",
-        "ownCode": "<1>eigener Code</1>"
+        "ownCode": "<1>eigener Code</1>",
+        "modelDetails": "Beschreibung und Konfiguration der Modelle"
     },
     "vscode": {
         "tab": "VS Code",
@@ -402,5 +403,85 @@
         "categoryHint": "wofür es gedacht ist; gemessen wird später",
         "measured": "gemessen",
         "stated": "angegeben, noch nicht gemessen"
+    },
+    "available": {
+        "title": "Verfügbare Modelle",
+        "intro": "Die Modellnamen, die mit den eigenen Projekten nutzbar sind: die gemeinsamen Aliase und, was einzelnen Projekten zusätzlich freigegeben ist. Ein Klick auf eine Zeile zeigt Beschreibung, Herkunft und Konfiguration des Modells und einen Beispielaufruf.",
+        "stability": "Ein Alias wie chat-default bleibt bestehen, das Modell dahinter kann wechseln. Ein Modellname bleibt gleich, solange das Modell angeboten wird; danach entfällt er.",
+        "name": "Name",
+        "kind": "Art",
+        "description": "Beschreibung",
+        "context": "Kontext",
+        "contextHint": "Kontext: längster Prompt / längste Antwort in Tokens, die jede Bereitstellung annimmt; bei einer Spanne nehmen manche Bereitstellungen mehr an.",
+        "state": "Zustand",
+        "project": "Projekt",
+        "allProjects": "alle Projekte",
+        "noSummary": "noch keine Beschreibung",
+        "kinds": {
+            "alias": "Alias",
+            "model": "Modell"
+        },
+        "kindHintAlias": "Alias: Der Name bleibt bestehen, das Modell dahinter kann wechseln.",
+        "kindHintModel": "Modellname: fest, solange das Modell angeboten wird.",
+        "health": {
+            "ok": "erreichbar",
+            "partial": "{{healthy}} von {{count}} erreichbar",
+            "down": "nicht erreichbar",
+            "none": "derzeit nicht bereitgestellt",
+            "unknown": "{{count}}× bereitgestellt"
+        },
+        "severalModels_one": "Hinter diesem Alias steht derzeit {{count}} Modell.",
+        "severalModels_other": "Hinter diesem Alias stehen derzeit {{count}} Modelle; welches antwortet, hängt von Auslastung und Erreichbarkeit ab.",
+        "noModels": "Derzeit stellt kein Gerät dieses Modell bereit.",
+        "noDescription": "Für dieses Modell gibt es noch keine Beschreibung.",
+        "facts": {
+            "source": "Herkunft",
+            "sourceLink": "Modellseite",
+            "license": "Lizenz",
+            "parameters": "Parameter",
+            "quantisation": "Quantisierung",
+            "toolCalls": "Tool-Aufrufe",
+            "reasoning": "Reasoning-Modus"
+        },
+        "yes": "ja",
+        "no": "nein",
+        "unknown": "unbekannt",
+        "device": "Geräteklasse",
+        "engine": "Engine",
+        "deployments": "Bereitstellungen",
+        "deployed": "{{healthy}} von {{count}} erreichbar",
+        "deployedNoHealth": "{{count}}",
+        "devices": {
+            "gpu": "GPU-Server",
+            "gb10": "GB10",
+            "mac": "Mac-Flotte",
+            "other": "Weiterer Server"
+        },
+        "engines": {
+            "vllm": "vLLM",
+            "strata": "Strata",
+            "ollama": "Ollama"
+        },
+        "example": "Beispielaufruf"
+    },
+    "descriptions": {
+        "title": "Modellbeschreibungen",
+        "intro": "Je bereitgestelltem Modellname (GPU-Katalog und Mac-Flotte) eine Beschreibung in Markdown, Herkunft, Lizenz und einige Angaben. Alle, die das Modell nutzen können, sehen sie unter „Verfügbare Modelle“. Bereitgestellte Modelle ohne Beschreibung sind markiert.",
+        "add": "Beschreibung hinzufügen",
+        "edit": "Beschreibung von {{model}} ändern",
+        "model": "Modellname",
+        "modelHint": "wie die Bereitstellungen ihn melden, z. B. Qwen/Qwen3.6-35B-A3B-FP8 oder qwen3.6:35b-a3b-coding-nvfp4",
+        "summary": "Kurzbeschreibung",
+        "summaryHint": "ein Satz für die Liste; leer = der erste Absatz der Beschreibung",
+        "text": "Beschreibung",
+        "textHint": "Markdown; Links öffnen in einem neuen Tab, Bilder und HTML werden nicht angezeigt.",
+        "write": "Schreiben",
+        "preview": "Vorschau",
+        "empty": "Keine Beschreibung.",
+        "source": "Herkunft (URL)",
+        "state": "Stand",
+        "missing": "ohne Beschreibung",
+        "notServed": "derzeit nicht bereitgestellt",
+        "described": "beschrieben"
     }
 }

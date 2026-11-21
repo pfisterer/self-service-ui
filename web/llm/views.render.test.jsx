@@ -65,7 +65,29 @@ const ALIASES = {
     ],
 };
 
+// The usable names as llm-management-api gives them (getUsableModels): an alias on Macs, an alias over GB10s and Macs, a model under its own name granted to a project; descriptions with Markdown that must arrive sanitised.
+const LIM = (i, o) => ({ max_input_tokens: i, max_output_tokens: o });
+const USABLE = {
+    health_known: true,
+    names: [
+        { name: 'chat-default', kind: 'alias', base: true, projects: [], deployments: 28, healthy: 27, limits: { min: LIM(24576, 8192), max: LIM(24576, 8192) },
+          models: [{ model: 'qwen3.6:35b-a3b-coding-nvfp4', deployments: 28, healthy: 27, description: null,
+              devices: [{ device: 'mac', engine: 'ollama', limits: { min: LIM(24576, 8192), max: LIM(24576, 8192) }, deployments: 28, healthy: 27 }] }] },
+        { name: 'chat-large', kind: 'alias', base: false, projects: [{ slug: 'p1', name: 'KI-Labor' }], deployments: 27, healthy: 26, limits: { min: LIM(24576, 8192), max: LIM(98304, 32768) },
+          models: [
+              { model: 'qwen3.8-flash-next-iq3_s', deployments: 2, healthy: 2,
+                description: { model: 'qwen3.8-flash-next-iq3_s', summary: '', description: 'Großes **MoE**-Modell.\n\n<script>window.__pwned = true</script><img src=x onerror="window.__pwned = true">[Seite](https://huggingface.co/x)', source_url: 'https://huggingface.co/x/y', license: 'Apache-2.0', parameters: '80B (3B aktiv)', quantisation: 'IQ3_S', tool_calls: true, reasoning: null },
+                devices: [{ device: 'gb10', engine: 'strata', limits: { min: LIM(98304, 32768), max: LIM(98304, 32768) }, deployments: 2, healthy: 2 }] },
+              { model: 'qwen3.8-flash-next-gyro-gyro-s', deployments: 25, healthy: 24, description: null,
+                devices: [{ device: 'mac', engine: 'strata', limits: { min: LIM(24576, 8192), max: LIM(24576, 8192) }, deployments: 25, healthy: 24 }] },
+          ] },
+        { name: 'qwen3.8-flash-next-iq3_s', kind: 'model', base: false, projects: [{ slug: 'p1', name: 'KI-Labor' }], deployments: 0, healthy: 0, limits: { min: LIM(0, 0), max: LIM(0, 0) }, models: [] },
+    ],
+};
+
 const { LlmOverview } = await import('/llm/overview.jsx');
+const { LlmAvailableModels } = await import('/llm/available.jsx');
+const { ModelDescriptionsAdmin } = await import('/llm/model-descriptions.jsx');
 const { LlmKeys } = await import('/llm/keys.jsx');
 const { LlmUsage } = await import('/llm/usage.jsx');
 const { LlmFleet } = await import('/llm/fleet.jsx');
@@ -81,6 +103,8 @@ beforeEach(() => {
         getFleet: async () => FLEET,
         getFleetInference: async () => POOL,
         getModelAliases: async () => ALIASES,
+        getUsableModels: async () => USABLE,
+        getModelDescriptions: async () => ({ descriptions: [USABLE.names[1].models[0].description], served: ['qwen3.6:35b-a3b-coding-nvfp4', 'qwen3.8-flash-next-iq3_s'] }),
     };
     consoleErrors = [];
     vi.spyOn(console, 'error').mockImplementation((...args) => { consoleErrors.push(args.join(' ')); });
@@ -135,6 +159,44 @@ describe('the LLM views render', () => {
         fireEvent.click(await screen.findByRole('tab', { name: 'Cline' }));
         expect(await screen.findByText('sk-new')).toBeTruthy();
         expect(screen.getByText('https://api.example/v1')).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('Available models lists the usable names with kind, context, state and project', async () => {
+        renderView(<LlmAvailableModels />);
+        expect(await screen.findByText('chat-large')).toBeTruthy();
+        expect(screen.getByText('24k–96k / 8k–32k')).toBeTruthy();
+        expect(screen.getAllByText('KI-Labor')).toHaveLength(2);
+        // The short description is the first paragraph, as plain text.
+        expect(screen.getByText('Großes MoE-Modell.')).toBeTruthy();
+        expect(screen.getByText(/(derzeit nicht bereitgestellt|not deployed at the moment)/)).toBeTruthy();
+        expect(screen.getByText(/(das Modell dahinter kann wechseln|the model behind it may change)/)).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('A row opens the details with the sanitised description, the device classes and an example call', async () => {
+        renderView(<LlmAvailableModels />);
+        fireEvent.click(await screen.findByRole('button', { name: 'chat-large' }));
+        const dialog = await screen.findByRole('dialog');
+        const html = within(dialog).getByTestId('model-description').innerHTML;
+        expect(html).toContain('<strong>MoE</strong>');
+        expect(html).not.toContain('<script');
+        expect(html).not.toContain('onerror');
+        expect(window.__pwned).toBeUndefined();
+        expect(within(dialog).getByText('GB10')).toBeTruthy();
+        expect(within(dialog).getAllByText(/Mac-(Flotte)|Mac fleet/).length).toBeGreaterThan(0);
+        expect(within(dialog).getByText('Apache-2.0')).toBeTruthy();
+        expect(within(dialog).getByRole('link', { name: /(Modellseite|Model page)/ }).getAttribute('href')).toBe('https://huggingface.co/x/y');
+        expect(within(dialog).getByText(/chat\/completions/)).toBeTruthy();
+        expectNoRenderFailure();
+    });
+
+    it('Model descriptions for admins mark a served model without a description', async () => {
+        renderView(<ModelDescriptionsAdmin />);
+        expect(await screen.findByText('qwen3.6:35b-a3b-coding-nvfp4')).toBeTruthy();
+        expect(screen.getByText(/(ohne Beschreibung|no description)/)).toBeTruthy();
+        fireEvent.click(screen.getAllByRole('button', { name: /(Ändern|Change)/ })[0]);
+        expect(await screen.findByRole('dialog')).toBeTruthy();
         expectNoRenderFailure();
     });
 
