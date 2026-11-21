@@ -6,7 +6,8 @@ import { CodeBlock } from '/helper/codeblock.jsx';
 import { ExternalLink } from '/helper/external-link.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
 import { llmKeys } from '/llm/query-keys.js';
-import { STABLE_MODELS, TOOLS, VSCODE_DOCS, grantedModels, limitsFrom, toolConfigs, vscodeModels } from '/llm/tools.js';
+import { KEY_PLACEHOLDER, STABLE_MODELS, TOOLS, VSCODE_DOCS, aliasModels, grantedModels, limitsFrom, limitsOfUsable, oneModel, toolConfigs, vscodeModels, vscodeName } from '/llm/tools.js';
+import { DEFAULT_API_URL, curlExample } from '/llm/usable-models.js';
 
 // Hands a configuration file to the browser as a download; nothing leaves the page.
 function save(name, text) {
@@ -18,24 +19,29 @@ function save(name, text) {
     URL.revokeObjectURL(url);
 }
 
-// The steps for VS Code's built-in Copilot Chat with a custom endpoint, plus the model entries to paste.
-function VscodeSetup({ apiUrl, limits, granted }) {
+// The text of a hint: for a single model (`model`) its own wording where the general one speaks of agent or of several models, else the general one.
+const hintKey = (key, model) => (model ? [key.replace(/^(llm\.\w+\.\w+)\./, '$1Model.'), key] : key);
+
+// The steps for VS Code's built-in Copilot Chat with a custom endpoint, plus the model entries to paste; with `model`, the entry of that one name.
+function VscodeSetup({ apiUrl, limits, granted, model }) {
     const { t } = useTranslation();
-    const models = vscodeModels(apiUrl, {
+    const names = {
         code: t('llm.vscode.names.code'), agent: t('llm.vscode.names.agent'), chat: t('llm.vscode.names.chat'), fast: t('llm.vscode.names.fast'),
-    }, limits, granted);
+    };
+    const models = vscodeModels(apiUrl, names, limits, granted, model);
     const b = { 1: <b />, 2: <Code />, 3: <Code /> };
+    const ids = model ? [model] : [...STABLE_MODELS, ...granted];
 
     return (
         <>
             <Text size="xs" c="dimmed">{t('llm.vscode.scope')}</Text>
             <List type="ordered" size="sm" spacing={4} mt="xs">
                 {['palette', 'add', 'json', 'select'].map(k => (
-                    <List.Item key={k}><Trans i18nKey={`llm.vscode.steps.${k}`} components={b} /></List.Item>
+                    <List.Item key={k}><Trans i18nKey={hintKey(`llm.vscode.steps.${k}`, model)} components={b} values={{ name: model && vscodeName(names, model) }} /></List.Item>
                 ))}
             </List>
             <Text size="xs" c="dimmed" mt="xs">
-                <Trans i18nKey="llm.vscode.keepIds" components={{ 2: <Code /> }} values={{ ids: [...STABLE_MODELS, ...granted].join(', ') }} />
+                <Trans i18nKey="llm.vscode.keepIds" components={{ 2: <Code /> }} values={{ ids: ids.join(', ') }} />
                 {' '}<ExternalLink href={VSCODE_DOCS} size="xs">{t('llm.vscode.docs')}</ExternalLink>
             </Text>
             <CodeBlock language="json" code={models} />
@@ -44,13 +50,13 @@ function VscodeSetup({ apiUrl, limits, granted }) {
 }
 
 // One agent's ready-made file with the key filled in: where it goes, the file itself (copy or download) and, for Codex and Zed, the variable it reads the key from.
-function ConfigSetup({ config }) {
+function ConfigSetup({ config, model }) {
     const { t } = useTranslation();
     const docs = TOOLS.find(tool => tool.id === config.id)?.url;
     return (
         <>
             <Text size="xs" c="dimmed">
-                <Trans i18nKey={`llm.tools.hint.${config.id}`} components={{ 1: <Code fz="xs" /> }} values={{ path: config.path }} />
+                <Trans i18nKey={hintKey(`llm.tools.hint.${config.id}`, model)} components={{ 1: <Code fz="xs" /> }} values={{ path: config.path, model }} />
                 {docs && <>{' '}<ExternalLink href={docs} size="xs">{t('llm.tools.docs')}</ExternalLink></>}
             </Text>
             <CodeBlock language={config.language} code={config.code} />
@@ -87,13 +93,13 @@ function Copyable({ value }) {
 }
 
 // The tools that read no file (Cline, Roo Code): the fields of their provider "OpenAI Compatible" with copy buttons, then the other models with their limits for further profiles.
-function FieldsSetup({ config }) {
+function FieldsSetup({ config, model }) {
     const { t } = useTranslation();
     const docs = TOOLS.find(tool => tool.id === config.id)?.url;
     return (
         <>
             <Text size="xs" c="dimmed">
-                <Trans i18nKey={`llm.tools.hint.${config.id}`} components={{ 1: <b /> }} />
+                <Trans i18nKey={hintKey(`llm.tools.hint.${config.id}`, model)} components={{ 1: <b /> }} values={{ model }} />
                 {docs && <>{' '}<ExternalLink href={docs} size="xs">{t('llm.tools.docs')}</ExternalLink></>}
             </Text>
             <Table withRowBorders={false} verticalSpacing={4} mt="xs" maw={720}>
@@ -107,6 +113,7 @@ function FieldsSetup({ config }) {
                 </Table.Tbody>
             </Table>
             <Text size="xs" c="dimmed" mt="xs">{t('llm.tools.fieldsRest')}</Text>
+            {config.models.length > 1 && <>
             <Text size="xs" c="dimmed" mt="sm">{t('llm.tools.otherModels')}</Text>
             <Table verticalSpacing={2} mt={4} maw={520}>
                 <Table.Thead>
@@ -126,7 +133,31 @@ function FieldsSetup({ config }) {
                     ))}
                 </Table.Tbody>
             </Table>
+            </>}
         </>
+    );
+}
+
+// The tabs with one setup per tool: VS Code, the ready-made files and the fields, and with `curl` a plain call at the end. `models` and `model` come from aliasModels and oneModel; `model` also switches the hints to a single name.
+function ToolTabs({ apiUrl, apiKey, limits, granted = [], model, curl }) {
+    const { t } = useTranslation();
+    const configs = toolConfigs(apiUrl, apiKey, limits, granted, model ? oneModel(model) : aliasModels(granted));
+    return (
+        <Tabs defaultValue="vscode" keepMounted={false}>
+            <Tabs.List>
+                <Tabs.Tab value="vscode">{t('llm.vscode.tab')}</Tabs.Tab>
+                {configs.map(c => <Tabs.Tab key={c.id} value={c.id}>{c.name}</Tabs.Tab>)}
+                {curl && <Tabs.Tab value="curl">curl</Tabs.Tab>}
+            </Tabs.List>
+            <Tabs.Panel value="vscode" pt="xs"><VscodeSetup apiUrl={apiUrl} limits={limits} granted={granted} model={model} /></Tabs.Panel>
+            {configs.map(c => <Tabs.Panel key={c.id} value={c.id} pt="xs">{c.fields ? <FieldsSetup config={c} model={model} /> : <ConfigSetup config={c} model={model} />}</Tabs.Panel>)}
+            {curl && (
+                <Tabs.Panel value="curl" pt="xs">
+                    <Text size="xs" c="dimmed">{t('llm.tools.curlHint')}</Text>
+                    <CodeBlock language="bash" code={curl} />
+                </Tabs.Panel>
+            )}
+        </Tabs>
     );
 }
 
@@ -135,22 +166,23 @@ export function ToolSetup({ apiUrl, apiKey }) {
     const { t } = useTranslation();
     const api = useLlmApi();
     const aliases = useQuery({ queryKey: llmKeys.aliases(), queryFn: () => api.getModelAliases() });
-    const limits = limitsFrom(aliases.data);
-    const granted = grantedModels(aliases.data);
-    const configs = toolConfigs(apiUrl, apiKey, limits, granted);
 
     return (
         <>
             <Text size="sm" fw={600} mt="lg">{t('llm.tools.title')}</Text>
             <Text size="xs" c="dimmed" mb="xs">{t('llm.tools.intro')}</Text>
-            <Tabs defaultValue="vscode" keepMounted={false}>
-                <Tabs.List>
-                    <Tabs.Tab value="vscode">{t('llm.vscode.tab')}</Tabs.Tab>
-                    {configs.map(c => <Tabs.Tab key={c.id} value={c.id}>{c.name}</Tabs.Tab>)}
-                </Tabs.List>
-                <Tabs.Panel value="vscode" pt="xs"><VscodeSetup apiUrl={apiUrl} limits={limits} granted={granted} /></Tabs.Panel>
-                {configs.map(c => <Tabs.Panel key={c.id} value={c.id} pt="xs">{c.fields ? <FieldsSetup config={c} /> : <ConfigSetup config={c} />}</Tabs.Panel>)}
-            </Tabs>
+            <ToolTabs apiUrl={apiUrl} apiKey={apiKey} limits={limitsFrom(aliases.data)} granted={grantedModels(aliases.data)} />
+        </>
+    );
+}
+
+// The same setup for one usable name (the list of available models, getUsableModels): every tool on that name with the limits all its deployments take, the key as KEY_PLACEHOLDER since none is on screen, and a curl call.
+export function ModelToolSetup({ apiUrl: given, entry }) {
+    const apiUrl = given || DEFAULT_API_URL;
+    return (
+        <>
+            <Text size="xs" c="dimmed" mb="xs"><Trans i18nKey="llm.tools.introModel" components={{ 1: <Code fz="xs" /> }} values={{ model: entry.name, key: KEY_PLACEHOLDER }} /></Text>
+            <ToolTabs apiUrl={apiUrl} apiKey={KEY_PLACEHOLDER} limits={limitsOfUsable(entry)} model={entry.name} curl={curlExample(apiUrl, entry.name)} />
         </>
     );
 }

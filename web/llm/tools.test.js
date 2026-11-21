@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { grantedModels, grantedName, limitsFrom, toolConfigs, vscodeModels } from '/llm/tools.js';
+import { KEY_PLACEHOLDER, grantedModels, grantedName, limitsFrom, limitsOfUsable, oneModel, toolConfigs, vscodeModels } from '/llm/tools.js';
 
 const API = 'https://api.llm.services.dhbw.cloud/v1';
 const ALIASES = {
@@ -110,5 +110,42 @@ describe('model groups granted on top', () => {
         expect(JSON.parse(files.kilo.code).provider.dhbw.models['chat-large'].limit).toEqual({ context: 65536, output: 8192 });
         expect(JSON.parse(files.zed.code).language_models.openai_compatible.dhbw.available_models.at(-1)).toMatchObject({ name: 'chat-large', display_name: 'DHBW Large', max_tokens: 65536 });
         expect(files.cline.models.at(-1)).toEqual({ id: 'chat-large', context: 65536, output: 8192 });
+    });
+});
+
+describe('the setup for one usable name', () => {
+    const entry = { name: 'qwen3.8-flash-next-iq3_s', limits: { min: { max_input_tokens: 98304, max_output_tokens: 32768 }, max: { max_input_tokens: 131072, max_output_tokens: 32768 } } };
+    const limits = limitsOfUsable(entry);
+    const files = Object.fromEntries(toolConfigs(API, KEY_PLACEHOLDER, limits, [], oneModel(entry.name)).map(c => [c.id, c]));
+
+    it('takes the smallest limits of the deployments, or the defaults when none is declared', () => {
+        expect(limits).toEqual({ [entry.name]: { input: 98304, output: 32768 } });
+        expect(limitsOfUsable({ name: 'x', limits: { min: { max_input_tokens: 0, max_output_tokens: 0 } } })).toEqual({});
+    });
+
+    it('names only that model, everywhere, with its context', () => {
+        const oc = JSON.parse(files.opencode.code);
+        expect(Object.keys(oc.provider.dhbw.models)).toEqual([entry.name]);
+        expect(oc.provider.dhbw.models[entry.name].limit).toEqual({ context: 131072, output: 32768 });
+        expect([oc.model, oc.small_model]).toEqual([`dhbw/${entry.name}`, `dhbw/${entry.name}`]);
+        const env = JSON.parse(files['claude-code'].code).env;
+        expect([env.ANTHROPIC_MODEL, env.ANTHROPIC_DEFAULT_HAIKU_MODEL, env.CLAUDE_CODE_MAX_CONTEXT_TOKENS]).toEqual([entry.name, entry.name, '131072']);
+        expect(files.codex.code).toContain(`model = "${entry.name}"`);
+        expect(files.continue.code.match(/model: /g)).toHaveLength(1);
+        expect(files.continue.code).toContain('roles: [chat, edit, apply]');
+        const zed = JSON.parse(files.zed.code);
+        expect(zed.language_models.openai_compatible.dhbw.available_models.map(m => m.name)).toEqual([entry.name]);
+        expect(zed.agent.default_model.model).toBe(entry.name);
+        expect(files.cline.fields.find(f => f.key === 'modelId').value).toBe(entry.name);
+        expect(files.cline.models).toEqual([{ id: entry.name, context: 131072, output: 32768 }]);
+        const vs = JSON.parse(`{${vscodeModels(API, { code: 'C', agent: 'A', chat: 'D', fast: 'F' }, limits, [], entry.name)}}`).models;
+        expect(vs).toEqual([expect.objectContaining({ id: entry.name, maxInputTokens: 98304, maxOutputTokens: 32768 })]);
+        expect(JSON.parse(`{${vscodeModels(API, { code: 'C', agent: 'A', chat: 'D', fast: 'F' }, {}, [], 'chat-default')}}`).models[0].name).toBe('D');
+    });
+
+    it('holds the placeholder instead of a key and asks for one in the shell line', () => {
+        expect(JSON.parse(files.opencode.code).provider.dhbw.options.apiKey).toBe('$DHBW_API_KEY');
+        expect(files.cline.fields.find(f => f.key === 'apiKey').value).toBe('$DHBW_API_KEY');
+        expect(files.codex.env).toBe('export DHBW_API_KEY=sk-…');
     });
 });

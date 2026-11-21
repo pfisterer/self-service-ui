@@ -174,20 +174,36 @@ describe('the LLM views render', () => {
         expectNoRenderFailure();
     });
 
-    it('A row opens the details with the sanitised description, the device classes and an example call', async () => {
+    it('A row opens a compact header, the sanitised description on request and the tool setup for this name', async () => {
         renderView(<LlmAvailableModels />);
         fireEvent.click(await screen.findByRole('button', { name: 'chat-large' }));
         const dialog = await screen.findByRole('dialog');
+        // Header: short description (first paragraph), origin and licence of the described model, the context of every deployment.
+        expect(within(dialog).getByText('Großes MoE-Modell.')).toBeTruthy();
+        expect(within(dialog).getByText('Apache-2.0')).toBeTruthy();
+        expect(within(dialog).getByRole('link', { name: /(Modellseite|Model page)/ }).getAttribute('href')).toBe('https://huggingface.co/x/y');
+        expect(within(dialog).getByText('24k–96k / 8k–32k')).toBeTruthy();
+        expect(within(dialog).getByText(/(Kontext \(Eingabe \/ Antwort\)|Context \(input \/ answer\))/)).toBeTruthy();
+        // No device classes any more.
+        expect(within(dialog).queryByText('GB10')).toBeNull();
+        // The longer description behind the toggle, sanitised.
+        fireEvent.click(within(dialog).getByRole('button', { name: /(Mehr zum Modell|More about the model)/ }));
         const html = within(dialog).getByTestId('model-description').innerHTML;
         expect(html).toContain('<strong>MoE</strong>');
         expect(html).not.toContain('<script');
         expect(html).not.toContain('onerror');
         expect(window.__pwned).toBeUndefined();
-        expect(within(dialog).getByText('GB10')).toBeTruthy();
-        expect(within(dialog).getAllByText(/Mac-(Flotte)|Mac fleet/).length).toBeGreaterThan(0);
-        expect(within(dialog).getByText('Apache-2.0')).toBeTruthy();
-        expect(within(dialog).getByRole('link', { name: /(Modellseite|Model page)/ }).getAttribute('href')).toBe('https://huggingface.co/x/y');
-        expect(within(dialog).getByText(/chat\/completions/)).toBeTruthy();
+        // The tools, made by the same code as after a new key, on this name with its smallest limits (24k + 8k) and the key as a placeholder.
+        for (const name of ['VS Code', 'OpenCode', 'Claude Code', 'Codex', 'Continue', 'Kilo Code', 'Zed', 'Cline', 'Roo Code', 'curl']) expect(within(dialog).getByRole('tab', { name })).toBeTruthy();
+        const vscode = dialog.textContent.replace(/\s+/g, ' ');
+        expect(vscode).toContain('"id": "chat-large"');
+        expect(vscode).toContain('"maxInputTokens": 24576');
+        fireEvent.click(within(dialog).getByRole('tab', { name: 'Cline' }));
+        // In the intro and in the field API Key.
+        expect((await within(dialog).findAllByText('$DHBW_API_KEY')).length).toBe(2);
+        expect(within(dialog).getByText('32768')).toBeTruthy();
+        fireEvent.click(within(dialog).getByRole('tab', { name: 'curl' }));
+        expect(await within(dialog).findByText(/chat\/completions/)).toBeTruthy();
         expectNoRenderFailure();
     });
 

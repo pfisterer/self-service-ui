@@ -37,6 +37,10 @@
             "agent": "DHBW Agent",
             "chat": "DHBW Chat",
             "fast": "DHBW Schnell"
+        },
+        "stepsModel": {
+            "add": "<1>Add Models</1> → <1>Custom Endpoint</1>. Als Namen <2>DHBW</2> eingeben, den eigenen API Key einfügen, als API-Typ <1>Chat Completions</1>.",
+            "select": "Im Chat-Fenster oben das Modell <1>{{name}}</1> auswählen."
         }
     },
     "tools": {
@@ -65,7 +69,14 @@
         "fieldsRest": "Unter „Model Configuration“ Image Support und Computer Use ausgeschaltet lassen, die Preise leer.",
         "otherModels": "Alle Modelle mit ihren Grenzen, z. B. für ein weiteres Profil:",
         "copy": "Kopieren",
-        "copied": "Kopiert"
+        "copied": "Kopiert",
+        "introModel": "Fertige Einstellungen für <1>{{model}}</1> mit dem Kontext, den jede Bereitstellung dieses Namens annimmt, zum Kopieren oder Herunterladen. Anstelle von <1>{{key}}</1> den eigenen API Key eintragen; einen neuen gibt es unter „API Keys“.",
+        "curlHint": "Ein Aufruf der Chat Completions mit dem API Key aus der Umgebungsvariablen DHBW_API_KEY. OpenAI-SDKs und andere Werkzeuge brauchen dieselbe Base URL und denselben Modellnamen.",
+        "hintModel": {
+            "opencode": "Als <1>{{path}}</1> speichern, bei vorhandener Datei den Eintrag „dhbw“ unter „provider“ übernehmen. Danach <1>opencode</1> starten; das Modell ist dhbw/{{model}}.",
+            "continue": "Als <1>{{path}}</1> speichern oder das Modell in die vorhandene Datei übernehmen.",
+            "kilo": "Als <1>{{path}}</1> speichern, bei vorhandener Datei den Eintrag „dhbw“ unter „provider“ übernehmen. Die Erweiterung für VS Code und die Kommandozeile <1>kilo</1> lesen dieselbe Datei; das Modell ist dhbw/{{model}}."
+        }
     },
     "keys": {
         "title": "API Keys",
@@ -406,13 +417,13 @@
     },
     "available": {
         "title": "Verfügbare Modelle",
-        "intro": "Die Modellnamen, die mit den eigenen Projekten nutzbar sind: die gemeinsamen Aliase und, was einzelnen Projekten zusätzlich freigegeben ist. Ein Klick auf eine Zeile zeigt Beschreibung, Herkunft und Konfiguration des Modells und einen Beispielaufruf.",
+        "intro": "Die Modellnamen, die mit den eigenen Projekten nutzbar sind: die gemeinsamen Aliase und, was einzelnen Projekten zusätzlich freigegeben ist. Ein Klick auf eine Zeile zeigt eine Kurzbeschreibung des Modells und fertige Einstellungen für die Werkzeuge unter diesem Namen.",
         "stability": "Ein Alias wie chat-default bleibt bestehen, das Modell dahinter kann wechseln. Ein Modellname bleibt gleich, solange das Modell angeboten wird; danach entfällt er.",
         "name": "Name",
         "kind": "Art",
         "description": "Beschreibung",
-        "context": "Kontext",
-        "contextHint": "Kontext: längster Prompt / längste Antwort in Tokens, die jede Bereitstellung annimmt; bei einer Spanne nehmen manche Bereitstellungen mehr an.",
+        "context": "Kontext (Eingabe / Antwort)",
+        "contextHint": "Kontext in Tokens: vor dem Schrägstrich die längste Eingabe (Frage samt Verlauf und angehängten Texten), nach dem Schrägstrich die längste Antwort. Bei einer Spanne gilt der kleinere Wert immer, der größere nur auf einem Teil der Bereitstellungen.",
         "state": "Zustand",
         "project": "Projekt",
         "allProjects": "alle Projekte",
@@ -446,23 +457,8 @@
         "yes": "ja",
         "no": "nein",
         "unknown": "unbekannt",
-        "device": "Geräteklasse",
-        "engine": "Engine",
-        "deployments": "Bereitstellungen",
-        "deployed": "{{healthy}} von {{count}} erreichbar",
-        "deployedNoHealth": "{{count}}",
-        "devices": {
-            "gpu": "GPU-Server",
-            "gb10": "GB10",
-            "mac": "Mac-Flotte",
-            "other": "Weiterer Server"
-        },
-        "engines": {
-            "vllm": "vLLM",
-            "strata": "Strata",
-            "ollama": "Ollama"
-        },
-        "example": "Beispielaufruf"
+        "more": "Mehr zum Modell",
+        "less": "Weniger zum Modell"
     },
     "descriptions": {
         "title": "Modellbeschreibungen",

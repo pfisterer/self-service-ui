@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Alert, Anchor, Badge, Code, Container, Group, Modal, Paper, SimpleGrid, Stack, Table, Text, Title, Typography } from '@mantine/core';
-import { CodeBlock } from '/helper/codeblock.jsx';
+import { Alert, Anchor, Badge, Code, Collapse, Container, Divider, Group, Modal, Paper, SimpleGrid, Stack, Table, Text, Title, Tooltip, Typography, UnstyledButton } from '@mantine/core';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { ExternalLink } from '/helper/external-link.jsx';
 import { markdownToHtml } from '/helper/markdown.js';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useLlmApi } from '/llm/api-llm.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
 import { llmKeys } from '/llm/query-keys.js';
-import { contextLabel, curlExample, healthState, summaryOf } from '/llm/usable-models.js';
+import { ModelToolSetup } from '/llm/tool-setup.jsx';
+import { contextLabel, healthState, summaryOf } from '/llm/usable-models.js';
 
-// The model names the person can use (llm-management-api getUsableModels): the base aliases and what their projects were granted, each with a short description, its context, how it is doing and the projects it comes through. A row opens the details: the description of each model behind it, origin, licence, facts, the configuration per device class and an example call. Never a machine or site: the service names only device classes.
+// The model names the person can use (llm-management-api getUsableModels): the base aliases and what their projects were granted, each with a short description, its context, how it is doing and the projects it comes through. A row opens the details: the short description, origin and licence, the longer description of each model behind it on request, and the setup of the tools on this name (the same as after a new key). Never a machine or site: the service names only device classes.
 
 const HEALTH_COLOR = { ok: 'teal', partial: 'yellow', down: 'red', none: 'gray', unknown: 'gray' };
 
@@ -47,23 +48,23 @@ function Fact({ label, children }) {
     return (
         <div>
             <Text size="xs" c="dimmed">{label}</Text>
-            <Text size="sm">{children}</Text>
+            <Text size="sm" component="div">{children}</Text>
         </div>
     );
 }
 
-// One model behind the name: its description and facts, and per device class how it runs.
-function ModelDetails({ model, healthKnown }) {
+// The description of the first model behind the name that has one: the same model summaryOf takes the short description from.
+const describedModel = (entry) => (entry.models ?? []).find(m => m.description);
+
+// One model behind the name, folded away under "more": its description and facts. Origin and licence of the first described model are in the header already; for a further one they come here.
+function ModelDetails({ model, withOrigin }) {
     const { t } = useTranslation();
     const d = model.description;
     const html = markdownToHtml(d?.description);
     return (
         <Paper withBorder radius="md" p="sm">
             <Stack gap="xs">
-                <Group gap="xs">
-                    <Code>{model.model}</Code>
-                    {d?.summary && <Text size="sm" c="dimmed">{d.summary}</Text>}
-                </Group>
+                <Code style={{ alignSelf: 'flex-start' }}>{model.model}</Code>
                 {!d && <Text size="sm" c="dimmed">{t('llm.available.noDescription')}</Text>}
                 {html && (
                     <Typography>
@@ -72,64 +73,63 @@ function ModelDetails({ model, healthKnown }) {
                     </Typography>
                 )}
                 {d && (
-                    <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="xs" verticalSpacing="xs">
-                        <Fact label={t('llm.available.facts.source')}>
-                            {d.source_url ? <ExternalLink href={d.source_url}>{t('llm.available.facts.sourceLink')}</ExternalLink> : '–'}
-                        </Fact>
-                        <Fact label={t('llm.available.facts.license')}>{d.license || '–'}</Fact>
+                    <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="xs" verticalSpacing="xs">
+                        {withOrigin && <Fact label={t('llm.available.facts.source')}>{d.source_url ? <ExternalLink href={d.source_url}>{t('llm.available.facts.sourceLink')}</ExternalLink> : '–'}</Fact>}
+                        {withOrigin && <Fact label={t('llm.available.facts.license')}>{d.license || '–'}</Fact>}
                         <Fact label={t('llm.available.facts.parameters')}>{d.parameters || '–'}</Fact>
                         <Fact label={t('llm.available.facts.quantisation')}>{d.quantisation || '–'}</Fact>
                         <Fact label={t('llm.available.facts.toolCalls')}>{flag(t, d.tool_calls)}</Fact>
                         <Fact label={t('llm.available.facts.reasoning')}>{flag(t, d.reasoning)}</Fact>
                     </SimpleGrid>
                 )}
-                {model.devices?.length > 0 && (
-                    <Table verticalSpacing={4} fz="sm">
-                        <Table.Thead><Table.Tr>
-                            <Table.Th>{t('llm.available.device')}</Table.Th>
-                            <Table.Th>{t('llm.available.engine')}</Table.Th>
-                            <Table.Th>{t('llm.available.context')}</Table.Th>
-                            <Table.Th>{t('llm.available.deployments')}</Table.Th>
-                        </Table.Tr></Table.Thead>
-                        <Table.Tbody>
-                            {model.devices.map(dc => (
-                                <Table.Tr key={`${dc.device}|${dc.engine}`}>
-                                    <Table.Td>{t(`llm.available.devices.${dc.device}`, { defaultValue: dc.device })}</Table.Td>
-                                    <Table.Td>{dc.engine ? t(`llm.available.engines.${dc.engine}`, { defaultValue: dc.engine }) : '–'}</Table.Td>
-                                    <Table.Td>{contextLabel(dc.limits) || '–'}</Table.Td>
-                                    <Table.Td>{healthKnown ? t('llm.available.deployed', { healthy: dc.healthy, count: dc.deployments }) : t('llm.available.deployedNoHealth', { count: dc.deployments })}</Table.Td>
-                                </Table.Tr>
-                            ))}
-                        </Table.Tbody>
-                    </Table>
-                )}
             </Stack>
         </Paper>
     );
 }
 
+// The dialog of one usable name: a compact header (short description, origin, licence, context, state, projects), the longer description folded away, and below the setup of the tools on this name, made by the same code as after a new key.
 export function UsableNameModal({ entry, healthKnown, apiUrl, onClose }) {
     const { t } = useTranslation();
+    const [more, setMore] = useState(false);
     const context = contextLabel(entry.limits);
+    const summary = summaryOf(entry);
+    const described = describedModel(entry);
+    const d = described?.description;
+    const models = entry.models ?? [];
     return (
-        <Modal opened onClose={onClose} size="xl" title={<Group gap="xs"><Code fz="md">{entry.name}</Code><KindBadge kind={entry.kind} /></Group>}>
+        <Modal opened onClose={onClose} size={900} title={<Group gap="xs"><Code fz="md">{entry.name}</Code><KindBadge kind={entry.kind} /></Group>}>
             <Stack gap="sm">
-                <Text size="sm" c="dimmed">{t(entry.kind === 'model' ? 'llm.available.kindHintModel' : 'llm.available.kindHintAlias')}</Text>
+                {summary ? <Text size="sm">{summary}</Text> : <Text size="sm" c="dimmed">{t('llm.available.noSummary')}</Text>}
                 <Group gap="xl" align="flex-start">
-                    <Fact label={t('llm.available.project')}>{entry.base ? t('llm.available.allProjects') : (entry.projects ?? []).map(p => p.name || p.slug).join(', ')}</Fact>
-                    <Fact label={t('llm.available.context')}>{context || '–'}</Fact>
-                    <div>
-                        <Text size="xs" c="dimmed">{t('llm.available.state')}</Text>
-                        <HealthBadge entry={entry} healthKnown={healthKnown} />
-                    </div>
+                    {d?.source_url && <Fact label={t('llm.available.facts.source')}><ExternalLink href={d.source_url}>{t('llm.available.facts.sourceLink')}</ExternalLink></Fact>}
+                    {d?.license && <Fact label={t('llm.available.facts.license')}>{d.license}</Fact>}
+                    <Fact label={t('llm.available.context')}>
+                        <Tooltip label={t('llm.available.contextHint')} multiline w={340} withArrow><span style={{ cursor: 'help', borderBottom: '1px dotted' }}>{context || '–'}</span></Tooltip>
+                    </Fact>
+                    <Fact label={t('llm.available.state')}><HealthBadge entry={entry} healthKnown={healthKnown} /></Fact>
+                    <Fact label={t('llm.available.project')}><ProjectsText entry={entry} /></Fact>
                 </Group>
-                {entry.kind !== 'model' && entry.models?.length > 1 && <Text size="sm">{t('llm.available.severalModels', { count: entry.models.length })}</Text>}
-                {(entry.models ?? []).length === 0 && <Alert color="gray" variant="light">{t('llm.available.noModels')}</Alert>}
-                {(entry.models ?? []).map(m => <ModelDetails key={m.model} model={m} healthKnown={healthKnown} />)}
-                <div>
-                    <Text size="sm" fw={500} mb={4}>{t('llm.available.example')}</Text>
-                    <CodeBlock code={curlExample(apiUrl, entry.name)} language="bash" />
-                </div>
+                <Text size="xs" c="dimmed">{t(entry.kind === 'model' ? 'llm.available.kindHintModel' : 'llm.available.kindHintAlias')}</Text>
+                {models.length === 0 && <Alert color="gray" variant="light">{t('llm.available.noModels')}</Alert>}
+                {models.length > 0 && (
+                    <div>
+                        <UnstyledButton onClick={() => setMore(o => !o)} aria-expanded={more}>
+                            <Group gap={4}>
+                                {more ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                <Text size="sm" c="dimmed">{t(more ? 'llm.available.less' : 'llm.available.more')}</Text>
+                            </Group>
+                        </UnstyledButton>
+                        <Collapse expanded={more}>
+                            <Stack gap="xs" mt="xs">
+                                {entry.kind !== 'model' && models.length > 1 && <Text size="sm">{t('llm.available.severalModels', { count: models.length })}</Text>}
+                                {models.map(m => <ModelDetails key={m.model} model={m} withOrigin={m !== described} />)}
+                            </Stack>
+                        </Collapse>
+                    </div>
+                )}
+                <Divider />
+                <Text size="sm" fw={600}>{t('llm.tools.title')}</Text>
+                <ModelToolSetup apiUrl={apiUrl} entry={entry} />
             </Stack>
         </Modal>
     );
@@ -164,7 +164,7 @@ export function LlmAvailableModels() {
                                 <Table.Th>{t('llm.available.name')}</Table.Th>
                                 <Table.Th>{t('llm.available.kind')}</Table.Th>
                                 <Table.Th>{t('llm.available.description')}</Table.Th>
-                                <Table.Th>{t('llm.available.context')}</Table.Th>
+                                <Table.Th style={{ whiteSpace: 'nowrap' }}>{t('llm.available.context')}</Table.Th>
                                 <Table.Th>{t('llm.available.state')}</Table.Th>
                                 <Table.Th>{t('llm.available.project')}</Table.Th>
                             </Table.Tr></Table.Thead>
