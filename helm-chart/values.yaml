@@ -99,7 +99,7 @@ ingress:
 bff:
   enabled: false
   image: quay.io/oauth2-proxy/oauth2-proxy
-  version: v7.15.5
+  version: v7.15.6
   # Optional image digest, e.g. digest: "sha256:<64 hex>": the image is then pulled as <image>:<version>@<digest>, so a re-pushed tag cannot change what runs. Left unset on purpose (not even ""), so the checksum/values annotation and thus the pods stay as they are.
   # digest: ""
   # Supplies client-id, client-secret and cookie-secret. Created out of band;
@@ -122,6 +122,8 @@ bff:
   # Hosts the proxy may redirect to besides the UI itself; the issuer's host
   # belongs here, or RP-initiated logout cannot reach its end-session endpoint.
   whitelistDomains: []
+  # Shown on the BFF's error page ("Anmeldung nicht möglich") as the contact for support, e.g. "support@example.org" (becomes a mailto link), "https://example.org/help" (a link) or any short text. Unset, the page names no contact.
+  # supportContact: ""
   ingress:
     enabled: true
     className: traefik

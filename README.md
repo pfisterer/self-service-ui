@@ -248,6 +248,8 @@ A Helm chart lives in [`helm-chart/`](helm-chart) (`selfServiceUI`, `auth`, `ing
 
 The proxy reads its client ID, client secret and cookie secret from an existing Secret (`bff.existingSecret`, keys `client-id`, `client-secret`, `cookie-secret`); keeping the cookie secret stable across redeploys is what keeps sessions alive. `bff.cookieExpire` (default `8h`) bounds a session, because the oauth2-proxy default is a week and the offline refresh token it holds is not tied to the single sign-on session, so a logout elsewhere does not reach it. For sign-out to reach the issuer, its host belongs in `bff.whitelistDomains`.
 
+When a login fails, the proxy shows the chart's own error page ([`helm-chart/files/oauth2-proxy/error.html`](helm-chart/files/oauth2-proxy/error.html), mounted from a ConfigMap via `--custom-templates-dir`) instead of oauth2-proxy's generic English one: German first, English below, titled „Anmeldung nicht möglich“. It runs without `--show-debug-on-error`, so it cannot know the actual cause (an e-mail address the issuer marks as unconfirmed, an expired login, a temporary fault all arrive as the same error) and names the likely ones, with a link to sign in again, the status code and the request ID, which is also in the proxy's access log. Only a 502 (the portal behind the proxy does not answer) gets its own text. `bff.supportContact` (an e-mail address, an https URL or short text) adds a contact line; unset, the page names none. A change to the page or the contact rolls the proxy pod (`checksum/error-page`).
+
 The chart is published as an OCI artifact for every new version pushed to `main`, prereleases included:
 
 ```sh

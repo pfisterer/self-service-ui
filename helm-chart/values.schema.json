@@ -30,6 +30,7 @@
         "cookieName": { "type": "string" },
         "cookieExpire": { "type": "string", "pattern": "^[0-9]+(s|m|h)$" },
         "whitelistDomains": { "type": "array", "items": { "type": "string" } },
+        "supportContact": { "type": "string", "description": "Contact shown on the BFF error page: an e-mail address (mailto link), an https URL (link) or short text; empty or unset shows none." },
         "ingress": {
           "type": "object",
           "additionalProperties": false,

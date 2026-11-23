@@ -11,6 +11,36 @@
 {{- $labels := include "cloud-self-service.labels" $comp -}}
 {{- $selectors := include "cloud-self-service.selectorLabels" $comp -}}
 {{- $secret := .Values.bff.existingSecret -}}
+{{- $templatesName := include "cloud-self-service.resourceName" (dict "context" . "component" "bff" "name" "templates") -}}
+{{- /* bff.supportContact as an HTML snippet for the error page: an e-mail address becomes a mailto link, an https URL a link, anything else plain text; unset, nothing. Escaped with html, since it lands in the page as is. */ -}}
+{{- $contact := "" -}}
+{{- with .Values.bff.supportContact -}}
+{{- if or (contains "{{" .) (contains "}}" .) -}}
+{{- fail "bff.supportContact must not contain {{ or }}: the error page is itself a Go template for oauth2-proxy" -}}
+{{- end -}}
+{{- $c := html . -}}
+{{- if regexMatch "^[^@\\s]+@[^@\\s]+$" . -}}
+{{- $contact = printf "<a href=\"mailto:%s\">%s</a>" $c $c -}}
+{{- else if hasPrefix "https://" . -}}
+{{- $contact = printf "<a href=\"%s\">%s</a>" $c $c -}}
+{{- else -}}
+{{- $contact = $c -}}
+{{- end -}}
+{{- $contact = printf "      <p>Kontakt · Contact: %s</p>" $contact -}}
+{{- end -}}
+{{- $errorPage := .Files.Get "files/oauth2-proxy/error.html" | replace "<!--SUPPORT_CONTACT-->" $contact -}}
+---
+# Our own error page instead of oauth2-proxy's generic English one (see files/oauth2-proxy/error.html). Only error.html is provided: oauth2-proxy takes each template from the directory if it is there and falls back to its built-in one otherwise, so the sign-in page stays the default, and with --skip-provider-button it is never shown anyway (at startup it logs that sign_in.html and robots.txt are not in the directory and the defaults are used; harmless).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $templatesName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- $labels | nindent 4 }}
+data:
+  error.html: |
+    {{- $errorPage | nindent 4 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -30,6 +60,9 @@ spec:
     metadata:
       labels:
         {{- $selectors | nindent 8 }}
+      annotations:
+        # A changed error page (or support contact) rolls the pod: oauth2-proxy reads its templates once at startup.
+        checksum/error-page: {{ $errorPage | sha256sum }}
     spec:
       automountServiceAccountToken: false
       securityContext:
@@ -95,6 +128,8 @@ spec:
             - --redirect-url=https://{{ .Values.selfServiceUI.hostname }}/oauth2/callback
             - --skip-provider-button=true
             - --footer=-
+            # Our own error page (ConfigMap above). Deliberately without --show-debug-on-error: that would put internal error texts on the page; the cause stays in this pod's log, findable by the request ID the page shows.
+            - --custom-templates-dir=/etc/oauth2-proxy/templates
             # Injects the token into the UPSTREAM request, which is what makes
             # the browser never see it. Not --set-authorization-header: that
             # only sets it on the /oauth2/auth RESPONSE, i.e. forward-auth mode,
@@ -121,9 +156,17 @@ spec:
             httpGet: { path: /ping, port: 4180 }
             initialDelaySeconds: 5
             periodSeconds: 10
+          volumeMounts:
+            - name: templates
+              mountPath: /etc/oauth2-proxy/templates
+              readOnly: true
           resources:
             requests: { cpu: 10m, memory: 32Mi }
             limits: { memory: 64Mi }
+      volumes:
+        - name: templates
+          configMap:
+            name: {{ $templatesName }}
 
 ---
 apiVersion: v1

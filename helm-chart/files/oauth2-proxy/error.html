@@ -1,0 +1,93 @@
+{{- /*
+  Error page of the BFF (oauth2-proxy, --custom-templates-dir). Replaces the generic English "Something went wrong" page.
+
+  Two template languages meet here. This file is NOT rendered by Helm: the chart reads it with .Files.Get, so every {{ }} below is oauth2-proxy's Go html/template, evaluated per request with these fields (pkg/app/pagewriter/error_page.go, v7.15): StatusCode, Title, Message, ProxyPrefix, Redirect, RequestID, Footer, Version. The one thing Helm does is replace the SUPPORT_CONTACT marker comment below with bff.supportContact, or with nothing.
+
+  Without --show-debug-on-error, .Message is only a generic English sentence and never the actual cause (an unconfirmed e-mail address, an expired state cookie and a broken token exchange all arrive as the same 500). So the page names the likely causes instead of pretending to know which one it was; only 502 is told apart, because there the user is signed in and the portal behind the proxy does not answer.
+
+  Self-contained on purpose: no scripts, no external stylesheets, fonts or images, so it renders under any CSP and when nothing else is reachable. Colours and font follow the portal (web/index.jsx: the dhbw and neutral palettes, Arial).
+*/ -}}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{{ if eq .StatusCode 502 }}Portal nicht erreichbar · Portal not reachable{{ else }}Anmeldung nicht möglich · Sign-in failed{{ end }} – DHBW Cloud</title>
+<style>
+  :root { --red: #D52C2A; --red-dark: #B32421; --bg: #F0F1F1; --card: #FFFFFF; --text: #1A1E20; --dim: #5F6466; --line: #D9DBDC; --box: #F0F1F1; }
+  @media (prefers-color-scheme: dark) {
+    :root { --red: #DD6462; --red-dark: #E69C9A; --bg: #1A1E20; --card: #303537; --text: #F0F1F1; --dim: #BFC3C5; --line: #474C4E; --box: #1A1E20; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Arial, sans-serif; font-size: 16px; line-height: 1.5; }
+  main { max-width: 640px; margin: 0 auto; padding: 24px 16px 32px; }
+  .brand { color: var(--red); font-weight: bold; letter-spacing: .02em; margin: 0 0 12px; }
+  .card { background: var(--card); border-top: 4px solid var(--red); border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+  h1 { font-size: 1.5rem; line-height: 1.25; margin: 0 0 12px; }
+  h2 { font-size: 1.15rem; margin: 0 0 8px; }
+  p { margin: 0 0 12px; }
+  ol { margin: 0 0 16px; padding-left: 1.3em; }
+  li { margin-bottom: 8px; }
+  a { color: var(--red-dark); }
+  .button { display: inline-block; background: var(--red); color: #FFFFFF; text-decoration: none; font-weight: bold; padding: 10px 18px; border-radius: 4px; }
+  .button:hover, .button:focus { background: var(--red-dark); color: #FFFFFF; }
+  section + section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .support { margin-top: 24px; background: var(--box); border-radius: 4px; padding: 12px 14px; font-size: .9rem; color: var(--dim); }
+  .support p { margin: 0 0 4px; }
+  .support p:last-child { margin: 0; }
+  code { font-family: Consolas, Menlo, monospace; color: var(--text); overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+  <p class="brand">DHBW Cloud</p>
+  <div class="card">
+{{- if eq .StatusCode 502 }}
+    <section lang="de">
+      <h1>Portal gerade nicht erreichbar</h1>
+      <p>Die Anmeldung hat geklappt, aber das Self-Service-Portal antwortet gerade nicht. Meist ist das nach wenigen Minuten vorbei, etwa während einer Aktualisierung.</p>
+      <p><a class="button" href="/">Erneut versuchen</a></p>
+    </section>
+    <section lang="en">
+      <h2>Portal currently not reachable</h2>
+      <p>Signing in worked, but the self-service portal is not answering right now. This usually passes within a few minutes, for example during an update.</p>
+      <p><a class="button" href="/">Try again</a></p>
+    </section>
+{{- else }}
+    <section lang="de">
+      <h1>Anmeldung nicht möglich</h1>
+      <p>Die Anmeldung an der DHBW Cloud konnte nicht abgeschlossen werden. Die häufigsten Gründe:</p>
+      <ol>
+        <li><strong>Die E-Mail-Adresse des Kontos ist nicht bestätigt.</strong> Einmal beim Hochschulkonto (bwIDM) anmelden, damit die Adresse bestätigt wird, und es danach hier erneut versuchen. Hilft das nicht, bitte an den Support wenden.</li>
+        <li><strong>Die Sitzung ist abgelaufen oder die Anmeldung hat zu lange gedauert.</strong> Einfach erneut anmelden.</li>
+        <li><strong>Sonst handelt es sich meist um eine vorübergehende Störung.</strong> Bitte in einigen Minuten erneut versuchen.</li>
+      </ol>
+      <p><a class="button" href="/">Erneut anmelden</a></p>
+    </section>
+    <section lang="en">
+      <h2>Sign-in failed</h2>
+      <p>Signing in to the DHBW Cloud could not be completed. The most common reasons:</p>
+      <ol>
+        <li><strong>The e-mail address of the account is not confirmed.</strong> Sign in once to the university account (bwIDM) so the address gets confirmed, then try again here. If that does not help, please contact support.</li>
+        <li><strong>The session expired or signing in took too long.</strong> Simply sign in again.</li>
+        <li><strong>Otherwise it is usually a temporary fault.</strong> Please try again in a few minutes.</li>
+      </ol>
+      <p><a class="button" href="/">Sign in again</a></p>
+    </section>
+{{- end }}
+    <div class="support">
+      <p>Angaben für den Support · For support:</p>
+      <p>Statuscode · Status code: <code>{{ .StatusCode }}</code></p>
+{{- if .RequestID }}
+      <p>Anfrage-ID · Request ID: <code>{{ .RequestID }}</code></p>
+{{- end }}
+{{- if .Message }}
+      <p>Meldung · Message: {{ .Message }}</p>
+{{- end }}
+<!--SUPPORT_CONTACT-->
+    </div>
+  </div>
+</main>
+</body>
+</html>
