@@ -34,7 +34,7 @@ selfServiceUI:
   # Hosts that may send people to the start page (/projects/start) with a return address (?back=): exact host names (optionally host:port), https only; the UI's own origin is always allowed. Look-alikes and subdomains are not. Empty list -> only the UI itself. Set per deployment: the JupyterHub, the chat and, once it runs here, the Moodle LTI.
   backHosts:
     - jupyter.gpu.services.dhbw.cloud
-    - chat.gpu.services.dhbw.cloud
+    - chat.llm.services.dhbw.cloud
   # In-cluster addresses Caddy forwards the SPA's same-origin /api/<svc>/ calls
   # to. These are Service names of OTHER releases, so this chart cannot derive
   # them — and leaving them as image defaults meant a rename over there broke

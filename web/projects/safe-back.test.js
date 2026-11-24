@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseBackHosts, safeBack } from '/projects/safe-back.js';
 
 const origin = 'https://self-service.dhbw.cloud';
-const hosts = ['jupyter.gpu.services.dhbw.cloud', 'chat.gpu.services.dhbw.cloud'];
+const hosts = ['jupyter.gpu.services.dhbw.cloud', 'chat.llm.services.dhbw.cloud'];
 const back = raw => safeBack(raw, { origin, hosts });
 
 describe('safeBack', () => {
@@ -18,7 +18,7 @@ describe('safeBack', () => {
 
     it('keeps https addresses on an allowed host', () => {
         expect(back('https://jupyter.gpu.services.dhbw.cloud/hub/home')).toBe('https://jupyter.gpu.services.dhbw.cloud/hub/home');
-        expect(back('https://CHAT.gpu.services.dhbw.cloud/c/new')).toBe('https://chat.gpu.services.dhbw.cloud/c/new');
+        expect(back('https://CHAT.llm.services.dhbw.cloud/c/new')).toBe('https://chat.llm.services.dhbw.cloud/c/new');
     });
 
     it('refuses other DHBW hosts that are not on the list', () => {
