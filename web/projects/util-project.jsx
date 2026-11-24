@@ -471,6 +471,11 @@ export function quotaFits(budget, requestedQuota, resources) {
         .every(r => (requestedQuota?.[r.id] ?? 0) <= freeAmount(budget, r.id));
 }
 
+// mostSpecificFirst orders the budgets a person may request from deepest first, keeping the server's order among equals: a course or programme budget (Kurs, Studiengang) before the base budget of the site (Grundversorgung), so the picker preselects the one meant for this person and the offers start with it. A person sees every budget whose own requesters name one of their groups; without this, the lowest id came first.
+export function mostSpecificFirst(budgets) {
+    return [...(budgets || [])].sort((a, b) => (b.parent_path?.length ?? 0) - (a.parent_path?.length ?? 0));
+}
+
 // hasAutoApprove reports whether the budget grants requests without a manager.
 export function hasAutoApprove(budget) {
     return !!budget?.auto_approve;

@@ -21,7 +21,7 @@ import { useWorkspaceSettings, workspaceSettingsItems } from '/gpu/workspace-set
 import { ProjectId } from '/gpu/project-id.jsx';
 import { withCurrentParent } from './component-budget-select.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
-import { autoApproveHeadroom, budgetShortfall, canRaise, changeOutcome, COLOR, idsAbove, managesChainOf, projectNeed, raisePlan, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, projectKinds, resourcesOfKinds, PROJECT_KINDS, kindOfResource, isLab, endDate, endDay, expiryTone, expiryValue } from './util-project.jsx';
+import { autoApproveHeadroom, budgetShortfall, canRaise, changeOutcome, COLOR, idsAbove, managesChainOf, projectNeed, raisePlan, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, hasAllocations, isAvailability, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, mostSpecificFirst, projectKinds, resourcesOfKinds, PROJECT_KINDS, kindOfResource, isLab, endDate, endDay, expiryTone, expiryValue } from './util-project.jsx';
 import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
@@ -320,7 +320,7 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
     const initialKind_ = isChange || isAdopt || catalog.length < 2 ? null
         : (initialKind ?? (budgetById(initialBudgetId) && budgetKinds(budgetById(initialBudgetId), resources)[0]) ?? catalog[0]);
     const initialParentId = isChange ? null
-        : (initialBudgetId ?? [...myBudgets, ...requestable].find(b => offersKind(b, initialKind_))?.id ?? null);
+        : (initialBudgetId ?? [...myBudgets, ...mostSpecificFirst(requestable)].find(b => offersKind(b, initialKind_))?.id ?? null);
     const form = useForm({
         initialValues: isAdopt
             ? {
@@ -616,7 +616,7 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
                         { label: t('projects.projectForm.budgetsManaged'), budgets: (myBudgets || []).filter(b => offersKind(b, isAdopt ? 'cloud' : kind)) },
                         {
                             label: isAdopt ? t('projects.adopt.budgetsOwnerCanRequest') : t('projects.projectForm.budgetsRequestable'),
-                            budgets: (requestable || []).filter(b => !managedIds.has(b.id) && offersKind(b, isAdopt ? 'cloud' : kind)),
+                            budgets: mostSpecificFirst(requestable).filter(b => !managedIds.has(b.id) && offersKind(b, isAdopt ? 'cloud' : kind)),
                         },
                     ]}
                     markInstant

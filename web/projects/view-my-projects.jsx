@@ -23,7 +23,7 @@ import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { jobMaxHours, projectHasJobs } from '/gpu/jobs.js';
 import { GroupChoices } from '/gpu/group-choice.jsx';
-import { COLOR, PROJECT_SORTS, budgetKinds, deletionRequested, getAuthUserEmail, isRetired, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
+import { COLOR, PROJECT_SORTS, budgetKinds, deletionRequested, getAuthUserEmail, isRetired, mostSpecificFirst, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
 
 // MyProjectsView lists the projects of one area (cloud, workspaces, llm) the
 // signed-in user owns or shares, and lets them request new ones, propose changes
@@ -121,7 +121,7 @@ export function MyProjectsView({ area = 'cloud' }) {
     // The offers are what the user may REQUEST from; budgets they manage live
     // in "My Budgets" and would only repeat themselves here.
     const managedIds = new Set(myBudgets.map(b => b.id));
-    const offers = eligibleBudgets.filter(b => !managedIds.has(b.id) && offersArea(b));
+    const offers = mostSpecificFirst(eligibleBudgets).filter(b => !managedIds.has(b.id) && offersArea(b));
     const budgetRequestTargets = offers.filter(b => b.allow_sub_budget_requests !== false);
 
     return (

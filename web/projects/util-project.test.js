@@ -4,7 +4,7 @@ import i18n from '/i18n/index.js';
 // The real English resources, so a renamed key fails here rather than showing
 // the key itself on the screen.
 const t = i18n.getFixedT('en');
-import { endDate, resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, usageState, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds } from './util-project.jsx';
+import { endDate, resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, usageState, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds, mostSpecificFirst } from './util-project.jsx';
 
 // asServer is a translator without translations: every resource text comes out as the server sent it.
 const asServer = (key, opts) => opts?.defaultValue ?? key;
@@ -831,5 +831,17 @@ describe('project kinds', () => {
         expect(resourcesOfKinds(RES, [])).toHaveLength(4);
         expect(budgetKinds({ available_resources: ['cores'] }, RES)).toEqual(['cloud']);
         expect(budgetKinds({}, RES)).toEqual(['cloud', 'workspaces', 'llm']);
+    });
+});
+
+describe('mostSpecificFirst', () => {
+    it('puts a course budget before the base budget of the site and keeps the order among equals', () => {
+        const site = { id: 'b1', name: 'Grundversorgung Studierende', parent_path: [{ id: 'ma' }] };
+        const course = { id: 'b2', name: 'WDSKI24A', parent_path: [{ id: 'ma' }, { id: 'w' }, { id: 'ds' }, { id: 'p' }] };
+        const other = { id: 'b3', name: 'DSKI', parent_path: [{ id: 'ma' }, { id: 'w' }, { id: 'ds' }] };
+        const top = { id: 'b0', name: 'Spielbudget GPU' };
+        expect(mostSpecificFirst([top, site, course, other]).map(b => b.id)).toEqual(['b2', 'b3', 'b1', 'b0']);
+        expect(mostSpecificFirst([site, { ...site, id: 'b4' }]).map(b => b.id)).toEqual(['b1', 'b4']);
+        expect(mostSpecificFirst(null)).toEqual([]);
     });
 });
