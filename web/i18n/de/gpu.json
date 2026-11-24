@@ -92,7 +92,7 @@
             "update": "Neuere Version übernehmen",
             "autoUpdate": "Neue Versionen des Tags automatisch übernehmen",
             "autoUpdateHint": "Sonst wird eine neuere Version nur angezeigt und auf Knopfdruck übernommen. Neue Workspaces starten dann mit ihr, laufende behalten ihre.",
-            "gitHint": "Gebaut wird wie bei Binder aus requirements.txt, environment.yml, apt.txt und postBuild (im Hauptverzeichnis, binder/ oder .binder/) auf der gewählten Basis. In die Workspaces kommen die Dateien des Repositorys als „Material aus Git“ (unten). Bei einer neuen Version der Basis wird neu gebaut; bis ein Build fertig ist, bleibt das bisherige Image.",
+            "gitHint": "Gebaut wird wie bei Binder aus requirements.txt, environment.yml, apt.txt und postBuild (im Hauptverzeichnis, binder/ oder .binder/) auf der gewählten Basis. In die Workspaces kommen die Dateien des Repositorys als „Material aus Git“ (unten). Bei einer neuen Version der Basis wird neu gebaut; bis ein Build fertig ist, bleibt das bisherige Image. Ein privates Repository braucht unten unter „Zugänge für private Repositories und Images“ einen Zugang für seinen Host.",
             "state": "Zustand",
             "since": "läuft seit {{time}}",
             "live": "wird alle 3 s aktualisiert",
@@ -132,7 +132,7 @@
         },
         "credentials": {
             "title": "Zugänge für private Repositories und Images",
-            "hint": "Mit einem Zugang für einen Host können Material aus Git und ein vorhandenes Image von dort privat sein; die Workspaces des Projekts nutzen ihn beim Start. Das Token wird verschlüsselt gespeichert und nicht wieder angezeigt; ein neues für denselben Host ersetzt es. Builds aus privaten Repositories gibt es noch nicht.",
+            "hint": "Mit einem Zugang für einen Host können Material aus Git und ein vorhandenes Image von dort privat sein; die Workspaces des Projekts nutzen ihn beim Start. Das Token wird verschlüsselt gespeichert und nicht wieder angezeigt; ein neues für denselben Host ersetzt es. Auch ein Projekt-Image aus einem privaten Repository wird damit gebaut; es liegt dann in einem nicht öffentlichen Bereich der Registry, und nur dieses Projekt nutzt es.",
             "host": "Host",
             "username": "Benutzername",
             "token": "Token",

@@ -92,7 +92,7 @@
             "update": "Take the newer version",
             "autoUpdate": "Take new versions of the tag automatically",
             "autoUpdateHint": "Otherwise a newer version is only shown and taken at the press of a button. New workspaces then start with it, running ones keep theirs.",
-            "gitHint": "Built like Binder from requirements.txt, environment.yml, apt.txt and postBuild (top level, binder/ or .binder/) on the chosen base. The repository’s files reach the workspaces as “Material from Git” (below). A new version of the base triggers a rebuild; until a build is ready, the previous image stays.",
+            "gitHint": "Built like Binder from requirements.txt, environment.yml, apt.txt and postBuild (top level, binder/ or .binder/) on the chosen base. The repository’s files reach the workspaces as “Material from Git” (below). A new version of the base triggers a rebuild; until a build is ready, the previous image stays. A private repository needs an access for its host under “Access to private repositories and images” below.",
             "state": "State",
             "since": "running since {{time}}",
             "live": "updates every 3 s",
@@ -132,7 +132,7 @@
         },
         "credentials": {
             "title": "Access to private repositories and images",
-            "hint": "With access to a host, the material from Git and an existing image can be private there; the project's workspaces use it when they start. The token is stored encrypted and not shown again; a new one for the same host replaces it. Builds from private repositories are not offered yet.",
+            "hint": "With access to a host, the material from Git and an existing image can be private there; the project's workspaces use it when they start. The token is stored encrypted and not shown again; a new one for the same host replaces it. A project image from a private repository is built with it as well; it then lives in a non-public part of the registry, and only this project uses it.",
             "host": "Host",
             "username": "User name",
             "token": "Token",

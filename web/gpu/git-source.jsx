@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Group, TextInput } from '@mantine/core';
 
-// GitSource is a Git repository with its ref, the way every Git field of a project takes it: the environment built from Git and the course material (workspace-settings.jsx). value is { url, ref }; refLabel says which refs the field takes (a build takes branches, tags and commits, the material only branches). It is the place for the access to private repositories later.
+// GitSource is a Git repository with its ref, the way every Git field of a project takes it: the environment built from Git and the course material (workspace-settings.jsx). value is { url, ref }; refLabel says which refs the field takes (a build takes branches, tags and commits, the material only branches). A private repository is reached with the project's access to its host (credentials.jsx), for the build as for the material.
 export function GitSource({ value, onChange, refLabel, readOnly }) {
     const { t } = useTranslation();
     const { url = '', ref = '' } = value ?? {};
