@@ -31,6 +31,10 @@ import {
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
+// Sharing a zone with a group (dynamic-zones addZoneGroupShare, removeZoneGroupShare), written the way the generated client writes its operations, because the client this UI takes from npm predates them; once a client with them is taken, the named imports replace these.
+const addZoneGroupShare = (options) => options.client.post({ url: '/v1/zones/{zone}/groups', ...options });
+const removeZoneGroupShare = (options) => options.client.delete({ url: '/v1/zones/{zone}/groups/{group}', ...options });
+
 function unwrap(res) {
     const err = apiErrorMessage(res);
     if (err) throw new Error(err);
@@ -79,6 +83,11 @@ export function useZonesApi() {
             rotateKeys: async (zone) => unwrap(await rotateZoneKeys({ client, path: { zone } })),
             addOwner: async (zone, email) =>
                 unwrap(await addZoneOwner({ client, path: { zone }, body: { email }, headers: JSON_HEADERS })),
+            // Sharing with a group of the role provider (group:<id> or group:<id>#<relation>).
+            addGroupShare: async (zone, group) =>
+                unwrap(await addZoneGroupShare({ client, path: { zone }, body: { group }, headers: JSON_HEADERS })),
+            removeGroupShare: async (zone, group) =>
+                unwrap(await removeZoneGroupShare({ client, path: { zone, group } })),
 
             // ── Zone events ──────────────────────────────────────────────
             // Problems the platform observed with the caller's zones (fed by

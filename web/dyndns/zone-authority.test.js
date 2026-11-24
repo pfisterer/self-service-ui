@@ -32,4 +32,19 @@ describe('zoneAuthority', () => {
         const a = zoneAuthority({ owners: ['a@dhbw.de', 'b@dhbw.de'] }, 'b@dhbw.de');
         expect(a).toMatchObject({ manages: true, canLeave: true });
     });
+
+    it('lets an owner through a group delete the zone, but not leave, and keeps others from removing them one by one', () => {
+        const shared = { owners: ['creator@dhbw.de', 'member@dhbw.de'], creator: 'creator@dhbw.de', via: { 'member@dhbw.de': 'group:lab' } };
+        const member = zoneAuthority(shared, 'member@dhbw.de');
+        expect(member).toMatchObject({ manages: false, canDelete: true, canLeave: false, viaGroup: 'group:lab' });
+        const creator = zoneAuthority(shared, 'creator@dhbw.de');
+        expect(creator.canRemove('member@dhbw.de')).toBe(false);
+        expect(creator.throughGroup('member@dhbw.de')).toBe(true);
+    });
+
+    it('reads the caller\'s group from the zone list too', () => {
+        const listed = { owners: ['creator@dhbw.de', 'member@dhbw.de'], creator: 'creator@dhbw.de', via: 'group:lab', owners_via: { 'member@dhbw.de': 'group:lab' } };
+        expect(zoneAuthority(listed, 'member@dhbw.de')).toMatchObject({ canDelete: true, viaGroup: 'group:lab' });
+        expect(zoneAuthority({ ...listed, via: undefined }, 'creator@dhbw.de')).toMatchObject({ canDelete: true, viaGroup: '' });
+    });
 });

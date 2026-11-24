@@ -243,4 +243,24 @@ describe('the zones page', () => {
         fireEvent.keyDown(document.activeElement, { key: 'End' });
         expect(document.activeElement).toBe(row('some-project'));
     });
+
+    it('a member of a group the zone is shared with sees the group, may delete the zone and ends the share in the share dialog', async () => {
+        const LAB = 'lab.dhbw.site';
+        globalThis.__zones = [{ name: LAB, zone_soa: 'dhbw.site', exists: true, owners: ['creator@dhbw.de', ME], creator: 'creator@dhbw.de', groups: ['group:lab'], via: 'group:lab', owners_via: { [ME]: 'group:lab' }, sharing_allowed: true }];
+        const removed = [];
+        globalThis.__zonesApi.getZone = async (name) => ({ owners: ['creator@dhbw.de', ME], creator: 'creator@dhbw.de', groups: ['group:lab'], via: { [ME]: 'group:lab' }, sharing_allowed: true, zoneData: { zone: name, zone_keys: [] } });
+        globalThis.__zonesApi.removeGroupShare = async (zone, group) => { removed.push([zone, group]); return {}; };
+        renderAt(`/zone/${LAB}`);
+        expect(await screen.findByText(i18n.t('dyndns.zoneDetail.sharedWithGroups', { groups: 'group:lab' }), { exact: false })).toBeTruthy();
+        expect(screen.getByText(i18n.t('dyndns.zoneDetail.viaGroup', { group: 'group:lab' }), { exact: false })).toBeTruthy();
+        expect(screen.getByRole('button', { name: i18n.t('dyndns.zoneDetail.delete') })).toBeTruthy();
+        expect(screen.queryByRole('button', { name: i18n.t('dyndns.zoneDetail.leave') })).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: i18n.t('dyndns.zoneDetail.share') }));
+        const groups = await screen.findByTestId('zone-groups');
+        expect(within(groups).getByText('lab', { exact: false })).toBeTruthy();
+        expect(screen.getByText(i18n.t('dyndns.share.viaGroup'))).toBeTruthy();
+        fireEvent.click(within(groups).getByRole('button', { name: i18n.t('dyndns.actions.remove') }));
+        fireEvent.click(await screen.findByRole('button', { name: i18n.t('dyndns.share.removeGroupConfirm') }));
+        await waitFor(() => expect(removed).toEqual([[LAB, 'group:lab']]));
+    });
 });

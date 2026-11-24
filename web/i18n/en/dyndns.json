@@ -31,7 +31,8 @@
         "clearFilter": "Clear filter",
         "noMatch": "No zone matches the filter.",
         "inactive": "not active",
-        "headingTitle": "Zones under {{domain}}"
+        "headingTitle": "Zones under {{domain}}",
+        "group": "group {{group}}"
     },
     "subzone": {
         "title": "Create subzone",
@@ -77,7 +78,9 @@
         "rotateAll": "Rotate all owners’ keys",
         "rotateOwn": "Rotate own key",
         "rotateOwnTooltip": "Regenerates only your own TSIG key; the other owners’ keys stay valid. Only whoever created the zone can rotate all keys.",
-        "rotateOwnMessage": "This regenerates your own TSIG key for this zone; the other owners’ keys are unaffected. Everything that uses the old key (external-dns secrets, scripts, nsupdate) needs the new one afterwards."
+        "rotateOwnMessage": "This regenerates your own TSIG key for this zone; the other owners’ keys are unaffected. Everything that uses the old key (external-dns secrets, scripts, nsupdate) needs the new one afterwards.",
+        "sharedWithGroups": "Shared with the groups: {{groups}}",
+        "viaGroup": "Access through the group {{group}}: the zone can be managed, shared further and deleted for as long as the membership in the group lasts."
     },
     "joinZone": {
         "intro": "This is a shared zone. Join it to co-manage its DNS records — you'll get your own TSIG key.",
@@ -95,7 +98,18 @@
         "removeMessage": "Remove {{owner}} from this zone? Their TSIG key is deleted and they lose access immediately. Other owners are unaffected.",
         "coOwnerHint": "Only whoever created the zone can remove other owners or delete it. You can remove yourself with “Leave zone”.",
         "creator": "creator",
-        "creatorTooltip": "Created the zone: may delete it, remove other owners and rotate all keys. Cannot leave the zone, only delete it."
+        "creatorTooltip": "Created the zone: may delete it, remove other owners and rotate all keys. Cannot leave the zone, only delete it.",
+        "groupsTitle": "Groups",
+        "groupsIntro": "Members of a group manage the zone like owners for as long as they are in the group, and may share it further and delete it. The zone counts toward each member's maximum number of zones.",
+        "noGroups": "Not shared with any group.",
+        "addGroupLabel": "Add a group",
+        "addGroupPlaceholder": "Search for a group",
+        "groupOnly": "Only groups can be picked here; add people with the e-mail field.",
+        "removeGroupTitle": "Remove the share with the group?",
+        "removeGroupConfirm": "Remove share",
+        "removeGroupMessage": "Remove the share with {{group}}? Members of the group lose access to the zone and its subzones unless they are owners themselves.",
+        "viaGroup": "through group",
+        "viaGroupTooltip": "Manages the zone through a group. The access ends with the membership or with the share for the group."
     },
     "keys": {
         "title": "TSIG keys for {{zone}}",

@@ -22,6 +22,9 @@ import { useZoneEvents, ZoneEventIndicator, ZoneEventsBanner } from '/dyndns/zon
 import { defaultZone, sharedOwners, zoneMatches, zoneRowId, zoneTree } from '/dyndns/zone-tree.js';
 import { zoneAuthority } from '/dyndns/zone-authority.js';
 import { useDnsMeQuery } from '/dyndns/use-dns-me.jsx';
+import { PrincipalTokenAutocomplete } from '/helper/principal-token-autocomplete.jsx';
+import { tokenDisplay, useTokenLabels } from '/projects/token-labels.jsx';
+import { useDirectorySearch } from '/dyndns/user-filter-field.jsx';
 
 // From this many zones on, a filter box stands above the tree.
 const FILTER_FROM = 6;
@@ -59,7 +62,9 @@ export function DynDnsZones() {
             const z = r.zone;
             // Shared: on the root zone, on a subzone only where its owners differ from the zone above.
             const shared = sharedOwners(r, parent(r));
-            const owners = shared ? t('dyndns.zoneList.sharedWith', { owners: shared.join(', ') }) : null;
+            const groups = (z.groups ?? []).map(g => g.replace(/^group:/i, ''));
+            const sharedText = [...(shared ?? []), ...groups.map(g => t('dyndns.zoneList.group', { group: g }))];
+            const owners = shared || groups.length > 0 ? t('dyndns.zoneList.sharedWith', { owners: sharedText.join(', ') }) : null;
             return {
                 id: r.id, name: r.name, zone: z, label: r.label, wrap: true,
                 title: z.exists ? r.name : `${r.name} (${t('dyndns.zoneList.inactive')})`,
@@ -439,6 +444,7 @@ function ActiveDomain({ zone: zoneName, onDeleted, onAddSubzone }) {
                                 {t('dyndns.zoneDetail.createdBy', { creator: zone.creator })}
                             </Text>
                         )}
+                        <ZoneGroupsLine groups={zone.groups} viaGroup={authority.viaGroup} />
                     </div>
                     <Group gap="sm" wrap="wrap">
                         {onAddSubzone && (
@@ -463,7 +469,7 @@ function ActiveDomain({ zone: zoneName, onDeleted, onAddSubzone }) {
                                 </Button>
                             </Tooltip>
                         )}
-                        {authority.manages && (
+                        {authority.canDelete && (
                             <Button color="red" size="sm" onClick={handleDeleteClick} loading={deleteZone.isPending}>{t('dyndns.zoneDetail.delete')}</Button>
                         )}
                     </Group>
@@ -475,6 +481,7 @@ function ActiveDomain({ zone: zoneName, onDeleted, onAddSubzone }) {
                 onClose={() => setShareOpen(false)}
                 zoneName={zone.zoneData.zone}
                 owners={zone.owners || []}
+                groups={zone.groups || []}
                 creator={zone.creator}
                 me={me.email}
                 authority={authority}
@@ -515,15 +522,41 @@ function ActiveDomain({ zone: zoneName, onDeleted, onAddSubzone }) {
     );
 }
 
+// ZoneGroupsLine: the groups the zone is shared with, and the caller's own group when they hold the zone through one.
+function ZoneGroupsLine({ groups = [], viaGroup = '' }) {
+    const { t } = useTranslation();
+    const labels = useTokenLabels([...groups, viaGroup].filter(Boolean));
+    if (groups.length === 0 && !viaGroup) return null;
+    return (
+        <>
+            {groups.length > 0 && (
+                <Text size="sm" c="dimmed" style={{ wordBreak: 'break-word' }}>
+                    {t('dyndns.zoneDetail.sharedWithGroups', { groups: groups.map(g => tokenDisplay(g, labels[g])).join(', ') })}
+                </Text>
+            )}
+            {viaGroup && (
+                <Text size="sm" c="dimmed" style={{ wordBreak: 'break-word' }}>
+                    {t('dyndns.zoneDetail.viaGroup', { group: tokenDisplay(viaGroup, labels[viaGroup]) })}
+                </Text>
+            )}
+        </>
+    );
+}
+
 // ----------------------------------------
 // Share Zone Modal — add co-owners; the creator (or a super admin) also removes them.
 // Each owner has their own TSIG key; removing an owner deletes only their key.
+// Groups: every owner may share the zone with a group of the directory and end such a share; the group's members then own the zone for as long as they are in the group (marked "über Gruppe" in the list, removed with the share, not one by one).
 // ----------------------------------------
-function ShareZoneModal({ opened, onClose, zoneName, owners, creator, me, authority }) {
+function ShareZoneModal({ opened, onClose, zoneName, owners, groups = [], creator, me, authority }) {
     const { t } = useTranslation();
     const api = useZonesApi();
     const confirm = useConfirm();
     const [email, setEmail] = useState('');
+    const [groupPick, setGroupPick] = useState('');
+    const [groupError, setGroupError] = useState('');
+    const search = useDirectorySearch();
+    const labels = useTokenLabels(groups);
     // Both writes invalidate the zone, so the owner list this modal renders
     // comes back through the parent's query. It used to be mirrored into local
     // state and patched from each response — two sources for one list.
@@ -540,7 +573,37 @@ function ShareZoneModal({ opened, onClose, zoneName, owners, creator, me, author
         invalidates: zoneKeys,
     });
 
-    const busy = addOwner.isPending || removeOwner.isPending;
+    const addGroup = useApiMutation({
+        mutationFn: (group) => api.addGroupShare(zoneName, group),
+        invalidates: zoneKeys,
+        onSuccess: () => setGroupPick(''),
+    });
+
+    const removeGroup = useApiMutation({
+        mutationFn: (group) => api.removeGroupShare(zoneName, group),
+        invalidates: zoneKeys,
+    });
+
+    const busy = addOwner.isPending || removeOwner.isPending || addGroup.isPending || removeGroup.isPending;
+
+    function handleAddGroup(token) {
+        const group = (token || '').trim().toLowerCase();
+        if (!group.startsWith('group:')) {
+            setGroupError(t('dyndns.share.groupOnly'));
+            return;
+        }
+        setGroupError('');
+        addGroup.mutate(group);
+    }
+
+    async function handleRemoveGroup(group) {
+        const ok = await confirm({
+            title: t('dyndns.share.removeGroupTitle'),
+            confirmLabel: t('dyndns.share.removeGroupConfirm'),
+            message: t('dyndns.share.removeGroupMessage', { group: tokenDisplay(group, labels[group]) }),
+        });
+        if (ok) removeGroup.mutate(group);
+    }
 
     function handleAdd() {
         const address = email.trim().toLowerCase();
@@ -560,7 +623,7 @@ function ShareZoneModal({ opened, onClose, zoneName, owners, creator, me, author
         <Modal opened={opened} onClose={onClose} title={t('dyndns.share.title', { zone: zoneName })} centered size="lg">
             <Stack gap="lg">
                 <Text size="sm" c="dimmed">{t('dyndns.share.intro')}</Text>
-                {!authority.manages && <Text size="sm" c="dimmed">{t('dyndns.share.coOwnerHint')}</Text>}
+                {!authority.manages && !authority.viaGroup && <Text size="sm" c="dimmed">{t('dyndns.share.coOwnerHint')}</Text>}
 
                 <Stack gap="xs">
                     {owners.map(o => (
@@ -570,6 +633,11 @@ function ShareZoneModal({ opened, onClose, zoneName, owners, creator, me, author
                                 {creator && o.toLowerCase() === creator.toLowerCase() && (
                                     <Tooltip multiline w={280} label={t('dyndns.share.creatorTooltip')}>
                                         <Badge size="xs" variant="light" color="blue">{t('dyndns.share.creator')}</Badge>
+                                    </Tooltip>
+                                )}
+                                {authority.throughGroup(o) && (
+                                    <Tooltip multiline w={280} label={t('dyndns.share.viaGroupTooltip')}>
+                                        <Badge size="xs" variant="light" color="gray">{t('dyndns.share.viaGroup')}</Badge>
                                     </Tooltip>
                                 )}
                             </Group>
@@ -588,6 +656,39 @@ function ShareZoneModal({ opened, onClose, zoneName, owners, creator, me, author
                         onChange={e => setEmail(e.currentTarget.value)} onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }} />
                     <Button onClick={handleAdd} loading={busy} disabled={!email.trim()} leftSection={<Plus size={16} />}>{t('dyndns.actions.add')}</Button>
                 </Group>
+
+                <Stack gap="xs" data-testid="zone-groups">
+                    <Text size="sm" fw={500}>{t('dyndns.share.groupsTitle')}</Text>
+                    <Text size="sm" c="dimmed">{t('dyndns.share.groupsIntro')}</Text>
+                    {groups.map(g => (
+                        <Group key={g} justify="space-between" wrap="nowrap">
+                            <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+                                <Users size={14} aria-hidden />
+                                <Tooltip label={g} openDelay={400}>
+                                    <Text size="sm" style={{ wordBreak: 'break-word' }}>{tokenDisplay(g, labels[g])}</Text>
+                                </Tooltip>
+                            </Group>
+                            <Button size="compact-xs" color="red" variant="light" disabled={busy} onClick={() => handleRemoveGroup(g)}>
+                                {t('dyndns.actions.remove')}
+                            </Button>
+                        </Group>
+                    ))}
+                    {groups.length === 0 && <Text size="sm" c="dimmed">{t('dyndns.share.noGroups')}</Text>}
+                    {search ? (
+                        <PrincipalTokenAutocomplete
+                            label={t('dyndns.share.addGroupLabel')}
+                            placeholder={t('dyndns.share.addGroupPlaceholder')}
+                            search={search}
+                            searchKey={['dyndns', 'principals']}
+                            value={groupPick}
+                            onChange={(v) => { setGroupPick(v); setGroupError(''); }}
+                            onSelect={handleAddGroup}
+                        />
+                    ) : (
+                        <Text size="xs" c="dimmed">{t('dyndns.userFilter.noDirectory')}</Text>
+                    )}
+                    {groupError && <Text size="xs" c="red">{groupError}</Text>}
+                </Stack>
 
                 <Group justify="flex-end" mt="xs">
                     <Button variant="default" onClick={onClose}>{t('dyndns.actions.close')}</Button>

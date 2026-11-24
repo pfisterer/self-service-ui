@@ -31,7 +31,8 @@
         "clearFilter": "Filter zurücksetzen",
         "noMatch": "Keine Zone passt zum Filter.",
         "inactive": "nicht aktiv",
-        "headingTitle": "Zonen unter {{domain}}"
+        "headingTitle": "Zonen unter {{domain}}",
+        "group": "Gruppe {{group}}"
     },
     "subzone": {
         "title": "Subzone anlegen",
@@ -77,7 +78,9 @@
         "rotateAll": "Schlüssel aller Eigentümer erneuern",
         "rotateOwn": "Eigenen Schlüssel erneuern",
         "rotateOwnTooltip": "Erzeugt nur den eigenen TSIG-Schlüssel neu, die Schlüssel der anderen Eigentümer bleiben gültig. Alle Schlüssel erneuern kann nur, wer die Zone angelegt hat.",
-        "rotateOwnMessage": "Das erzeugt den eigenen TSIG-Schlüssel dieser Zone neu; die Schlüssel der anderen Eigentümer bleiben unverändert. Alles, was den bisherigen Schlüssel benutzt (external-dns-Secrets, Skripte, nsupdate), braucht danach den neuen."
+        "rotateOwnMessage": "Das erzeugt den eigenen TSIG-Schlüssel dieser Zone neu; die Schlüssel der anderen Eigentümer bleiben unverändert. Alles, was den bisherigen Schlüssel benutzt (external-dns-Secrets, Skripte, nsupdate), braucht danach den neuen.",
+        "sharedWithGroups": "Geteilt mit den Gruppen: {{groups}}",
+        "viaGroup": "Zugriff über die Gruppe {{group}}: Die Zone lässt sich verwalten, weiter teilen und löschen, solange die Mitgliedschaft in der Gruppe besteht."
     },
     "joinZone": {
         "intro": "Das ist eine geteilte Zone. Nach dem Beitritt lassen sich ihre DNS-Einträge mitverwalten, mit einem eigenen TSIG-Schlüssel.",
@@ -95,7 +98,18 @@
         "removeMessage": "{{owner}} aus dieser Zone entfernen? Der TSIG-Schlüssel dieser Person wird gelöscht und sie verliert sofort den Zugriff. Die anderen Eigentümer bleiben unverändert.",
         "coOwnerHint": "Andere Eigentümer entfernen und die Zone löschen kann nur, wer sie angelegt hat. Das eigene Konto lässt sich über „Zone verlassen“ entfernen.",
         "creator": "Ersteller",
-        "creatorTooltip": "Hat die Zone angelegt: darf sie löschen, andere Eigentümer entfernen und alle Schlüssel erneuern. Kann die Zone nicht verlassen, nur löschen."
+        "creatorTooltip": "Hat die Zone angelegt: darf sie löschen, andere Eigentümer entfernen und alle Schlüssel erneuern. Kann die Zone nicht verlassen, nur löschen.",
+        "groupsTitle": "Gruppen",
+        "groupsIntro": "Mitglieder einer Gruppe verwalten die Zone wie Eigentümer, solange sie in der Gruppe sind, und dürfen sie weiter teilen und löschen. Die Zone zählt bei jedem Mitglied zur Höchstzahl der Zonen.",
+        "noGroups": "Mit keiner Gruppe geteilt.",
+        "addGroupLabel": "Gruppe hinzufügen",
+        "addGroupPlaceholder": "Gruppe suchen",
+        "groupOnly": "Hier lassen sich nur Gruppen auswählen; Personen über das Feld mit der E-Mail-Adresse hinzufügen.",
+        "removeGroupTitle": "Freigabe für die Gruppe entfernen?",
+        "removeGroupConfirm": "Freigabe entfernen",
+        "removeGroupMessage": "Die Freigabe für {{group}} entfernen? Mitglieder der Gruppe verlieren den Zugriff auf die Zone und ihre Subzonen, sofern sie nicht selbst Eigentümer sind.",
+        "viaGroup": "über Gruppe",
+        "viaGroupTooltip": "Verwaltet die Zone über eine Gruppe. Der Zugriff endet mit der Mitgliedschaft oder mit der Freigabe für die Gruppe."
     },
     "keys": {
         "title": "TSIG-Schlüssel für {{zone}}",
