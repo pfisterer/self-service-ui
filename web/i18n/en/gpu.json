@@ -472,6 +472,7 @@
         "hideLog": "Hide log",
         "noEvents": "No messages yet.",
         "failedTitle": "The start failed",
+        "noticeTitle": "About the last run",
         "limits": "Ends after {{idle}} without activity, after {{max}} at the latest.",
         "buildingTitle": "The environment is being built",
         "building": "The environment's image is being built from the Git repository. Workspaces can start once the build is done; this page updates by itself.",

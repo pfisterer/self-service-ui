@@ -174,6 +174,7 @@ export function GpuStart() {
                                 <Progress value={last?.progress ?? 0} size="sm" animated />
                             </>
                         )}
+                        <StartNotice events={events} />
                         <StartLog events={events} open={failed} />
                         <Anchor component={Link} href="/servers" size="sm">{t('gpu.start.toServers')}</Anchor>
                     </Stack>
@@ -319,6 +320,14 @@ export function LlmChoice({ project, llmProjects, value, onChange }) {
                 data={[...llmProjects.map(p => ({ value: p.slug, label: mark(p.slug, p.name || p.slug) })), { value: NO_LLM, label: mark(NO_LLM, t('gpu.start.llmNone')) }]} />
         </Stack>
     );
+}
+
+// The hub puts a "Hinweis: " event at the head of a start when Kubernetes ended this server last time (an eviction, e.g. the local storage outside the home ran full); shown above the log rather than folded away inside it.
+export function StartNotice({ events }) {
+    const { t } = useTranslation();
+    const notice = (events ?? []).find(e => typeof e?.message === 'string' && e.message.startsWith('Hinweis: '));
+    if (!notice) return null;
+    return <Alert color="yellow" variant="light" title={t('gpu.start.noticeTitle')}>{notice.message.slice('Hinweis: '.length)}</Alert>;
 }
 
 // StartLog is the hub's event log of a start, folded away until asked for; open from the start when the start failed.

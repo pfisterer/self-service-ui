@@ -472,6 +472,7 @@
         "hideLog": "Protokoll ausblenden",
         "noEvents": "Noch keine Meldungen.",
         "failedTitle": "Der Start ist gescheitert",
+        "noticeTitle": "Hinweis zum letzten Lauf",
         "limits": "Endet nach {{idle}} ohne Aktivität, spätestens nach {{max}}.",
         "buildingTitle": "Die Umgebung wird gebaut",
         "building": "Das Image der Umgebung wird aus dem Git-Repository gebaut. Workspaces können starten, sobald der Bau fertig ist; diese Seite aktualisiert sich von selbst.",
