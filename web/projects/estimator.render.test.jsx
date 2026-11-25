@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import i18n from '/i18n/index.js';
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { fakeNodesApi, fixtureTree, renderView } from '/test/render-harness.jsx';
 import { applicable, budgetVerdict, ESTIMATE_DEFAULTS, estimateInput, formsFromInput } from './component-estimator.jsx';
 
@@ -90,6 +90,16 @@ describe('budgetVerdict', () => {
 });
 
 describe('EstimatorSection', () => {
+    // The feature gate (GET /v1/config features.estimator): closed, the helper is not there at all; a config without features leaves it open.
+    it('is hidden where the estimator gate is closed to the person', () => {
+        globalThis.__testApi = { ...fakeNodesApi(fixtureTree()) };
+        renderView(<EstimatorSection kind="llm" offered={LLM} budgetId="b_ma" onApply={() => {}} />, { config: { resources: LLM, roles: [], features: { estimator: false } } });
+        expect(screen.queryByRole('button', { name: 'Schätzen' })).toBeNull();
+        cleanup();
+        renderView(<EstimatorSection kind="llm" offered={LLM} budgetId="b_ma" onApply={() => {}} />, { config: { resources: LLM, roles: [], features: { estimator: true } } });
+        expect(screen.getAllByRole('button', { name: 'Schätzen' }).length).toBeGreaterThan(0);
+    });
+
     it('computes, shows assumptions, warnings and the budget, and takes the offered amounts into the fields', async () => {
         const estimate = vi.fn(async () => RESULT);
         globalThis.__testApi = { ...fakeNodesApi(fixtureTree()), estimate };
@@ -133,6 +143,39 @@ describe('EstimatorSection', () => {
         fireEvent.click(screen.getAllByRole('button', { name: 'Schätzen' })[0]);
         await screen.findByText('Flavor hinzufügen');
         expect(screen.queryByText('Beschreibung der Nutzung')).toBeNull();
+    });
+
+    it('opens as a dialog over the request dialog: Escape and Abbrechen close only it, Übernehmen fills the fields below', async () => {
+        const estimate = vi.fn(async () => RESULT);
+        globalThis.__testApi = { ...fakeNodesApi(fixtureTree()), estimate };
+        const onClose = vi.fn();
+        renderView(<ProjectFormModal opened onClose={onClose} resources={LLM} roles={['member', 'reader']}
+            myBudgets={[]} eligibleBudgets={[{ id: 'b_ma', kind: 'budget', name: 'Mannheim', status: 'approved', limit: { 'llm-mtokens': 1000, 'llm-rpm': 1000, 'llm-tpm': 10000000 }, eligible_requesters: ['user:x@example.org'] }]}
+            initialTab="resources" />);
+        const openIt = async () => {
+            fireEvent.click((await screen.findAllByRole('button', { name: 'Schätzen' }))[0]);
+            await screen.findByRole('button', { name: /Berechnen/ });
+        };
+        // Escape belongs to the estimator while it is open; the request dialog stays.
+        await openIt();
+        fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+        await waitFor(() => expect(screen.queryByRole('button', { name: /Berechnen/ })).toBeNull());
+        expect(onClose).not.toHaveBeenCalled();
+        // Abbrechen: closed, nothing taken.
+        await openIt();
+        const dialogs = screen.getAllByRole('dialog');
+        fireEvent.click(within(dialogs[dialogs.length - 1]).getByRole('button', { name: 'Abbrechen' }));
+        await waitFor(() => expect(screen.queryByRole('button', { name: /Berechnen/ })).toBeNull());
+        expect(onClose).not.toHaveBeenCalled();
+        // Übernehmen: closed, the amounts in the fields of the request dialog.
+        await openIt();
+        await waitFor(() => expect(screen.getByRole('button', { name: /Berechnen/ }).disabled).toBe(false));
+        fireEvent.click(screen.getByRole('button', { name: /Berechnen/ }));
+        await screen.findByTestId('estimate-result');
+        fireEvent.click(screen.getByRole('button', { name: 'In die Felder übernehmen' }));
+        await waitFor(() => expect(screen.queryByTestId('estimate-result')).toBeNull());
+        expect(onClose).not.toHaveBeenCalled();
+        await waitFor(() => expect(screen.getAllByDisplayValue('49').length).toBeGreaterThan(0));
     });
 
     it('is part of the request dialog of a new LLM project', async () => {

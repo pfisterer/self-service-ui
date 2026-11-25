@@ -349,6 +349,13 @@
         "jobs_one": "Batch-Jobs: {{count}} je Person, {{hours}} h",
         "jobs_other": "Batch-Jobs: {{count}} je Person, {{hours}} h"
     },
+    "memberView": {
+        "others_one": "Eigener Zugang und 1 weiteres Mitglied",
+        "others_other": "Eigener Zugang und {{count}} weitere Mitglieder",
+        "alone": "Nur eigener Zugang",
+        "through": "Zugang über",
+        "hint": "Wer außerdem Zugang hat, ist nur für die Inhaberin oder den Inhaber und die Verwaltenden des Projekts sichtbar."
+    },
     "projectForm": {
         "titleNew": "Neues Projekt",
         "titleEdit": "Anfrage bearbeiten",

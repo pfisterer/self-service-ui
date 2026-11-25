@@ -180,6 +180,24 @@ export function TokenBadgeList({ tokens, emptyMessage = null, size = 'sm' }) {
     );
 }
 
+// MemberSummary is what a project's member sees of its members (isMemberView): their own access and how many others there are, never who. A group they are in through which they have access stays named, as the API sends it.
+export function MemberSummary({ node }) {
+    const { t } = useTranslation();
+    const others = node?.members_hidden ?? 0;
+    const groups = (node?.authorized_users || []).map(u => u.token).filter(tk => tk.startsWith('group:'));
+    return (
+        <Stack gap={4}>
+            <Text size="xs">{others > 0 ? t('projects.memberView.others', { count: others }) : t('projects.memberView.alone')}</Text>
+            {groups.length > 0 && (
+                <Group gap="xs" wrap="wrap">
+                    <Text size="xs" c="dimmed">{t('projects.memberView.through')}</Text>
+                    <TokenBadgeList tokens={groups} size="xs" />
+                </Group>
+            )}
+        </Stack>
+    );
+}
+
 // QuotaBadges renders a quota map as one badge per resource ("10 vCPUs" …). hideZero leaves out amounts of 0, for a request: a project asks for what it names, and the form fills every other resource of the budget with 0, so a cloud project's request would otherwise list "0 vCPU h Workspace CPU" and the like.
 export function QuotaBadges({ resources, quota, size = 'sm', hideZero = false }) {
     const { t } = useTranslation();

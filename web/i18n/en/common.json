@@ -94,6 +94,12 @@
             "seconds": "{{count}} s",
             "cancel": "Cancel",
             "cancelled": "Upload cancelled."
+        },
+        "apiError": {
+            "unavailable": "The service cannot be reached right now. Please try again in a moment.",
+            "status": "status {{status}}",
+            "requestId": "request ID {{id}}",
+            "failed": "The request failed."
         }
     },
     "providers": {
