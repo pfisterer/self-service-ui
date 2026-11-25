@@ -198,6 +198,8 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
     const queryClient = useQueryClient();
     // The budget being raised from here ({ budget, parent, add }), or null.
     const [raise, setRaise] = useState(null);
+    // The estimator's dialog lies over this one while it is open (component-estimator.jsx); Escape is then its.
+    const [estimating, setEstimating] = useState(false);
     const isAdopt = adopt && !!node;
     const isChange = !!node && !isAdopt;
     const { user } = useAuth();
@@ -912,6 +914,7 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
             {/* The estimator: amounts computed from the intended use, taken into the fields below (still editable). The budget check only for a new project paid by one budget; a change or a split is checked by the outcome and the split below. */}
             {!isAdopt && !multi && (
                 <EstimatorSection
+                    onOpenChange={setEstimating}
                     kind={kind}
                     offered={kind ? offered.filter(r => kindOfResource(r) === kind) : offered}
                     budgetId={!isChange && !splitting ? parentId : null}
@@ -1037,7 +1040,7 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
             size={DIALOG_SIZE}
             onClose={onClose}
             // Escape belongs to the budget's dialog while it is open over this one.
-            closeOnEscape={!raise}
+            closeOnEscape={!raise && !estimating}
             title={isAdopt ? t('projects.adopt.title', { name: nodeTitle(node) })
                 : isChange
                 ? t('projects.inspect.titleProject', { name: nodeTitle(node) })

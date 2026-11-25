@@ -13,7 +13,8 @@ async function call(path, { method = 'GET', body } = {}) {
     let data;
     try { data = text ? JSON.parse(text) : null; } catch { data = null; }
     if (!response.ok) {
-        throw apiError({ error: data && typeof data === 'object' ? data : { error: response.statusText || `HTTP ${response.status}` }, response });
+        // A body that is not JSON (a proxy's error page) goes on as text: apiErrorMessage never shows it, it says the service is not reachable.
+        throw apiError({ error: data && typeof data === 'object' ? data : text, response });
     }
     return data;
 }

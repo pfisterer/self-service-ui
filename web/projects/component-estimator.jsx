@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ActionIcon, Alert, Button, Checkbox, Group, List, NumberInput, Paper, SegmentedControl, Select, Stack, Table, Text, Textarea } from '@mantine/core';
+import { ActionIcon, Alert, Button, Checkbox, Group, List, Modal, NumberInput, Paper, SegmentedControl, Select, Stack, Table, Text, Textarea } from '@mantine/core';
 import { AlertTriangle, Calculator, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
@@ -182,16 +182,54 @@ export function EstimateResult({ t, result, budget, described, offered, onApply 
     );
 }
 
-// EstimatorSection is the "Schätzen" helper above a resources tab, shown where the feature gate estimator is open to the person (use-features.js). kind is the tab's area (null: every area the form offers); budgetId the one budget paying (none while the project is split over budgets); onApply gets the amounts to write into the fields.
+// ESTIMATOR_Z lies above the request dialog (FormModal, default z-index), as the budget's dialog for a raise does.
+const ESTIMATOR_Z = 300;
+
+// EstimatorSection is the "Schätzen" button above a resources tab, shown where the feature gate estimator is open to the person (use-features.js). It opens the estimator as a dialog over the request dialog, which keeps its state underneath: "In die Felder übernehmen" closes it and fills the fields below (still editable), "Abbrechen" or Escape close it without changes. kind is the tab's area (null: every area the form offers); budgetId the one budget paying (none while the project is split over budgets); onApply gets the amounts to write into the fields; onOpenChange tells the request dialog, so that Escape closes only the estimator while it is open.
 export function EstimatorSection(props) {
-    return useFeature('estimator') ? <EstimatorPanel {...props} /> : null;
+    return useFeature('estimator') ? <EstimatorLauncher {...props} /> : null;
 }
 
-function EstimatorPanel({ kind, offered, budgetId, terminationDate, onApply }) {
+function EstimatorLauncher({ kind, offered, budgetId, terminationDate, onApply, onOpenChange }) {
+    const { t } = useTranslation();
+    const api = useNodesApi();
+    const [open, setOpen] = useState(false);
+    const kinds = estimatorKinds(kind, offered);
+    if (!api?.estimateOptions || kinds.length === 0) return null;
+    const toggle = (v) => { setOpen(v); onOpenChange?.(v); };
+    return (
+        <Paper withBorder radius="md" p="sm">
+            <Group justify="space-between" wrap="nowrap">
+                <Group gap={6} wrap="nowrap">
+                    <Calculator size="14" />
+                    <Stack gap={0}>
+                        <Text size="sm" fw={600}>{t('projects.estimate.title')}</Text>
+                        <Text size="xs" c="dimmed">{t('projects.estimate.hint')}</Text>
+                    </Stack>
+                </Group>
+                <Button size="xs" variant="light" onClick={() => toggle(true)}>{t('projects.estimate.open')}</Button>
+            </Group>
+            <Modal opened={open} onClose={() => toggle(false)} zIndex={ESTIMATOR_Z} size="lg" title={t('projects.estimate.title')}>
+                {open && (
+                    <EstimatorPanel kind={kind} offered={offered} budgetId={budgetId} terminationDate={terminationDate}
+                        onApply={(take) => { onApply(take); toggle(false); }}
+                        onCancel={() => toggle(false)} />
+                )}
+            </Modal>
+        </Paper>
+    );
+}
+
+// estimatorKinds are the areas the estimator offers: the tab's, or every area the form has resources of.
+function estimatorKinds(kind, offered) {
+    return kind ? [kind] : PROJECT_KINDS.filter(k => (offered || []).some(r => kindOfResource(r) === k));
+}
+
+function EstimatorPanel({ kind, offered, budgetId, terminationDate, onApply, onCancel }) {
     const { t, i18n } = useTranslation();
     const api = useNodesApi();
-    const kinds = kind ? [kind] : PROJECT_KINDS.filter(k => (offered || []).some(r => kindOfResource(r) === k));
-    const [open, setOpen] = useState(false);
+    const kinds = estimatorKinds(kind, offered);
+    const open = true;
     const [area, setArea] = useState(kinds[0] ?? 'llm');
     const [forms, setForms] = useState(ESTIMATE_DEFAULTS);
     const [level, setLevel] = useState('typical');
@@ -238,19 +276,9 @@ function EstimatorPanel({ kind, offered, budgetId, terminationDate, onApply }) {
     const wsGpu = (opts?.workspace_kinds || []).find(x => x.id === forms.workspaces.kind)?.gpus > 0;
 
     return (
-        <Paper withBorder radius="md" p="sm">
-            <Group justify="space-between" wrap="nowrap">
-                <Group gap={6} wrap="nowrap">
-                    <Calculator size="14" />
-                    <Stack gap={0}>
-                        <Text size="sm" fw={600}>{t('projects.estimate.title')}</Text>
-                        <Text size="xs" c="dimmed">{t('projects.estimate.hint')}</Text>
-                    </Stack>
-                </Group>
-                <Button size="xs" variant={open ? 'default' : 'light'} onClick={() => setOpen(o => !o)}>{t(open ? 'projects.estimate.close' : 'projects.estimate.open')}</Button>
-            </Group>
+        <>
             {open && (
-                <Stack gap="xs" mt="xs">
+                <Stack gap="xs">
                     {options.isLoading && <Text size="xs" c="dimmed">{t('projects.estimate.loading')}</Text>}
                     {options.error && <Alert color={COLOR.negative} variant="light" p="xs"><Text size="xs">{formatError(options.error)}</Text></Alert>}
                     {opts?.describe_enabled && (
@@ -308,8 +336,11 @@ function EstimatorPanel({ kind, offered, budgetId, terminationDate, onApply }) {
                         <EstimateResult t={t} result={answer.result} budget={answer.budget} described={answer.described} offered={offered}
                             onApply={(take) => onApply(take)} />
                     )}
+                    <Group justify="flex-end">
+                        <Button size="xs" variant="default" onClick={onCancel}>{t('projects.actions.cancel')}</Button>
+                    </Group>
                 </Stack>
             )}
-        </Paper>
+        </>
     );
 }

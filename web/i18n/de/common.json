@@ -94,6 +94,12 @@
             "seconds": "{{count}} s",
             "cancel": "Abbrechen",
             "cancelled": "Hochladen abgebrochen."
+        },
+        "apiError": {
+            "unavailable": "Der Dienst ist gerade nicht erreichbar. Bitte gleich noch einmal versuchen.",
+            "status": "Status {{status}}",
+            "requestId": "Anfrage-ID {{id}}",
+            "failed": "Die Anfrage ist fehlgeschlagen."
         }
     },
     "providers": {

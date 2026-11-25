@@ -160,18 +160,18 @@ describe('upload', () => {
         expect(onError).toHaveBeenCalledWith(err);
     });
 
-    it('reads a body that is not JSON as the message, and an empty one as the status text', async () => {
+    it('never shows a body that is not JSON: an outage reads as one, any other refusal as a failed request, both with the status', async () => {
         let p = upload({ url: '/a', body: file() });
         FakeXHR.last.respond(502, '<html>Bad Gateway</html>', { contentType: 'text/html', statusText: 'Bad Gateway' });
         let err = await p.catch(e => e);
-        expect(err.message).toBe('<html>Bad Gateway</html>');
+        expect(err.message).toBe(`${i18n.t('helper.apiError.unavailable')} (${i18n.t('helper.apiError.status', { status: 502 })})`);
         expect(err.status).toBe(502);
         expect(err.code).toBeUndefined();
 
         p = upload({ url: '/a', body: file() });
         FakeXHR.last.respond(413, '', { contentType: null, statusText: 'Payload Too Large' });
         err = await p.catch(e => e);
-        expect(err.message).toBe('Payload Too Large');
+        expect(err.message).toBe(`${i18n.t('helper.apiError.failed')} (${i18n.t('helper.apiError.status', { status: 413 })})`);
         expect(err.status).toBe(413);
     });
 
