@@ -15,6 +15,7 @@ import { ExternalGroups } from './component-external-groups.jsx';
 import { capHistory } from './util-caps.js';
 import { useProjectConfig } from './projects.jsx';
 import { LlmLimitHints } from './component-llm-limits.jsx';
+import { AllocationList } from './component-allocations.jsx';
 
 dayjs.extend(relativeTime);
 
@@ -50,6 +51,13 @@ const EVENT_ICON = {
     term_shortened: CalendarMinus,
     allocation_set: Gift,
     allocation_removed: Gift,
+    // allocation_leaves: a project's allocations come and go, run out and get cut.
+    allocation_added: Gift,
+    allocation_ended: Gift,
+    members_changed: Users,
+    expired: CalendarMinus,
+    shortened: CalendarMinus,
+    budget_deleted: Trash2,
     attributes_changed: Tags,
     external_group_removed: Users,
     archived: Archive,
@@ -116,6 +124,13 @@ function ResourcesTab({ node, resources }) {
                 : <QuotaBadges resources={resources} quota={node.limit} size="xs" />}
             {!isBudget(node) && projectKinds(node, resources).includes('llm') && (
                 <Box mt="xs"><LlmLimitHints compact resources={resources} limit={effectiveLimit(node, node.limit)} /></Box>
+            )}
+            {/* Who pays for what: every allocation, the ones that no longer count included (dimmed). */}
+            {(node.allocations || []).length > 0 && (
+                <Box mt="md">
+                    <Text size="xs" c="dimmed" mb={4}>{t('projects.fact.paidFrom')}</Text>
+                    <AllocationList project={node} resources={resources} all />
+                </Box>
             )}
         </Section>
     );

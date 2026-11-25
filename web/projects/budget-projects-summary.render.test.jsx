@@ -28,11 +28,12 @@ const RESOURCES = [
     { id: 'ws-storage-gb', name: 'Workspace storage', unit: 'GB', area: 'workspaces' },
 ];
 const BUDGET = { id: 'b', kind: 'budget', name: 'Budget', limit: { cores: 100, 'gpu-hours-small': 100, 'gpu-hours-large': 100, 'ws-vcpu-hours': 1000, 'ws-ram-gb-hours': 4000, 'ws-storage-gb': 100 } };
-const PROJECTS = [
-    { id: 'p1', kind: 'project', status: 'approved', name: 'Bildanalyse', parent_id: 'b', limit: { 'gpu-hours-small': 50, 'gpu-hours-large': 20, 'ws-vcpu-hours': 100, 'ws-ram-gb-hours': 400, 'ws-storage-gb': 20 },
-      bindings: { aiaas: { in_use: { 'gpu-hours-small': 12, 'gpu-hours-large': 3, 'ws-vcpu-hours': 40, 'ws-ram-gb-hours': 160, 'ws-storage-gb': 7 } } } },
-    { id: 'p2', kind: 'project', status: 'approved', name: 'Noch leer', parent_id: 'b', limit: { 'gpu-hours-small': 10 } },
-];
+// The table lists the budget's allocations (allocation_leaves), each with its whole project: what is used is the project's.
+const allocation = (id, project, limit) => ({ id, kind: 'allocation', status: 'approved', name: project.name, parent_id: 'b', project_id: project.id, limit, project });
+const P1 = { id: 'p1', kind: 'project', status: 'approved', name: 'Bildanalyse', parent_id: null, limit: { 'gpu-hours-small': 50, 'gpu-hours-large': 20, 'ws-vcpu-hours': 100, 'ws-ram-gb-hours': 400, 'ws-storage-gb': 20 },
+    bindings: { aiaas: { in_use: { 'gpu-hours-small': 12, 'gpu-hours-large': 3, 'ws-vcpu-hours': 40, 'ws-ram-gb-hours': 160, 'ws-storage-gb': 7 } } } };
+const P2 = { id: 'p2', kind: 'project', status: 'approved', name: 'Noch leer', parent_id: null, limit: { 'gpu-hours-small': 10 } };
+const PROJECTS = [allocation('a1', P1, P1.limit), allocation('a2', P2, P2.limit)];
 
 let calls;
 beforeEach(() => {
@@ -62,7 +63,7 @@ describe('the budget table, narrow', () => {
         await waitFor(() => expect(calls.some(c => c.sort === 'used:gpu-hours-small,gpu-hours-large' && c.order === 'desc')).toBe(true));
 
         fireEvent.click(row);
-        expect(onOpen).toHaveBeenCalledWith(PROJECTS[0]);
+        expect(onOpen).toHaveBeenCalledWith(P1);
     });
 
     it('under Workspaces also shows RAM hours and storage', async () => {
@@ -76,7 +77,7 @@ describe('the budget table, narrow', () => {
     });
 
     it('the project dialog opens on its consumption, also for a project without OpenStack', async () => {
-        renderView(<NodeInspectModal opened node={PROJECTS[0]} resources={RESOURCES} initialTab={TAB_USAGE} onClose={() => {}} />, { config: { resources: RESOURCES } });
+        renderView(<NodeInspectModal opened node={P1} resources={RESOURCES} initialTab={TAB_USAGE} onClose={() => {}} />, { config: { resources: RESOURCES } });
         expect(await screen.findByText(i18n.t('projects.consumption.now'))).toBeTruthy();
         expect(screen.queryByText(i18n.t('projects.consumption.history'))).toBeNull();
     });

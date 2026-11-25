@@ -14,6 +14,9 @@ import { BudgetFormModal } from './modal-budget-form.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
 import { NodeInspectModal } from './modal-inspect.jsx';
 import { RetireModal } from './modal-retire.jsx';
+import { DecisionModal } from './modal-decide.jsx';
+import { AllocationModal } from './modal-allocation.jsx';
+import { useEndAllocation } from './component-allocations.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
@@ -23,7 +26,7 @@ import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { jobMaxHours, projectHasJobs } from '/gpu/jobs.js';
 import { GroupChoices } from '/gpu/group-choice.jsx';
-import { COLOR, PROJECT_SORTS, budgetKinds, deletionRequested, getAuthUserEmail, isRetired, mostSpecificFirst, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
+import { COLOR, PROJECT_SORTS, budgetKinds, deletionRequested, getAuthUserEmail, holdsProject, isRetired, mostSpecificFirst, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
 
 // MyProjectsView lists the projects of one area (cloud, workspaces, llm) the
 // signed-in user owns or shares, and lets them request new ones, propose changes
@@ -91,7 +94,11 @@ export function MyProjectsView({ area = 'cloud' }) {
         ],
     });
 
-    const handleAction = (action, node, tab) => dlg.open(action, node, tab);
+    const endAllocation = useEndAllocation();
+    // Giving back one allocation of a project is a confirmation, no dialog; everything else opens one.
+    const handleAction = (action, node, tab) => (action === 'allocation-end'
+        ? endAllocation(node, { holder: holdsProject(node.project, getAuthUserEmail(user)), resources: config?.resources })
+        : dlg.open(action, node, tab));
 
     if (!api || !config || projectsQuery.isPending) return <Loading />;
     if (projectsQuery.isError) return <LoadError query={projectsQuery} title={t('projects.myProjects.loadError')} />;
@@ -193,6 +200,8 @@ export function MyProjectsView({ area = 'cloud' }) {
                         envBuild={envBuildOf(node)}
                         jobs={jobsOf(node)}
                         start={startOf(node)}
+                        managedIds={managedIds}
+                        isRoot={cloudStatus.isRoot}
                         onAction={handleAction}
                     />
                 ))}
@@ -259,6 +268,24 @@ export function MyProjectsView({ area = 'cloud' }) {
                 onClose={dlg.close} node={dlg.node} resources={resources} initialTab={dlg.tab} />
             <RetireModal key={`retire:${dlg.key}`} opened={dlg.is('release') || dlg.is('delete-for-good')}
                 mode={dlg.is('delete-for-good') ? 'delete' : 'release'} onClose={dlg.close} node={dlg.node} />
+            {/* What each budget pays for a project: change it, give it back, or ask another budget for more. */}
+            <AllocationModal
+                key={`allocations:${dlg.key}:${dlg.tab ?? ''}`}
+                opened={dlg.is('allocations')}
+                onClose={dlg.close}
+                onDone={cloudStatus.refresh}
+                project={dlg.is('allocations') ? dlg.node : null}
+                initial={dlg.tab}
+                resources={resources}
+                myBudgets={myBudgets}
+                eligibleBudgets={eligibleBudgets}
+                myProjects={ownProjects}
+                isRoot={cloudStatus.isRoot}
+                userEmail={getAuthUserEmail(user)}
+            />
+            {/* A holder who also manages one of the paying budgets decides on its allocation here too. */}
+            <DecisionModal key={`decide:${dlg.key}`} opened={dlg.is('decide')} onClose={dlg.close} onDone={cloudStatus.refresh}
+                resources={resources} node={dlg.node} />
         </Stack>
     );
 }

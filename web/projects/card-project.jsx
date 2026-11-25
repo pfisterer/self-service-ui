@@ -1,7 +1,7 @@
-import { Activity, AlertTriangle, ExternalLink, Eye, Gift, Pencil, Play, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
+import { Activity, AlertTriangle, ExternalLink, Eye, Pencil, Play, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Loader, Stack, Text, Tooltip } from '@mantine/core';
-import { CopyLinkButton, DeletingBadge, FactRow, NodeChangesDiff, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
-import { COLOR, deletesOnRequest, deletionRequested, effectiveLimit, expiryTone, expiryValue, getAuthUserEmail, hasAllocations, isImported, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, finalDeletion, labDeletion, openstackSide, catalogKinds, projectKinds } from './util-project.jsx';
+import { CopyLinkButton, DeletingBadge, FactRow, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
+import { COLOR, deletesOnRequest, deletionRequested, expiryTone, expiryValue, getAuthUserEmail, holdsProject, isImported, liveAllocations, managesAllocation, projectDisplayLimit, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, finalDeletion, labDeletion, openstackSide, catalogKinds, projectKinds } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'wouter';
@@ -11,6 +11,7 @@ import { BudgetPath } from './component-budget-path.jsx';
 import { ProjectResources } from './component-project-resources.jsx';
 import { LlmLimitHints } from './component-llm-limits.jsx';
 import { TAB_USAGE } from './modal-inspect.jsx';
+import { AllocationList, allocationNode } from './component-allocations.jsx';
 
 // ProjectCard renders one project leaf. It is purely presentational: every
 // button reports an action to the owning view via onAction(actionId, node),
@@ -21,6 +22,8 @@ import { TAB_USAGE } from './modal-inspect.jsx';
 //   'owner'    the viewer owns or administers this project (My Projects)
 //   'member'   the viewer only works in it as an authorized user (My Projects): read-only, only its details
 //   'manager'  the viewer decides on it (Approvals)
+//
+// The project consists of allocations, one per paying budget (allocation_leaves); "Paid from" lists them with what the viewer may do with each (AllocationList). managedIds/isRoot: the budgets the viewer manages, so a budget's managers act on their own allocation only. focusId: the allocation the view is about (a waiting request in the inbox, a row of a budget's table).
 // How many members a card names before it counts the rest.
 const MEMBERS_SHOWN = 5;
 
@@ -29,7 +32,7 @@ const MEMBERS_SHOWN = 5;
 // jobs: what the project allows of batch jobs ({perPerson, hours}), else null.
 // start: where a workspace of the project starts (the start page with it chosen), else null.
 // envBuild: the build of the project's workspace environment from Git while it builds or after it failed ({status, message, hasImage}), else null.
-export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction, link, envBuild, jobs, start }) {
+export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction, link, envBuild, jobs, start, managedIds = null, isRoot = false, focusId = null }) {
     const { t } = useTranslation();
     const act = (action, tab) => onAction?.(action, node, tab);
     const config = useProjectConfig();
@@ -40,7 +43,6 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     // Approved but not in OpenStack yet — the reconciler runs on an interval.
     const provisioning = isProvisioning(node, config?.provisioningEnabled, resources, config?.providers);
     const openstackUrl = openstackProjectUrl(config?.openstackDashboardUrl, node);
-    const isChangePending = node.status === 'change_pending';
     const isRejected = node.status === 'rejected';
     const hasHistory = (node.history || []).length > 0;
     const isManager = perspective === 'manager';
@@ -68,13 +70,17 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
     const memberTokens = (node.authorized_users || []).map(u => u.token);
     const shownMembers = memberTokens.slice(0, MEMBERS_SHOWN);
 
-    // Resources shown in the summary line: the proposed limit while a change
-    // awaits approval, the current limit otherwise.
-    const summaryQuota = (isChangePending && node.pending?.limit) ? node.pending.limit : node.limit;
-    // In total, allocations from budgets further up included — that is what
-    // the project has in OpenStack. Where it comes from is the next row.
-    const resourceSummary = resourceSummaryText(t, resources, effectiveLimit(node, summaryQuota));
-    const allocated = hasAllocations(node);
+    // What the project holds in total (the sum of its paying allocations), or while it waits as a whole what it asks for; which budget pays for what is the "Paid from" row.
+    const summaryQuota = projectDisplayLimit(node);
+    const resourceSummary = resourceSummaryText(t, resources, summaryQuota);
+    // Holders (owner, admins) manage the whole project; a budget's managers their own allocation. In My Projects the card is a holder's unless the viewer is only a member.
+    const holder = perspective === 'owner' || (isManager && holdsProject(node, me));
+    const allocations = liveAllocations(node);
+    // A manager's decision is on an allocation of their budget: the one the view is about, else the first one waiting there.
+    const waitingMine = allocations.filter(a => (a.status === 'pending' || a.status === 'change_pending') && managesAllocation(a, managedIds, isRoot));
+    const decideOn = isManager ? (waitingMine.find(a => a.id === focusId) ?? waitingMine[0] ?? null) : null;
+    // Releasing the whole project is for its holders and whoever manages every budget paying for it.
+    const releasable = holder || (allocations.length > 0 && allocations.every(a => managesAllocation(a, managedIds, isRoot)));
     // An LLM project that is still in use: say when its limits keep it from working (no tokens, rates too low).
     const llmHints = projectKinds(node, resources).includes('llm') && !isRetired(node) && !isRejected && !deletionRequested(node);
 
@@ -172,28 +178,16 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                     {resourceSummary && (
                         <FactRow label={t('projects.fact.resources')}>
                             <ProjectResources node={node} resources={resources}
-                                quota={effectiveLimit(node, summaryQuota)} size="sm" />
+                                quota={summaryQuota} size="sm" />
                         </FactRow>
                     )}
 
-                    {/* With allocations, which budget pays for what: the own
-                        share from the project's budget, the rest from further up. */}
-                    {allocated ? (
+                    {/* Which budget pays for what, until when, and what waits or ran out. */}
+                    {allocations.length > 0 ? (
                         <FactRow label={t('projects.fact.paidFrom')}>
-                            <Stack gap={2}>
-                                <Text size="xs">
-                                    <b>{parentName ? <BudgetPath path={node.parent_path} name={parentName} inherit /> : t('projects.allocation.ownBudget')}</b>
-                                    {' · '}{resourceSummaryText(t, resources, summaryQuota) || '—'}
-                                </Text>
-                                {node.allocations.map(a => (
-                                    <Text size="xs" key={a.budget_id}>
-                                        <Gift size="11" style={{ verticalAlign: '-1px', marginRight: 4, color: `var(--mantine-color-${COLOR.info}-7)` }} />
-                                        <b><BudgetPath path={a.budget_path} name={a.budget_name || a.budget_id} inherit /></b>
-                                        {' · '}{resourceSummaryText(t, resources, a.limit)}
-                                        <Text span size="xs" c="dimmed">{' '}({t('projects.allocation.badge')})</Text>
-                                    </Text>
-                                ))}
-                            </Stack>
+                            <AllocationList project={node} resources={resources} holder={holder}
+                                managedIds={managedIds} isRoot={isRoot} focusId={focusId}
+                                onAction={isMember ? undefined : onAction} />
                         </FactRow>
                     ) : parentName && (
                         <FactRow label={t('projects.fact.paidFrom')}>
@@ -254,20 +248,9 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
 
                 {llmHints && (
                     <Box mb="xs">
-                        <LlmLimitHints compact resources={resources} limit={effectiveLimit(node, summaryQuota)} />
+                        <LlmLimitHints compact resources={resources} limit={summaryQuota} />
                     </Box>
                 )}
-
-                {/* ── Proposed changes while change_pending ──────────────── */}
-                <NodeChangesDiff
-                    resources={resources}
-                    limitFrom={node.limit}
-                    limitTo={node.pending?.limit}
-                    dateFrom={node.termination_date}
-                    dateTo={node.pending?.termination_date}
-                    usersFrom={node.authorized_users}
-                    usersTo={node.pending?.authorized_users}
-                />
 
                 {rejectionReason && (
                     <Card.Section withBorder inheritPadding py="xs" mt="xs">
@@ -309,7 +292,7 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         from, and the API has always allowed a manager of the
                         funding chain to release a leaf. Without the button they
                         had to ask the owner to hand back resources. */}
-                    {can.release && (
+                    {can.release && releasable && (
                         <Button color={COLOR.negative} variant="light" size="xs" onClick={() => act('release')}>
                             {t('projects.actions.release')}
                         </Button>
@@ -320,15 +303,17 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         </Button>
                     )}
 
-                    {/* Manager actions */}
-                    {can.decide && (
-                        <>
-                            {/* One dialog for both answers: approve or reject,
-                                knowing the same facts. */}
-                            <Button color={COLOR.attention} variant="light" size="xs" onClick={() => act('decide')}>
-                                <Scale size="13" style={{ marginRight: 4 }} />{t('projects.actions.decide')}
-                            </Button>
-                        </>
+                    {/* Manager actions: a decision on the allocation of their budget that waits. */}
+                    {decideOn && (
+                        <Button color={COLOR.attention} variant="light" size="xs" onClick={() => onAction?.('decide', allocationNode(decideOn, node))}>
+                            <Scale size="13" style={{ marginRight: 4 }} />{t('projects.actions.decide')}
+                        </Button>
+                    )}
+                    {/* An import has no allocation yet: decided as the project it is. */}
+                    {!decideOn && allocations.length === 0 && can.decide && (
+                        <Button color={COLOR.attention} variant="light" size="xs" onClick={() => act('decide')}>
+                            <Scale size="13" style={{ marginRight: 4 }} />{t('projects.actions.decide')}
+                        </Button>
                     )}
                     {can.adopt && (
                         <Button color={COLOR.outside} variant="light" size="xs" onClick={() => act('adopt')}>

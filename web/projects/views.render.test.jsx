@@ -396,7 +396,7 @@ describe('the cloud project views render', () => {
     it('My Projects under Workspaces offers to start a workspace of a project the AI service knows', async () => {
         // A project that holds nothing yet belongs to every area, Workspaces among them.
         const { items } = await globalThis.__testApi.listMine();
-        const node = { ...items.find(n => n.name === 'Mein Projekt'), limit: {}, pending: null };
+        const node = { ...items.find(n => n.name === 'Mein Projekt'), limit: {}, pending: null, allocations: [] };
         globalThis.__testApi.listMine = async () => ({ items: [node], total: 1 });
         globalThis.__llmEnabled = true;
         globalThis.__gpuApi = { listProjects: async () => [{ slug: 'mein-projekt', tree_node: node.id, profiles: ['cpu'], limits: {} }] };

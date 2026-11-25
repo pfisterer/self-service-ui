@@ -7,7 +7,7 @@ import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { useProjectConfig } from './projects.jsx';
-import { autoApproveHeadroom, defaultsWithin, isAvailability, kindOfResource, latestProjectEnd, endDay, PROJECT_KINDS, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
+import { autoApproveHeadroom, defaultsWithin, fundedBy, isAvailability, kindOfResource, latestProjectEnd, endDay, PROJECT_KINDS, resourceSummaryText, roomIn, visibleResources } from './util-project.jsx';
 import { AREA_PROJECTS } from './start-link.js';
 import { safeBack } from './safe-back.js';
 
@@ -43,7 +43,8 @@ export function StartView() {
         return (eligibleQuery.data?.items ?? []).map(budget => {
             const offered = visibleResources(resources, budget).filter(r => kindOfResource(r) === area && !isAvailability(r));
             if (offered.length === 0) return null;
-            const has = mine.some(p => p.parent_id === budget.id && ['pending', 'approved', 'change_pending'].includes(p.status));
+            // A project of theirs that this budget pays for, or is asked to (allocation_leaves: a project has no parent, its allocations name the budgets).
+            const has = mine.some(p => ['pending', 'approved', 'change_pending'].includes(p.status) && fundedBy(p, budget.id));
             const headroom = autoApproveHeadroom(budget, resources, mine);
             const instant = !!headroom && offered.some(r => (headroom[r.id] ?? 0) > 0);
             // The availabilities of the area the budget offers come with their defaults (e.g. the server types of workspaces); the server would add them too, this keeps what is sent and what is shown the same.

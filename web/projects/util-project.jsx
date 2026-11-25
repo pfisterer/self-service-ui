@@ -88,6 +88,8 @@ const STATUS_META = {
     // until the deletion for good.
     archived: { color: COLOR.identity, variant: 'outline' },
     imported: { color: COLOR.outside, variant: 'light' },
+    // An allocation that no longer pays: given back, withdrawn or cut after it expired. The project goes on with its others.
+    ended: { color: COLOR.identity, variant: 'outline' },
 };
 
 // ── Retirement: released → archived → deleted ───────────────────────────────
@@ -110,7 +112,8 @@ export function deletionRequested(node) {
 // standing at the step it was at when the page loaded.
 export const DELETING_POLL_MS = 10000;
 export function pollWhileDeleting(query) {
-    return (query?.state?.data?.items ?? []).some(deletionRequested) ? DELETING_POLL_MS : false;
+    // A budget's table lists allocations: whether the project is being deleted is the project's.
+    return (query?.state?.data?.items ?? []).some(n => deletionRequested(n) || deletionRequested(n?.project)) ? DELETING_POLL_MS : false;
 }
 
 // deletesOnRequest: the deployment deletes a released project when asked.
@@ -230,10 +233,11 @@ export function catalogKinds(resources) {
     return PROJECT_KINDS.filter(k => (resources || []).some(r => kindOfResource(r) === k));
 }
 
-// projectKinds: the kinds a project is — what it holds (allocations included)
-// or asks for in a waiting change. Empty for a project holding nothing.
+// projectKinds: the kinds a project is — what it holds or asks for: its limit,
+// and what its live allocations hold or ask for in a waiting change (a project
+// still waiting as a whole holds nothing yet). Empty for a project holding nothing.
 export function projectKinds(node, resources) {
-    const limits = [effectiveLimit(node, node?.limit), node?.pending?.limit].filter(Boolean);
+    const limits = [node?.limit, node?.pending?.limit, projectAsked(node)].filter(Boolean);
     return PROJECT_KINDS.filter(k => limits.some(limit => (resources || []).some(r => kindOfResource(r) === k
         && ((limit[r.id] ?? 0) > 0 || limit[r.id] === UNLIMITED_QUOTA))));
 }
@@ -519,14 +523,16 @@ export function autoApproveHeadroom(budget, resources, myProjects) {
 
 // activeUsageUnder sums what the caller's active projects under this budget
 // hold — the same definition of "active" the server uses for the per-person sum.
+// Since allocation_leaves a person's share is counted per budget, so this sums what their projects' paying allocations FROM this budget hold, not the projects' totals.
 function activeUsageUnder(budget, resources, myProjects) {
     const mine = {};
     for (const project of myProjects || []) {
-        if (project?.parent_id !== budget.id) continue;
-        if (project.status !== 'approved' && project.status !== 'change_pending') continue;
-        for (const r of resources || []) {
-            if (isAvailability(r)) continue;
-            mine[r.id] = (mine[r.id] || 0) + (project.limit?.[r.id] || 0);
+        for (const a of project?.allocations || []) {
+            if (a.budget_id !== budget.id || !PAYING_ALLOCATION_STATUSES.includes(a.status)) continue;
+            for (const r of resources || []) {
+                if (isAvailability(r)) continue;
+                mine[r.id] = (mine[r.id] || 0) + (a.limit?.[r.id] || 0);
+            }
         }
     }
     return mine;
@@ -1042,7 +1048,7 @@ export function isExpired(d) {
 export const PROJECT_SORTS = ['name', 'created', 'expiry', 'status'];
 
 // What needs the owner's attention first, what is over last.
-const STATUS_RANK = { rejected: 0, change_pending: 1, pending: 2, approved: 3, imported: 4, released: 5, archived: 6 };
+const STATUS_RANK = { rejected: 0, change_pending: 1, pending: 2, approved: 3, imported: 4, released: 5, archived: 6, ended: 7 };
 
 export function sortProjects(items, key) {
     const byName = (a, b) => nodeTitle(a).localeCompare(nodeTitle(b), undefined, { sensitivity: 'base', numeric: true });
@@ -1111,32 +1117,123 @@ export function useAsyncRefresh(fetcher, onError) {
 
 // ── Allocations ─────────────────────────────────────────────────────────────
 //
-// A project may draw from budgets ABOVE its own on top of its own limit (an
-// allocation, granted by that budget's managers). node.limit stays the own
-// share — what a change request edits; OpenStack gets the sum.
+// Since allocation_leaves (25.11.2026) a project is not in the budget tree: it consists of allocations, each a leaf directly under the one budget that pays for it and subject to that budget's rules alone. The project's limit is the sum of the allocations that pay, its termination_date the latest of their ends; `allocations` on every project lists them (live ones first), and an allocation row of a budget's table carries its whole `project`.
 
-export function hasAllocations(node) {
-    return (node?.allocations || []).length > 0;
+// The allocation states that still mean something for the project: asked for, or paying.
+export const LIVE_ALLOCATION_STATUSES = ['pending', 'approved', 'change_pending'];
+// The states in which an allocation pays for its project now.
+export const PAYING_ALLOCATION_STATUSES = ['approved', 'change_pending'];
+
+export function isAllocation(node) { return node?.kind === 'allocation'; }
+
+// liveAllocations are a project's allocations that are asked for or pay.
+export function liveAllocations(project) {
+    return (project?.allocations || []).filter(a => LIVE_ALLOCATION_STATUSES.includes(a.status));
 }
 
-// effectiveLimit is the own share (or the given one, e.g. a waiting proposal)
-// plus every allocation. Availabilities come from one place only, so adding
-// their 0s and 1s is the same as "any of them grants it".
-export function effectiveLimit(node, own = node?.limit) {
-    const out = { ...(own || {}) };
-    for (const a of node?.allocations || []) {
-        for (const [id, v] of Object.entries(a.limit || {})) out[id] = (out[id] ?? 0) + v;
+// isCoFunded reports whether more than one budget pays for (or is asked to pay for) the project.
+export function isCoFunded(project) {
+    return liveAllocations(project).length > 1;
+}
+
+// projectOf is the project a row stands for: an allocation's project, a project itself.
+export function projectOf(node) {
+    return isAllocation(node) ? (node.project ?? null) : node;
+}
+
+// projectBudgetId is the budget a project's place in the tree is read from: its home allocation's budget (a project has no parent any more); a budget's or allocation's parent.
+export function projectBudgetId(node) {
+    return node?.home_budget_id ?? node?.parent_id ?? null;
+}
+
+// fundedBy reports whether a budget pays for the project, or is asked to.
+export function fundedBy(project, budgetId) {
+    return liveAllocations(project).some(a => a.budget_id === budgetId);
+}
+
+// projectAsked is what a project holds or asks for in total: per live allocation its waiting change where there is one, else its limit. While nothing pays yet (a request), the project's own limit is empty and this is what it is about.
+export function projectAsked(project) {
+    const out = {};
+    for (const a of liveAllocations(project)) {
+        for (const [id, v] of Object.entries(a.pending?.limit || a.limit || {})) out[id] = addQuota(out[id], v);
     }
     return out;
 }
 
-// availabilityElsewhere reports whether the project already gets an
-// availability from somewhere other than budgetId's allocation — its own
-// limit, a waiting proposal, or another allocation. Such an availability is
-// not offered again: it comes from one place.
-export function availabilityElsewhere(node, resourceId, budgetId) {
-    if ((node?.limit?.[resourceId] ?? 0) === 1 || (node?.pending?.limit?.[resourceId] ?? 0) === 1) return true;
-    return (node?.allocations || []).some(a => a.budget_id !== budgetId && (a.limit?.[resourceId] ?? 0) === 1);
+// addQuota adds two amounts of one resource: unlimited stays unlimited. An availability comes from one allocation only, so its 0s and 1s never add up past 1.
+function addQuota(a, b) {
+    if (a === UNLIMITED_QUOTA || b === UNLIMITED_QUOTA) return UNLIMITED_QUOTA;
+    return (a ?? 0) + (b ?? 0);
+}
+
+// projectDisplayLimit is what a project card and its dialogs show as the project's resources: what it holds, or while it waits as a whole, what it asks for.
+export function projectDisplayLimit(project) {
+    return project?.status === 'pending' ? projectAsked(project) : (project?.limit || {});
+}
+
+// effectiveLimit is what a project holds in total. Since allocation_leaves that is its limit (the sum of its paying allocations), so the given quota is returned as it is; kept as one name for every place that means "the whole project".
+export function effectiveLimit(node, own = node?.limit) {
+    return { ...(own || {}) };
+}
+
+// availabilityElsewhere reports whether the project already gets an availability from another live allocation than allocationId: it comes from one place, so another budget is not asked for it again.
+export function availabilityElsewhere(project, resourceId, allocationId) {
+    return liveAllocations(project).some(a => a.id !== allocationId
+        && ((a.limit?.[resourceId] ?? 0) === 1 || (a.pending?.limit?.[resourceId] ?? 0) === 1));
+}
+
+// holdsProject reports whether the viewer answers for the project — its owner or one of its admins — and so manages the whole of it: every allocation, giving one back, asking other budgets for more. viewer_relation says so where the API sets it (my projects); elsewhere the owner and the person's own token among the admins decide (a group among them is the API's to recognise).
+export function holdsProject(project, email) {
+    if (!project) return false;
+    if (project.viewer_relation) return project.viewer_relation === 'owner' || project.viewer_relation === 'admin';
+    const me = (email || '').toLowerCase();
+    if (!me) return false;
+    return ownerEmail(project).toLowerCase() === me || (project.admin_scope || []).some(tk => tk.toLowerCase() === `user:${me}`);
+}
+
+// managesAllocation reports whether the viewer manages the budget an allocation is paid from, or one above it: then they change, approve, reject or withdraw it — and no other budget's allocation (decided 25.11.2026, (4) and (5)). budget_path runs from below the root down to the budget itself.
+export function managesAllocation(allocation, managedIds, isRoot = false) {
+    if (!allocation) return false;
+    if (isRoot) return true;
+    const mine = managedIds instanceof Set ? managedIds : new Set(managedIds || []);
+    const budgetId = allocation.budget_id ?? allocation.parent_id;
+    const path = (allocation.budget_path ?? allocation.parent_path ?? []).map(p => p.id);
+    return [budgetId, ...path].some(id => id && mine.has(id));
+}
+
+// allocationActions says what the viewer may do with one allocation of a project: holder (holdsProject) or manager of its budget (managesAllocation). The API decides in the end; the UI only offers what it would allow.
+//   change  a new amount or end: the holders ask (or give back), the budget's managers set it
+//   end     give it back (holders) or withdraw it (managers)
+//   decide  approve or reject a waiting allocation or change: its budget's managers
+export function allocationActions(allocation, { holder = false, manager = false } = {}) {
+    const live = LIVE_ALLOCATION_STATUSES.includes(allocation?.status);
+    const waiting = allocation?.status === 'pending' || allocation?.status === 'change_pending';
+    return {
+        change: live && allocation.status !== 'change_pending' && (holder || manager),
+        end: live && (holder || manager),
+        decide: waiting && manager,
+    };
+}
+
+// expiryOf describes an expired allocation for the people looking at it: { at, due, cause, budgetName }, null when it has not expired.
+export function expiryOf(allocation) {
+    const e = allocation?.expired;
+    if (!e) return null;
+    return { at: e.at, due: e.due ?? null, cause: e.cause, budgetName: e.budget_name || allocation.budget_name || allocation.parent_name || '' };
+}
+
+// expiredText is the one sentence naming an expired allocation: when it ran out and what happens next — cut on its due day, or (without a notification service) left to the budget's managers; a deleted budget is named as the cause.
+export function expiredText(t, allocation) {
+    const e = expiryOf(allocation);
+    if (!e) return '';
+    if (e.cause === 'budget_deleted') {
+        return e.due
+            ? t('projects.allocation.budgetDeletedDue', { name: e.budgetName, due: formatDate(e.due) })
+            : t('projects.allocation.budgetDeleted', { name: e.budgetName });
+    }
+    return e.due
+        ? t('projects.allocation.expiredDue', { at: formatDate(e.at), due: formatDate(e.due) })
+        : t('projects.allocation.expiredOpen', { at: formatDate(e.at) });
 }
 
 // projectActions says which actions a project offers, for its owner or for a

@@ -164,22 +164,52 @@ export function fixtureSkippedLevel() {
 // The api-nodes facade, answering from a fixture. Every method the views call
 // has to exist here: a missing one shows up as "not a function" during render,
 // which is the failure mode this harness is for.
+//
+// Since allocation_leaves a project is not in the tree: each budget paying for
+// it holds an allocation. The fixture keeps every project under the budget that
+// pays for it; the facade answers the way the API does — a project with its
+// allocations (here the one), a budget's table with the allocations, each
+// carrying its project.
+export function asProject(p) {
+    if (p?.kind !== 'project' || p.status === 'imported') return p;
+    return {
+        ...p,
+        home_budget_id: p.parent_id,
+        allocations: p.allocations ?? [{
+            id: `a_${p.id}`, budget_id: p.parent_id, budget_name: p.parent_name, status: p.status,
+            limit: p.limit, pending: p.pending, termination_date: p.termination_date, revision: 1, home: true,
+        }],
+    };
+}
+
+export function asAllocationRow(p) {
+    const project = asProject(p);
+    if (project === p && p.kind !== 'project') return p;
+    const a = project.allocations[0];
+    return {
+        id: a.id, kind: 'allocation', parent_id: p.parent_id, project_id: p.id, name: p.name, owner: p.owner,
+        status: a.status, limit: a.limit, pending: a.pending, termination_date: a.termination_date, revision: a.revision,
+        project,
+    };
+}
+
 export function fakeNodesApi(tree = fixtureTree()) {
     const page = (items) => ({ items, total: items.length });
     const all = [...tree.roots, ...Object.values(tree.children).flatMap(p => p.items)];
-    const byId = Object.fromEntries(all.map(n => [n.id, n]));
+    const byId = Object.fromEntries(all.map(n => [n.id, asProject(n)]));
 
     return {
         getConfig: async () => CONFIG,
         getNode: async (id) => byId[id] ?? null,
         // Honours the kind filter the way the API does: the tree asks for
-        // budgets, the project table for projects.
+        // budgets, the project table for projects — and gets their allocations.
         listChildren: async (id, { kind } = {}) => {
-            const items = (tree.children[id]?.items ?? []).filter(n => !kind || n.kind === kind);
+            const items = (tree.children[id]?.items ?? []).filter(n => !kind || n.kind === kind)
+                .map(n => (kind === 'project' ? asAllocationRow(n) : n));
             return { items, total: items.length };
         },
         searchNodes: async () => page([]),
-        listMine: async () => page(all.filter(n => n.kind === 'project')),
+        listMine: async () => page(all.filter(n => n.kind === 'project').map(asProject)),
         listMyBudgets: async () => page(tree.roots),
         listEligibleForMe: async () => page([]),
         listEligibleForOwner: async () => page([]),
@@ -192,6 +222,9 @@ export function fakeNodesApi(tree = fixtureTree()) {
         searchPrincipals: async () => [],
         getActAs: async () => null,
         getReconcilerStatus: async () => ({ enabled: false }),
+        planSplit: async () => ({ parts: [] }),
+        addAllocation: async () => ({}),
+        endAllocation: async () => ({}),
         listApiTokens: async () => [],
         createApiToken: async () => ({}),
         deleteApiToken: async () => ({}),

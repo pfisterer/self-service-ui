@@ -11,7 +11,8 @@ import { QuotaInputs, validateQuota } from './component-quota-inputs.jsx';
 import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
 import { formatError } from '/helper/api-error.js';
-import { COLOR, isBudget, nodeTitle, ownerEmail } from './util-project.jsx';
+import { COLOR, isAllocation, isBudget, isCoFunded, nodeTitle, ownerEmail, resourceSummaryText } from './util-project.jsx';
+import { budgetPathText } from './component-budget-path.jsx';
 
 // RequestedBy names who asked: the owner of a project, whoever filed a budget
 // request — a budget has no owner.
@@ -119,6 +120,15 @@ export function DecisionModal({ opened, onClose, onDone, resources, node }) {
                 {isBudget(node) && (
                     <Alert color={COLOR.info} variant="light" p="xs">
                         <Trans i18nKey="projects.approve.budgetNote" components={{ 1: <b /> }} />
+                    </Alert>
+                )}
+                {/* An allocation is what one budget pays for a project: the decision is about this budget's part only. */}
+                {isAllocation(node) && (
+                    <Alert color={COLOR.info} variant="light" p="xs">
+                        <Text size="xs">
+                            {t('projects.allocation.decideNote', { budget: budgetPathText(node.parent_path, node.parent_name || node.parent_id) })}
+                            {isCoFunded(node.project) && ` ${t('projects.allocation.decideCoFunded', { total: resourceSummaryText(t, resources, node.project.limit) || '—' })}`}
+                        </Text>
                     </Alert>
                 )}
             </Stack>

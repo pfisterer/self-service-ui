@@ -1,8 +1,8 @@
-import { Eye, FolderOpen, Gift, Pencil, Plus, Scale, Trash2, Zap } from 'lucide-react';
-import { Anchor, Badge, Button, Card, Divider, Group, Stack, Text } from '@mantine/core';
+import { Eye, FolderOpen, Pencil, Plus, Scale, Trash2, Zap } from 'lucide-react';
+import { Badge, Button, Card, Divider, Group, Stack, Text } from '@mantine/core';
 import { CopyLinkButton, FactRow, formatTerm, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
 import { useTranslation } from 'react-i18next';
-import { autoApproveFacts, COLOR, expiryTone, expiryValue, hasAutoApprove, resourceSummaryText } from './util-project.jsx';
+import { autoApproveFacts, COLOR, expiryTone, expiryValue, hasAutoApprove } from './util-project.jsx';
 
 // BudgetCard renders one budget (inner tree node): who manages it, who may
 // request under it, and how full it is. Like ProjectCard it is presentational —
@@ -106,20 +106,6 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
                                 : `${expiryTone(node.termination_date)}.7`}>
                                 {expiryValue(t, node.termination_date)}
                             </Text>
-                        </FactRow>
-                    )}
-                    {/* What this budget handed to projects further down, past the
-                        budgets in between — part of its usage above. The link
-                        lists those projects in the table below. */}
-                    {node.allocated_out?.projects > 0 && (
-                        <FactRow label={t('projects.allocation.fact')}>
-                            <Anchor component="button" type="button" size="xs" onClick={() => act('show-allocated')}>
-                                <Gift size="11" style={{ verticalAlign: '-1px', marginRight: 4 }} />
-                                {t('projects.allocation.factValue', {
-                                    count: node.allocated_out.projects,
-                                    summary: resourceSummaryText(t, resources, node.allocated_out.limit),
-                                })}
-                            </Anchor>
                         </FactRow>
                     )}
                     {node.inherits_limit && (

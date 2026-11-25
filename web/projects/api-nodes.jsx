@@ -8,13 +8,20 @@ import { cloudProjectsEnabled } from '/features.js';
 import {
     addCatalogEntry, approveNode, createNode, createToken, deleteNode,
     deleteToken, getActAs, getAdminReconcileStatus, getCatalogEntry, getConfig, getNode, getNodeUsage, getUsageReport,
-    listAllocationSources, listCatalog, listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
+    listCatalog, listEligibleBudgets, listEligibleBudgetsForOwner, listMyBudgets,
     listMyNodes, listNodeChildren, listNodesToManage, listTokens, promoteNode,
     rejectNode, releaseNode, removeCatalogEntry, reparentNode, restoreCatalogEntry, requestNodeChange, requestNodeDeletion, searchNodes,
-    removeNodeExternalGroup, searchPrincipals, setNodeAllocation, setNodeAttributes, transferNodeOwner,
+    removeNodeExternalGroup, searchPrincipals, setNodeAttributes, transferNodeOwner,
     triggerAdminReconcile, updateCatalogEntry, updateNode, withdrawCatalogEntry,
 } from '@dhbw-cloud/os-mgt-client';
 import { normalizeObjectResponse } from './util-project.jsx';
+
+// planProjectSplit (POST /v1/nodes/split, allocation_leaves) written the way the generated client writes its operations, because the client this UI takes from npm (0.8.73) predates it; once a client with planProjectSplit is taken, the named import replaces it.
+const planProjectSplit = (options) => options.client.post({
+    url: '/v1/nodes/split',
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+});
 
 // useNodesApi wraps every node-tree SDK operation with uniform error handling,
 // so views and modals never deal with transport envelopes, headers or the
@@ -84,14 +91,15 @@ export function useNodesApi() {
                 unwrapObject(await getNode({ client, path: { id } })),
             // The one list that has no natural bound: a course budget holds as
             // many projects as it has students. Loaded one page at a time.
+            // A budget's projects come as its allocations (kind 'project' or
+            // 'allocation' asks for those), each carrying its whole `project`.
             //
             // The filters narrow and order on the server (see ChildFilter in
             // the API): the browser only ever holds the page it shows. Empty
             // values are left out of the query rather than sent as "".
-            listChildren: async (id, { limit = PAGE_SIZE, offset = 0, kind, q, status, group, groupMode, sort, order, allocated, deep, area } = {}) => {
+            listChildren: async (id, { limit = PAGE_SIZE, offset = 0, kind, q, status, group, groupMode, sort, order, deep, area } = {}) => {
                 const query = { limit, offset };
                 if (area) query.area = area;
-                if (allocated) query.allocated = true;
                 if (deep) query.deep = true;
                 if (kind) query.kind = kind;
                 if (q) query.q = q;
@@ -160,12 +168,30 @@ export function useNodesApi() {
                 unwrapObject(await transferNodeOwner({
                     client, path: { id }, body: { new_owner: newOwner }, headers: JSON_HEADERS,
                 })),
-            // Allocations: what a project draws from a budget above its own.
-            // The limit is the whole allocation from that budget; {} removes it.
-            setAllocation: async (id, { budgetId, limit, reason }) =>
-                unwrapObject(await setNodeAllocation({
-                    client, path: { id }, body: { budget_id: budgetId, limit, reason }, headers: JSON_HEADERS,
+            // ── Allocations (allocation_leaves) ──────────────────────────
+            // How a project of `limit` in total would be paid for by the budgets the caller may request from (or only budgetIds): { parts: [{ budget_id, budget_name, budget_path, limit, auto_approved, termination_date }], unplaced? }. Nothing is written.
+            planSplit: async ({ limit, terminationDate, budgetIds } = {}) =>
+                unwrapObject(await planProjectSplit({
+                    client,
+                    body: {
+                        limit,
+                        ...(terminationDate ? { termination_date: terminationDate } : {}),
+                        ...(budgetIds?.length ? { budget_ids: budgetIds } : {}),
+                    },
                 })),
+            // Another allocation of a project from budgetId: asked for by its owner or admins under the budget's rules, or granted by a manager of the budget (then a reason is required).
+            addAllocation: async ({ projectId, budgetId, limit, reason, terminationDate }) =>
+                unwrapObject(await createNode({
+                    client,
+                    body: {
+                        kind: 'allocation', project_id: projectId, parent_id: budgetId, limit, reason,
+                        ...(terminationDate ? { termination_date: terminationDate } : {}),
+                    },
+                    headers: JSON_HEADERS,
+                })),
+            // Ends an allocation: given back by the project's holders, withdrawn by its budget's managers. The project goes on with its other allocations.
+            endAllocation: async (id) =>
+                unwrapObject(await releaseNode({ client, path: { id }, body: {}, headers: JSON_HEADERS })),
             // Takes a group given access in OpenStack off a project.
             removeExternalGroup: async (id, groupId) =>
                 unwrapObject(await removeNodeExternalGroup({ client, path: { id, groupId } })),
@@ -174,8 +200,6 @@ export function useNodesApi() {
                 unwrapObject(await setNodeAttributes({
                     client, path: { id }, body: { attributes }, headers: JSON_HEADERS,
                 })),
-            listAllocationSources: async (id) =>
-                unwrapArray(await listAllocationSources({ client, path: { id } })),
             adopt: async (id, body) =>
                 unwrapObject(await promoteNode({ client, path: { id }, body, headers: JSON_HEADERS })),
             deleteNode: async (id) =>

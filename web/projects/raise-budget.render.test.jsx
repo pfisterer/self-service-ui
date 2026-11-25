@@ -40,10 +40,12 @@ function tree() {
     };
 }
 
+// Paid by Course alone (allocation_leaves): the project is not in the tree, its home allocation names the budget.
 const project = {
-    id: 'p_1', parent_id: 'b_course', kind: 'project', status: 'approved', name: 'Vorlesung',
+    id: 'p_1', parent_id: null, home_budget_id: 'b_course', home_allocation_id: 'a_1', kind: 'project', status: 'approved', name: 'Vorlesung',
     parent_name: 'Course', parent_path: [{ id: 'b_dept', name: 'Dept' }, { id: 'b_course', name: 'Course' }],
     limit: { cores: 2, ram: 4 }, owner: 'user:stud@x', termination_date: '2027-03-31',
+    allocations: [{ id: 'a_1', budget_id: 'b_course', budget_name: 'Course', budget_path: [{ id: 'b_dept', name: 'Dept' }, { id: 'b_course', name: 'Course' }], status: 'approved', limit: { cores: 2, ram: 4 }, termination_date: '2027-03-31', revision: 3, home: true }],
     authorized_users: [{ token: 'user:someone@dhbw.de', role: 'member' }], history: [], created_at: '2026-08-02T10:00:00Z',
 };
 
@@ -62,7 +64,6 @@ beforeEach(() => {
             return nodes[id];
         }),
         requestChange: vi.fn(async () => ({})),
-        listAllocationSources: async () => [],
         searchIdentities: async () => [],
         searchPrincipals: async () => [],
         searchPrincipalDetails: async () => [],

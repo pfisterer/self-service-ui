@@ -4,7 +4,7 @@ import i18n from '/i18n/index.js';
 // The real English resources, so a renamed key fails here rather than showing
 // the key itself on the screen.
 const t = i18n.getFixedT('en');
-import { endDate, resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, usageState, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, hasAllocations, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds, mostSpecificFirst } from './util-project.jsx';
+import { endDate, resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, usageState, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, liveAllocations, isCoFunded, fundedBy, projectAsked, projectDisplayLimit, holdsProject, managesAllocation, allocationActions, expiredText, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds, mostSpecificFirst } from './util-project.jsx';
 
 // asServer is a translator without translations: every resource text comes out as the server sent it.
 const asServer = (key, opts) => opts?.defaultValue ?? key;
@@ -101,7 +101,7 @@ describe('headroomExhaustedBy', () => {
     };
 
     it('names the own projects when they hold the whole share', () => {
-        const mine = [{ parent_id: 'b1', status: 'approved', limit: { cpu: 4, ram: 8 } }];
+        const mine = [{ status: 'approved', allocations: [{ budget_id: 'b1', status: 'approved', limit: { cpu: 4, ram: 8 } }] }];
         expect(headroomExhaustedBy(budget, RESOURCES, mine)).toBe('share');
     });
 
@@ -130,8 +130,12 @@ describe('autoApproveHeadroom', () => {
         expect(autoApproveHeadroom({ id: 'b1' }, RESOURCES, [])).toBeNull();
     });
 
+    // A person's share is counted per budget (allocation_leaves): what their projects' allocations from this budget hold, whatever else pays for those projects.
     it('subtracts what this user already holds under the budget', () => {
-        const mine = [{ parent_id: 'b1', status: 'approved', limit: { cpu: 3, ram: 4 } }];
+        const mine = [{ status: 'approved', limit: { cpu: 7, ram: 4 }, allocations: [
+            { budget_id: 'b1', status: 'approved', limit: { cpu: 3, ram: 4 } },
+            { budget_id: 'other', status: 'approved', limit: { cpu: 4 } },
+        ] }];
         expect(autoApproveHeadroom(budget, RESOURCES, mine)).toEqual({ cpu: 5, ram: 12 });
     });
 
@@ -144,18 +148,20 @@ describe('autoApproveHeadroom', () => {
     });
 
     it('counts only active projects of this user under this budget', () => {
+        const project = (status, limit, budget = 'b1') => ({ allocations: [{ budget_id: budget, status, limit }] });
         const mine = [
-            { parent_id: 'b1', status: 'approved', limit: { cpu: 1 } },
-            { parent_id: 'b1', status: 'change_pending', limit: { cpu: 1 } },
-            { parent_id: 'b1', status: 'pending', limit: { cpu: 4 } },   // not yet granted
-            { parent_id: 'b1', status: 'released', limit: { cpu: 4 } },  // gone
-            { parent_id: 'other', status: 'approved', limit: { cpu: 4 } },
+            project('approved', { cpu: 1 }),
+            project('change_pending', { cpu: 1 }),
+            project('pending', { cpu: 4 }),   // not yet granted
+            project('released', { cpu: 4 }),  // gone
+            project('ended', { cpu: 4 }),     // given back
+            project('approved', { cpu: 4 }, 'other'),
         ];
         expect(autoApproveHeadroom(budget, RESOURCES, mine).cpu).toBe(6); // 8 - 2
     });
 
     it('never goes below zero when the user is already over the cap', () => {
-        const mine = [{ parent_id: 'b1', status: 'approved', limit: { cpu: 20 } }];
+        const mine = [{ allocations: [{ budget_id: 'b1', status: 'approved', limit: { cpu: 20 } }] }];
         expect(autoApproveHeadroom(budget, RESOURCES, mine).cpu).toBe(0);
     });
 });
@@ -672,27 +678,65 @@ describe('projectActions', () => {
 });
 
 describe('allocations', () => {
+    // A project paid by two budgets (allocation_leaves): its limit is the sum of what pays, an availability comes from one allocation.
     const node = {
-        limit: { cores: 4, ipv4: 0 },
+        id: 'p1', kind: 'project', status: 'approved', owner: 'user:owner@example.org', admin_scope: ['user:admin@example.org'],
+        limit: { cores: 14, gpu: 1, ipv4: 1 },
         allocations: [
-            { budget_id: 'uni', limit: { cores: 12, gpu: 1, ipv4: 1 } },
-            { budget_id: 'dept', limit: { cores: 2 } },
+            { id: 'a_uni', budget_id: 'uni', budget_path: [{ id: 'root2', name: 'Root' }, { id: 'uni', name: 'Uni' }], status: 'approved', limit: { cores: 12, gpu: 1, ipv4: 1 } },
+            { id: 'a_dept', budget_id: 'dept', status: 'change_pending', limit: { cores: 2 }, pending: { limit: { cores: 6 } } },
+            { id: 'a_old', budget_id: 'old', status: 'ended', limit: { cores: 8 } },
         ],
     };
 
-    it('adds every allocation to the own share', () => {
-        expect(effectiveLimit(node)).toEqual({ cores: 18, gpu: 1, ipv4: 1 });
-        expect(effectiveLimit(node, { cores: 1 })).toEqual({ cores: 15, gpu: 1, ipv4: 1 });
-        expect(effectiveLimit({ limit: { cores: 2 } })).toEqual({ cores: 2 });
+    it('takes the project limit as the whole project', () => {
+        expect(effectiveLimit(node)).toEqual({ cores: 14, gpu: 1, ipv4: 1 });
+        expect(effectiveLimit(node, { cores: 1 })).toEqual({ cores: 1 });
+    });
+
+    it('lists what is live and what is asked for', () => {
+        expect(liveAllocations(node).map(a => a.id)).toEqual(['a_uni', 'a_dept']);
+        expect(isCoFunded(node)).toBe(true);
+        expect(isCoFunded({ allocations: [node.allocations[0]] })).toBe(false);
+        expect(fundedBy(node, 'dept')).toBe(true);
+        expect(fundedBy(node, 'old')).toBe(false);
+        // A waiting change counts with what it asks for.
+        expect(projectAsked(node)).toEqual({ cores: 18, gpu: 1, ipv4: 1 });
+        expect(projectDisplayLimit({ ...node, status: 'pending', limit: {} })).toEqual({ cores: 18, gpu: 1, ipv4: 1 });
+        expect(projectDisplayLimit(node)).toEqual(node.limit);
     });
 
     it('knows where an availability already comes from', () => {
-        expect(availabilityElsewhere(node, 'ipv4', 'dept')).toBe(true);
-        expect(availabilityElsewhere(node, 'ipv4', 'uni')).toBe(false);
-        expect(availabilityElsewhere({ limit: { ipv4: 1 } }, 'ipv4', 'uni')).toBe(true);
-        expect(availabilityElsewhere({ limit: {}, pending: { limit: { ipv4: 1 } } }, 'ipv4', 'uni')).toBe(true);
-        expect(hasAllocations(node)).toBe(true);
-        expect(hasAllocations({})).toBe(false);
+        expect(availabilityElsewhere(node, 'ipv4', 'a_dept')).toBe(true);
+        expect(availabilityElsewhere(node, 'ipv4', 'a_uni')).toBe(false);
+        expect(availabilityElsewhere(node, 'ipv4', null)).toBe(true);
+    });
+
+    it('tells the project’s holders from a budget’s managers', () => {
+        expect(holdsProject(node, 'Owner@example.org')).toBe(true);
+        expect(holdsProject(node, 'admin@example.org')).toBe(true);
+        expect(holdsProject(node, 'someone@example.org')).toBe(false);
+        expect(holdsProject({ ...node, viewer_relation: 'member' }, 'owner@example.org')).toBe(false);
+        // A manager of the budget or one above it: budget_path names the way down.
+        expect(managesAllocation(node.allocations[0], new Set(['root2']))).toBe(true);
+        expect(managesAllocation(node.allocations[1], new Set(['root2']))).toBe(false);
+        expect(managesAllocation(node.allocations[1], [], true)).toBe(true);
+    });
+
+    it('offers each viewer only their part (decided 25.11.2026)', () => {
+        const [uni, dept] = node.allocations;
+        expect(allocationActions(uni, { holder: true })).toEqual({ change: true, end: true, decide: false });
+        expect(allocationActions(dept, { manager: true })).toEqual({ change: false, end: true, decide: true });
+        expect(allocationActions(uni, {})).toEqual({ change: false, end: false, decide: false });
+        expect(allocationActions(node.allocations[2], { holder: true, manager: true })).toEqual({ change: false, end: false, decide: false });
+    });
+
+    it('says when and why an allocation expired', () => {
+        const t = (key, vars) => `${key} ${JSON.stringify(vars ?? {})}`;
+        expect(expiredText(t, { expired: { at: '2026-11-01', cause: 'ended', due: '2026-11-15' } })).toContain('projects.allocation.expiredDue');
+        expect(expiredText(t, { expired: { at: '2026-11-01', cause: 'ended' } })).toContain('projects.allocation.expiredOpen');
+        expect(expiredText(t, { budget_name: 'Uni', expired: { at: '2026-11-01', cause: 'budget_deleted', budget_name: 'Gone' } })).toContain('"name":"Gone"');
+        expect(expiredText(t, {})).toBe('');
     });
 });
 
@@ -820,7 +864,7 @@ describe('project kinds', () => {
         expect(projectKinds({ limit: { cores: 2 } }, RES)).toEqual(['cloud']);
         expect(projectKinds({ limit: { 'llm-mtokens': -1 } }, RES)).toEqual(['llm']);
         expect(projectKinds({ limit: { cores: 1 }, pending: { limit: { cores: 1, 'llm-mtokens': 5 } } }, RES)).toEqual(['cloud', 'llm']);
-        expect(projectKinds({ limit: {}, allocations: [{ limit: { 'ws-storage-gb': 3 } }] }, RES)).toEqual(['workspaces']);
+        expect(projectKinds({ limit: {}, allocations: [{ status: 'pending', limit: { 'ws-storage-gb': 3 } }] }, RES)).toEqual(['workspaces']);
         // Without an area and provider a resource is OpenStack's, so cloud.
         expect(projectKinds({ limit: { legacy: 4 } }, RES)).toEqual(['cloud']);
     });

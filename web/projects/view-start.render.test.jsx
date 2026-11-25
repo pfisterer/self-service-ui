@@ -40,7 +40,9 @@ describe('StartView', () => {
             budget('b_os', 'Nur OpenStack', { available_resources: ['cores'] }),
             budget('b_llm', 'Nur LLM', { available_resources: ['llm-mtokens'] }),
         ], total: 5 });
-        api.listMine = async () => ({ items: [{ id: 'p_1', kind: 'project', parent_id: 'b_had', status: 'approved', limit: { 'ws-vcpu-hours': 100 } }], total: 1 });
+        // A project is not in the tree (allocation_leaves): its allocation names the budget that pays.
+        api.listMine = async () => ({ items: [{ id: 'p_1', kind: 'project', parent_id: null, status: 'approved', limit: { 'ws-vcpu-hours': 100 },
+            allocations: [{ id: 'a_1', budget_id: 'b_had', status: 'approved', limit: { 'ws-vcpu-hours': 100 } }] }], total: 1 });
         api.createNode = async (body) => { created.push(body); return { id: 'p_new', ...body }; };
         globalThis.__testApi = api;
 

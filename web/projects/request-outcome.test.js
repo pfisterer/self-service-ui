@@ -66,7 +66,9 @@ describe('requestOutcome', () => {
 });
 
 describe('changeOutcome', () => {
-    const project = { id: 'p1', parent_id: 'b1', status: 'approved', limit: { cpu: 2, ram: 8 }, termination_date: '2027-03-31T00:00:00Z' };
+    // What the person holds under b1 is what their allocation from it holds (allocation_leaves).
+    const project = { id: 'p1', parent_id: null, status: 'approved', limit: { cpu: 2, ram: 8 }, termination_date: '2027-03-31T00:00:00Z',
+        allocations: [{ id: 'a1', budget_id: 'b1', status: 'approved', limit: { cpu: 2, ram: 8 } }] };
     const change = (b, quota, terminationDate = project.termination_date) =>
         changeOutcome({ node: project, budget: b, quota, terminationDate, resources: RESOURCES, myProjects: [project] });
 
@@ -105,7 +107,9 @@ describe('changeOutcome', () => {
 
 describe('a budget that takes no requests beyond auto-approve', () => {
     const hard = (b) => ({ ...b, allow_requests_beyond_auto_approve: false });
-    const project = { id: 'p1', parent_id: 'b1', status: 'approved', limit: { cpu: 2, ram: 8 }, termination_date: '2027-03-31T00:00:00Z' };
+    // What the person holds under b1 is what their allocation from it holds (allocation_leaves).
+    const project = { id: 'p1', parent_id: null, status: 'approved', limit: { cpu: 2, ram: 8 }, termination_date: '2027-03-31T00:00:00Z',
+        allocations: [{ id: 'a1', budget_id: 'b1', status: 'approved', limit: { cpu: 2, ram: 8 } }] };
 
     it('blocks a new project beyond the share instead of queueing it', () => {
         const ask = (quota) => requestOutcome({ budget: hard(individual()), quota, resources: RESOURCES, myProjects: [] });
@@ -133,7 +137,9 @@ describe('a budget that takes no requests beyond auto-approve', () => {
 
 describe('a budget that leaves extensions to its managers', () => {
     const noExt = (b) => ({ ...b, auto_approve_extensions: false });
-    const project = { id: 'p1', parent_id: 'b1', status: 'approved', limit: { cpu: 2, ram: 8 }, termination_date: '2027-03-31T00:00:00Z' };
+    // What the person holds under b1 is what their allocation from it holds (allocation_leaves).
+    const project = { id: 'p1', parent_id: null, status: 'approved', limit: { cpu: 2, ram: 8 }, termination_date: '2027-03-31T00:00:00Z',
+        allocations: [{ id: 'a1', budget_id: 'b1', status: 'approved', limit: { cpu: 2, ram: 8 } }] };
     const change = (b, quota, terminationDate) =>
         changeOutcome({ node: project, budget: b, quota, terminationDate, resources: RESOURCES, myProjects: [project] });
 
@@ -150,7 +156,9 @@ describe('a budget that leaves extensions to its managers', () => {
 });
 
 describe('a change by someone who manages a budget above the project', () => {
-    const project = { id: 'p1', parent_id: 'b1', status: 'approved', limit: { cpu: 2, ram: 8 }, termination_date: '2027-03-31T00:00:00Z' };
+    // What the person holds under b1 is what their allocation from it holds (allocation_leaves).
+    const project = { id: 'p1', parent_id: null, status: 'approved', limit: { cpu: 2, ram: 8 }, termination_date: '2027-03-31T00:00:00Z',
+        allocations: [{ id: 'a1', budget_id: 'b1', status: 'approved', limit: { cpu: 2, ram: 8 } }] };
     // b1 hangs under b_dept, which the viewer manages; b1 itself they do not.
     const b1 = budget({ parent_id: 'b_dept', parent_path: [{ id: 'b_dept', name: 'Department' }] });
     const change = (quota, terminationDate = project.termination_date) => changeOutcome({

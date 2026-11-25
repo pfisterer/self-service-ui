@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Archive, Calendar, Check, CircleCheck, CircleHelp, CirclePlus, CircleX, Clock, CloudDownload, Info, Link2, LogOut, Trash2, User, Users } from 'lucide-react';
+import { Archive, Calendar, Check, CircleCheck, CircleHelp, CircleMinus, CirclePlus, CircleX, Clock, CloudDownload, Info, Link2, LogOut, Trash2, User, Users } from 'lucide-react';
 import { useClipboard } from '@mantine/hooks';
 import { DatePickerInput } from '@mantine/dates';
 import { ActionIcon, Anchor, Badge, Box, Button, Checkbox, Group, NumberInput, Popover, Progress, Select, Stack, Table, Text, Tooltip, Divider } from '@mantine/core';
@@ -96,6 +96,8 @@ const STATUS_ICONS = {
     released: LogOut,
     archived: Archive,
     imported: CloudDownload,
+    // An allocation that no longer pays (allocation_leaves).
+    ended: CircleMinus,
 };
 
 export function NodeStatusBadge({ status, size = 'sm', provisioning = false, full = false, icon = false, deleting = false, purge = null, deletionAt = null }) {

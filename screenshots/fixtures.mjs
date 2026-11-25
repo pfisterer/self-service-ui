@@ -51,7 +51,20 @@ const B_LEA = node({
     usage: { approved: { limit: { cores: 4, ram: 16, storage: 100, 'ws-vcpu-hours': 4800, 'ws-ram-gb-hours': 9600, 'ws-storage-gb': 30, 'ws-gpu-hours-general-small': 200, 'ws-gpus-general-small': 4, 'llm-mtokens': 50 }, node_ids: ['p_ml', 'p_bild', 'p_web'] } },
     child_count: 3, child_project_count: 3,
 });
-const project = (id, name, limit, extra = {}) => node({ id, kind: 'project', name, parent_id: 'b_lea', parent_name: 'Dozentin-Lea-Muster', ancestor_ids: ['b_root', 'b_wi', 'b_lea'], owner: `user:${ME}`, viewer_relation: 'owner', limit, termination_date: '2027-03-31', ...extra });
+// A project is not in the tree (allocation_leaves): it consists of allocations, one per paying budget, each a leaf under its budget. Here every project is paid by one budget (`budget`, default the lecturer's); parent_name/parent_path are its home budget's, as the API sends them.
+const LEA_PATH = [{ id: 'b_wi', name: 'Wirtschaftsinformatik' }, { id: 'b_lea', name: 'Dozentin-Lea-Muster' }];
+const project = (id, name, limit, { budget = { id: 'b_lea', name: 'Dozentin-Lea-Muster', path: LEA_PATH }, ...extra } = {}) => {
+    const p = node({ id, kind: 'project', name, parent_id: null, home_budget_id: budget.id, home_allocation_id: `a_${id}`, parent_name: budget.name, parent_path: budget.path, owner: `user:${ME}`, viewer_relation: 'owner', limit, termination_date: '2027-03-31', ...extra });
+    p.allocations = [{ id: `a_${id}`, budget_id: budget.id, budget_name: budget.name, budget_path: budget.path, status: p.status, limit, termination_date: p.termination_date, created_at: p.created_at, home: true, revision: 1 }];
+    // A request waiting as a whole holds nothing yet: what it asks for is its allocation's.
+    if (p.status === 'pending') p.limit = {};
+    return p;
+};
+// allocationRow is a project as its budget's table and the decision inbox list it: the allocation, carrying the whole project.
+const allocationRow = (p) => {
+    const a = p.allocations[0];
+    return { id: a.id, kind: 'allocation', status: a.status, name: p.name, owner: p.owner, parent_id: a.budget_id, parent_name: a.budget_name, parent_path: a.budget_path, project_id: p.id, limit: a.limit, termination_date: a.termination_date, revision: a.revision, created_at: p.created_at, project: p };
+};
 const P_ML = project('p_ml', 'ML-Grundlagen WI24', { 'ws-vcpu-hours': 4800, 'ws-ram-gb-hours': 9600, 'ws-storage-gb': 10, 'ws-gpu-hours-general-small': 200, 'ws-gpus-general-small': 4, 'ws-profile-cpu': 1, 'ws-profile-cpu-gpukernel': 1 }, { reason: 'Übungen zur Vorlesung Machine Learning, Kurs WI24A', authorized_users: [{ token: 'group:wi24a' }, { token: 'user:tom.beispiel@dhbw.example' }], bindings: { aiaas: { external_id: 'ml-grundlagen-wi24' } } });
 const P_BILD = project('p_bild', 'Bildanalyse', { 'ws-storage-gb': 20, 'llm-mtokens': 50 }, { reason: 'Masterarbeit Bildsegmentierung', bindings: { aiaas: { external_id: 'bildanalyse' } } });
 const P_WEB = project('p_web', 'Webserver Projektarbeit', { cores: 4, ram: 16, storage: 100 }, { reason: 'Webserver für die Projektarbeit im 5. Semester', termination_date: '2027-02-28', bindings: { openstack: { external_id: 'os-web', external_name: 'webserver-projektarbeit', in_use: { cores: 2, ram: 8, storage: 40 } } } });
@@ -61,16 +74,17 @@ const page = (items) => ({ items, total: items.length });
 // For the README's Cloud and Budgets pictures (README_CLOUD in shots.mjs): a project waiting for approval and one administered for a colleague beside the own one, two budgets to draw from (one granting a fixed share per person on its own, one on request), and a student's request waiting in the lecturer's budget.
 const TOM = 'user:tom.beispiel@dhbw.example';
 const P_DB = project('p_db', 'Datenbanken Seminar', { cores: 2, ram: 8, storage: 50 }, { status: 'pending', reason: 'Übungsdatenbanken für das Seminar Datenbanken', termination_date: '2027-01-31', created_at: '2026-11-09T10:00:00Z' });
-const P_IOT = project('p_iot', 'IoT-Labor', { cores: 8, ram: 32, storage: 200 }, { parent_id: 'b_lab', parent_name: 'Forschungslabor WI', ancestor_ids: ['b_root', 'b_wi', 'b_lab'], owner: TOM, viewer_relation: 'admin', admin_scope: [`user:${ME}`], authorized_users: [{ token: TOM, role: 'member' }, { token: `user:${ME}`, role: 'member' }, { token: 'group:tutoren', role: 'member' }], termination_date: '2027-09-30', bindings: { openstack: { external_id: 'os-iot', external_name: 'iot-labor', in_use: { cores: 6, ram: 24, storage: 120 } } } });
+const P_IOT = project('p_iot', 'IoT-Labor', { cores: 8, ram: 32, storage: 200 }, { budget: { id: 'b_lab', name: 'Forschungslabor WI', path: [{ id: 'b_wi', name: 'Wirtschaftsinformatik' }, { id: 'b_lab', name: 'Forschungslabor WI' }] }, owner: TOM, viewer_relation: 'admin', admin_scope: [`user:${ME}`], authorized_users: [{ token: TOM, role: 'member' }, { token: `user:${ME}`, role: 'member' }, { token: 'group:tutoren', role: 'member' }], termination_date: '2027-09-30', bindings: { openstack: { external_id: 'os-iot', external_name: 'iot-labor', in_use: { cores: 6, ram: 24, storage: 120 } } } });
 const P_REQ = project('p_req', 'Chatbot Projektarbeit', { cores: 4, ram: 16, storage: 100 }, { status: 'pending', owner: 'user:mia.beispiel@dhbw.example', viewer_relation: undefined, reason: 'Chatbot für die Projektarbeit im 5. Semester, mit einer kleinen Datenbank', termination_date: '2027-02-28', created_at: '2026-11-09T14:20:00Z' });
 const B_STUD = node({ id: 'b_stud', kind: 'budget', name: 'WI Studierende (kleine VM)', parent_id: 'b_wi', parent_name: 'Wirtschaftsinformatik', ancestor_ids: ['b_root', 'b_wi'], admin_scope: ['group:lehrende-wi'], eligible_requesters: ['group:wi24a'], limit: { cores: 64, ram: 256, storage: 2000 }, available_resources: ['cores', 'ram', 'storage'], auto_approve: { per_requester_limit: { cores: 2, ram: 4, storage: 20 } }, usage: { approved: { limit: { cores: 20, ram: 80, storage: 400 } } }, termination_date: '2027-09-30' });
 const B_LAB = node({ id: 'b_lab', kind: 'budget', name: 'Forschungslabor WI', parent_id: 'b_wi', parent_name: 'Wirtschaftsinformatik', ancestor_ids: ['b_root', 'b_wi'], admin_scope: [TOM], eligible_requesters: ['group:lehrende-wi'], limit: { cores: 48, ram: 192, storage: 2000 }, available_resources: ['cores', 'ram', 'storage'], usage: { approved: { limit: { cores: 8, ram: 32, storage: 200 } } }, termination_date: '2027-12-31' });
 export const README_CLOUD = {
     'projects GET /v1/nodes/mine': page([P_WEB, P_DB, P_IOT]),
     'projects GET /v1/nodes/eligible-for-me': page([B_STUD, B_LAB]),
-    'projects GET /v1/nodes/to-manage': page([P_REQ]),
-    'projects GET /v1/nodes/b_lea/children': (query) => page([P_ML, P_BILD, P_WEB, P_REQ].filter(n => !query.get('kind') || n.kind === query.get('kind'))),
+    'projects GET /v1/nodes/to-manage': page([allocationRow(P_REQ)]),
+    'projects GET /v1/nodes/b_lea/children': (query) => page(query.get('kind') === 'budget' ? [] : [P_ML, P_BILD, P_WEB, P_REQ].map(allocationRow)),
     'projects GET /v1/nodes/p_req': P_REQ,
+    'projects GET /v1/nodes/a_p_req': allocationRow(P_REQ),
     'projects GET /v1/nodes/b_stud': B_STUD,
     'projects GET /v1/nodes/b_lab': B_LAB,
 };
@@ -201,11 +215,21 @@ export function answer(api, method, path, query, shot) {
     if (key in own) return typeof own[key] === 'function' ? own[key](query) : own[key];
     if (key in DEFAULTS) return DEFAULTS[key];
     if (api === 'groups' && method === 'GET') return groupsAnswer(path, query, shot);
-    // The tree: one node, and a node's children (budgets or projects, as asked).
+    // The tree: one node, and a node's children — budgets, or a budget's allocations with their projects (kind project or allocation).
     if (api === 'projects' && method === 'GET') {
         const m = path.match(/^\/v1\/nodes\/([^/]+)(\/children)?$/);
-        if (m && m[2]) return page(NODES.filter(n => n.parent_id === m[1] && (!query.get('kind') || n.kind === query.get('kind'))));
+        if (m && m[2]) {
+            const kind = query.get('kind');
+            const budgets = NODES.filter(n => n.kind === 'budget' && n.parent_id === m[1]);
+            const allocations = NODES.filter(n => n.kind === 'project' && n.home_budget_id === m[1]).map(allocationRow);
+            return page(kind === 'budget' ? budgets : kind ? allocations : [...budgets, ...allocations]);
+        }
         if (m) return NODES.find(n => n.id === m[1]);
+    }
+    // The split of a new project (POST /v1/nodes/split; the body is not at hand here): the catalogue's defaults from the lecturer's budget, granted at once.
+    if (api === 'projects' && method === 'POST' && path === '/v1/nodes/split') {
+        const limit = { cores: 4, ram: 16, storage: 50 };
+        return { parts: [{ budget_id: 'b_lea', budget_name: 'Dozentin-Lea-Muster', budget_path: LEA_PATH, limit, auto_approved: limit, termination_date: '2027-03-31' }] };
     }
     return undefined;
 }

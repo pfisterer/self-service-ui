@@ -7,8 +7,9 @@ import { groupTitle } from '/projects/util-caps.js';
 
 // Does each of the node dialogs open, with the data that reaches its branches?
 // The same question as views.render.test.jsx, for the dialogs that took over
-// what used to be separate ones: moving, handing over and allocations inside
-// the project dialog, approving and rejecting in one decision dialog.
+// what used to be separate ones: moving and handing over inside the project
+// dialog, the allocations listed in it, approving and rejecting in one decision
+// dialog.
 
 vi.mock('/projects/api-nodes.jsx', async (importOriginal) => {
     const actual = await importOriginal();
@@ -45,10 +46,7 @@ async function openCaps(group) {
 let consoleErrors = [];
 beforeEach(() => {
     const tree = fixtureTree();
-    const api = fakeNodesApi(tree);
-    // A budget above the project's own that may allocate to it.
-    api.listAllocationSources = async () => [tree.roots[0]];
-    globalThis.__testApi = api;
+    globalThis.__testApi = fakeNodesApi(tree);
     consoleErrors = [];
     vi.spyOn(console, 'error').mockImplementation((...args) => { consoleErrors.push(args.join(' ')); });
 });
@@ -59,8 +57,13 @@ const fatal = () => consoleErrors.filter(e => /Error|Warning: Maximum|is not def
 function project(extra = {}) {
     const p = fixtureTree().children.b_ma.items[0];
     return {
-        ...p, parent_name: 'Mannheim', parent_path: [{ id: 'b_ma', name: 'Mannheim' }],
-        allocations: [{ budget_id: 'b_root', budget_name: 'Organization Root', limit: { cores: 2 }, granted_by: 'x@y', granted_at: '2026-08-01T10:00:00Z', reason: 'GPU work' }],
+        // Paid by Mannheim and, for two cores more, by the root (allocation_leaves): not in the tree, its home is Mannheim.
+        ...p, parent_id: null, home_budget_id: 'b_ma', parent_name: 'Mannheim', parent_path: [{ id: 'b_ma', name: 'Mannheim' }],
+        limit: { cores: 6, ram: 8 },
+        allocations: [
+            { id: 'a_ma', budget_id: 'b_ma', budget_name: 'Mannheim', budget_path: [{ id: 'b_ma', name: 'Mannheim' }], status: 'approved', limit: { cores: 4, ram: 8 }, home: true, revision: 1 },
+            { id: 'a_root', budget_id: 'b_root', budget_name: 'Organization Root', status: 'approved', limit: { cores: 2 }, reason: 'GPU work', created_by: 'x@example.org', revision: 1 },
+        ],
         bindings: { openstack: { ...p.bindings?.openstack, external_group_assignments: [{ group_id: 'g1', group_name: 'fakultaet-wi', role: 'member' }] } },
         ...extra,
     };

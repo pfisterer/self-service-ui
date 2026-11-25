@@ -26,6 +26,8 @@ export const projectKeys = {
     // The project table under a budget: one entry per filter, sort and page.
     budgetProjects: (id, params) => ['projects', 'tree', 'budget-projects', id, params],
     search: (q, offset) => ['projects', 'tree', 'search', q, offset],
+    // A proposed split of a new project over budgets (POST /v1/nodes/split): what the budgets grant depends on the tree, so it lives under tree() and follows every write.
+    split: (params) => ['projects', 'tree', 'split', params],
     config: () => ['projects', 'config'],
     rootStatus: () => ['projects', 'root-status'],
     // Root admins' view of the availabilities; a change there also changes

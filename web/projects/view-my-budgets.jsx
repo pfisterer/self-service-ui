@@ -18,12 +18,14 @@ import { RetireModal } from './modal-retire.jsx';
 import { DecisionModal } from './modal-decide.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
 import { ProjectFormModal } from './modal-project-form.jsx';
+import { AllocationModal } from './modal-allocation.jsx';
+import { useEndAllocation } from './component-allocations.jsx';
 import { NodeInspectModal, TAB_USAGE } from './modal-inspect.jsx';
 import { useNodeDialog } from './use-node-dialog.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useRouter } from 'wouter';
-import { childrenById, COLOR, formatError, getAuthUserEmail, isBudget, projectActions, requestedBy, requestTypes, requestType } from './util-project.jsx';
+import { childrenById, COLOR, formatError, getAuthUserEmail, holdsProject, isAllocation, isBudget, projectActions, requestedBy, requestTypes, requestType } from './util-project.jsx';
 import { NodeStatusBadge } from './component-common.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
@@ -112,10 +114,7 @@ export function MyBudgetsView({ params }) {
     // see the whole organization).
     const dlg = useNodeDialog();
     const [budgetForm, setBudgetForm] = useState(null); // { mode, parent?, node? } | null
-    // Whether the selected budget's table lists the projects it allocated to
-    // further down instead of its own; kept per budget, so choosing another
-    // budget starts with its own projects.
-    const [allocatedFor, setAllocatedFor] = useState(null);
+    const endAllocation = useEndAllocation();
 
     // Which of the managed budgets are drawn at the top.
     //
@@ -414,7 +413,15 @@ export function MyBudgetsView({ params }) {
             return setBudgetForm({ mode: 'edit', node, parent });
         }
         if (action === 'delete') return handleDelete(node);
-        if (action === 'show-allocated') return setAllocatedFor(node.id);
+        // Giving back or withdrawing one allocation of a project: a confirmation, no dialog.
+        if (action === 'allocation-end') {
+            return endAllocation(node, { holder: holdsProject(node.project, userEmail), resources: config?.resources })
+                .then(ok => ok && refresh());
+        }
+        // A project from a budget's table comes as its allocation's copy, without its history: the dialogs get the project as it is stored.
+        if (node?.kind === 'project' && !node.history && ['change', 'details', 'release', 'delete-for-good'].includes(action)) {
+            return api.getNode(node.id).catch(() => node).then(full => dlg.open(action, full ?? node, tab));
+        }
         dlg.open(action, node, tab);
     };
 
@@ -428,6 +435,8 @@ export function MyBudgetsView({ params }) {
         && (budgetRequestTargets.length > 0 || myRequests.length > 0);
 
     const resources = config.resources || [];
+    // Which budgets' allocations are the viewer's to act on (managesAllocation).
+    const managedIds = new Set(myBudgets.items.map(b => b.id));
     // Move targets: every budget visible in the tree.
     const loadedBudgets = Object.values(childrenMap).flatMap(p => p.items).filter(isBudget);
     const moveTargets = [
@@ -656,13 +665,14 @@ export function MyBudgetsView({ params }) {
                                         // A row opens the project's one dialog, as its
                                         // Edit or Details button does.
                                         // A row opens its project on what it consumes: the table shows only the summary of it.
-                                        onOpen={(node) => handleAction(projectActions(node, { manager: true }).change ? 'change' : 'details', node, TAB_USAGE)}
-                                        allocatedOnly={allocatedFor === selected.id}
-                                        onAllocatedOnlyChange={(on) => setAllocatedFor(on ? selected.id : null)} />
+                                        onOpen={(node) => handleAction(projectActions(node, { manager: true }).change ? 'change' : 'details', node, TAB_USAGE)} />
                                 )}
                             </Stack>
                         ) : (
-                            <ProjectCard node={selected} resources={resources} parentName={selected.parent_name}
+                            // A waiting allocation (the inbox) shows its project, with that allocation marked: the decision is on it.
+                            <ProjectCard node={isAllocation(selected) ? (selected.project ?? selected) : selected} resources={resources}
+                                parentName={selected.parent_name} focusId={isAllocation(selected) ? selected.id : null}
+                                managedIds={managedIds} isRoot={cloudStatus.isRoot}
                                 link={linkTo(selected)} perspective="manager" onAction={handleAction} />
                         ))}
                     </Box>
@@ -733,6 +743,20 @@ export function MyBudgetsView({ params }) {
                 asManager
                 moveTargets={moveTargets}
                 initialTab={dlg.tab}
+            />
+            {/* What one budget pays for a project: change it, or add another budget — a manager's from their own budgets. */}
+            <AllocationModal
+                key={`allocations:${dlg.key}:${dlg.tab ?? ''}`}
+                opened={dlg.is('allocations')}
+                onClose={dlg.close}
+                onDone={refresh}
+                project={dlg.is('allocations') ? dlg.node : null}
+                initial={dlg.tab}
+                resources={resources}
+                myBudgets={selected && isBudget(selected) && !selected.request_only ? [selected, ...myBudgets.items.filter(b => b.id !== selected.id)] : myBudgets.items}
+                eligibleBudgets={eligibleQuery.data?.items ?? []}
+                isRoot={cloudStatus.isRoot}
+                userEmail={userEmail}
             />
             {/* History is a tab in here, not a button of its own outside. */}
             <NodeInspectModal key={`nodeinspectmodal:${dlg.key}`} opened={dlg.is('details')}

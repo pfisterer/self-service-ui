@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, ArrowDown, ArrowUp, Eye, Gift, LogOut, Package, Pencil, Rocket, Scale, Search, Server, Sparkles, SquareTerminal, Trash2, X } from 'lucide-react';
+import { Activity, AlertTriangle, ArrowDown, ArrowUp, CircleMinus, Eye, Layers, LogOut, Package, Pencil, Rocket, Scale, Search, Server, Sparkles, SquareTerminal, Trash2, X } from 'lucide-react';
 import { ActionIcon, Badge, Box, Group, Loader, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { useDebouncedValue, useElementSize, useLocalStorage } from '@mantine/hooks';
 import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
@@ -8,8 +8,9 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { InfoPopover, NodeStatusBadge } from './component-common.jsx';
 import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
-import { COLOR, UNLIMITED_QUOTA, budgetKinds, resourcesOfKinds, deletesOnRequest, deletionRequested, effectiveLimit, finalDeletion, isRetired, expiryTone, expiryValue, hasAllocations, isAvailability, nodeTitle, ownerEmail, projectActions, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting, resourceName, resourceShortName, resourceUnitName } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, budgetKinds, resourcesOfKinds, deletesOnRequest, deletionRequested, finalDeletion, isRetired, expiryTone, expiryValue, expiredText, isAvailability, isCoFunded, liveAllocations, nodeTitle, ownerEmail, projectActions, projectOf, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting, resourceName, resourceShortName, resourceUnitName, allocationActions, getAuthUserEmail, holdsProject } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
+import { useAuth } from '/providers/auth.jsx';
 import { LoadError } from '/helper/query-state.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
 import { formatDate } from '../format-date.js';
@@ -20,23 +21,25 @@ import { SortButton } from '/helper/sort-button.jsx';
 const TABLE_PAGE_SIZE = 25;
 const SEARCH_DEBOUNCE_MS = 300;
 
-// The statuses a project can be filtered by, in the order a manager thinks
-// about them: what runs, what waits, what came from outside, what is gone.
-const FILTER_STATUSES = ['approved', 'pending', 'change_pending', 'imported', 'rejected', 'released', 'archived'];
+// The statuses a row can be filtered by, in the order a manager thinks about
+// them: what pays, what waits, what is over. A row is an allocation, so these
+// are its states: ended is one given back, withdrawn or cut after it expired.
+const FILTER_STATUSES = ['approved', 'pending', 'change_pending', 'ended', 'rejected', 'released', 'archived'];
 
 // BudgetProjectsTable lists the projects paid from one budget, under the
-// budget's card in My Budgets. Filtering, sorting and paging happen on the
-// server; the table holds one page. Each row carries the actions the project
-// card offers (projectActions decides both), the frequent ones as icons and the
-// rarer ones in a menu; clicking a row opens the full card.
-//
-// allocatedOnly switches the table from the budget's own projects to the ones
-// anywhere below that draw an allocation from it — the exceptions its managers
-// handed out past the budgets in between. Controlled by the view, so the
-// budget card's "allocations" line can switch it on.
-export function BudgetProjectsTable({ budget, resources, onAction, onOpen, allocatedOnly = false, onAllocatedOnlyChange }) {
+// budget's card in My Budgets. Since allocation_leaves a row is the budget's
+// ALLOCATION — what it pays for one project — carrying the whole project
+// (row.project): its name, owner, members and what it uses are the project's,
+// the amounts in the row what this budget pays, and a project paid by others too
+// says so. Filtering, sorting and paging happen on the server; the table holds
+// one page. Each row offers what the viewer may do — with this allocation
+// (change, decide, withdraw) and with the project (its dialog, releasing it
+// where the viewer manages all of it); clicking a row opens the project.
+export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
     const { t } = useTranslation();
     const api = useNodesApi();
+    const { user } = useAuth();
+    const me = getAuthUserEmail(user);
 
     const [search, setSearch] = useState('');
     const [statuses, setStatuses] = useState([]);
@@ -79,11 +82,11 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
     // result means nothing for the new one.
     const refilter = (apply) => (value) => { apply(value); setPage(1); };
 
-    const params = { q, status: statuses, group, groupMode, sort: sort.key, order: sort.order, page, allocated: allocatedOnly, deep, area };
+    const params = { q, status: statuses, group, groupMode, sort: sort.key, order: sort.order, page, deep, area };
     const query = useQuery({
         queryKey: projectKeys.budgetProjects(budget.id, params),
         queryFn: () => api.listChildren(budget.id, {
-            kind: 'project', q, status: statuses, group, groupMode, allocated: allocatedOnly, deep: deep && !allocatedOnly, area,
+            kind: 'project', q, status: statuses, group, groupMode, deep, area,
             sort: sort.key, order: sort.order,
             limit: TABLE_PAGE_SIZE, offset: (page - 1) * TABLE_PAGE_SIZE,
         }),
@@ -100,7 +103,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
             const p = { ...params, page: 1, area: k === 'all' ? '' : k, count: true };
             return {
                 queryKey: projectKeys.budgetProjects(budget.id, p),
-                queryFn: () => api.listChildren(budget.id, { kind: 'project', q, status: statuses, group, groupMode, allocated: allocatedOnly, deep: deep && !allocatedOnly, area: p.area, limit: 1 }),
+                queryFn: () => api.listChildren(budget.id, { kind: 'project', q, status: statuses, group, groupMode, deep, area: p.area, limit: 1 }),
                 enabled: !!api,
                 placeholderData: keepPreviousData,
             };
@@ -141,11 +144,9 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
         <Paper withBorder radius="md" p="md">
             <Stack gap="sm">
                 <Group justify="space-between" align="center">
-                    <Title order={5}>{allocatedOnly
-                        ? t('projects.budgetProjects.titleAllocated', { count: total })
-                        : deep
-                            ? t('projects.budgetProjects.titleDeep', { count: total })
-                            : t('projects.budgetProjects.title', { count: total })}</Title>
+                    <Title order={5}>{deep
+                        ? t('projects.budgetProjects.titleDeep', { count: total })
+                        : t('projects.budgetProjects.title', { count: total })}</Title>
                     {query.isFetching && <Loader size="xs" />}
                 </Group>
 
@@ -169,33 +170,17 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                 )}
 
                 <Group gap="lg">
-                    {/* Only where there are sub-budgets to look into. The
-                        allocation view already spans the whole subtree. */}
+                    {/* Only where there are sub-budgets to look into. */}
                     {(budget.child_budget_count > 0 || deep) && (
                         <Group gap={4} wrap="nowrap">
                             <Switch
                                 size="xs"
                                 label={t('projects.budgetProjects.deep')}
                                 checked={deep}
-                                disabled={allocatedOnly}
                                 onChange={(e) => refilter(setDeep)(e.currentTarget.checked)}
                             />
                             <InfoPopover label={t('projects.budgetProjects.deep')}>
                                 {t('projects.budgetProjects.deepHelp')}
-                            </InfoPopover>
-                        </Group>
-                    )}
-                    {/* Only where there is something to switch to. */}
-                    {(budget.allocated_out?.projects > 0 || allocatedOnly) && (
-                        <Group gap={4} wrap="nowrap">
-                            <Switch
-                                size="xs"
-                                label={t('projects.budgetProjects.allocatedOnly')}
-                                checked={allocatedOnly}
-                                onChange={(e) => { onAllocatedOnlyChange?.(e.currentTarget.checked); setPage(1); }}
-                            />
-                            <InfoPopover label={t('projects.budgetProjects.allocatedOnly')}>
-                                {t('projects.budgetProjects.allocatedOnlyHelp')}
                             </InfoPopover>
                         </Group>
                     )}
@@ -322,7 +307,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, alloc
                             <Table.Tbody>
                                 {items.map(node => (
                                     <ProjectRow key={node.id} node={node} resources={resources} columns={columns} summaries={summaries} compact={compact}
-                                        showBudget={allocatedOnly || (deep && node.parent_id !== budget.id)}
+                                        showBudget={deep && node.parent_id !== budget.id} me={me}
                                         onAction={onAction} onOpen={onOpen} />
                                 ))}
                                 {items.length === 0 && !query.isPending && (
@@ -373,17 +358,22 @@ function ResourceSort({ icon: Icon, label, sortKey, sort, onSort }) {
 // Availabilities have no amount and go under the project's name instead.
 // short: the Lab/KI view, where "Workspace CPU" says no more than "CPU".
 function resourceColumns(t, resources, items, short = false) {
-    const quotaOf = (n) => effectiveLimit(n, n.pending?.limit || n.limit) || {};
     const cols = (resources || [])
-        .filter(r => !isAvailability(r) && items.some(n => (quotaOf(n)[r.id] ?? 0) !== 0))
+        .filter(r => !isAvailability(r) && items.some(n => (paidQuota(n)[r.id] ?? 0) !== 0))
         .map(r => ({ id: r.id, label: short ? resourceShortName(t, r) : resourceName(t, r), unit: resourceUnitName(t, r), window: r.window }));
-    if (items.some(n => openstackSide(n).facts?.servers != null)) {
+    if (items.some(n => openstackSide(rowProject(n)).facts?.servers != null)) {
         cols.push({ id: VMS, label: t('projects.resources.vms') });
     }
     return cols;
 }
 
 const VMS = '__vms';
+
+// rowProject is the project a row stands for: an allocation's project, an imported project itself.
+const rowProject = (row) => projectOf(row) ?? row;
+
+// paidQuota is what a row's budget pays: the allocation's limit, or its waiting change while one waits — what the manager is asked about.
+const paidQuota = (row) => row.pending?.limit || row.limit || {};
 
 // SUMMARIES are the sums the narrow table shows instead of a column per resource: what a manager compares projects by, each summed over its resources (the GPU hours of all classes, say). In use now, or consumed in the current window for an amount per window.
 const SUMMARIES = [
@@ -407,7 +397,7 @@ function summaryColumns(resources, columns, kind) {
 
 // summaryValue is a project's sum of one summary; null when none of its resources was measured, so a dash, never a zero.
 function summaryValue(node, c) {
-    const inUse = measuredUse(node) || {};
+    const inUse = measuredUse(rowProject(node)) || {};
     const values = c.ids.map(id => inUse[id]).filter(v => typeof v === 'number');
     return values.length ? values.reduce((a, b) => a + b, 0).toLocaleString() : null;
 }
@@ -428,13 +418,15 @@ const DEFAULT_SORT = { key: 'name', order: 'asc' };
 // measured (an import, a project not synced yet, a resource
 // OpenStack does not count). A dash is never a zero.
 function resourceFigures(node, c) {
-    const quota = effectiveLimit(node, node.pending?.limit || node.limit) || {};
+    const quota = paidQuota(node);
+    const project = rowProject(node);
     // VMs are no catalogue resource: what OpenStack allows is measured with
     // the count (for a managed project it follows the cores).
-    const reserved = c.id === VMS ? (openstackSide(node).facts?.server_limit ?? null)
+    const reserved = c.id === VMS ? (openstackSide(project).facts?.server_limit ?? null)
         : (quota[c.id] ?? 0) === 0 ? null
             : quota[c.id] === UNLIMITED_QUOTA ? '∞' : quota[c.id];
-    const used = c.id === VMS ? openstackSide(node).facts?.servers : measuredUse(node)?.[c.id];
+    // What the project uses is the project's, whoever pays for it.
+    const used = c.id === VMS ? openstackSide(project).facts?.servers : measuredUse(project)?.[c.id];
     return { reserved, used };
 }
 
@@ -483,24 +475,46 @@ function ResourceCells({ node, columns }) {
     );
 }
 
-function ProjectRow({ node, resources, columns, summaries, compact = false, onAction, onOpen, showBudget = false }) {
+function ProjectRow({ node, resources, columns, summaries, compact = false, onAction, onOpen, showBudget = false, me = '' }) {
     const { t } = useTranslation();
     const config = useProjectConfig();
-    const can = projectActions(node, { manager: true, canDelete: deletesOnRequest(config?.retirement) });
+    // The row is the budget's allocation; the project it pays for is everything else.
+    const project = rowProject(node);
+    const isAlloc = node.kind === 'allocation';
+    const can = projectActions(project, { manager: true, canDelete: deletesOnRequest(config?.retirement) });
+    const holder = holdsProject(project, me);
+    // The viewer manages this budget, so this allocation is theirs to change, decide and withdraw.
+    const mine = isAlloc ? allocationActions(node, { holder, manager: true }) : {};
+    // Releasing the whole project only where this budget is the only one paying for it: with others, ending this allocation is what is the viewer's.
+    const others = isAlloc ? liveAllocations(project).filter(a => a.id !== node.id) : [];
+    const releasable = can.release && others.length === 0;
     // A click on an action must not also open the row.
-    const act = (action) => (e) => { e.stopPropagation(); onAction(action, node); };
+    const act = (action, target = project, extra) => (e) => { e.stopPropagation(); onAction(action, target, extra); };
 
     return (
-        <Table.Tr style={{ cursor: 'pointer' }} onClick={() => onOpen(node)}>
+        <Table.Tr style={{ cursor: 'pointer' }} onClick={() => onOpen(project)}>
             <Table.Td>
                 <Group gap={6} wrap="nowrap">
-                    <Text size="sm" fw={500} style={{ overflowWrap: 'anywhere' }}>{nodeTitle(node)}</Text>
-                    {hasAllocations(node) && (
-                        <Tooltip label={node.allocations.map(a =>
-                            `${a.budget_name || a.budget_id}: ${resourceSummaryText(t, resources, a.limit)}`).join(' · ')}>
-                            <Badge size="xs" variant="light" color={COLOR.info} tt="none" leftSection={<Gift size="10" />}
+                    <Text size="sm" fw={500} style={{ overflowWrap: 'anywhere' }}>{nodeTitle(project)}</Text>
+                    {/* Paid by other budgets too: how many, and on hover the project's total and who pays the rest. */}
+                    {isAlloc && isCoFunded(project) && (
+                        <Tooltip multiline w={300} withinPortal label={
+                            <>
+                                <b>{t('projects.budgetProjects.coFundedTotal', { total: resourceSummaryText(t, resources, project.limit) || '—' })}</b>
+                                {others.map(a => <div key={a.id}>{`${a.budget_name || a.budget_id}: ${resourceSummaryText(t, resources, a.limit) || '—'}`}</div>)}
+                            </>
+                        }>
+                            <Badge size="xs" variant="light" color={COLOR.info} tt="none" leftSection={<Layers size="10" />}
                                 style={{ flexShrink: 0 }}>
-                                {t('projects.allocation.badge')}
+                                {t('projects.budgetProjects.coFunded', { count: others.length })}
+                            </Badge>
+                        </Tooltip>
+                    )}
+                    {node.expired && (
+                        <Tooltip label={expiredText(t, node)} multiline w={300} withinPortal>
+                            <Badge size="xs" variant="light" color={COLOR.negative} tt="none" leftSection={<AlertTriangle size="10" />}
+                                style={{ flexShrink: 0 }}>
+                                {t('projects.allocation.expiredBadge')}
                             </Badge>
                         </Tooltip>
                     )}
@@ -509,8 +523,8 @@ function ProjectRow({ node, resources, columns, summaries, compact = false, onAc
                     lives. */}
                 {/* Wrapped rather than cut off: the path is what tells two
                     budgets of the same name apart, an ellipsis hid exactly that. */}
-                {ownerEmail(node) && (
-                    <Text size="xs" c="dimmed" style={{ overflowWrap: 'anywhere' }}>{ownerEmail(node)}</Text>
+                {ownerEmail(project) && (
+                    <Text size="xs" c="dimmed" style={{ overflowWrap: 'anywhere' }}>{ownerEmail(project)}</Text>
                 )}
                 {showBudget && node.parent_name && (
                     <Text size="xs" c="dimmed">
@@ -522,18 +536,17 @@ function ProjectRow({ node, resources, columns, summaries, compact = false, onAc
                     <Text size="xs" c="dimmed">{availabilityNames(t, resources, node)}</Text>
                 )}
             </Table.Td>
-            {/* The status is the one cell that must never be cut: "Change
-                requested" and "Awaiting approval" are what a manager scans for.
-                The end date sits under it: both answer "how is it doing". */}
             {/* The status as an icon, its name and meaning on hover, the end date
                 beside it: the badge with words like "Change requested" took a
-                fifth of the table. Being deleted says more than released. */}
+                fifth of the table. Being deleted says more than released. The
+                status and the end are this allocation's: what the budget pays,
+                and until when. */}
             <Table.Td style={{ whiteSpace: 'nowrap' }}>
                 <Group gap={6} wrap="nowrap">
-                    <NodeStatusBadge icon status={node.status} deleting={deletionRequested(node)} purge={openstackSide(node).purge} deletionAt={finalDeletion(node, resources, config?.retirement)} />
+                    <NodeStatusBadge icon status={node.status} deleting={deletionRequested(project)} purge={openstackSide(project).purge} deletionAt={finalDeletion(project, resources, config?.retirement)} />
                     {/* A given-up project has no end date that means anything.
                         The colour says whether it is close; how far, on hover. */}
-                    {node.termination_date && !isRetired(node) ? (
+                    {node.termination_date && !isRetired(node) && node.status !== 'ended' ? (
                         <Tooltip label={expiryValue(t, node.termination_date)} openDelay={300}>
                             <Text size="xs" c={expiryTone(node.termination_date)}>
                                 {formatDate(node.termination_date)}
@@ -547,15 +560,17 @@ function ProjectRow({ node, resources, columns, summaries, compact = false, onAc
             )) : <ResourceCells node={node} columns={columns} />}
             <Table.Td>
                 <Group gap="2" wrap="wrap" justify="flex-end">
-                    {/* One dialog per project: editable where it may be changed. */}
+                    {/* The project's one dialog: editable where it may be changed. */}
                     {can.change
                         ? <RowAction label={t('projects.actions.edit')} onClick={act('change')}><Pencil size="14" /></RowAction>
                         : <RowAction label={t('projects.actions.details')} onClick={act('details')}><Eye size="14" /></RowAction>}
-                    {can.decide && <RowAction label={t('projects.actions.decide')} color={COLOR.attention} onClick={act('decide')}><Scale size="14" /></RowAction>}
-                    {can.adopt && <RowAction label={t('projects.actions.adopt')} color={COLOR.outside} onClick={act('adopt')}><Rocket size="14" /></RowAction>}
+                    {mine.decide && <RowAction label={t('projects.actions.decide')} color={COLOR.attention} onClick={act('decide', node)}><Scale size="14" /></RowAction>}
+                    {mine.change && others.length > 0 && <RowAction label={t('projects.allocation.change')} onClick={act('allocations', project, node.id)}><Package size="14" /></RowAction>}
+                    {!isAlloc && can.adopt && <RowAction label={t('projects.actions.adopt')} color={COLOR.outside} onClick={act('adopt', node)}><Rocket size="14" /></RowAction>}
                     {/* Every action as its own icon, none behind a menu: a row may
                         grow a line taller, but nothing has to be looked for. */}
-                    {can.release && <RowAction label={t('projects.actions.release')} color={COLOR.negative} onClick={act('release')}><LogOut size="14" /></RowAction>}
+                    {mine.end && others.length > 0 && <RowAction label={t('projects.allocation.withdraw')} color={COLOR.negative} onClick={act('allocation-end', node)}><CircleMinus size="14" /></RowAction>}
+                    {releasable && <RowAction label={t('projects.actions.release')} color={COLOR.negative} onClick={act('release')}><LogOut size="14" /></RowAction>}
                     {can.deleteForGood && <RowAction label={t('projects.actions.deleteForGood')} color={COLOR.negative} onClick={act('delete-for-good')}><Trash2 size="14" /></RowAction>}
                 </Group>
             </Table.Td>
@@ -574,6 +589,6 @@ function RowAction({ label, color = 'gray', onClick, children }) {
 }
 
 function availabilityNames(t, resources, node) {
-    const quota = effectiveLimit(node, node.pending?.limit || node.limit) || {};
+    const quota = paidQuota(node);
     return (resources || []).filter(r => isAvailability(r) && quota[r.id] === 1).map(r => resourceName(t, r)).join(' · ');
 }
