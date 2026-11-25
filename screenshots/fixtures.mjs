@@ -51,11 +51,11 @@ const B_LEA = node({
     usage: { approved: { limit: { cores: 4, ram: 16, storage: 100, 'ws-vcpu-hours': 4800, 'ws-ram-gb-hours': 9600, 'ws-storage-gb': 30, 'ws-gpu-hours-general-small': 200, 'ws-gpus-general-small': 4, 'llm-mtokens': 50 }, node_ids: ['p_ml', 'p_bild', 'p_web'] } },
     child_count: 3, child_project_count: 3,
 });
-// A project is not in the tree (allocation_leaves): it consists of allocations, one per paying budget, each a leaf under its budget. Here every project is paid by one budget (`budget`, default the lecturer's); parent_name/parent_path are its home budget's, as the API sends them.
+// A project is not in the tree (allocation_leaves): it consists of allocations, one per paying budget, each a leaf under its budget. Here every project is paid by one budget (`budget`, default the lecturer's); funding_budget_ids names it, and the project has no parent of its own (revised 25.11.2026: no home allocation).
 const LEA_PATH = [{ id: 'b_wi', name: 'Wirtschaftsinformatik' }, { id: 'b_lea', name: 'Dozentin-Lea-Muster' }];
 const project = (id, name, limit, { budget = { id: 'b_lea', name: 'Dozentin-Lea-Muster', path: LEA_PATH }, ...extra } = {}) => {
-    const p = node({ id, kind: 'project', name, parent_id: null, home_budget_id: budget.id, home_allocation_id: `a_${id}`, parent_name: budget.name, parent_path: budget.path, owner: `user:${ME}`, viewer_relation: 'owner', limit, termination_date: '2027-03-31', ...extra });
-    p.allocations = [{ id: `a_${id}`, budget_id: budget.id, budget_name: budget.name, budget_path: budget.path, status: p.status, limit, termination_date: p.termination_date, created_at: p.created_at, home: true, revision: 1 }];
+    const p = node({ id, kind: 'project', name, parent_id: null, funding_budget_ids: [budget.id], owner: `user:${ME}`, viewer_relation: 'owner', limit, termination_date: '2027-03-31', ...extra });
+    p.allocations = [{ id: `a_${id}`, budget_id: budget.id, budget_name: budget.name, budget_path: budget.path, status: p.status, limit, termination_date: p.termination_date, created_at: p.created_at, revision: 1 }];
     // A request waiting as a whole holds nothing yet: what it asks for is its allocation's.
     if (p.status === 'pending') p.limit = {};
     return p;
@@ -221,7 +221,7 @@ export function answer(api, method, path, query, shot) {
         if (m && m[2]) {
             const kind = query.get('kind');
             const budgets = NODES.filter(n => n.kind === 'budget' && n.parent_id === m[1]);
-            const allocations = NODES.filter(n => n.kind === 'project' && n.home_budget_id === m[1]).map(allocationRow);
+            const allocations = NODES.filter(n => n.kind === 'project' && (n.funding_budget_ids || []).includes(m[1])).map(allocationRow);
             return page(kind === 'budget' ? budgets : kind ? allocations : [...budgets, ...allocations]);
         }
         if (m) return NODES.find(n => n.id === m[1]);

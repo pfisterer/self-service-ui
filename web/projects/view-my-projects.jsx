@@ -104,9 +104,9 @@ export function MyProjectsView({ area = 'cloud' }) {
         if (!linkedProject || !listed) return;
         document.getElementById(`project-${linkedProject}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
     }, [linkedProject, listed]);
-    // Giving back one allocation of a project is a confirmation, no dialog; everything else opens one.
-    const handleAction = (action, node, tab) => (action === 'allocation-end'
-        ? endAllocation(node, { holder: holdsProject(node.project, getAuthUserEmail(user)), resources: config?.resources })
+    // Giving back one allocation of a project, or extending it without one, is a confirmation, no dialog; everything else opens one.
+    const handleAction = (action, node, tab) => (action === 'allocation-end' || action === 'allocation-end-alone'
+        ? endAllocation(node, { holder: holdsProject(node.project, getAuthUserEmail(user)), resources: config?.resources, atEnd: action === 'allocation-end-alone' })
         : dlg.open(action, node, tab));
 
     if (!api || !config || projectsQuery.isPending) return <Loading />;
@@ -204,7 +204,6 @@ export function MyProjectsView({ area = 'cloud' }) {
                     <ProjectCard
                         node={node}
                         resources={areaResources}
-                        parentName={node.parent_name}
                         perspective={memberOnly(node) ? 'member' : 'owner'}
                         envBuild={envBuildOf(node)}
                         jobs={jobsOf(node)}

@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'wouter';
 import { useProjectConfig } from './projects.jsx';
 import { formatDate } from '../format-date.js';
-import { BudgetPath } from './component-budget-path.jsx';
 import { ProjectResources } from './component-project-resources.jsx';
 import { LlmLimitHints } from './component-llm-limits.jsx';
 import { TAB_USAGE } from './modal-inspect.jsx';
@@ -32,7 +31,7 @@ const MEMBERS_SHOWN = 5;
 // jobs: what the project allows of batch jobs ({perPerson, hours}), else null.
 // start: where a workspace of the project starts (the start page with it chosen), else null.
 // envBuild: the build of the project's workspace environment from Git while it builds or after it failed ({status, message, hasImage}), else null.
-export function ProjectCard({ node, resources, parentName, perspective = 'owner', onAction, link, envBuild, jobs, start, managedIds = null, isRoot = false, focusId = null }) {
+export function ProjectCard({ node, resources, perspective = 'owner', onAction, link, envBuild, jobs, start, managedIds = null, isRoot = false, focusId = null }) {
     const { t } = useTranslation();
     const act = (action, tab) => onAction?.(action, node, tab);
     const config = useProjectConfig();
@@ -182,16 +181,17 @@ export function ProjectCard({ node, resources, parentName, perspective = 'owner'
                         </FactRow>
                     )}
 
-                    {/* Which budget pays for what, until when, and what waits or ran out. */}
+                    {/* Which budget pays for what, until when, what waits, and one the project goes on without. */}
                     {allocations.length > 0 ? (
                         <FactRow label={t('projects.fact.paidFrom')}>
                             <AllocationList project={node} resources={resources} holder={holder}
                                 managedIds={managedIds} isRoot={isRoot} focusId={focusId}
                                 onAction={isMember ? undefined : onAction} />
                         </FactRow>
-                    ) : parentName && (
+                    ) : (node.allocations || []).length > 0 && (
+                        // Given up or refused: who paid, every budget of it — a project has no single budget.
                         <FactRow label={t('projects.fact.paidFrom')}>
-                            <BudgetPath path={node.parent_path} name={parentName} />
+                            <AllocationList project={node} resources={resources} all />
                         </FactRow>
                     )}
 

@@ -26,6 +26,7 @@ import { useProjectConfig } from './projects.jsx';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useRouter } from 'wouter';
 import { childrenById, COLOR, formatError, getAuthUserEmail, holdsProject, isAllocation, isBudget, projectActions, requestedBy, requestTypes, requestType } from './util-project.jsx';
+import { linkedPaths } from './project-link.js';
 import { NodeStatusBadge } from './component-common.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
@@ -287,15 +288,20 @@ export function MyBudgetsView({ params }) {
 
     // A linked node is opened in the tree: every budget on its way down from the
     // first one the viewer manages. What lies above that is not in their tree.
-    // parent_path leaves out the root, which is open anyway where it is shown.
+    // The paths leave out the root, which is open anyway where it is shown. A
+    // project is found under every budget paying for it, so each of their ways
+    // down is opened (linkedPaths).
     useEffect(() => {
         if (!linked) return;
         const shown = new Set(rootBudgets.map(b => b.id));
-        const path = (linked.parent_path || []).map(p => p.id);
-        let from = path.findIndex(id => shown.has(id));
-        if (from < 0 && shown.has('root')) from = 0;
-        if (from < 0) return;
-        expansion.expand(path.slice(from));
+        const open = [];
+        for (const path of linkedPaths(linked)) {
+            let from = path.findIndex(id => shown.has(id));
+            if (from < 0 && shown.has('root')) from = 0;
+            if (from >= 0) open.push(...path.slice(from).filter(id => !open.includes(id)));
+        }
+        if (open.length === 0) return;
+        expansion.expand(open);
         // `expansion` is new every render; listing it would re-run this on every toggle and re-open what the user just closed.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [linked?.id, rootIds]);
@@ -413,9 +419,9 @@ export function MyBudgetsView({ params }) {
             return setBudgetForm({ mode: 'edit', node, parent });
         }
         if (action === 'delete') return handleDelete(node);
-        // Giving back or withdrawing one allocation of a project: a confirmation, no dialog.
-        if (action === 'allocation-end') {
-            return endAllocation(node, { holder: holdsProject(node.project, userEmail), resources: config?.resources })
+        // Giving back or withdrawing one allocation of a project, or letting the project go on without it after its end: a confirmation, no dialog.
+        if (action === 'allocation-end' || action === 'allocation-end-alone') {
+            return endAllocation(node, { holder: holdsProject(node.project, userEmail), resources: config?.resources, atEnd: action === 'allocation-end-alone' })
                 .then(ok => ok && refresh());
         }
         // A project from a budget's table comes as its allocation's copy, without its history: the dialogs get the project as it is stored.
@@ -671,7 +677,7 @@ export function MyBudgetsView({ params }) {
                         ) : (
                             // A waiting allocation (the inbox) shows its project, with that allocation marked: the decision is on it.
                             <ProjectCard node={isAllocation(selected) ? (selected.project ?? selected) : selected} resources={resources}
-                                parentName={selected.parent_name} focusId={isAllocation(selected) ? selected.id : null}
+                                focusId={isAllocation(selected) ? selected.id : null}
                                 managedIds={managedIds} isRoot={cloudStatus.isRoot}
                                 link={linkTo(selected)} perspective="manager" onAction={handleAction} />
                         ))}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { linkTarget } from './project-link.js';
+import { linkTarget, linkedPaths } from './project-link.js';
 
 const RES = [{ id: 'cores', kind: 'cloud' }];
 const p = (s) => new URLSearchParams(s);
@@ -15,5 +15,24 @@ describe('linkTarget', () => {
         expect(linkTarget({ params: p('budget=b_1') })).toBe('/budgets/b_1');
         expect(linkTarget({ params: p('node=a_1') })).toBe('/budgets/a_1');
         expect(linkTarget({ params: p('') })).toBe('/');
+    });
+});
+
+describe('linkedPaths', () => {
+    it('finds a project under every budget paying for it', () => {
+        const project = {
+            kind: 'project', allocations: [
+                { budget_id: 'b_grund', status: 'approved', budget_path: [{ id: 'b_ma' }, { id: 'b_grund' }] },
+                { budget_id: 'b_kurs', status: 'change_pending', budget_path: [{ id: 'b_kurs' }] },
+                { budget_id: 'b_old', status: 'ended', budget_path: [{ id: 'b_old' }] },
+            ],
+        };
+        expect(linkedPaths(project)).toEqual([['b_ma', 'b_grund'], ['b_kurs']]);
+        // Given up: under the budgets that paid.
+        expect(linkedPaths({ kind: 'project', allocations: [{ budget_id: 'b_x', status: 'released' }] })).toEqual([['b_x']]);
+    });
+    it('follows a budget’s or an allocation’s own parents', () => {
+        expect(linkedPaths({ kind: 'allocation', parent_path: [{ id: 'b_ma' }, { id: 'b_grund' }] })).toEqual([['b_ma', 'b_grund']]);
+        expect(linkedPaths(null)).toEqual([]);
     });
 });

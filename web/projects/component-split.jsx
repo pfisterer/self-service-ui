@@ -7,17 +7,21 @@ import { budgetLabel, budgetPathText } from './component-budget-path.jsx';
 import { formatDate } from '../format-date.js';
 import { COLOR, UNLIMITED_QUOTA, resourceSummaryText, visibleResources } from './util-project.jsx';
 
-// The split of a new project over budgets (allocation_leaves, decided 25.11.2026, (1)): the person enters what the project needs in total, POST /v1/nodes/split proposes which budget pays what — first what each grants without a decision, the most specific budget first, then the rest as a request — and the proposal can be changed before it is sent: amounts per part, a part removed, another budget added. What no budget would even take as a request (unplaced) blocks the request. With more than one part, or a part that waits, the person chooses when the project starts (3): at once with what is granted, or once everything is decided.
+// The split of a new project over budgets (allocation_leaves, decided 25.11.2026, (1)): the person enters what the project needs in total, POST /v1/nodes/split proposes which budget pays what — first what each grants without a decision, the most specific budget first, then the rest as a request — and the proposal can be changed before it is sent: amounts per part, a part removed, another budget added. What no budget would even take as a request (unplaced) blocks the request. With more than one part, or a part that waits, the person chooses when the project starts (3): at once with what is granted (a budget grants what its rules allow at once, the rest of its part waits), or all or nothing (revised 25.11.2026): no part is granted in pieces, each is granted whole or waits whole, and one part refused refuses the whole request.
 
 // nonZero is a quota without its zeros: what a part actually asks for.
 export function nonZero(quota) {
     return Object.fromEntries(Object.entries(quota || {}).filter(([, v]) => (v ?? 0) !== 0));
 }
 
-// waitingPart is what of a part waits for its budget's managers: its limit minus what the budget grants at once, per resource (an availability waits unless it is granted). Nothing waits on a budget the person manages (managed): there the allocation is created approved. null where auto_approved is unknown (a part changed by hand: its budget decides when the request arrives).
-export function waitingPart(part, managed = false) {
+// waitingPart is what of a part waits for its budget's managers: its limit minus what the budget grants at once, per resource (an availability waits unless it is granted). Nothing waits on a budget the person manages (managed): there the allocation is created approved. null where auto_approved is unknown (a part changed by hand: its budget decides when the request arrives). allOrNothing (start_when all): nothing is granted in pieces, so a part that does not fit wholly waits wholly.
+export function waitingPart(part, managed = false, allOrNothing = false) {
     if (managed) return {};
     if (!part.auto_approved) return null;
+    if (allOrNothing) {
+        const partly = waitingPart(part, false, false);
+        return Object.keys(partly).length > 0 ? nonZero(part.limit) : {};
+    }
     const out = {};
     for (const [id, v] of Object.entries(part.limit || {})) {
         const granted = part.auto_approved[id] ?? 0;
@@ -69,6 +73,7 @@ export function SplitSection({ plan, loading = false, error = null, parts, edite
     const total = sumParts(parts);
     const differs = edited && JSON.stringify(nonZero(sortKeys(total))) !== JSON.stringify(nonZero(sortKeys(asked)));
     const waitsSomewhere = (parts || []).some(p => { const w = waitingPart(p, isManaged(p.budget_id)); return !w || Object.keys(w).length > 0; });
+    const allOrNothing = startWhen === 'all';
 
     const update = (i, patch) => onChange(parts.map((p, j) => (j === i ? { ...p, ...patch, auto_approved: null } : p)));
     const remove = (i) => { setEditing(null); onChange(parts.filter((_, j) => j !== i)); };
@@ -103,9 +108,11 @@ export function SplitSection({ plan, loading = false, error = null, parts, edite
 
                 {(parts || []).map((p, i) => {
                     const managed = isManaged(p.budget_id);
-                    const waiting = waitingPart(p, managed);
-                    // On a budget the person manages, everything of the part is granted at once.
-                    const granted = managed ? nonZero(p.limit) : nonZero(p.auto_approved);
+                    const waiting = waitingPart(p, managed, allOrNothing);
+                    // On a budget the person manages, everything of the part is granted at once; all or nothing, a part is granted whole or not at all.
+                    const granted = managed ? nonZero(p.limit)
+                        : allOrNothing ? (waiting && Object.keys(waiting).length === 0 ? nonZero(p.limit) : {})
+                        : nonZero(p.auto_approved);
                     return (
                         <Box key={p.budget_id} data-testid={`split-part-${p.budget_id}`}>
                             <Group justify="space-between" align="flex-start" wrap="nowrap" gap="xs">
@@ -193,6 +200,9 @@ export function SplitSection({ plan, loading = false, error = null, parts, edite
                             <Radio value="all" label={t('projects.split.startAll')} description={t('projects.split.startAllHint')} />
                         </Stack>
                     </Radio.Group>
+                )}
+                {allOrNothing && (parts || []).length > 1 && waitsSomewhere && (
+                    <Text size="xs" c={`${COLOR.attention}.8`}>{t('projects.split.allOrNothing')}</Text>
                 )}
                 {(parts || []).length > 0 && (
                     <Badge variant="light" color={COLOR.identity} tt="none" style={{ alignSelf: 'flex-start' }}>

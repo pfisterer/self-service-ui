@@ -88,7 +88,7 @@ const STATUS_META = {
     // until the deletion for good.
     archived: { color: COLOR.identity, variant: 'outline' },
     imported: { color: COLOR.outside, variant: 'light' },
-    // An allocation that no longer pays: given back, withdrawn or cut after it expired. The project goes on with its others.
+    // An allocation that no longer pays: given back, withdrawn, or run out at its own end after the project was extended without it. The project goes on with its others.
     ended: { color: COLOR.identity, variant: 'outline' },
 };
 
@@ -1117,7 +1117,7 @@ export function useAsyncRefresh(fetcher, onError) {
 
 // ── Allocations ─────────────────────────────────────────────────────────────
 //
-// Since allocation_leaves (25.11.2026) a project is not in the budget tree: it consists of allocations, each a leaf directly under the one budget that pays for it and subject to that budget's rules alone. The project's limit is the sum of the allocations that pay, its termination_date the latest of their ends; `allocations` on every project lists them (live ones first), and an allocation row of a budget's table carries its whole `project`.
+// Since allocation_leaves (25.11.2026) a project is not in the budget tree: it consists of allocations, each a leaf directly under the one budget that pays for it and subject to that budget's rules alone. The project's limit is the sum of the allocations that pay, its termination_date the EARLIEST of their ends (revised 25.11.2026: every allocation runs until the project ends; one the project was extended without, `ends_alone`, ends at its own date and is not counted); `funding_budget_ids` names the paying budgets, oldest first — a project has no single budget it belongs to; `allocations` on every project lists them (live ones first), and an allocation row of a budget's table carries its whole `project`.
 
 // The allocation states that still mean something for the project: asked for, or paying.
 export const LIVE_ALLOCATION_STATUSES = ['pending', 'approved', 'change_pending'];
@@ -1141,9 +1141,18 @@ export function projectOf(node) {
     return isAllocation(node) ? (node.project ?? null) : node;
 }
 
-// projectBudgetId is the budget a project's place in the tree is read from: its home allocation's budget (a project has no parent any more); a budget's or allocation's parent.
-export function projectBudgetId(node) {
-    return node?.home_budget_id ?? node?.parent_id ?? null;
+// soleBudgetId is the one budget a project is paid from where there is exactly one (its only live allocation's), else null: a project paid by several has no single budget — every place that needs one (bounds of a form, moving it) works per allocation then. A budget's or an allocation's own parent otherwise.
+export function soleBudgetId(node) {
+    if (node?.kind !== 'project') return node?.parent_id ?? null;
+    const live = liveAllocations(node);
+    if (live.length === 1) return live[0].budget_id ?? null;
+    if (live.length === 0 && (node.funding_budget_ids || []).length === 1) return node.funding_budget_ids[0];
+    return null;
+}
+
+// payingBudgets are the budgets a project is paid from, one entry per live allocation in the order the API lists them: { id, name, path }. What a project shows instead of a single "budget".
+export function payingBudgets(project) {
+    return liveAllocations(project).map(a => ({ id: a.budget_id, name: a.budget_name || a.budget_id, path: a.budget_path || [] }));
 }
 
 // fundedBy reports whether a budget pays for the project, or is asked to.
@@ -1202,38 +1211,27 @@ export function managesAllocation(allocation, managedIds, isRoot = false) {
 }
 
 // allocationActions says what the viewer may do with one allocation of a project: holder (holdsProject) or manager of its budget (managesAllocation). The API decides in the end; the UI only offers what it would allow.
-//   change  a new amount or end: the holders ask (or give back), the budget's managers set it
-//   end     give it back (holders) or withdraw it (managers)
-//   decide  approve or reject a waiting allocation or change: its budget's managers
-export function allocationActions(allocation, { holder = false, manager = false } = {}) {
+//   change   new amounts: the holders ask (or give back), the budget's managers set it. The end is the project's, changed on the project (every allocation runs until it).
+//   end      give it back (holders) or withdraw it (managers)
+//   decide   approve or reject a waiting allocation or change: its budget's managers
+//   endAlone let the project go on without it after its own end (goesOnWithout), for both
+export function allocationActions(allocation, { holder = false, manager = false, project = null } = {}) {
     const live = LIVE_ALLOCATION_STATUSES.includes(allocation?.status);
     const waiting = allocation?.status === 'pending' || allocation?.status === 'change_pending';
     return {
         change: live && allocation.status !== 'change_pending' && (holder || manager),
         end: live && (holder || manager),
         decide: waiting && manager,
+        endAlone: (holder || manager) && !!project && goesOnWithout(allocation, project),
     };
 }
 
-// expiryOf describes an expired allocation for the people looking at it: { at, due, cause, budgetName }, null when it has not expired.
-export function expiryOf(allocation) {
-    const e = allocation?.expired;
-    if (!e) return null;
-    return { at: e.at, due: e.due ?? null, cause: e.cause, budgetName: e.budget_name || allocation.budget_name || allocation.parent_name || '' };
-}
-
-// expiredText is the one sentence naming an expired allocation: when it ran out and what happens next — cut on its due day, or (without a notification service) left to the budget's managers; a deleted budget is named as the cause.
-export function expiredText(t, allocation) {
-    const e = expiryOf(allocation);
-    if (!e) return '';
-    if (e.cause === 'budget_deleted') {
-        return e.due
-            ? t('projects.allocation.budgetDeletedDue', { name: e.budgetName, due: formatDate(e.due) })
-            : t('projects.allocation.budgetDeleted', { name: e.budgetName });
-    }
-    return e.due
-        ? t('projects.allocation.expiredDue', { at: formatDate(e.at), due: formatDate(e.due) })
-        : t('projects.allocation.expiredOpen', { at: formatDate(e.at) });
+// goesOnWithout reports whether the project could be extended without this allocation (release with at_end): it pays, has an end, is not left behind already, and another paying allocation not left behind runs longer — its budget agreed to a later end (or it has none) while this one's did not, not yet, or refused. The API refuses it for the last allocation; that one never runs shorter than the others.
+export function goesOnWithout(allocation, project) {
+    if (!PAYING_ALLOCATION_STATUSES.includes(allocation?.status) || allocation.ends_alone || !allocation.termination_date) return false;
+    const mine = endDate(allocation.termination_date).getTime();
+    return liveAllocations(project).some(a => a.id !== allocation.id && PAYING_ALLOCATION_STATUSES.includes(a.status) && !a.ends_alone
+        && (!a.termination_date || endDate(a.termination_date).getTime() > mine));
 }
 
 // projectActions says which actions a project offers, for its owner or for a

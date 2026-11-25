@@ -8,7 +8,7 @@
         "action": {
             "label": "Handeln nötig",
             "short": "Handeln nötig",
-            "text": "Ein Antrag wartet auf eine Entscheidung, ein Projekt endet, eine Zuteilung ist abgelaufen. Erinnerungen nach 2 und 7 Tagen, solange nichts geschehen ist."
+            "text": "Ein Antrag wartet auf eine Entscheidung, ein Projekt endet. Erinnerungen nach 2 und 7 Tagen, solange nichts geschehen ist."
         },
         "disruption": {
             "label": "Störung mit Auswirkung",

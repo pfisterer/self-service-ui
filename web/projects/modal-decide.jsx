@@ -128,6 +128,8 @@ export function DecisionModal({ opened, onClose, onDone, resources, node }) {
                         <Text size="xs">
                             {t('projects.allocation.decideNote', { budget: budgetPathText(node.parent_path, node.parent_name || node.parent_id) })}
                             {isCoFunded(node.project) && ` ${t('projects.allocation.decideCoFunded', { total: resourceSummaryText(t, resources, node.project.limit) || '—' })}`}
+                            {/* Waiting for everything is all or nothing: refusing this part refuses the whole request. */}
+                            {node.status === 'pending' && node.project?.status === 'pending' && node.project?.start_when === 'all' && ` ${t('projects.allocation.decideAllOrNothing')}`}
                         </Text>
                     </Alert>
                 )}

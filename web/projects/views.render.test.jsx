@@ -238,7 +238,8 @@ describe('the cloud project views render', () => {
     // Search hits are a flat NavTree: each row with its funding budget below, the next page by "show more" with how many are loaded, a hit selected by click.
     it('lists the search hits flat, with their budget and a show-more row', async () => {
         const api = fakeNodesApi(fixtureTree());
-        const hit = (id, name) => ({ id, kind: 'project', status: 'approved', name, parent_id: 'b_ma', parent_name: 'Mannheim', parent_path: [{ id: 'b_root', name: 'Organization Root' }, { id: 'b_ma', name: 'Mannheim' }], limit: { cores: 4, ram: 8 }, created_at: '2026-08-02T10:00:00Z' });
+        // A project has no parent (allocation_leaves): the hit names every budget paying for it, by its path.
+        const hit = (id, name) => ({ id, kind: 'project', status: 'approved', name, parent_id: null, funding_budget_ids: ['b_ma'], allocations: [{ id: `a_${id}`, budget_id: 'b_ma', budget_name: 'Mannheim', budget_path: [{ id: 'b_root', name: 'Organization Root' }, { id: 'b_ma', name: 'Mannheim' }], status: 'approved', limit: { cores: 4, ram: 8 } }], limit: { cores: 4, ram: 8 }, created_at: '2026-08-02T10:00:00Z' });
         const hits = [hit('p_a', 'Treffer A'), hit('p_b', 'Treffer B'), hit('p_c', 'Treffer C')];
         api.searchNodes = vi.fn(async (q, { offset = 0 } = {}) => ({ items: offset ? hits.slice(2) : hits.slice(0, 2), total: 3 }));
         globalThis.__testApi = api;
@@ -274,7 +275,7 @@ describe('the cloud project views render', () => {
     // The requests waiting for a decision are the same flat list, worked through by keyboard as the tree is.
     it('lists what is waiting flat and selects a row by keyboard', async () => {
         const api = fakeNodesApi(fixtureTree());
-        const waiting = ['Antrag Eins', 'Antrag Zwei'].map((name, i) => ({ id: `p_w${i}`, kind: 'project', status: 'pending', name, parent_id: 'b_ma', parent_name: 'Mannheim', limit: { cores: 2, ram: 4 }, owner: 'user:someone@dhbw.de', created_at: '2026-08-02T10:00:00Z' }));
+        const waiting = ['Antrag Eins', 'Antrag Zwei'].map((name, i) => ({ id: `p_w${i}`, kind: 'project', status: 'pending', name, parent_id: null, funding_budget_ids: ['b_ma'], allocations: [{ id: `a_w${i}`, budget_id: 'b_ma', budget_name: 'Mannheim', status: 'pending', limit: { cores: 2, ram: 4 } }], limit: {}, owner: 'user:someone@dhbw.de', created_at: '2026-08-02T10:00:00Z' }));
         api.listToManage = async () => ({ items: waiting, total: waiting.length });
         api.getNode = async (id) => waiting.find(n => n.id === id) ?? null;
         globalThis.__testApi = api;

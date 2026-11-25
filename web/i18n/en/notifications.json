@@ -8,7 +8,7 @@
         "action": {
             "label": "Action needed",
             "short": "Action",
-            "text": "A request awaits a decision, a project ends, an allocation has expired. Reminders after 2 and 7 days while nothing has happened."
+            "text": "A request awaits a decision, a project ends. Reminders after 2 and 7 days while nothing has happened."
         },
         "disruption": {
             "label": "Disruption that affects you",

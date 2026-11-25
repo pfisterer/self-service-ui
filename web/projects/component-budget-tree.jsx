@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { CloudDownload, CornerLeftUp, Eye, FileText, Folder, Zap } from 'lucide-react';
 import { Box, Text, Tooltip } from '@mantine/core';
 import { NavTree } from '/helper/tree.jsx';
-import { COLOR, isBudget, isImported, nodeTitle, statusDescription, statusLabel, statusStyle } from './util-project.jsx';
+import { COLOR, isBudget, isImported, nodeTitle, payingBudgets, statusDescription, statusLabel, statusStyle } from './util-project.jsx';
 import { budgetPathText } from './component-budget-path.jsx';
 
 // BudgetTree is the navigation side of the "My Budgets" master-detail view: a lazily loaded tree of budgets, the one tree of the master-detail pages (helper/tree.jsx's NavTree, on Mantine's Tree): its expansion, guide lines, keyboard and ARIA, and the loading of a branch as it opens (onLoadChildren) with its spinner and its failure on the row.
@@ -127,6 +127,15 @@ export function BudgetTree({ data, expansion, selectedId, onSelect, onLoadChildr
     );
 }
 
+// hitBudgets names where a hit is paid from: a budget's or an allocation's parent, every budget paying for a project (it has no single one).
+function hitBudgets(t, node) {
+    if (node.kind === 'project') {
+        const paying = payingBudgets(node);
+        return paying.length > 0 ? t('projects.tree.inBudget', { name: paying.map(b => budgetPathText(b.path, b.name)).join(' + ') }) : undefined;
+    }
+    return node.parent_name ? t('projects.tree.inBudget', { name: budgetPathText(node.parent_path, node.parent_name) }) : undefined;
+}
+
 // budgetResultsToTreeData: nodes outside their place in the tree as a flat NavTree, the search hits and the requests waiting for a decision. Both answer "which ones", not "where", and unfolding a paginated tree down to a handful of matches would be both slow and harder to read: the funding budget is named on each row instead. With `total` beyond what is loaded the list ends in the paging row, "show more" with loaded/total where `onMore` fetches the next page, else only the count.
 export function budgetResultsToTreeData(t, nodes, { total, onMore } = {}) {
     const rows = (nodes ?? []).map(node => ({
@@ -134,7 +143,7 @@ export function budgetResultsToTreeData(t, nodes, { total, onMore } = {}) {
         label: nodeTitle(node),
         node,
         icon: <NodeIcon node={node} />,
-        sub: node.parent_name ? t('projects.tree.inBudget', { name: budgetPathText(node.parent_path, node.parent_name) }) : undefined,
+        sub: hitBudgets(t, node),
         badge: <NodeMarkers node={node} />,
     }));
     if (typeof total === 'number' && rows.length < total) {

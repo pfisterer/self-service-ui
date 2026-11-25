@@ -24,8 +24,7 @@ import { useWorkspaceSettings, workspaceSettingsItems } from '/gpu/workspace-set
 import { ProjectId } from '/gpu/project-id.jsx';
 import { withCurrentParent } from './component-budget-select.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
-import { autoApproveHeadroom, budgetShortfall, canRaise, changeOutcome, COLOR, idsAbove, managesChainOf, projectNeed, raisePlan, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, getAuthUserEmail, holdsProject, isAvailability, liveAllocations, projectBudgetId as homeBudgetOf, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, mostSpecificFirst, projectKinds, resourcesOfKinds, PROJECT_KINDS, kindOfResource, isLab, endDate, endDay, expiryTone, expiryValue } from './util-project.jsx';
-import { AttributesEditor, AttributesView, hasAttributes, useAttributesTab } from './component-node-attributes.jsx';
+import { autoApproveHeadroom, budgetShortfall, canRaise, changeOutcome, COLOR, idsAbove, managesChainOf, projectNeed, raisePlan, nodeTitle, ownerEmail as nodeOwnerEmail, defaultsWithin, effectiveLimit, getAuthUserEmail, holdsProject, isAvailability, liveAllocations, payingBudgets, soleBudgetId, isPoolAutoApprove, latestProjectEnd, requestOutcome, resourceSummaryText, roomIn, visibleResources, measuredUse, openstackSide, resourceLabel, budgetKinds, catalogKinds, mostSpecificFirst, projectKinds, resourcesOfKinds, PROJECT_KINDS, kindOfResource, isLab, endDate, endDay, expiryTone, expiryValue } from './util-project.jsx';
 import { nodeExtraTabs } from './modal-inspect.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
@@ -36,7 +35,6 @@ const DEFAULT_TERM_DAYS = 90;
 const TAB_DETAILS = 'details';
 const TAB_RESOURCES = 'resources';
 const TAB_MEMBERS = 'members';
-const TAB_ATTRIBUTES = 'attributes';
 const TAB_WORKSPACES = 'workspaces';
 // The first of the workspace settings' entries, where a dialog opened on "workspaces" lands.
 const TAB_WORKSPACES_FIRST = `${TAB_WORKSPACES}-environment`;
@@ -162,17 +160,21 @@ function RaiseBudgetOffer({ plan, resources, chainComplete, onRaise, compact = f
 // initialBudgetId preselects the budget of a new project — set when the dialog
 // is opened from a budget's own card.
 //
-// asManager: opened by a manager of the project's budget. They alone set its
-// attributes (who pays for it, a tab of its own), and on an approved project
-// they move it to another budget and hand it to another owner — fields of the
-// Details tab that act at once, like the name. `moveTargets` are the budgets it
-// may move to.
+// asManager: opened by a manager of one of the project's budgets. On an approved
+// project they move it to another budget and hand it to another owner — fields
+// of the Details tab that act at once, like the name. `moveTargets` are the
+// budgets it may move to. Attributes (who pays for it) are no longer the
+// project's: each paying budget sets them on its own allocation (the allocation
+// dialog).
 //
 // A project consists of allocations, one per paying budget (allocation_leaves,
-// 25.11.2026). Paid by one budget, the form changes that allocation as it always
-// changed the project (the API forwards the change); paid by several, the
-// Resources tab shows the total and the allocations, each changed on its own
-// (AllocationModal) — what a budget pays follows that budget's rules. A new
+// 25.11.2026, revised the same day). Paid by one budget, the form changes that
+// allocation as it always changed the project (the API forwards the change);
+// paid by several, the Resources tab shows the total and the allocations, each
+// changed on its own (AllocationModal) — what a budget pays follows that
+// budget's rules. The end is the project's in both cases: every allocation runs
+// until it, and a new end is asked of every paying budget (request-change on the
+// project); it moves once all have agreed. A new
 // project is either split over the budgets automatically (POST /v1/nodes/split,
 // shown and changeable before it is sent) or paid by one budget picked here, as
 // before; opened from a budget's card it is that budget.
@@ -199,15 +201,15 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
     const isChange = !!node && !isAdopt;
     const { user } = useAuth();
     const userEmail = getAuthUserEmail(user);
-    // The allocations of an existing project. Paid by one budget, the form edits that allocation (its waiting change first); paid by several, amounts and end are changed per allocation and the form shows the total.
+    // The allocations of an existing project. Paid by one budget, the form edits that allocation (its waiting change first); paid by several, amounts are changed per allocation and the form shows the total, the end is the project's and asked of every paying budget.
     const live = isChange ? liveAllocations(node) : [];
     const multi = live.length > 1;
     const sole = live.length === 1 ? live[0] : null;
     const base = !isChange ? null : sole
         ? { limit: sole.pending?.limit || sole.limit, termination_date: sole.pending?.termination_date || sole.termination_date }
         : { limit: node.pending?.limit || node.limit, termination_date: node.pending?.termination_date || node.termination_date };
-    // The budget the project's place in the tree is read from: its home allocation's (a project has no parent of its own).
-    const homeId = isChange ? homeBudgetOf(node) : null;
+    // The one budget paying for the project, where there is one (a project has no parent of its own; paid by several, no single budget bounds the form).
+    const homeId = isChange ? soleBudgetId(node) : null;
     // The allocation dialog over this one ({ initial }) and giving one back.
     const [allocDialog, setAllocDialog] = useState(null);
     const endAllocation = useEndAllocation();
@@ -229,7 +231,6 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
         retry: false,
     });
     const requestable = isAdopt ? (ownerBudgetsQuery.data ?? []) : eligibleBudgets;
-    const withAttributes = isChange && asManager;
     // Moving and handing over: a manager's, on an approved project.
     // Moving is a move of the project's only allocation (the API refuses it with several).
     const restructure = isChange && asManager && node.status === 'approved';
@@ -241,7 +242,6 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
     const parentChanged = movable && newParent && newParent !== homeId;
     // Lab/KI: how the project's workspaces are used — the AI service's part, in its own tab, saved with the rest and at once.
     const workspaces = useWorkspaceSettings(isChange && opened ? node?.id : null, isChange && opened);
-    const attrs = useAttributesTab(node);
 
     // "workspaces" was the tab of all workspace settings; they are entries of their own now.
     const [activeTab, setActiveTab] = useState(initialTab === TAB_WORKSPACES ? TAB_WORKSPACES_FIRST : (initialTab ?? TAB_DETAILS));
@@ -267,6 +267,18 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
     // Nothing outlives the budget it draws from, and no project runs longer at
     // a time than the budget allows (see latestProjectEnd).
     const latestEndOf = (id) => latestProjectEnd(budgetById(id));
+    // Paid by several budgets: the project may end no later than the earliest any of them grants (of those in view; the API checks the rest and refuses with the budget's name).
+    const multiBound = (() => {
+        if (!multi) return null;
+        let bound = null;
+        for (const a of live) {
+            const l = latestEndOf(a.budget_id);
+            if (l && (!bound || l.date < bound.date)) bound = l;
+        }
+        return bound;
+    })();
+    // Whether a picked end is later than the project's: what its budgets have to agree to.
+    const endExtended = (d) => !!d && !!node?.termination_date && d.getTime() > endDate(node.termination_date).getTime();
     const withinBudget = (date, id) => {
         const bound = latestEndOf(id)?.date;
         return bound && (!date || date > bound) ? bound : date;
@@ -414,9 +426,7 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
             reason: reasonError(values.reason, t('projects.projectForm.purposeRequired')),
             parentId: (!isChange && values.funding !== 'split' && !values.parentId) ? t('projects.projectForm.budgetRequired') : null,
             terminationDate: (() => {
-                // Paid by several budgets, each allocation has its own end; the form's is not edited there.
-                if (multi) return null;
-                const latest = latestEndOf(isChange ? homeId : values.funding === 'split' ? null : values.parentId);
+                const latest = multi ? multiBound : latestEndOf(isChange ? homeId : values.funding === 'split' ? null : values.parentId);
                 if (!values.terminationDate) {
                     return latest || openEndLocked ? t('projects.projectForm.endDateRequired') : null;
                 }
@@ -427,7 +437,7 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
                     : t('projects.projectForm.endDateAfterBudget', { date: formatDate(latest.date) });
             })(),
             ...Object.fromEntries(
-                multi ? {} : Object.entries(validateQuota(t, offeredFor(values.funding === 'split' ? null : values.parentId, values.kind, values.funding === 'split'), values.quota, { providerDefaults: true })).map(([id, msg]) => [`quota.${id}`, msg])),
+                multi ? [] : Object.entries(validateQuota(t, offeredFor(values.funding === 'split' ? null : values.parentId, values.kind, values.funding === 'split'), values.quota, { providerDefaults: true })).map(([id, msg]) => [`quota.${id}`, msg])),
         }),
     });
 
@@ -445,7 +455,7 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
     const offered = offeredFor(parentId, kind, splitting);
     const knownBudget = budgetById(projectBudgetId) || null;
     // Managing the budget or one above it is what the API asks of whoever creates a project directly or changes one at once — not only managing the budget itself (managing just the one above it showed "a manager decides").
-    const manages = !isAdopt && managesChainOf(knownBudget ?? (isChange ? (homeId ? { id: homeId, parent_path: node.parent_path } : null) : (parentId ? { id: parentId } : null)), managedIds, isRoot);
+    const manages = !isAdopt && managesChainOf(knownBudget ?? (isChange ? (homeId ? { id: homeId, parent_path: (sole?.budget_path || []).slice(0, -1) } : null) : (parentId ? { id: parentId } : null)), managedIds, isRoot);
     // An amended pending request stays a request, and an adopted project always goes through approval: neither applies anything now.
     const applies = !isAdopt && !(isChange && node.status === 'pending');
 
@@ -511,8 +521,8 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
     // What the button will do.
     const outcomeBudget = projectBudget;
     const predicted = isAdopt ? null : isChange
-        // Paid by several budgets the form changes members, name and admins only: at once.
-        ? (multi ? 'instant' : node.status === 'pending' ? null : changeOutcome({
+        // Paid by several budgets the form changes members, name, admins and the end: a later end is asked of every paying budget, so it may wait; anything else applies at once.
+        ? (multi ? (endExtended(terminationDate) ? 'approval' : 'instant') : node.status === 'pending' ? null : changeOutcome({
             node: sole ?? node, budget: outcomeBudget, quota, terminationDate, resources, myProjects, manages,
         }))
         : splitting ? (splitQuery.isFetching && !editedParts ? null : splitOutcome(parts, editedParts ? null : splitPlan?.unplaced, managesChain))
@@ -530,7 +540,7 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
         .filter(r => !isAvailability(r) && (quota?.[r.id] ?? 0) > (newRoom[r.id] ?? Infinity))
         .map(r => ({ ...r, asked: quota[r.id], free: newRoom[r.id] })) : [];
     const openRaise = (step) => setRaise({ budget: step.budget, parent: step.parent, add: step.short });
-    const latestEnd = latestEndOf(isChange ? homeId : parentId);
+    const latestEnd = multi ? multiBound : latestEndOf(isChange ? homeId : parentId);
 
     // Picking a budget with auto-approve fills the resources with the most it
     // would grant on the spot. Any other budget refits the defaults to its room
@@ -560,6 +570,12 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
         const nextDate = values.terminationDate?.getTime() ?? null;
         return (resources || []).some(r => (values.quota[r.id] ?? 0) !== (baseLimit[r.id] ?? 0))
             || (baseDate ? endDate(baseDate).getTime() : null) !== nextDate;
+    };
+    // Paid by several budgets the end is changed on its own (request-change on the project with the end alone): the API asks every paying budget for it.
+    const projectEndChanged = (values) => {
+        if (!isChange || !multi) return false;
+        const from = node.termination_date ? endDate(node.termination_date).getTime() : null;
+        return from !== (values.terminationDate?.getTime() ?? null);
     };
     const approvalFieldsChanged = (values) => {
         if (!isChange) return true;
@@ -655,8 +671,11 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
                     reason: values.reason,
                 });
             }
-            const attributes = withAttributes && attrs.changed();
-            if (attributes) result = await api.setAttributes(node.id, attributes);
+            // A new end of a project paid by several budgets: asked of each, applied where it shortens or the budget agrees by itself, else waiting for its managers. The allocations it goes on without keep their own end; is one left to carry the project's end, the change is that allocation's (the API would otherwise not tell them apart).
+            if (projectEndChanged(values)) {
+                const carriers = live.filter(a => !a.ends_alone);
+                result = await api.requestChange(carriers.length === 1 ? carriers[0].id : node.id, { termination_date: iso });
+            }
             return result;
         },
     });
@@ -779,10 +798,8 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
                 {...form.getInputProps('reason')}
             />
 
-            {/* Paid by several budgets, each allocation ends on its own day; the project runs until the latest. */}
-            {multi ? (
-                <Text size="xs" c="dimmed">{t('projects.allocation.endPerAllocation')}</Text>
-            ) : <TerminationDatePicker
+            {/* The project's end, also paid by several budgets: every allocation runs until it. */}
+            <TerminationDatePicker
                 value={terminationDate}
                 maxDate={latestEnd?.date ?? null}
                 maxHint={latestEnd?.term
@@ -792,7 +809,8 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
                 optionalHint={t('projects.endDate.setEndDateHintProject')}
                 error={form.errors.terminationDate}
                 onChange={(d) => { form.setFieldValue('terminationDate', d); form.clearFieldError('terminationDate'); }}
-            />}
+            />
+            {multi && <Text size="xs" c="dimmed" mt={-8}>{t('projects.allocation.endAllBudgets')}</Text>}
 
             {/* A manager's: they act at once when saved, not as a request. */}
             {restructure && (
@@ -810,7 +828,7 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
                         <BudgetSelect
                             label={t('projects.projectForm.budget')}
                             description={t('projects.projectForm.moveHint')}
-                            budgets={withCurrentParent({ ...node, parent_id: homeId }, moveTargets)}
+                            budgets={withCurrentParent({ ...node, parent_id: homeId, parent_name: sole?.budget_name, parent_path: sole?.budget_path }, moveTargets)}
                             value={newParent}
                             onChange={setNewParent}
                         />
@@ -854,7 +872,9 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
                             decide={false}
                             onAction={(action, subject, target) => {
                                 if (action === 'allocations') return setAllocDialog({ initial: target });
-                                if (action === 'allocation-end') return endAllocation(subject, { holder, resources }).then(ok => ok && onDone?.());
+                                if (action === 'allocation-end' || action === 'allocation-end-alone') {
+                                    return endAllocation(subject, { holder, resources, atEnd: action === 'allocation-end-alone' }).then(ok => ok && onDone?.());
+                                }
                             }} />
                     </Stack>
                 </Paper>
@@ -980,13 +1000,10 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
                     </Text>
                 </Text>
             )}
-            {multi ? (
+            {/* Every budget paying for it: a project has no single budget. */}
+            {payingBudgets(node).length > 0 && (
                 <Text size="xs" c="dimmed">
-                    {t('projects.fact.paidFrom')}: <Text span inherit fw={500} c="var(--mantine-color-text)">{live.map(a => a.budget_name || a.budget_id).join(', ')}</Text>
-                </Text>
-            ) : node.parent_name && (
-                <Text size="xs" c="dimmed">
-                    {t('projects.projectForm.budget')}: <Text span inherit fw={500} c="var(--mantine-color-text)">{node.parent_name}</Text>
+                    {t('projects.fact.paidFrom')}: <Text span inherit fw={500} c="var(--mantine-color-text)">{payingBudgets(node).map(b => b.name).join(', ')}</Text>
                 </Text>
             )}
             <ProjectId slug={workspaces.project?.slug} />
@@ -1019,12 +1036,11 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
                 }
                 // Split over budgets: something has to be placed, and nothing left that no budget takes.
                 if (splitting && outcome === 'blocked') return setActiveTab(firstResourceTab);
-                if (withAttributes && !attrs.validate()) return setActiveTab(TAB_ATTRIBUTES);
                 save.mutate(values);
             }, handleInvalid)}
             submitting={save.isPending}
             submitDisabled={outcome === 'blocked' || (splitting && (outcome === null || parts.length === 0))}
-            submitError={attrs.error || (save.error && (save.error.stale && workspaces.available
+            submitError={(save.error && (save.error.stale && workspaces.available
                 // The AI service's part changed meanwhile (another manager, a member choosing a group): its draft is loaded again, the dialog's other changes stay.
                 ? <>{formatError(save.error)} <Button size="compact-xs" variant="light" onClick={async () => { save.reset(); await workspaces.reload(); }}>{t('gpu.projects.conflictReload')}</Button></>
                 : formatError(save.error)))}
@@ -1056,11 +1072,6 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
                         items: [
                             { value: TAB_DETAILS, label: t('projects.actions.details'), hasError: tabHasError(TAB_DETAILS) || !!newOwnerError || !!ownerError, changed: detailsChanged, content: detailsTab },
                             { value: TAB_MEMBERS, label: t('projects.fact.members'), changed: isChange && (form.isDirty('authorizedUsers') || form.isDirty('adminScope')), content: membersTab },
-                            // Set by the budget's managers; its owner and admins see them.
-                            ...(withAttributes ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'), hasError: !!attrs.error,
-                                content: <AttributesEditor node={node} groups={attrs.groups} onChange={attrs.onChange} /> }]
-                                : isChange && hasAttributes(node) ? [{ value: TAB_ATTRIBUTES, label: t('projects.attributes.tab'),
-                                    content: <AttributesView node={node} /> }] : []),
                             ...(isChange ? nodeExtraTabs(t, node, resources, activeTab) : []),
                         ],
                     },

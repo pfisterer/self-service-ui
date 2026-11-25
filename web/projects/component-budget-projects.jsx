@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Activity, AlertTriangle, ArrowDown, ArrowUp, CircleMinus, Eye, Layers, LogOut, Package, Pencil, Rocket, Scale, Search, Server, Sparkles, SquareTerminal, Trash2, X } from 'lucide-react';
+import { Activity, ArrowDown, ArrowUp, CalendarX, CircleMinus, Eye, Layers, LogOut, Package, Pencil, Rocket, Scale, Search, Server, Sparkles, SquareTerminal, Tags, Trash2, X } from 'lucide-react';
 import { ActionIcon, Badge, Box, Group, Loader, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { useDebouncedValue, useElementSize, useLocalStorage } from '@mantine/hooks';
 import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
@@ -8,7 +8,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { InfoPopover, NodeStatusBadge } from './component-common.jsx';
 import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
-import { COLOR, UNLIMITED_QUOTA, budgetKinds, resourcesOfKinds, deletesOnRequest, deletionRequested, finalDeletion, isRetired, expiryTone, expiryValue, expiredText, isAvailability, isCoFunded, liveAllocations, nodeTitle, ownerEmail, projectActions, projectOf, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting, resourceName, resourceShortName, resourceUnitName, allocationActions, getAuthUserEmail, holdsProject } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, budgetKinds, resourcesOfKinds, deletesOnRequest, deletionRequested, finalDeletion, isRetired, expiryTone, expiryValue, isAvailability, isCoFunded, liveAllocations, nodeTitle, ownerEmail, projectActions, projectOf, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting, resourceName, resourceShortName, resourceUnitName, allocationActions, getAuthUserEmail, holdsProject } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { LoadError } from '/helper/query-state.jsx';
@@ -23,7 +23,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 // The statuses a row can be filtered by, in the order a manager thinks about
 // them: what pays, what waits, what is over. A row is an allocation, so these
-// are its states: ended is one given back, withdrawn or cut after it expired.
+// are its states: ended is one given back, withdrawn, or run out at its own end after the project was extended without it.
 const FILTER_STATUSES = ['approved', 'pending', 'change_pending', 'ended', 'rejected', 'released', 'archived'];
 
 // BudgetProjectsTable lists the projects paid from one budget, under the
@@ -484,7 +484,7 @@ function ProjectRow({ node, resources, columns, summaries, compact = false, onAc
     const can = projectActions(project, { manager: true, canDelete: deletesOnRequest(config?.retirement) });
     const holder = holdsProject(project, me);
     // The viewer manages this budget, so this allocation is theirs to change, decide and withdraw.
-    const mine = isAlloc ? allocationActions(node, { holder, manager: true }) : {};
+    const mine = isAlloc ? allocationActions(node, { holder, manager: true, project }) : {};
     // Releasing the whole project only where this budget is the only one paying for it: with others, ending this allocation is what is the viewer's.
     const others = isAlloc ? liveAllocations(project).filter(a => a.id !== node.id) : [];
     const releasable = can.release && others.length === 0;
@@ -510,11 +510,12 @@ function ProjectRow({ node, resources, columns, summaries, compact = false, onAc
                             </Badge>
                         </Tooltip>
                     )}
-                    {node.expired && (
-                        <Tooltip label={expiredText(t, node)} multiline w={300} withinPortal>
-                            <Badge size="xs" variant="light" color={COLOR.negative} tt="none" leftSection={<AlertTriangle size="10" />}
+                    {/* The project was extended without this allocation: it ends at its own date. */}
+                    {isAlloc && node.ends_alone && node.termination_date && node.status !== 'ended' && (
+                        <Tooltip label={t('projects.allocation.endsAlone', { date: formatDate(node.termination_date) })} multiline w={300} withinPortal>
+                            <Badge size="xs" variant="light" color={COLOR.identity} tt="none" leftSection={<CalendarX size="10" />}
                                 style={{ flexShrink: 0 }}>
-                                {t('projects.allocation.expiredBadge')}
+                                {t('projects.allocation.endsAloneBadge')}
                             </Badge>
                         </Tooltip>
                     )}
@@ -566,6 +567,9 @@ function ProjectRow({ node, resources, columns, summaries, compact = false, onAc
                         : <RowAction label={t('projects.actions.details')} onClick={act('details')}><Eye size="14" /></RowAction>}
                     {mine.decide && <RowAction label={t('projects.actions.decide')} color={COLOR.attention} onClick={act('decide', node)}><Scale size="14" /></RowAction>}
                     {mine.change && others.length > 0 && <RowAction label={t('projects.allocation.change')} onClick={act('allocations', project, node.id)}><Package size="14" /></RowAction>}
+                    {/* What this budget's part is booked to (cost centre and the like): the allocation dialog, where its managers set it. */}
+                    {mine.end && <RowAction label={t('projects.allocation.attributes')} onClick={act('allocations', project, node.id)}><Tags size="14" /></RowAction>}
+                    {mine.endAlone && <RowAction label={t('projects.allocation.endAlone')} color={COLOR.attention} onClick={act('allocation-end-alone', { ...node, project })}><CalendarX size="14" /></RowAction>}
                     {!isAlloc && can.adopt && <RowAction label={t('projects.actions.adopt')} color={COLOR.outside} onClick={act('adopt', node)}><Rocket size="14" /></RowAction>}
                     {/* Every action as its own icon, none behind a menu: a row may
                         grow a line taller, but nothing has to be looked for. */}

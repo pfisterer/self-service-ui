@@ -174,10 +174,10 @@ export function asProject(p) {
     if (p?.kind !== 'project' || p.status === 'imported') return p;
     return {
         ...p,
-        home_budget_id: p.parent_id,
+        funding_budget_ids: [p.parent_id],
         allocations: p.allocations ?? [{
             id: `a_${p.id}`, budget_id: p.parent_id, budget_name: p.parent_name, status: p.status,
-            limit: p.limit, pending: p.pending, termination_date: p.termination_date, revision: 1, home: true,
+            limit: p.limit, pending: p.pending, termination_date: p.termination_date, revision: 1,
         }],
     };
 }
@@ -225,6 +225,8 @@ export function fakeNodesApi(tree = fixtureTree()) {
         planSplit: async () => ({ parts: [] }),
         addAllocation: async () => ({}),
         endAllocation: async () => ({}),
+        endAllocationAtEnd: async () => ({}),
+        setAttributes: async () => ({}),
         listApiTokens: async () => [],
         createApiToken: async () => ({}),
         deleteApiToken: async () => ({}),

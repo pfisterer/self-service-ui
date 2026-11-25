@@ -57,11 +57,11 @@ const fatal = () => consoleErrors.filter(e => /Error|Warning: Maximum|is not def
 function project(extra = {}) {
     const p = fixtureTree().children.b_ma.items[0];
     return {
-        // Paid by Mannheim and, for two cores more, by the root (allocation_leaves): not in the tree, its home is Mannheim.
-        ...p, parent_id: null, home_budget_id: 'b_ma', parent_name: 'Mannheim', parent_path: [{ id: 'b_ma', name: 'Mannheim' }],
+        // Paid by Mannheim and, for two cores more, by the root (allocation_leaves): not in the tree, no single budget of its own.
+        ...p, parent_id: null, funding_budget_ids: ['b_ma', 'b_root'], parent_name: undefined, parent_path: undefined,
         limit: { cores: 6, ram: 8 },
         allocations: [
-            { id: 'a_ma', budget_id: 'b_ma', budget_name: 'Mannheim', budget_path: [{ id: 'b_ma', name: 'Mannheim' }], status: 'approved', limit: { cores: 4, ram: 8 }, home: true, revision: 1 },
+            { id: 'a_ma', budget_id: 'b_ma', budget_name: 'Mannheim', budget_path: [{ id: 'b_ma', name: 'Mannheim' }], status: 'approved', limit: { cores: 4, ram: 8 }, revision: 1 },
             { id: 'a_root', budget_id: 'b_root', budget_name: 'Organization Root', status: 'approved', limit: { cores: 2 }, reason: 'GPU work', created_by: 'x@example.org', revision: 1 },
         ],
         bindings: { openstack: { ...p.bindings?.openstack, external_group_assignments: [{ group_id: 'g1', group_name: 'fakultaet-wi', role: 'member' }] } },

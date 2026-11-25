@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Group, Select, Stack, Text } from '@mantine/core';
+import { Alert, Divider, Group, Select, Stack, Text } from '@mantine/core';
 import { Clock, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
@@ -9,24 +9,26 @@ import { formatError } from '/helper/api-error.js';
 import { formatDate } from '../format-date.js';
 import { FormModal } from './component-form-modal.jsx';
 import { QuotaInputs } from './component-quota-inputs.jsx';
-import { NodeChangesDiff, TerminationDatePicker, formatTerm } from './component-common.jsx';
+import { NodeChangesDiff } from './component-common.jsx';
 import { BudgetSelect } from './component-budget-select.jsx';
 import { ReasonField, reasonError } from './component-reason-field.jsx';
 import { useNodeMutation } from './use-node-mutation.jsx';
-import { ExpiredNote, endLabel, useEndAllocation, allocationNode } from './component-allocations.jsx';
+import { EndsAloneNote, endLabel, useEndAllocation, allocationNode } from './component-allocations.jsx';
+import { AttributesEditor, AttributesView, hasAttributes } from './component-node-attributes.jsx';
+import { attributesError, fromAttributes, toAttributes } from './util-attributes.js';
+import { attributesKey } from './util-usage.js';
 import { budgetPathText } from './component-budget-path.jsx';
 import {
-    COLOR, allocationActions, availabilityElsewhere, changeOutcome, endDate, endDay, fundedBy, holdsProject, isAvailability,
-    latestProjectEnd, liveAllocations, managesAllocation, managesChainOf, mostSpecificFirst, nodeTitle, requestOutcome, resourceLabel,
+    COLOR, allocationActions, availabilityElsewhere, changeOutcome, fundedBy, holdsProject, isAvailability,
+    liveAllocations, managesAllocation, managesChainOf, mostSpecificFirst, nodeTitle, requestOutcome, resourceLabel,
     resourceSummaryText, roomIn, visibleResources,
 } from './util-project.jsx';
 
 const ADD = 'add';
-const DEFAULT_TERM_DAYS = 90;
 
-// AllocationModal changes what one budget pays for a project, or adds another budget to it (allocation_leaves, 25.11.2026). The person picks the allocation first — the one clicked is preselected — and then:
-//   - an allocation: its new amounts and end (POST request-change on the allocation): giving back and ending sooner apply at once, so does whatever the budget's auto-approve covers or its managers set; the rest waits as a change for the budget's managers. "Give back" / "Withdraw" ends it after a confirmation.
-//   - "more from another budget": a new allocation of the project under a budget (POST /v1/nodes, kind allocation): the project's holders ask a budget they may request from, a budget's managers grant from their own, with a reason (the former extra allocation from above).
+// AllocationModal changes what one budget pays for a project, or adds another budget to it (allocation_leaves, 25.11.2026, revised the same day). The person picks the allocation first — the one clicked is preselected — and then:
+//   - an allocation: its new amounts (POST request-change on the allocation): giving back applies at once, so does whatever the budget's auto-approve covers or its managers set; the rest waits as a change for the budget's managers. Its end is not changed here: every allocation runs until the project ends, and the end is the project's (its dialog asks every paying budget). Its attributes (cost centre and the like) are set here by the managers of its budget (PUT attributes on the allocation), inherited from that budget. "Give back" / "Withdraw" ends it after a confirmation.
+//   - "more from another budget": a new allocation of the project under a budget (POST /v1/nodes, kind allocation), running until the project's end — the API refuses a budget that cannot grant that long, and its message says so: the project's holders ask a budget they may request from, a budget's managers grant from their own, with a reason.
 // Only what the viewer may do is offered (allocationActions): the holders manage every allocation, a budget's managers only those paid from their budgets.
 //
 // initial: the allocation id to open on, or 'add'. myBudgets: the budgets the viewer manages (my-budgets), eligibleBudgets: those they may request from; isRoot: a root admin, who manages every budget. myProjects: the viewer's own projects, for what an auto-approve still grants them.
@@ -55,18 +57,17 @@ export function AllocationModal({ opened, onClose, onDone, project, resources, i
     const adding = selection === ADD;
 
     // Per selection what was entered; picking another one starts from what that one holds.
-    const [defaultEnd] = useState(() => new Date(Date.now() + DEFAULT_TERM_DAYS * 24 * 60 * 60 * 1000));
     const draftFor = (sel) => {
         const a = allocations.find(x => x.id === sel);
         if (a) {
             return {
                 budgetId: a.budget_id,
                 quota: { ...(a.pending?.limit || a.limit || {}) },
-                end: endDate(a.pending?.termination_date || a.termination_date),
                 reason: '',
+                attrs: fromAttributes(a.attributes),
             };
         }
-        return { budgetId: null, quota: {}, end: project?.termination_date ? endDate(project.termination_date) : defaultEnd, reason: '' };
+        return { budgetId: null, quota: {}, reason: '', attrs: [] };
     };
     const [draft, setDraft] = useState(() => draftFor(first));
     const [checked, setChecked] = useState(false);
@@ -86,6 +87,16 @@ export function AllocationModal({ opened, onClose, onDone, project, resources, i
         ? !!draft.budgetId && managesChainOf(budget ?? { id: draft.budgetId }, managedIds, isRoot)
         : managesAllocation(allocation, managedIds, isRoot);
 
+    // The allocation as a node, for what its budget passes down to it (effective_attributes); its own attributes come with the project's list.
+    const allocationQuery = useQuery({
+        queryKey: projectKeys.node(allocation?.id),
+        queryFn: () => api.getNode(allocation.id),
+        enabled: !!api && opened && !!allocation,
+        retry: false,
+    });
+    const attrNode = allocation ? { ...(allocationQuery.data ?? {}), id: allocation.id, attributes: allocation.attributes } : null;
+    const attrsChanged = !!allocation && manager && attributesKey(toAttributes(draft.attrs)) !== attributesKey(allocation.attributes);
+
     // What may be asked for from that budget: what it holds, without an availability another allocation of the project gives already (it comes from one place).
     const offered = (budget ? visibleResources(resources, budget) : resources || [])
         .filter(r => !isAvailability(r) || !availabilityElsewhere(project, r.id, allocation?.id ?? null));
@@ -93,43 +104,48 @@ export function AllocationModal({ opened, onClose, onDone, project, resources, i
     const held = allocation && (allocation.status === 'approved' || allocation.status === 'change_pending') ? (allocation.limit || {}) : {};
     const room = budget ? roomIn(budget, offered) : null;
     const headroom = room ? Object.fromEntries(Object.entries(room).map(([id, free]) => [id, free + (held[id] ?? 0)])) : null;
-    const latest = latestProjectEnd(budget);
 
     const asked = Object.fromEntries(Object.entries(draft.quota).filter(([, v]) => (v ?? 0) !== 0));
     const quantityErrors = Object.fromEntries(offered
         .filter(r => !isAvailability(r) && ((draft.quota[r.id] ?? 0) < 0 || (typeof r.max === 'number' && r.max > 0 && (draft.quota[r.id] ?? 0) > r.max)))
         .map(r => [r.id, t('projects.quotaInputs.range', { min: 0, max: r.max })]));
     const reasonNeeded = adding && manager;
+    const attrsProblem = attrsChanged ? attributesError(draft.attrs) : null;
+    // Amounts only: the end is the project's.
+    const base = allocation ? (allocation.pending?.limit || allocation.limit || {}) : {};
+    const amountsChanged = !!allocation && Object.keys({ ...base, ...draft.quota }).some(id => (draft.quota[id] ?? 0) !== (base[id] ?? 0));
     const problems = {
         budget: adding && !draft.budgetId ? t('projects.allocation.budgetRequired') : null,
         quota: adding && Object.keys(asked).length === 0 ? t('projects.allocation.nothingAsked') : null,
         reason: reasonNeeded ? reasonError(draft.reason, t('projects.allocation.reasonRequired')) : null,
-        end: draft.end && latest && draft.end > latest.date
-            ? (latest.term ? t('projects.projectForm.endDateAfterTerm', { date: formatDate(latest.date), duration: formatTerm(t, latest.term) }) : t('projects.projectForm.endDateAfterBudget', { date: formatDate(latest.date) }))
-            : null,
+        attributes: attrsProblem ? t(`projects.attributes.error.${attrsProblem.code}`, attrsProblem) : null,
     };
     const valid = !Object.values(problems).some(Boolean) && Object.keys(quantityErrors).length === 0;
 
     // What the button will do — the API's decision, made early.
     const outcome = !budget ? null : adding
         ? requestOutcome({ budget, manages: manager, quota: draft.quota, resources: offered, myProjects })
-        : changeOutcome({ node: allocation, budget, quota: draft.quota, terminationDate: draft.end, resources: offered, myProjects, manages: manager });
+        : !amountsChanged ? (attrsChanged ? 'instant' : null)
+        : changeOutcome({ node: allocation, budget, quota: draft.quota, terminationDate: allocation?.termination_date ?? null, resources: offered, myProjects, manages: manager });
 
     const save = useNodeMutation({
         onDone,
         onClose,
-        mutationFn: () => {
-            const termination = endDay(draft.end);
+        mutationFn: async () => {
             if (adding) {
-                return api.addAllocation({
-                    projectId: project.id, budgetId: draft.budgetId, limit: asked, reason: draft.reason.trim(), terminationDate: termination,
+                // No end: it runs until the project ends, or the API says why the budget cannot grant that long.
+                return api.addAllocation({ projectId: project.id, budgetId: draft.budgetId, limit: asked, reason: draft.reason.trim() });
+            }
+            let result = null;
+            // Attributes first: they act at once, a change of the amounts may wait for a decision.
+            if (attrsChanged) result = await api.setAttributes(allocation.id, toAttributes(draft.attrs));
+            if (amountsChanged) {
+                result = await api.requestChange(allocation.id, {
+                    limit: draft.quota,
+                    ...(draft.reason.trim() ? { reason: draft.reason.trim() } : {}),
                 });
             }
-            return api.requestChange(allocation.id, {
-                limit: draft.quota,
-                ...(termination ? { termination_date: termination } : {}),
-                ...(draft.reason.trim() ? { reason: draft.reason.trim() } : {}),
-            });
+            return result;
         },
     });
 
@@ -167,7 +183,7 @@ export function AllocationModal({ opened, onClose, onDone, project, resources, i
             submitLabel={adding
                 ? (manager ? t('projects.allocation.grant') : t('projects.allocation.ask'))
                 : (outcome === 'approval' ? t('projects.projectForm.submitChangeRequest') : t('projects.forms.saveChanges'))}
-            secondary={allocation && allocationActions(allocation, { holder, manager }).end ? {
+            secondary={allocation && allocationActions(allocation, { holder, manager, project }).end ? {
                 label: endLabel(t, allocation, holder),
                 color: COLOR.negative,
                 onClick: end,
@@ -188,7 +204,7 @@ export function AllocationModal({ opened, onClose, onDone, project, resources, i
                 />
             )}
 
-            {allocation && <ExpiredNote allocation={allocation} size="sm" />}
+            {allocation && <EndsAloneNote allocation={allocation} size="sm" />}
 
             {adding && (
                 <BudgetSelect
@@ -218,16 +234,12 @@ export function AllocationModal({ opened, onClose, onDone, project, resources, i
                         onChange={(id, v) => set({ quota: { ...draft.quota, [id]: v } })}
                     />
                     {checked && problems.quota && <Text size="xs" c={COLOR.negative}>{problems.quota}</Text>}
-                    <TerminationDatePicker
-                        label={t('projects.allocation.end')}
-                        value={draft.end}
-                        maxDate={latest?.date ?? null}
-                        maxHint={latest?.term ? t('projects.endDate.atMostTerm', { date: formatDate(latest.date), duration: formatTerm(t, latest.term) }) : undefined}
-                        optional={!latest && !(allocation?.termination_date)}
-                        optionalHint={t('projects.endDate.setEndDateHintProject')}
-                        error={checked ? problems.end : null}
-                        onChange={(d) => set({ end: d })}
-                    />
+                    {/* Every allocation runs until the project ends; the end is changed on the project. */}
+                    <Text size="xs" c="dimmed">
+                        {project.termination_date
+                            ? t(adding ? 'projects.allocation.runsUntilAdd' : 'projects.allocation.runsUntil', { date: formatDate(project.termination_date) })
+                            : t('projects.allocation.runsOpen')}
+                    </Text>
                     <ReasonField
                         label={t('projects.allocation.reason')}
                         description={reasonNeeded ? t('projects.allocation.reasonHintGrant') : t('projects.allocation.reasonHint')}
@@ -241,11 +253,23 @@ export function AllocationModal({ opened, onClose, onDone, project, resources, i
                             resources={offered}
                             limitFrom={allocation.limit}
                             limitTo={draft.quota}
-                            dateFrom={allocation.termination_date}
-                            dateTo={draft.end}
                             label={t('projects.changes.proposed')}
                             separated
                         />
+                    )}
+                    {/* What it is booked to: set by its budget's managers, inherited from that budget; the project's holders see it. */}
+                    {allocation && manager && (
+                        <>
+                            <Divider label={t('projects.attributes.tab')} labelPosition="left" />
+                            <AttributesEditor node={attrNode} groups={draft.attrs} onChange={(next) => set({ attrs: next })} />
+                            {checked && problems.attributes && <Text size="xs" c={COLOR.negative}>{problems.attributes}</Text>}
+                        </>
+                    )}
+                    {allocation && !manager && hasAttributes(allocationQuery.data) && (
+                        <>
+                            <Divider label={t('projects.attributes.tab')} labelPosition="left" />
+                            <AttributesView node={attrNode && { ...attrNode, effective_attributes: allocationQuery.data.effective_attributes }} />
+                        </>
                     )}
                     {!budget && budgetQuery.isError && (
                         <Text size="xs" c="dimmed">{t('projects.allocation.budgetUnknown')}</Text>

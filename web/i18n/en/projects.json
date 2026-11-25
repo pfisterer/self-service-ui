@@ -109,7 +109,7 @@
     },
     "budgets": {
         "deleteTitle": "Delete budget “{{name}}”?",
-        "deleteMessage": "Only possible while nothing under it is active or awaiting a decision.",
+        "deleteMessage": "Only possible while no project is paid from this budget or its sub-budgets any more and nothing awaits a decision. Otherwise the message names what is in the way.",
         "loadError": "Could not load your budgets",
         "intro": "The budgets you manage, as a tree.",
         "introWithRequestable": "The budgets you manage, plus the ones you may request from (read-only).",
@@ -269,7 +269,9 @@
             "members_changed": "Members changed",
             "expired": "Allocation expired",
             "shortened": "Cut by an expired allocation",
-            "budget_deleted": "Budget deleted"
+            "budget_deleted": "Budget deleted",
+            "ends_alone": "Project goes on without this allocation",
+            "rejected_with_project": "Rejected with the whole request"
         },
         "name": "Name",
         "noAutoApprove": "No auto-approval: a manager decides on every request.",
@@ -523,7 +525,7 @@
         "deletingOn": "To be deleted on {{date}}",
         "ended": {
             "label": "Ended",
-            "description": "This allocation no longer pays: given back, withdrawn or cut after it expired. The project goes on with its other allocations."
+            "description": "This allocation no longer pays: given back, withdrawn, or run out at its own end after the project was extended without it. The project goes on with its other allocations."
         }
     },
     "tokenList": {
@@ -656,11 +658,6 @@
         },
         "until": "until {{date}}",
         "changeWaiting": "Change waiting for the budget’s managers: {{what}}",
-        "expiredDue": "Expired on {{at}} — cut on {{due}} unless extended by then",
-        "expiredOpen": "Expired on {{at}} — the budget’s managers decide",
-        "budgetDeleted": "Budget “{{name}}” deleted — the managers decide",
-        "budgetDeletedDue": "Budget “{{name}}” deleted — cut on {{due}} unless settled otherwise by then",
-        "expiredBadge": "expired",
         "change": "Change allocation",
         "addOther": "More from another budget",
         "addMine": "Allocate from my budget",
@@ -674,7 +671,7 @@
         "withdrawTitle": "Withdraw the allocation from “{{name}}”?",
         "withdrawText": "The project “{{project}}” loses {{summary}} at once; what other budgets pay for stays. Whoever is responsible for the project is notified where notifications are set up.",
         "dialogTitle": "Allocations of “{{name}}”",
-        "dialogHint": "Each allocation is the part of the project one budget pays for, and follows that budget’s rules: giving back and ending sooner apply at once, more or longer at once or after approval, depending on the budget.",
+        "dialogHint": "Each allocation is the part of the project one budget pays for, and follows that budget’s rules: giving back applies at once, more at once or after approval, depending on the budget. Every allocation runs until the project ends; the end is changed on the project.",
         "which": "Allocation",
         "nothingToDo": "There is nothing here for you to change.",
         "from": "From budget",
@@ -686,7 +683,6 @@
         "reason": "Reason",
         "reasonHint": "Optional; the budget’s managers see it when they decide.",
         "reasonHintGrant": "Whoever is responsible for the project sees this allocation and should know why it exists.",
-        "end": "End of this allocation",
         "grant": "Allocate",
         "ask": "Request",
         "budgetUnknown": "The budget cannot be viewed here; the service checks what it allows when saving.",
@@ -697,8 +693,19 @@
         "outcomeInstantChange": "The change applies at once.",
         "decideNote": "The decision is only about the part the budget {{budget}} pays for.",
         "decideCoFunded": "The project is paid for by other budgets too; in total it has {{total}}.",
-        "endPerAllocation": "Paid for by several budgets: each allocation ends on its own day, the project with the last one. Change them under “Resources”.",
-        "multiHint": "The amounts below are the total. They are changed per allocation, under the rules of its budget."
+        "multiHint": "The amounts below are the total. They are changed per allocation, under the rules of its budget.",
+        "endsAlone": "Ends on {{date}}, the project goes on without it",
+        "endsAloneBadge": "ends alone",
+        "endAlone": "Extend without this allocation",
+        "endAloneHint": "The budget has not agreed to a later end (yet); until it does, the whole project ends on {{date}}. Without this allocation the project goes on with the others, and the allocation itself ends on {{date}}.",
+        "endAloneTitle": "Extend the project without the allocation from “{{name}}”?",
+        "endAloneText": "The allocation ({{summary}}) ends on {{date}}; the project “{{project}}” then goes on with its other allocations, and its end follows theirs. A waiting extension of this allocation is dropped.",
+        "runsUntil": "Runs as long as the project, until {{date}}; the end is changed on the project.",
+        "runsUntilAdd": "Runs as long as the project, until {{date}}. If the budget does not grant that long, the service refuses the allocation and says why.",
+        "runsOpen": "Runs as long as the project, without an end date.",
+        "endAllBudgets": "Applies to every allocation: each paying budget is asked, under its own rules. The project’s end moves only once all have agreed; an earlier end applies at once.",
+        "attributes": "Attributes of this allocation",
+        "decideAllOrNothing": "The request holds only as a whole: rejecting this part rejects the whole request."
     },
     "retire": {
         "releaseTitle": "Delete project “{{name}}”?",
@@ -1043,7 +1050,7 @@
     },
     "attributes": {
         "tab": "Attributes",
-        "explain": "Free-form facts such as a cost centre or a project number, in groups. Budgets and projects below inherit each group whole from the nearest node above that sets it. A group set here replaces the inherited one. They appear in the usage evaluation and in the CSV export for billing.",
+        "explain": "Free-form facts such as a cost centre or a project number, in groups. Budgets below and the allocations they pay projects with inherit each group whole from the nearest node above that sets it. A group set here replaces the inherited one. They appear in the usage evaluation and in the CSV export for billing.",
         "explainView": "These are set by the managers of the budgets above. They appear in the usage evaluation for billing.",
         "inheritedFrom": "inherited from {{name}}",
         "override": "Override here",
@@ -1234,14 +1241,15 @@
         "unplaced": "No budget takes {{amount}}, not even as a request. Please ask for less or add a budget.",
         "startWhen": "When the project starts",
         "startNow": "Start at once with what is granted",
-        "startNowHint": "The rest stays an open request; if it is rejected, the project keeps what was granted.",
-        "startAll": "Wait until everything is decided",
-        "startAllHint": "The project starts only then, with what was granted.",
+        "startNowHint": "Each budget grants at once what its rules allow; the rest stays an open request. If it is rejected, the project keeps what was granted.",
+        "startAll": "All or nothing",
+        "startAllHint": "No part is granted in pieces: the project starts only once every part is approved. If one part is rejected, the whole request is rejected.",
         "total": "Together: {{amount}}",
         "funding": "Paid from",
         "fundingSplit": "Split automatically",
         "fundingSingle": "One budget",
         "fundingSplitHint": "The resources are split over the budgets in reach; the split is shown under “Resources”.",
-        "fundingSingleHint": "One budget pays for everything."
+        "fundingSingleHint": "One budget pays for everything.",
+        "allOrNothing": "All or nothing: parts not granted whole at once wait whole; if one is rejected, the whole request is rejected."
     }
 }

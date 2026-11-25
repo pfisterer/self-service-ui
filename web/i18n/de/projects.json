@@ -109,7 +109,7 @@
     },
     "budgets": {
         "deleteTitle": "Budget „{{name}}“ löschen?",
-        "deleteMessage": "Nur möglich, solange darunter nichts aktiv ist und nichts auf eine Entscheidung wartet.",
+        "deleteMessage": "Nur möglich, solange kein Projekt mehr aus diesem Budget oder seinen Teilbudgets bezahlt wird und nichts auf eine Entscheidung wartet. Sonst nennt die Meldung, was im Weg ist.",
         "loadError": "Die Budgets konnten nicht geladen werden",
         "intro": "Die selbst verwalteten Budgets als Baum.",
         "introWithRequestable": "Die selbst verwalteten Budgets, dazu die, aus denen angefragt werden darf (nur lesbar).",
@@ -269,7 +269,9 @@
             "members_changed": "Mitglieder geändert",
             "expired": "Zuteilung abgelaufen",
             "shortened": "Um eine abgelaufene Zuteilung gekürzt",
-            "budget_deleted": "Budget gelöscht"
+            "budget_deleted": "Budget gelöscht",
+            "ends_alone": "Projekt läuft ohne diese Zuteilung weiter",
+            "rejected_with_project": "Mit der ganzen Anfrage abgelehnt"
         },
         "name": "Name",
         "noAutoApprove": "Keine automatische Genehmigung: Über jede Anfrage entscheidet eine verwaltende Person.",
@@ -523,7 +525,7 @@
         "deletingOn": "Wird gelöscht am {{date}}",
         "ended": {
             "label": "Beendet",
-            "description": "Diese Zuteilung bezahlt nichts mehr: zurückgegeben, entzogen oder nach dem Ablauf gekürzt. Das Projekt läuft mit seinen anderen Zuteilungen weiter."
+            "description": "Diese Zuteilung bezahlt nichts mehr: zurückgegeben, entzogen oder an ihrem eigenen Ende ausgelaufen, nachdem das Projekt ohne sie verlängert wurde. Das Projekt läuft mit seinen anderen Zuteilungen weiter."
         }
     },
     "tokenList": {
@@ -656,11 +658,6 @@
         },
         "until": "bis {{date}}",
         "changeWaiting": "Änderung wartet auf die Verwaltenden des Budgets: {{what}}",
-        "expiredDue": "Abgelaufen am {{at}} — wird am {{due}} gekürzt, wenn bis dahin nicht verlängert",
-        "expiredOpen": "Abgelaufen am {{at}} — die Verwaltenden des Budgets entscheiden",
-        "budgetDeleted": "Budget „{{name}}“ gelöscht — die Verwaltenden entscheiden",
-        "budgetDeletedDue": "Budget „{{name}}“ gelöscht — wird am {{due}} gekürzt, wenn bis dahin nicht anders geregelt",
-        "expiredBadge": "abgelaufen",
         "change": "Zuteilung ändern",
         "addOther": "Mehr aus einem anderen Budget",
         "addMine": "Aus meinem Budget zuteilen",
@@ -674,7 +671,7 @@
         "withdrawTitle": "Zuteilung aus „{{name}}“ entziehen?",
         "withdrawText": "Das Projekt „{{project}}“ verliert sofort {{summary}}; was andere Budgets bezahlen, bleibt. Wer das Projekt verantwortet, wird benachrichtigt, wo Benachrichtigungen eingerichtet sind.",
         "dialogTitle": "Zuteilungen von „{{name}}“",
-        "dialogHint": "Jede Zuteilung ist der Teil des Projekts, den ein Budget bezahlt, und folgt dessen Regeln: Zurückgeben und früher Enden gilt sofort, mehr oder länger je nach Budget sofort oder nach Genehmigung.",
+        "dialogHint": "Jede Zuteilung ist der Teil des Projekts, den ein Budget bezahlt, und folgt dessen Regeln: Zurückgeben gilt sofort, mehr je nach Budget sofort oder nach Genehmigung. Alle Zuteilungen laufen bis zum Ende des Projekts; das Ende wird am Projekt geändert.",
         "which": "Zuteilung",
         "nothingToDo": "Hier gibt es für Sie nichts zu ändern.",
         "from": "Aus Budget",
@@ -686,7 +683,6 @@
         "reason": "Begründung",
         "reasonHint": "Optional; die Verwaltenden des Budgets sehen sie bei ihrer Entscheidung.",
         "reasonHintGrant": "Wer das Projekt verantwortet, sieht diese Zuteilung und soll wissen, warum es sie gibt.",
-        "end": "Ende dieser Zuteilung",
         "grant": "Zuteilen",
         "ask": "Beantragen",
         "budgetUnknown": "Das Budget ist hier nicht einsehbar; was es zulässt, prüft der Dienst beim Speichern.",
@@ -697,8 +693,19 @@
         "outcomeInstantChange": "Die Änderung gilt sofort.",
         "decideNote": "Entschieden wird nur über den Teil, den das Budget {{budget}} bezahlt.",
         "decideCoFunded": "Das Projekt wird auch aus anderen Budgets bezahlt; insgesamt hat es {{total}}.",
-        "endPerAllocation": "Bezahlt aus mehreren Budgets: Jede Zuteilung endet an ihrem eigenen Tag, das Projekt mit der letzten. Ändern unter „Ressourcen“.",
-        "multiHint": "Die Mengen unten sind die Summe. Geändert wird je Zuteilung, nach den Regeln ihres Budgets."
+        "multiHint": "Die Mengen unten sind die Summe. Geändert wird je Zuteilung, nach den Regeln ihres Budgets.",
+        "endsAlone": "Endet am {{date}}, das Projekt läuft ohne sie weiter",
+        "endsAloneBadge": "endet allein",
+        "endAlone": "Ohne diese Zuteilung verlängern",
+        "endAloneHint": "Das Budget hat einem späteren Ende (noch) nicht zugestimmt; solange endet das ganze Projekt am {{date}}. Ohne diese Zuteilung läuft das Projekt mit den anderen weiter, sie selbst endet am {{date}}.",
+        "endAloneTitle": "Projekt ohne die Zuteilung aus „{{name}}“ verlängern?",
+        "endAloneText": "Die Zuteilung ({{summary}}) endet am {{date}}; das Projekt „{{project}}“ läuft danach mit seinen anderen Zuteilungen weiter, sein Ende richtet sich nach ihnen. Eine wartende Verlängerung dieser Zuteilung entfällt.",
+        "runsUntil": "Läuft wie das Projekt bis {{date}}; das Ende wird am Projekt geändert.",
+        "runsUntilAdd": "Läuft wie das Projekt bis {{date}}. Vergibt das Budget nicht so lange, lehnt der Dienst die Zuteilung mit Begründung ab.",
+        "runsOpen": "Läuft wie das Projekt ohne Enddatum.",
+        "endAllBudgets": "Gilt für alle Zuteilungen: Jedes zahlende Budget wird gefragt, nach seinen Regeln. Das Projektende verschiebt sich erst, wenn alle zugestimmt haben; ein früheres Ende gilt sofort.",
+        "attributes": "Merkmale dieser Zuteilung",
+        "decideAllOrNothing": "Die Anfrage gilt nur ganz: Wird dieser Teil abgelehnt, ist die ganze Anfrage abgelehnt."
     },
     "retire": {
         "releaseTitle": "Projekt „{{name}}“ löschen?",
@@ -1043,7 +1050,7 @@
     },
     "attributes": {
         "tab": "Merkmale",
-        "explain": "Freie Angaben wie Kostenstelle oder Projektnummer, in Gruppen. Darunterliegende Budgets und Projekte erben jede Gruppe vollständig vom nächsten Knoten darüber, der sie setzt. Eine hier gesetzte Gruppe ersetzt die geerbte. Die Angaben stehen in der Verbrauchsauswertung und im CSV-Export für die Abrechnung.",
+        "explain": "Freie Angaben wie Kostenstelle oder Projektnummer, in Gruppen. Darunterliegende Budgets und die Zuteilungen, mit denen sie Projekte bezahlen, erben jede Gruppe vollständig vom nächsten Knoten darüber, der sie setzt. Eine hier gesetzte Gruppe ersetzt die geerbte. Die Angaben stehen in der Verbrauchsauswertung und im CSV-Export für die Abrechnung.",
         "explainView": "Diese Angaben setzen die Verwaltenden der Budgets darüber. Sie stehen in der Verbrauchsauswertung für die Abrechnung.",
         "inheritedFrom": "geerbt von {{name}}",
         "override": "Hier überschreiben",
@@ -1234,14 +1241,15 @@
         "unplaced": "Kein Budget übernimmt {{amount}}, auch nicht als Antrag. Bitte weniger angeben oder ein Budget hinzufügen.",
         "startWhen": "Wann das Projekt startet",
         "startNow": "Sofort mit dem Genehmigten starten",
-        "startNowHint": "Der Rest bleibt eine offene Anfrage; wird sie abgelehnt, bleibt es beim Genehmigten.",
-        "startAll": "Warten, bis über alles entschieden ist",
-        "startAllHint": "Das Projekt startet erst danach, mit dem, was genehmigt wurde.",
+        "startNowHint": "Jedes Budget gewährt sofort, was seine Regeln erlauben; der Rest bleibt eine offene Anfrage. Wird sie abgelehnt, bleibt es beim Genehmigten.",
+        "startAll": "Alles oder nichts",
+        "startAllHint": "Kein Teil wird nur teilweise genehmigt: Das Projekt startet erst, wenn alle Teile genehmigt sind. Wird ein Teil abgelehnt, ist die ganze Anfrage abgelehnt.",
         "total": "Zusammen: {{amount}}",
         "funding": "Bezahlt aus",
         "fundingSplit": "Automatisch aufteilen",
         "fundingSingle": "Ein Budget",
         "fundingSplitHint": "Die Ressourcen werden auf die Budgets in Reichweite aufgeteilt; die Aufteilung steht unter „Ressourcen“.",
-        "fundingSingleHint": "Ein Budget bezahlt alles."
+        "fundingSingleHint": "Ein Budget bezahlt alles.",
+        "allOrNothing": "Alles oder nichts: Teile, die nicht ganz sofort genehmigt werden, warten ganz; wird einer abgelehnt, ist die ganze Anfrage abgelehnt."
     }
 }

@@ -192,6 +192,9 @@ export function useNodesApi() {
             // Ends an allocation: given back by the project's holders, withdrawn by its budget's managers. The project goes on with its other allocations.
             endAllocation: async (id) =>
                 unwrapObject(await releaseNode({ client, path: { id }, body: {}, headers: JSON_HEADERS })),
+            // Extends the project without this allocation: it runs out at its own end, the project goes on with the others (release with at_end).
+            endAllocationAtEnd: async (id) =>
+                unwrapObject(await releaseNode({ client, path: { id }, body: { at_end: true }, headers: JSON_HEADERS })),
             // Takes a group given access in OpenStack off a project.
             removeExternalGroup: async (id, groupId) =>
                 unwrapObject(await removeNodeExternalGroup({ client, path: { id, groupId } })),

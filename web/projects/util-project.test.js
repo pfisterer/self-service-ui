@@ -4,7 +4,7 @@ import i18n from '/i18n/index.js';
 // The real English resources, so a renamed key fails here rather than showing
 // the key itself on the screen.
 const t = i18n.getFixedT('en');
-import { endDate, resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, usageState, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, liveAllocations, isCoFunded, fundedBy, projectAsked, projectDisplayLimit, holdsProject, managesAllocation, allocationActions, expiredText, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds, mostSpecificFirst } from './util-project.jsx';
+import { endDate, resourceUsageText, sortProjects, usageLevel, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, isRetired, lastEventAt, scheduledDeletion, autoApproveHeadroom, childrenById, expiryTone, freeAmount, groupResources, headroomExhaustedBy, isAvailability, isExpired, isProvisioning, limitDelta, nodeChanges, nodeTitle, normalizeObjectResponse, openstackProjectUrl, overageEntries, overageText, ownerEmail, quotaFits, requestType, resourceBarSegments, usageState, resourceSummaryText, statusLabel, usedAmount, visibleResources, defaultsWithin, projectActions, effectiveLimit, availabilityElsewhere, liveAllocations, isCoFunded, fundedBy, projectAsked, projectDisplayLimit, holdsProject, managesAllocation, allocationActions, goesOnWithout, soleBudgetId, payingBudgets, roomIn, resourceLabel, pollWhileDeleting, DELETING_POLL_MS, projectKinds, catalogKinds, resourcesOfKinds, budgetKinds, mostSpecificFirst } from './util-project.jsx';
 
 // asServer is a translator without translations: every resource text comes out as the server sent it.
 const asServer = (key, opts) => opts?.defaultValue ?? key;
@@ -725,18 +725,44 @@ describe('allocations', () => {
 
     it('offers each viewer only their part (decided 25.11.2026)', () => {
         const [uni, dept] = node.allocations;
-        expect(allocationActions(uni, { holder: true })).toEqual({ change: true, end: true, decide: false });
-        expect(allocationActions(dept, { manager: true })).toEqual({ change: false, end: true, decide: true });
-        expect(allocationActions(uni, {})).toEqual({ change: false, end: false, decide: false });
-        expect(allocationActions(node.allocations[2], { holder: true, manager: true })).toEqual({ change: false, end: false, decide: false });
+        expect(allocationActions(uni, { holder: true })).toEqual({ change: true, end: true, decide: false, endAlone: false });
+        expect(allocationActions(dept, { manager: true })).toEqual({ change: false, end: true, decide: true, endAlone: false });
+        expect(allocationActions(uni, {})).toEqual({ change: false, end: false, decide: false, endAlone: false });
+        expect(allocationActions(node.allocations[2], { holder: true, manager: true })).toEqual({ change: false, end: false, decide: false, endAlone: false });
     });
 
-    it('says when and why an allocation expired', () => {
-        const t = (key, vars) => `${key} ${JSON.stringify(vars ?? {})}`;
-        expect(expiredText(t, { expired: { at: '2026-11-01', cause: 'ended', due: '2026-11-15' } })).toContain('projects.allocation.expiredDue');
-        expect(expiredText(t, { expired: { at: '2026-11-01', cause: 'ended' } })).toContain('projects.allocation.expiredOpen');
-        expect(expiredText(t, { budget_name: 'Uni', expired: { at: '2026-11-01', cause: 'budget_deleted', budget_name: 'Gone' } })).toContain('"name":"Gone"');
-        expect(expiredText(t, {})).toBe('');
+    // Revised 25.11.2026: the project ends at the earliest end of its paying allocations; one whose budget did not agree to a later end can be left behind.
+    it('offers to go on without an allocation that ends before the others', () => {
+        const project = {
+            kind: 'project', allocations: [
+                { id: 'a1', budget_id: 'b1', status: 'approved', termination_date: '2027-03-31' },
+                { id: 'a2', budget_id: 'b2', status: 'change_pending', termination_date: '2027-06-30' },
+                { id: 'a3', budget_id: 'b3', status: 'approved', termination_date: '2027-01-31', ends_alone: true },
+                { id: 'a4', budget_id: 'b4', status: 'pending', termination_date: '2026-12-31' },
+            ],
+        };
+        const [a1, a2, a3, a4] = project.allocations;
+        expect(goesOnWithout(a1, project)).toBe(true);
+        expect(goesOnWithout(a2, project)).toBe(false);
+        // Left behind already, or not paying yet.
+        expect(goesOnWithout(a3, project)).toBe(false);
+        expect(goesOnWithout(a4, project)).toBe(false);
+        // Another one without an end runs longer.
+        expect(goesOnWithout(a1, { allocations: [a1, { id: 'a5', status: 'approved' }] })).toBe(true);
+        // Alone, or as long as the others: nothing to leave behind.
+        expect(goesOnWithout(a1, { allocations: [a1] })).toBe(false);
+        expect(goesOnWithout(a1, { allocations: [a1, { ...a2, termination_date: '2027-03-31' }] })).toBe(false);
+        expect(allocationActions(a1, { holder: true, project }).endAlone).toBe(true);
+        expect(allocationActions(a1, { project }).endAlone).toBe(false);
+    });
+
+    it('has no single budget for a project paid by several', () => {
+        expect(soleBudgetId({ kind: 'project', allocations: [node.allocations[0]] })).toBe(node.allocations[0].budget_id);
+        expect(soleBudgetId(node)).toBeNull();
+        expect(soleBudgetId({ kind: 'project', allocations: [], funding_budget_ids: ['b_x'] })).toBe('b_x');
+        expect(soleBudgetId({ kind: 'budget', parent_id: 'b_up' })).toBe('b_up');
+        expect(payingBudgets({ allocations: [{ budget_id: 'b1', budget_name: 'Eins', status: 'approved' }, { budget_id: 'b2', status: 'ended' }] }))
+            .toEqual([{ id: 'b1', name: 'Eins', path: [] }]);
     });
 });
 

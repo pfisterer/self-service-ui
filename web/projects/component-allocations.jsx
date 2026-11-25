@@ -1,5 +1,5 @@
 import { ActionIcon, Anchor, Badge, Box, Group, Stack, Text, Tooltip } from '@mantine/core';
-import { AlertTriangle, Clock, LogOut, Pencil, Plus, Scale } from 'lucide-react';
+import { CalendarX, Clock, LogOut, Pencil, Plus, Scale } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useConfirm } from '/providers/confirm.jsx';
@@ -9,7 +9,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { budgetPathText } from './component-budget-path.jsx';
 import { formatDate } from '../format-date.js';
-import { COLOR, LIVE_ALLOCATION_STATUSES, allocationActions, expiredText, expiryOf, liveAllocations, managesAllocation, resourceSummaryText, statusLabel } from './util-project.jsx';
+import { COLOR, LIVE_ALLOCATION_STATUSES, allocationActions, liveAllocations, managesAllocation, resourceSummaryText, statusLabel } from './util-project.jsx';
 
 // The allocations of a project (allocation_leaves, 25.11.2026): which budget pays for what, until when, and in which state. A project is made of one or more of them; each is a leaf under the one budget that pays it and follows that budget's rules. The project card, the project dialog and a budget's table all show them the same way.
 
@@ -33,7 +33,8 @@ export function allocationNode(allocation, project) {
         termination_date: allocation.termination_date,
         reason: allocation.reason || project?.reason,
         revision: allocation.revision,
-        expired: allocation.expired,
+        ends_alone: allocation.ends_alone,
+        attributes: allocation.attributes,
         project,
     };
 }
@@ -51,22 +52,23 @@ export function AllocationStatusBadge({ status, size = 'xs' }) {
     );
 }
 
-// ExpiredNote says that an allocation has run out while it still pays, and what happens next (decided 25.11.2026, (6)): cut on its due day, or left to the budget's managers where nothing is cut automatically; a deleted budget is named as the cause.
-export function ExpiredNote({ allocation, size = 'xs' }) {
+// EndsAloneNote says that the project was extended without an allocation: it ends at its own date and the project goes on with the others.
+export function EndsAloneNote({ allocation, size = 'xs' }) {
     const { t } = useTranslation();
-    if (!expiryOf(allocation)) return null;
+    if (!allocation?.ends_alone || !allocation.termination_date) return null;
     return (
         <Group gap={4} wrap="nowrap" align="flex-start">
-            <AlertTriangle size="12" color={`var(--mantine-color-${COLOR.negative}-7)`} style={{ flexShrink: 0, marginTop: 2 }} />
-            <Text size={size} c={`${COLOR.negative}.8`} fw={500}>{expiredText(t, allocation)}</Text>
+            <CalendarX size="12" color="var(--mantine-color-dimmed)" style={{ flexShrink: 0, marginTop: 2 }} />
+            <Text size={size} c="dimmed">{t('projects.allocation.endsAlone', { date: formatDate(allocation.termination_date) })}</Text>
         </Group>
     );
 }
 
-// AllocationList lists a project's allocations: the budget (its path on hover), what it pays, until when, its state, an expired one clearly marked, and a waiting change. With onAction, every row offers what the viewer may do with it (allocationActions):
-//   onAction('allocations', project, allocationId)   change it (the allocation dialog)
-//   onAction('allocation-end', allocationNode)        give it back / withdraw it
-//   onAction('decide', allocationNode)                approve or reject it
+// AllocationList lists a project's allocations: the budget (its path on hover), what it pays, until when, its state, a waiting change and one the project goes on without. With onAction, every row offers what the viewer may do with it (allocationActions):
+//   onAction('allocations', project, allocationId)    change it (the allocation dialog)
+//   onAction('allocation-end', allocationNode)         give it back / withdraw it
+//   onAction('allocation-end-alone', allocationNode)   extend the project without it: it runs out at its own end (its end is earlier than the others', its budget did not agree to the project's new end)
+//   onAction('decide', allocationNode)                 approve or reject it
 // and below them a way to more: from another budget (the project's holders) or from the viewer's own (a budget's managers), onAction('allocations', project, 'add').
 //
 // decide: whether the place offers deciding (a dialog without the decision dialog leaves it out).
@@ -83,7 +85,7 @@ export function AllocationList({ project, resources, holder = false, managedIds 
         <Stack gap={6}>
             {shown.map(a => {
                 const manager = managesAllocation(a, managedIds, isRoot);
-                const can = onAction ? { ...allocationActions(a, { holder, manager }), ...(decide ? {} : { decide: false }) } : {};
+                const can = onAction ? { ...allocationActions(a, { holder, manager, project }), ...(decide ? {} : { decide: false }) } : {};
                 const node = allocationNode(a, project);
                 const live = LIVE_ALLOCATION_STATUSES.includes(a.status);
                 return (
@@ -113,7 +115,17 @@ export function AllocationList({ project, resources, holder = false, managedIds 
                                         })}
                                     </Text>
                                 )}
-                                <ExpiredNote allocation={a} />
+                                <EndsAloneNote allocation={a} />
+                                {/* Its budget has not agreed to run as long as the others: the project's end waits for it, unless the project goes on without it. */}
+                                {can.endAlone && (
+                                    <Tooltip label={t('projects.allocation.endAloneHint', { date: formatDate(a.termination_date) })} multiline w={300} withinPortal>
+                                        <Anchor component="button" type="button" size="xs" c={COLOR.attention}
+                                            onClick={(e) => { e.stopPropagation(); onAction('allocation-end-alone', node); }}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                            <CalendarX size="12" />{t('projects.allocation.endAlone')}
+                                        </Anchor>
+                                    </Tooltip>
+                                )}
                             </Box>
                             {(can.change || can.end || can.decide) && (
                                 <Group gap={2} wrap="nowrap" style={{ flexShrink: 0 }}>
@@ -165,26 +177,30 @@ export function endLabel(t, allocation, holder) {
 }
 
 // useEndAllocation ends an allocation after a confirmation: given back by the project's holders, withdrawn by its budget's managers, a waiting request taken back. Resolves to true once it ended. The project goes on with its other allocations; ending its last one is releasing the project, which has its own dialog.
+// With atEnd it does not end now: the project goes on without it after its own end (release with at_end), the other allocations carry the project's end from then on.
 export function useEndAllocation() {
     const { t } = useTranslation();
     const api = useNodesApi();
     const confirm = useConfirm();
     const queryClient = useQueryClient();
     const { showError } = useErrorModal();
-    return async (allocation, { holder = false, resources = [] } = {}) => {
+    return async (allocation, { holder = false, resources = [], atEnd = false } = {}) => {
         const name = allocation.budget_name || allocation.parent_name || allocation.budget_id || allocation.parent_id;
         const waiting = allocation.status === 'pending';
-        const key = waiting ? 'withdrawRequest' : holder ? 'giveBack' : 'withdraw';
+        const key = atEnd ? 'endAlone' : waiting ? 'withdrawRequest' : holder ? 'giveBack' : 'withdraw';
         const summary = resourceSummaryText(t, resources, allocation.limit) || '—';
         const ok = await confirm({
             title: t(`projects.allocation.${key}Title`, { name }),
-            message: t(`projects.allocation.${key}Text`, { summary, project: allocation.name || allocation.project?.name || '' }),
-            severity: waiting ? 'warning' : 'danger',
-            confirmLabel: endLabel(t, allocation, holder),
+            message: t(`projects.allocation.${key}Text`, {
+                summary, project: allocation.name || allocation.project?.name || '',
+                date: allocation.termination_date ? formatDate(allocation.termination_date) : '—',
+            }),
+            severity: atEnd || waiting ? 'warning' : 'danger',
+            confirmLabel: atEnd ? t('projects.allocation.endAlone') : endLabel(t, allocation, holder),
         });
         if (!ok) return false;
         try {
-            await api.endAllocation(allocation.id);
+            await (atEnd ? api.endAllocationAtEnd(allocation.id) : api.endAllocation(allocation.id));
             await queryClient.invalidateQueries({ queryKey: projectKeys.tree() });
             return true;
         } catch (e) {

@@ -51,10 +51,13 @@ const EVENT_ICON = {
     term_shortened: CalendarMinus,
     allocation_set: Gift,
     allocation_removed: Gift,
-    // allocation_leaves: a project's allocations come and go, run out and get cut.
+    // allocation_leaves: a project's allocations come and go; one the project was extended without ends at its own date, and waiting for all is all or nothing.
     allocation_added: Gift,
     allocation_ended: Gift,
+    ends_alone: CalendarMinus,
+    rejected_with_project: X,
     members_changed: Users,
+    // From the first form of allocation_leaves (expiry marks), kept so old entries keep their label.
     expired: CalendarMinus,
     shortened: CalendarMinus,
     budget_deleted: Trash2,
