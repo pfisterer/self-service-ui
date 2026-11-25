@@ -349,6 +349,13 @@
         "jobs_one": "Batch jobs: {{count}} per person, {{hours}} h",
         "jobs_other": "Batch jobs: {{count}} per person, {{hours}} h"
     },
+    "memberView": {
+        "others_one": "Your access and 1 other member",
+        "others_other": "Your access and {{count}} other members",
+        "alone": "Only your own access",
+        "through": "Access through",
+        "hint": "Who else has access is visible to the project's owner and the people who administer it."
+    },
     "projectForm": {
         "titleNew": "New project",
         "titleEdit": "Edit request",

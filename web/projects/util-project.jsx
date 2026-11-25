@@ -1191,6 +1191,11 @@ export function availabilityElsewhere(project, resourceId, allocationId) {
         && ((a.limit?.[resourceId] ?? 0) === 1 || (a.pending?.limit?.[resourceId] ?? 0) === 1));
 }
 
+// isMemberView reports whether the API shows the project in a member's view: the caller only works in it, so it carries their own entries of authorized_users and members_hidden counting the others, and no admins, no history (the API decides, also for a project reached by link).
+export function isMemberView(project) {
+    return project?.viewer_relation === 'member';
+}
+
 // holdsProject reports whether the viewer answers for the project — its owner or one of its admins — and so manages the whole of it: every allocation, giving one back, asking other budgets for more. viewer_relation says so where the API sets it (my projects); elsewhere the owner and the person's own token among the admins decide (a group among them is the API's to recognise).
 export function holdsProject(project, email) {
     if (!project) return false;

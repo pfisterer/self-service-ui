@@ -1,7 +1,7 @@
 import { Activity, AlertTriangle, ExternalLink, Eye, Pencil, Play, Rocket, Scale, Trash2, Users, X } from 'lucide-react';
 import { Alert, Anchor, Badge, Box, Button, Card, Group, Loader, Stack, Text, Tooltip } from '@mantine/core';
-import { CopyLinkButton, DeletingBadge, FactRow, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
-import { COLOR, deletesOnRequest, deletionRequested, expiryTone, expiryValue, getAuthUserEmail, holdsProject, isImported, liveAllocations, managesAllocation, projectDisplayLimit, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, finalDeletion, labDeletion, openstackSide, catalogKinds, projectKinds } from './util-project.jsx';
+import { CopyLinkButton, DeletingBadge, FactRow, MemberSummary, NodeStatusBadge, PersonBadge, PurgeProgress, TokenBadgeList } from './component-common.jsx';
+import { COLOR, deletesOnRequest, deletionRequested, expiryTone, expiryValue, getAuthUserEmail, holdsProject, isImported, liveAllocations, managesAllocation, projectDisplayLimit, isProvisioning, isRetired, lastEventAt, openstackProjectUrl, overageEntries, overageText, ownerEmail, projectActions, resourceSummaryText, finalDeletion, labDeletion, openstackSide, catalogKinds, projectKinds, isMemberView } from './util-project.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'wouter';
@@ -232,7 +232,11 @@ export function ProjectCard({ node, resources, perspective = 'owner', onAction, 
                         </FactRow>
                     )}
 
-                    {memberTokens.length > 0 && (
+                    {/* A member sees no member list, only how many others there are (the API leaves them out). */}
+                    {isMemberView(node) && (
+                        <FactRow label={t('projects.fact.members')}><MemberSummary node={node} /></FactRow>
+                    )}
+                    {!isMemberView(node) && memberTokens.length > 0 && (
                         <FactRow label={t('projects.fact.members')}>
                             <Group gap="xs" wrap="wrap">
                                 <TokenBadgeList tokens={shownMembers} size="xs" />

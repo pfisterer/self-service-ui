@@ -381,7 +381,7 @@ describe('the cloud project views render', () => {
         const listMine = api.listMine;
         api.listMine = async () => {
             const page = await listMine();
-            const shared = { ...page.items[0], id: 'p_shared', name: 'Geteiltes Projekt', owner: 'user:someone@dhbw.de', admin_scope: [], viewer_relation: 'member', authorized_users: [{ token: 'user:dennis.pfisterer@dhbw.de', role: 'member' }] };
+            const shared = { ...page.items[0], id: 'p_shared', name: 'Geteiltes Projekt', owner: 'user:someone@dhbw.de', admin_scope: [], viewer_relation: 'member', authorized_users: [{ token: 'user:dennis.pfisterer@dhbw.de', role: 'member' }], members_hidden: 23, history: undefined };
             return { items: [shared], total: 1 };
         };
         renderView(<MyProjectsView />);
@@ -391,6 +391,8 @@ describe('the cloud project views render', () => {
         expect(screen.queryByText(i18n.t('projects.actions.release'))).toBeNull();
         expect(screen.getByText(i18n.t('projects.actions.details'))).toBeDefined();
         expect(screen.queryByText(i18n.t('projects.myProjects.none'))).toBeNull();
+        // Who else works in it stays hidden: a count instead of the list.
+        expect(screen.getByText(i18n.t('projects.memberView.others', { count: 23 }))).toBeDefined();
         expectNoRenderFailure();
     });
 

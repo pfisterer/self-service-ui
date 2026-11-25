@@ -5,8 +5,8 @@ import { DIALOG_SIZE, DIALOG_STYLES, DialogFooter, FormTabs } from './component-
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { NodeChangesDiff, NodeStatusBadge, QuotaBadges, TokenBadgeList, UserRoleBadgeList } from './component-common.jsx';
-import { autoApproveFacts, effectiveLimit, formatRelativeDate, isBudget, nodeTitle, ownerEmail, statusLabel, measuredUse, openstackSide, projectKinds } from './util-project.jsx';
+import { MemberSummary, NodeChangesDiff, NodeStatusBadge, QuotaBadges, TokenBadgeList, UserRoleBadgeList } from './component-common.jsx';
+import { autoApproveFacts, effectiveLimit, formatRelativeDate, isBudget, nodeTitle, ownerEmail, statusLabel, measuredUse, openstackSide, projectKinds, isMemberView } from './util-project.jsx';
 import { ProjectResources, SyncErrorDetails } from './component-project-resources.jsx';
 import { formatDateTime } from '../format-date.js';
 import { UsagePanel } from './component-usage.jsx';
@@ -143,6 +143,15 @@ function ResourcesTab({ node, resources }) {
 // in it.
 function AccessTab({ node, resources }) {
     const { t } = useTranslation();
+    if (!isBudget(node) && isMemberView(node)) {
+        // A member sees how many others work in it, not who.
+        return (
+            <Section label={t('projects.projectForm.access')}>
+                <MemberSummary node={node} />
+                <Text size="xs" c="dimmed" mt="6">{t('projects.memberView.hint')}</Text>
+            </Section>
+        );
+    }
     if (!isBudget(node)) {
         return (
             <Stack>
@@ -244,10 +253,11 @@ function ProjectConsumption({ node, resources }) {
 export function nodeExtraTabs(t, node, resources, activeTab) {
     if (!node) return [];
     return [
-        {
+        // A member gets no history: it names who did what (the API leaves it out).
+        ...(isMemberView(node) ? [] : [{
             value: TAB_HISTORY, label: t('projects.inspect.tabHistory'),
             content: <Stack><NodeFacts node={node} /><SyncErrorDetails node={node} resources={resources} /><NodeHistoryPanel node={node} resources={resources} /></Stack>,
-        },
+        }]),
         ...(showsUsage(node) ? [{
             value: TAB_USAGE, label: t('projects.consumption.tab'),
             content: activeTab !== TAB_USAGE ? null
