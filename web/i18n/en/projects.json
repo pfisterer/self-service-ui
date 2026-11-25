@@ -1302,5 +1302,24 @@
         "modelAssumptions": "Assumptions from the description",
         "assumptions": "Assumptions of the computation (profiles of {{version}})",
         "apply": "Take into the fields"
+    },
+    "assistant": {
+        "title": "Assistant",
+        "readOnly": "read only",
+        "hint": "Questions about projects, budgets, allocations and requests in your own words. The assistant only reads, with the rights of the signed-in person, and changes nothing. Answers can contain mistakes; the queries under each answer show what it rests on.",
+        "question": "Question",
+        "placeholder": "e.g. What ends in the next 30 days?",
+        "ask": "Ask",
+        "clear": "Clear conversation",
+        "basis_one": "Based on {{count}} query",
+        "basis_other": "Based on {{count}} queries",
+        "callFailed": "failed",
+        "stopped": {
+            "steps": "The answer was made from the results so far after the maximum number of steps and may be incomplete.",
+            "tool_calls": "The maximum number of queries was reached; the answer may be incomplete.",
+            "tokens": "The question needed more computation than allowed; the answer may be incomplete.",
+            "time": "The time for the question ran out.",
+            "other": "The answer may be incomplete."
+        }
     }
 }

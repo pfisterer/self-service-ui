@@ -35,6 +35,12 @@ const postEstimateDescribe = (options) => options.client.post({
     ...options,
     headers: { 'Content-Type': 'application/json', ...options.headers },
 });
+// The portal assistant (POST /v1/assistant/ask), by hand for the same reason.
+const postAssistantAsk = (options) => options.client.post({
+    url: '/v1/assistant/ask',
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+});
 
 // useNodesApi wraps every node-tree SDK operation with uniform error handling,
 // so views and modals never deal with transport envelopes, headers or the
@@ -208,6 +214,10 @@ export function useNodesApi() {
                     client,
                     body: { description, ...(budgetId ? { budget_id: budgetId } : {}), ...(terminationDate ? { termination_date: terminationDate } : {}) },
                 })),
+            // ── Portal assistant (read only) ─────────────────────────────
+            // A question in the person's own words, answered by the platform's model from the read tools of /mcp as the caller: { answer, tool_calls: [{ name, arguments, ok, error?, result? }], stopped?, model, usage, stage }. history: earlier turns [{ role: 'user' | 'assistant', content }].
+            askAssistant: async ({ question, history = [] }) =>
+                unwrapObject(await postAssistantAsk({ client, body: { question, history } })),
             // Another allocation of a project from budgetId: asked for by its owner or admins under the budget's rules, or granted by a manager of the budget (then a reason is required).
             addAllocation: async ({ projectId, budgetId, limit, reason, terminationDate }) =>
                 unwrapObject(await createNode({

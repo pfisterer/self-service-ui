@@ -16,6 +16,7 @@ import { ProjectLink } from './view-project-link.jsx';
 import { MyBudgetsView } from './view-my-budgets.jsx';
 import { RootAdminView } from './root-admin-view.jsx';
 import { ApiTokens } from '/tokens/api-tokens.jsx';
+import { AssistantPanel } from './component-assistant.jsx';
 
 // Swagger UI is ~1 MB — load it only when the API-doc route is opened. Same
 // component as the dyndns section's, pointed at the other API.
@@ -58,6 +59,10 @@ function ProjectsShell({ page, children }) {
                 below, so moving between pages does not look them up again. */}
             <TokenLabelProvider>
             <Container size="xl" py="md">
+                {/* The assistant (only where /v1/config says it is set up), outside the per-page boundary so its conversation survives moving between pages, inside one of its own. */}
+                <ErrorBoundary title={t('projects.shell.renderErrorTitle')} message={t('projects.shell.renderErrorMessage')}>
+                    <AssistantPanel />
+                </ErrorBoundary>
                 {/* Per-page boundary: a render crash in one page keeps the
                     navigation usable, and moving to another page (key change)
                     auto-resets it. */}

@@ -1302,5 +1302,24 @@
         "modelAssumptions": "Annahmen aus der Beschreibung",
         "assumptions": "Annahmen der Berechnung (Profile vom {{version}})",
         "apply": "In die Felder übernehmen"
+    },
+    "assistant": {
+        "title": "Assistent",
+        "readOnly": "nur lesend",
+        "hint": "Fragen zu Projekten, Budgets, Zuteilungen und Anträgen in eigenen Worten. Der Assistent liest nur, mit den Rechten der angemeldeten Person, und ändert nichts. Antworten können Fehler enthalten; die Abfragen unter jeder Antwort zeigen, worauf sie beruht.",
+        "question": "Frage",
+        "placeholder": "z. B. Was läuft in den nächsten 30 Tagen aus?",
+        "ask": "Fragen",
+        "clear": "Verlauf leeren",
+        "basis_one": "Grundlage: {{count}} Abfrage",
+        "basis_other": "Grundlage: {{count}} Abfragen",
+        "callFailed": "fehlgeschlagen",
+        "stopped": {
+            "steps": "Die Antwort wurde nach der Höchstzahl an Schritten aus den bisherigen Ergebnissen gebildet und kann unvollständig sein.",
+            "tool_calls": "Die Höchstzahl an Abfragen war erreicht; die Antwort kann unvollständig sein.",
+            "tokens": "Die Frage brauchte mehr Rechenaufwand als vorgesehen; die Antwort kann unvollständig sein.",
+            "time": "Die Zeit für die Frage ist abgelaufen.",
+            "other": "Die Antwort kann unvollständig sein."
+        }
     }
 }
