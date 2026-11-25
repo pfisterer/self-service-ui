@@ -1,0 +1,62 @@
+{
+    "title": "Notifications",
+    "intro": "How notifications of the DHBW Cloud reach {{address}} by mail. Every mail links to this page and can be unsubscribed from directly.",
+    "defaults": "Nothing saved yet: the defaults apply.",
+    "loadFailed": "The settings could not be loaded",
+    "classes": {
+        "title": "Delivery",
+        "action": {
+            "label": "Action needed",
+            "short": "Action",
+            "text": "A request awaits a decision, a project ends, an allocation has expired. Reminders after 2 and 7 days while nothing has happened."
+        },
+        "disruption": {
+            "label": "Disruption that affects you",
+            "short": "Disruption",
+            "text": "Something concerning your projects or workspaces failed or was restricted."
+        },
+        "info": {
+            "label": "Information",
+            "short": "Info",
+            "text": "Good to know, such as an approved request. Never immediately, only in the summary."
+        }
+    },
+    "modes": {
+        "immediate": "Immediately",
+        "digest": "Summary",
+        "off": "Off"
+    },
+    "digest": {
+        "title": "Summary",
+        "text": "Collects what does not come immediately into one mail at 8 am. If it holds something that needs action (e.g. beyond the daily limit of 5 mails), it comes the next morning.",
+        "daily": "Daily",
+        "weekly": "Weekly (Mondays)"
+    },
+    "quiet": {
+        "title": "Quiet hours",
+        "text": "No mails during this time; they are delivered afterwards. Deadlines within the next 48 hours come anyway.",
+        "from": "From",
+        "to": "To",
+        "weekends": "Quiet on weekends too"
+    },
+    "language": {
+        "title": "Language of the mails"
+    },
+    "types": {
+        "title": "Kinds",
+        "text": "Unticked kinds send no more mail, not even in the summary."
+    },
+    "save": "Save",
+    "saved": "Saved",
+    "recent": {
+        "title": "Recent notifications",
+        "none": "None so far.",
+        "status": {
+            "pending": "waiting",
+            "digest": "for the summary",
+            "sent": "sent",
+            "digested": "in the summary",
+            "failed": "failed"
+        }
+    }
+}

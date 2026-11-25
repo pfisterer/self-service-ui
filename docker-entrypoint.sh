@@ -23,6 +23,7 @@ window.appconfig = {
   dynamicZonesMcpUrl: "${DYN_ZONES_MCP_URL}",
   llmBaseUrl: "${LLM_BASE_URL}",
   groupsBaseUrl: "${GROUPS_BASE_URL}",
+  notificationsBaseUrl: "${NOTIFICATIONS_BASE_URL}",
   acmeServer: "${ACME_SERVER:-https://certificates.dhbw.cloud}",
   backHosts: "${BACK_HOSTS-jupyter.gpu.services.dhbw.cloud,chat.gpu.services.dhbw.cloud}",
   dummyAuth: ${DUMMY_AUTH:-false},

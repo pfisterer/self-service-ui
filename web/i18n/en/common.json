@@ -37,7 +37,8 @@
         "greeting": "Hello, {{name}}!",
         "signOutTitle": "Sign out?",
         "signOutMessage": "This ends your DHBW Cloud session and takes you back to the sign-in page. Your bwIDM single sign-on session stays active, so signing in again may not ask for a password. To end that session as well, close your browser.",
-        "developer": "API & tokens"
+        "developer": "API & tokens",
+        "notifications": "Notifications"
     },
     "footer": {
         "copyright": "© Dennis Pfisterer, DHBW"

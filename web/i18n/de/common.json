@@ -37,7 +37,8 @@
         "greeting": "Hallo, {{name}}!",
         "signOutTitle": "Abmelden?",
         "signOutMessage": "Damit endet die Sitzung in der DHBW-Cloud, anschließend erscheint wieder die Anmeldeseite. Die bwIDM-Anmeldung bleibt bestehen, eine erneute Anmeldung fragt also womöglich nicht nach einem Passwort. Sie endet erst mit dem Schließen des Browsers.",
-        "developer": "API & Tokens"
+        "developer": "API & Tokens",
+        "notifications": "Benachrichtigungen"
     },
     "footer": {
         "copyright": "© Dennis Pfisterer, DHBW"

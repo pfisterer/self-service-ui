@@ -25,6 +25,7 @@ export default defineConfig(({ mode }) => {
       dynamicZonesMcpUrl: env.DYNAMIC_ZONE_MCP_URL || '',
       llmBaseUrl: env.LLM_BASE_URL || '',
       groupsBaseUrl: env.GROUPS_BASE_URL || '',
+      notificationsBaseUrl: env.NOTIFICATIONS_BASE_URL || '',
       acmeServer: env.ACME_SERVER || 'https://certificates.dhbw.cloud',
       backHosts: env.BACK_HOSTS ?? 'jupyter.gpu.services.dhbw.cloud,chat.llm.services.dhbw.cloud',
       dummyAuth: env.DUMMY_AUTH === 'true',

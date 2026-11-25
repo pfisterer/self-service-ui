@@ -47,6 +47,14 @@
         reverse_proxy {$GROUPS_UPSTREAM:role-provider-service:8085}
     }
 
+    # The notification service, for the person's own settings and recent notifications (the portal's ID token, injected by the proxy in front). Only those routes: /v1/events is for services with their own tokens and has no business being reachable from a browser.
+    handle_path /api/notifications/* {
+        header Cache-Control "no-store"
+        @notpersonal not path /v1/preferences /v1/types /v1/notifications
+        respond @notpersonal 404
+        reverse_proxy {$NOTIFICATIONS_UPSTREAM:notifications:8087}
+    }
+
     # The LLM service runs in a cluster of its own, behind that cluster's ingress,
     # always over TLS. Two values, because where to connect and whom to ask for
     # are not the same thing there: its public name resolves to IPv6 only, while

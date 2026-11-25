@@ -72,6 +72,9 @@ spec:
             # Empty -> groups section disabled.
             - name: GROUPS_BASE_URL
               value: "{{ .Values.selfServiceUI.groupsBaseUrl }}"
+            # Empty -> notification settings page disabled.
+            - name: NOTIFICATIONS_BASE_URL
+              value: "{{ .Values.selfServiceUI.notificationsBaseUrl }}"
             - name: ACME_SERVER
               value: "{{ .Values.selfServiceUI.acmeServer }}"
             # Hosts allowed as return address (?back=) of /projects/start, besides the UI itself.
@@ -84,6 +87,10 @@ spec:
             {{- if .Values.selfServiceUI.cloudResourcesUpstream }}
             - name: CLOUD_RESOURCES_UPSTREAM
               value: "{{ .Values.selfServiceUI.cloudResourcesUpstream }}"
+            {{- end }}
+            {{- if .Values.selfServiceUI.notificationsUpstream }}
+            - name: NOTIFICATIONS_UPSTREAM
+              value: "{{ .Values.selfServiceUI.notificationsUpstream }}"
             {{- end }}
             {{- if .Values.selfServiceUI.groupsUpstream }}
             - name: GROUPS_UPSTREAM

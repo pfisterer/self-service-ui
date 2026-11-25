@@ -64,6 +64,8 @@
         "llmBaseUrl": { "type": "string" },
         "groupsBaseUrl": { "type": "string" },
         "groupsUpstream": { "type": "string" },
+        "notificationsBaseUrl": { "type": "string" },
+        "notificationsUpstream": { "type": "string" },
         "llmUpstream": { "type": "string" },
         "llmHost": { "type": "string" }
       }

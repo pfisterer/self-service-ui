@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { lazy, Suspense } from 'react';
 import { Redirect, Router, Route, Switch, useLocation } from 'wouter';
 
-import { cloudProjectsEnabled, dnsZonesEnabled, groupsEnabled, llmEnabled } from '/features.js';
+import { cloudProjectsEnabled, dnsZonesEnabled, groupsEnabled, llmEnabled, notificationsEnabled } from '/features.js';
 // Imported for its side effect: initialising i18next before the first render,
 // so nothing flashes in one language and settles in another.
 import '/i18n/index.js';
@@ -57,6 +57,8 @@ const GpuManagement = lazy(() =>
     import('./gpu/gpu-routes.jsx').then(m => ({ default: m.GpuManagement })));
 const GroupsSection = lazy(() =>
     import('./groups/groups-routes.jsx').then(m => ({ default: m.GroupsSection })));
+const NotificationSettings = lazy(() =>
+    import('./notifications/settings.jsx').then(m => ({ default: m.NotificationSettings })));
 
 createRoot(document.getElementById('app')).render(
     <MantineProvider
@@ -162,6 +164,7 @@ function AppRoutes() {
                     {llmEnabled && <Route path="/llm" component={LlmManagement} nest />}
                     {llmEnabled && <Route path="/workspaces" component={GpuManagement} nest />}
                     {groupsEnabled && <Route path="/groups" component={GroupsSection} nest />}
+                    {notificationsEnabled && <Route path="/settings/notifications" component={NotificationSettings} />}
                     <Route path="/developer" component={Developer} />
                     <Route component={NotFound} />
                 </Switch>

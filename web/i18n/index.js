@@ -24,6 +24,7 @@ import enHome from './en/home.json';
 import enLlm from './en/llm.json';
 import enGpu from './en/gpu.json';
 import enGroups from './en/groups.json';
+import enNotifications from './en/notifications.json';
 import deCommon from './de/common.json';
 import deProjects from './de/projects.json';
 import deDyndns from './de/dyndns.json';
@@ -32,9 +33,10 @@ import deHome from './de/home.json';
 import deLlm from './de/llm.json';
 import deGpu from './de/gpu.json';
 import deGroups from './de/groups.json';
+import deNotifications from './de/notifications.json';
 
-const en = { ...enCommon, projects: enProjects, dyndns: enDyndns, tokens: enTokens, home: enHome, llm: enLlm, gpu: enGpu, groups: enGroups };
-const de = { ...deCommon, projects: deProjects, dyndns: deDyndns, tokens: deTokens, home: deHome, llm: deLlm, gpu: deGpu, groups: deGroups };
+const en = { ...enCommon, projects: enProjects, dyndns: enDyndns, tokens: enTokens, home: enHome, llm: enLlm, gpu: enGpu, groups: enGroups, notifications: enNotifications };
+const de = { ...deCommon, projects: deProjects, dyndns: deDyndns, tokens: deTokens, home: deHome, llm: deLlm, gpu: deGpu, groups: deGroups, notifications: deNotifications };
 import { setDateLocale } from '../format-date.js';
 
 // Where the preference is kept. Namespaced, because an artifact origin is

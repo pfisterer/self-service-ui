@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '/providers/auth.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
-import { Code2, Languages, LogOut, User } from "lucide-react";
+import { Bell, Code2, Languages, LogOut, User } from "lucide-react";
+import { notificationsEnabled } from '/features.js';
 import { useTranslation } from 'react-i18next';
 import { LANGUAGES } from '/i18n/index.js';
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
@@ -230,6 +231,7 @@ export function Header() {
                                     <Menu.Divider />
                                     {/* API tokens and documentation: for scripts, out of the areas' navigation. */}
                                     <Menu.Item leftSection={<Code2 size={14} />} onClick={() => navigate('/developer')}>{t('account.developer')}</Menu.Item>
+                                    {notificationsEnabled && <Menu.Item leftSection={<Bell size={14} />} onClick={() => navigate('/settings/notifications')}>{t('account.notifications')}</Menu.Item>}
                                     <Menu.Divider />
                                     <Menu.Item color="red" onClick={confirmLogout}>{t('account.signOut')}</Menu.Item>
                                 </Menu.Dropdown>

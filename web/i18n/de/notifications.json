@@ -1,0 +1,62 @@
+{
+    "title": "Benachrichtigungen",
+    "intro": "Wie Benachrichtigungen der DHBW Cloud per Mail an {{address}} kommen. Jede Mail verlinkt auf diese Seite und lässt sich direkt abbestellen.",
+    "defaults": "Noch nichts gespeichert: Es gelten die Voreinstellungen.",
+    "loadFailed": "Die Einstellungen ließen sich nicht laden",
+    "classes": {
+        "title": "Zustellung",
+        "action": {
+            "label": "Handeln nötig",
+            "short": "Handeln nötig",
+            "text": "Ein Antrag wartet auf eine Entscheidung, ein Projekt endet, eine Zuteilung ist abgelaufen. Erinnerungen nach 2 und 7 Tagen, solange nichts geschehen ist."
+        },
+        "disruption": {
+            "label": "Störung mit Auswirkung",
+            "short": "Störung",
+            "text": "Etwas, das die eigenen Projekte oder Workspaces betrifft, hat nicht geklappt oder wurde eingeschränkt."
+        },
+        "info": {
+            "label": "Infos",
+            "short": "Info",
+            "text": "Gut zu wissen, etwa ein genehmigter Antrag. Kommt nie sofort, nur in der Zusammenfassung."
+        }
+    },
+    "modes": {
+        "immediate": "Sofort",
+        "digest": "Zusammenfassung",
+        "off": "Aus"
+    },
+    "digest": {
+        "title": "Zusammenfassung",
+        "text": "Sammelt, was nicht sofort kommt, in einer Mail um 8 Uhr. Enthält sie etwas, das Handeln verlangt (etwa nach dem Tageslimit von 5 Mails), kommt sie am nächsten Morgen.",
+        "daily": "Täglich",
+        "weekly": "Wöchentlich (montags)"
+    },
+    "quiet": {
+        "title": "Ruhezeiten",
+        "text": "In dieser Zeit kommen keine Mails, sie werden danach zugestellt. Fristen in den nächsten 48 Stunden kommen trotzdem.",
+        "from": "Von",
+        "to": "Bis",
+        "weekends": "Auch am Wochenende ruhig"
+    },
+    "language": {
+        "title": "Sprache der Mails"
+    },
+    "types": {
+        "title": "Arten",
+        "text": "Ohne Haken kommt zu dieser Art keine Mail mehr, auch nicht in der Zusammenfassung."
+    },
+    "save": "Speichern",
+    "saved": "Gespeichert",
+    "recent": {
+        "title": "Letzte Benachrichtigungen",
+        "none": "Bisher keine.",
+        "status": {
+            "pending": "wartet",
+            "digest": "für die Zusammenfassung",
+            "sent": "gesendet",
+            "digested": "in der Zusammenfassung",
+            "failed": "fehlgeschlagen"
+        }
+    }
+}
