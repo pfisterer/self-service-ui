@@ -23,6 +23,19 @@ const planProjectSplit = (options) => options.client.post({
     headers: { 'Content-Type': 'application/json', ...options.headers },
 });
 
+// The resource estimator (GET /v1/estimate/options, POST /v1/estimate, POST /v1/estimate/describe) written the same way, for the same reason: the client from npm predates it.
+const getEstimateOptions = (options) => options.client.get({ url: '/v1/estimate/options', ...options });
+const postEstimate = (options) => options.client.post({
+    url: '/v1/estimate',
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+});
+const postEstimateDescribe = (options) => options.client.post({
+    url: '/v1/estimate/describe',
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+});
+
 // useNodesApi wraps every node-tree SDK operation with uniform error handling,
 // so views and modals never deal with transport envelopes, headers or the
 // hey-api error shape. Every function either returns clean data or THROWS an
@@ -178,6 +191,22 @@ export function useNodesApi() {
                         ...(terminationDate ? { termination_date: terminationDate } : {}),
                         ...(budgetIds?.length ? { budget_ids: budgetIds } : {}),
                     },
+                })),
+            // ── Resource estimator ───────────────────────────────────────
+            // What an estimate can be made of: tools with their profiles, workspace kinds, the flavours the caller may use (under budgetId, or under any budget of theirs), GPU classes, describe_enabled.
+            estimateOptions: async ({ budgetId } = {}) =>
+                unwrapObject(await getEstimateOptions({ client, ...(budgetId ? { query: { budget_id: budgetId } } : {}) })),
+            // The estimate of input ({ llm | cloud | workspaces, level }): { input, result: { limit, llm, cloud, workspaces, assumptions, warnings }, budget? }. Nothing is written.
+            estimate: async ({ input, budgetId, terminationDate } = {}) =>
+                unwrapObject(await postEstimate({
+                    client,
+                    body: { ...input, ...(budgetId ? { budget_id: budgetId } : {}), ...(terminationDate ? { termination_date: terminationDate } : {}) },
+                })),
+            // A description in free text, read by the platform's language model into the estimator's input: { described: { input, assumptions, corrections }, result, budget? }.
+            estimateDescribe: async ({ description, budgetId, terminationDate } = {}) =>
+                unwrapObject(await postEstimateDescribe({
+                    client,
+                    body: { description, ...(budgetId ? { budget_id: budgetId } : {}), ...(terminationDate ? { termination_date: terminationDate } : {}) },
                 })),
             // Another allocation of a project from budgetId: asked for by its owner or admins under the budget's rules, or granted by a manager of the budget (then a reason is required).
             addAllocation: async ({ projectId, budgetId, limit, reason, terminationDate }) =>

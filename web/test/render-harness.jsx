@@ -50,6 +50,26 @@ export const CAPS = [
     { id: 'batch-max-hours', name: 'Longest run', provider: 'aiaas', area: 'workspaces', group: 'Batch jobs', unit: 'h', min: 1, max: 24, grant: true, together: 'batch-jobs', default: 4 },
 ];
 
+// What GET /v1/estimate/options answers, trimmed to what the estimator form reads.
+export const ESTIMATE_OPTIONS = {
+    profiles_version: '2026-11-25',
+    tools: [
+        { id: 'chat', name: 'Chat im Browser (LibreChat)', model: 'chat-default' },
+        { id: 'code', name: 'Code-Assistent (Positron, VS Code, Continue)', model: 'code' },
+    ],
+    workspace_kinds: [
+        { id: 'cpu', name_de: 'CPU', name_en: 'CPU', vcpu: 0.5, ram_gb: 2, gpus: 0 },
+        { id: 'gpu', name_de: 'GPU', name_en: 'GPU', vcpu: 1, ram_gb: 2, gpus: 1 },
+    ],
+    flavors: [
+        { id: 'f-small', name: 'm1.small', vcpus: 1, ram_mb: 2048, disk_gb: 20, public: true },
+        { id: 'f-large', name: 'm1.large', vcpus: 4, ram_mb: 8192, disk_gb: 40, public: true },
+    ],
+    flavors_available: true,
+    gpu_classes: ['l4'],
+    describe_enabled: true,
+};
+
 const CONFIG = {
     resources: [
         { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64 },
@@ -223,6 +243,9 @@ export function fakeNodesApi(tree = fixtureTree()) {
         getActAs: async () => null,
         getReconcilerStatus: async () => ({ enabled: false }),
         planSplit: async () => ({ parts: [] }),
+        estimateOptions: async () => ESTIMATE_OPTIONS,
+        estimate: async () => ({ input: {}, result: { limit: {}, assumptions: [], warnings: [], profiles_version: '2026-11-25' } }),
+        estimateDescribe: async () => ({ described: { input: {}, assumptions: [], corrections: [] }, result: { limit: {}, assumptions: [], warnings: [] } }),
         addAllocation: async () => ({}),
         endAllocation: async () => ({}),
         endAllocationAtEnd: async () => ({}),

@@ -29,6 +29,7 @@ import { nodeExtraTabs } from './modal-inspect.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { ExternalGroups } from './component-external-groups.jsx';
 import { LlmLimitHints } from './component-llm-limits.jsx';
+import { EstimatorSection } from './component-estimator.jsx';
 
 const DEFAULT_TERM_DAYS = 90;
 
@@ -907,6 +908,22 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
                         </Table>
                     </Stack>
                 </Alert>
+            )}
+            {/* The estimator: amounts computed from the intended use, taken into the fields below (still editable). The budget check only for a new project paid by one budget; a change or a split is checked by the outcome and the split below. */}
+            {!isAdopt && !multi && (
+                <EstimatorSection
+                    kind={kind}
+                    offered={kind ? offered.filter(r => kindOfResource(r) === kind) : offered}
+                    budgetId={!isChange && !splitting ? parentId : null}
+                    terminationDate={endDay(terminationDate)}
+                    onApply={(take) => {
+                        quotaTouched.current = true;
+                        for (const [id, v] of Object.entries(take)) {
+                            form.setFieldValue(`quota.${id}`, v);
+                            form.clearFieldError(`quota.${id}`);
+                        }
+                    }}
+                />
             )}
             {/* What the project gets from its budget, and what a change of it needs; the group "Quotas" names it already, so only the hint. How a Lab/KI project uses that inside is a group of entries of its own (workspaceSettingsItems), applied at once. */}
             <ResourceSection hint={t(isChange ? 'projects.resourceSections.quotaHintChange' : 'projects.resourceSections.quotaHintNew')}>
