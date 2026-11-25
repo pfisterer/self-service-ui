@@ -1,3 +1,14 @@
+# Global options. On SIGTERM Caddy stops taking connections and lets requests in flight finish for up to 20 s; the chart's preStop pause (5 s) has taken the pod out of the Service before.
+{
+    grace_period 20s
+}
+
+# Retries for the in-cluster backends: while one of them is being replaced in a rollout a connection can be refused for a moment; Caddy dials again for up to 5 s instead of passing the error to the portal (25.11.2026 "connection refused" to the role provider). Only failed connections are retried for every method; a request that reached the backend is never sent twice except for GET.
+(backend_retry) {
+    lb_try_duration 5s
+    lb_try_interval 250ms
+}
+
 :8080 {
     # Enable compression
     encode zstd gzip
@@ -28,11 +39,15 @@
     # after every mutation and must see the fresh state.
     handle_path /api/dyndns/* {
         header Cache-Control "no-store"
-        reverse_proxy {$DYN_ZONES_UPSTREAM:dynamic-zones:8082}
+        reverse_proxy {$DYN_ZONES_UPSTREAM:dynamic-zones:8082} {
+            import backend_retry
+        }
     }
     handle_path /api/projects/* {
         header Cache-Control "no-store"
-        reverse_proxy {$CLOUD_RESOURCES_UPSTREAM:openstack-management-api-openstack-management:8083}
+        reverse_proxy {$CLOUD_RESOURCES_UPSTREAM:openstack-management-api-openstack-management:8083} {
+            import backend_retry
+        }
     }
 
     # The role provider, for the people maintaining groups. Only /v1/manage: it
@@ -44,7 +59,9 @@
         header Cache-Control "no-store"
         @notmanage not path /v1/manage/*
         respond @notmanage 404
-        reverse_proxy {$GROUPS_UPSTREAM:role-provider-service:8085}
+        reverse_proxy {$GROUPS_UPSTREAM:role-provider-service:8085} {
+            import backend_retry
+        }
     }
 
     # The notification service, for the person's own settings and recent notifications (the portal's ID token, injected by the proxy in front). Only those routes: /v1/events is for services with their own tokens and has no business being reachable from a browser.
@@ -52,7 +69,9 @@
         header Cache-Control "no-store"
         @notpersonal not path /v1/preferences /v1/types /v1/notifications
         respond @notpersonal 404
-        reverse_proxy {$NOTIFICATIONS_UPSTREAM:notifications:8087}
+        reverse_proxy {$NOTIFICATIONS_UPSTREAM:notifications:8087} {
+            import backend_retry
+        }
     }
 
     # The LLM service runs in a cluster of its own, behind that cluster's ingress,

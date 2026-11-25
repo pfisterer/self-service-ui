@@ -53,6 +53,12 @@ metadata:
     {{- $labels | nindent 4 }}
 spec:
   replicas: 1
+  # A rollout without a gap: the new proxy first, the old one only once the new one answers /ping.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       {{- $selectors | nindent 6 }}
@@ -148,6 +154,11 @@ spec:
           ports:
             - containerPort: 4180
               name: http
+          # Wait before SIGTERM until the pod is out of the Service's endpoints; oauth2-proxy then finishes what is in flight.
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
           livenessProbe:
             httpGet: { path: /ping, port: 4180 }
             initialDelaySeconds: 5
