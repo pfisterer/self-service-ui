@@ -56,7 +56,7 @@ export function ActAsProvider({ children }) {
     const searchQuery = useQuery({
         queryKey: ['act-as', 'search', debounced],
         queryFn: () => nodesApi.searchIdentities(debounced, MAX_PICKS + 1),
-        enabled: !!nodesApi && mayActAs && debounced.length > 0,
+        enabled: !!nodesApi && mayActAs && debounced.length >= 3,
     });
     const found = (searchQuery.data ?? []).map(p => p.email).filter(e => e !== actingAs);
     const matches = found.slice(0, MAX_PICKS);

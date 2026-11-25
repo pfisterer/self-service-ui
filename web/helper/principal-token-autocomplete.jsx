@@ -36,7 +36,12 @@ import { useTranslation } from 'react-i18next';
  *   label?: string
  *   limit?: number
  *   autoFocus?: boolean — take the focus when a dialog opens
+ *
+ * The search starts from MIN_PRINCIPAL_QUERY characters and asks for at most MAX_PRINCIPAL_RESULTS of each kind: the APIs answer nothing shorter and nothing more (os-mgt-api since 25.11.2026), so the directory cannot be read out one letter at a time. Below that a short hint says how many characters are needed.
  */
+export const MIN_PRINCIPAL_QUERY = 3;
+export const MAX_PRINCIPAL_RESULTS = 10;
+
 export function PrincipalTokenAutocomplete({
     value, onChange, search: searchFn, searchKey, onSelect, single = false, placeholder, label, limit = 10, autoFocus = false,
 }) {
@@ -51,13 +56,16 @@ export function PrincipalTokenAutocomplete({
     // already looked up answers from the cache instead of the network, and a
     // slow response for an old term can no longer overwrite a newer one. That
     // race was the reason the effect below carried its own bookkeeping.
+    const asked = Math.min(limit || MAX_PRINCIPAL_RESULTS, MAX_PRINCIPAL_RESULTS);
+    const term = (search || '').trim();
+    const longEnough = term.length >= MIN_PRINCIPAL_QUERY;
     const suggestionsQuery = useQuery({
-        queryKey: [...searchKey, search, limit],
-        queryFn: () => searchFn(search, limit),
-        enabled: !!searchFn && !!search,
+        queryKey: [...searchKey, term, asked],
+        queryFn: () => searchFn(term, asked),
+        enabled: !!searchFn && longEnough,
     });
 
-    const groups = search ? (suggestionsQuery.data ?? []) : [];
+    const groups = longEnough ? (suggestionsQuery.data ?? []) : [];
     const loading = suggestionsQuery.isFetching;
     // A directory that is down looks exactly like "no group matches" — both show
     // an empty dropdown — so the failure is stated instead of swallowed.
@@ -123,7 +131,10 @@ export function PrincipalTokenAutocomplete({
         />
         {/* The syntax only matters once someone is searching, so it appears
             then rather than adding a line to every form. */}
-        {search && !failed && (
+        {term && !longEnough && (
+            <Text size="xs" c="dimmed">{t('helper.principalSearch.minChars', { n: MIN_PRINCIPAL_QUERY })}</Text>
+        )}
+        {longEnough && !failed && (
             <Text size="xs" c="dimmed">{t('helper.principalSearch.syntax')}</Text>
         )}
         {failed && (

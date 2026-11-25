@@ -289,7 +289,7 @@ export function useNodesApi() {
             // that fills every token field — there is no separate list, because
             // it would expose the same addresses behind a second door.
             searchIdentities: async (q, limit) => {
-                const data = unwrapObject(await searchPrincipals({ client, query: { q, limit } }));
+                const data = unwrapObject(await searchPrincipals({ client, query: { q, limit: Math.min(limit || 10, 10) } }));
                 return (data?.users || []).map(email => ({ email, label: email }));
             },
 
@@ -306,7 +306,7 @@ export function useNodesApi() {
                     ...(data?.users || []).map(email => ({ token: `user:${email}`, description: null })),
                 ];
             },
-            searchPrincipals: async (q, limit = 50) => {
+            searchPrincipals: async (q, limit = 10) => {
                 const res = await searchPrincipals({ client, query: { q, limit } });
                 const err = apiErrorMessage(res);
                 if (err) throw new Error(err);

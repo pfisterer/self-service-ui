@@ -54,4 +54,19 @@ describe('PrincipalTokenAutocomplete', () => {
         fireEvent.change(screen.getByRole('combobox'), { target: { value: 'wwi' } });
         expect(await screen.findByText('Kurs WWI23SEB')).toBeTruthy();
     });
+
+    it('searches only from 3 characters, with a hint below that, and asks for at most 10', async () => {
+        search.mockClear();
+        function Wide() {
+            const [value, setValue] = useState('');
+            return <PrincipalTokenAutocomplete value={value} onChange={setValue} limit={50} search={search} searchKey={['test', 'short']} />;
+        }
+        renderView(<Wide />);
+        fireEvent.change(screen.getByRole('combobox'), { target: { value: 'ww' } });
+        expect(await screen.findByText('Enter at least 3 characters.')).toBeTruthy();
+        expect(search).not.toHaveBeenCalled();
+        fireEvent.change(screen.getByRole('combobox'), { target: { value: 'wwi' } });
+        await waitFor(() => expect(search).toHaveBeenCalledWith('wwi', 10));
+        expect(screen.queryByText('Enter at least 3 characters.')).toBeNull();
+    });
 });
