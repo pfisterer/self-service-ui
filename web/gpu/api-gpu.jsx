@@ -20,6 +20,13 @@ const joinWorkspaceGroup = (options) => options.client.post({
     ...options,
 });
 
+// deleteEndedGpuJobs is llm-management-api's DELETE /v1/gpu/jobs?state=ended (deleteEndedGPUJobs), written the way the generated client writes its operations, because the client this UI takes from npm predates it; once a client with it is taken, the named import replaces it.
+const deleteEndedGpuJobs = (options) => options.client.delete({
+    security: [{ name: 'Authorization', type: 'apiKey' }],
+    url: '/v1/gpu/jobs',
+    ...options,
+});
+
 function unwrap(res) {
     if (apiErrorMessage(res)) throw apiError(res);
     return res?.data;
@@ -79,6 +86,12 @@ export function useGpuApi() {
             // The end of a job's output: { log }, live while it runs, what was kept once it ended.
             jobLog: async (id, lines) => (await call(getGpuJobLog, { path: { id }, query: lines ? { lines } : undefined })) ?? { log: '' },
             cancelJob: (id) => call(cancelGpuJob, { path: { id } }),
+            // The same DELETE on an ended job deletes it from the list (204): its row, not what it used (booked in the usage) nor its files (~/jobs/<name>/).
+            deleteJob: (id) => call(cancelGpuJob, { path: { id } }),
+            // Deletes every ended job the list shows with the same filter (project or none): { deleted }.
+            deleteEndedJobs: (project) => call(deleteEndedGpuJobs, { query: { state: 'ended', ...(project ? { project } : {}) } }),
+            // Every job of the filter, all pages (to count the ended ones before deleting them).
+            allJobs: (project) => allPages((page) => call(listGpuJobs, { query: { ...(project ? { project } : {}), ...page } })),
             // A job's files (todo job_files): a folder of the home it ran in ({ path, files, truncated }; without path the job's folder), and one file as a Blob. The service reads them through a short-lived pod, so the first request takes a few seconds.
             jobFiles: (id, path) => call(listGpuJobFiles, { path: { id }, query: path ? { path } : undefined }),
             jobFile: (id, path) => call(downloadGpuJobFile, { path: { id }, query: { path }, parseAs: 'blob' }),

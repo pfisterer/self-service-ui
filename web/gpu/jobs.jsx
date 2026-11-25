@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useSearch } from 'wouter';
 import { useTranslation } from 'react-i18next';
-import { Alert, Anchor, Badge, Button, Code, Container, Group, Pagination, Paper, Select, SimpleGrid, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
-import { ArrowLeft, ArrowUp, Download, Folder, Play, Square, Upload } from 'lucide-react';
+import { ActionIcon, Alert, Anchor, Badge, Button, Code, Container, Group, Pagination, Paper, Select, SimpleGrid, Stack, Table, Text, Title, Tooltip } from '@mantine/core';
+import { ArrowLeft, ArrowUp, Download, Folder, Play, Square, Trash2, Upload } from 'lucide-react';
 import { LoadError, Loading, useApiMutation } from '/helper/query-state.jsx';
 import { useConfirm } from '/providers/confirm.jsx';
 import { useLlmMe } from '/llm/use-llm-me.jsx';
@@ -97,6 +97,28 @@ export function GpuJobs() {
     const manages = chosen?.role === 'manager' || chosen?.role === 'admin';
     const own = (j) => !me?.email || j.person?.toLowerCase() === me.email.toLowerCase();
 
+    // Deleting ended jobs from the list (the service keeps what they used in the usage; their files stay in ~/jobs). One per row, or all ended ones of the current filter after counting them over every page.
+    const confirm = useConfirm();
+    const removeJob = useApiMutation({ mutationFn: (id) => api.deleteJob(id), invalidates: [gpuKeys.jobs()] });
+    const removeEnded = useApiMutation({ mutationFn: () => api.deleteEndedJobs(project), invalidates: [gpuKeys.jobs()] });
+    const [counting, setCounting] = useState(false);
+    async function onDelete(j) {
+        const name = j.name || j.id;
+        if (await confirm({ title: t('gpu.jobs.deleteTitle'), confirmLabel: t('gpu.jobs.deleteConfirm'), message: t('gpu.jobs.deleteMessage', { name }) })) removeJob.mutate(j.id);
+    }
+    async function onDeleteEnded() {
+        setCounting(true);
+        let count;
+        try {
+            count = (await api.allJobs(project)).filter(j => !isActive(j)).length;
+        } finally {
+            setCounting(false);
+        }
+        if (count === 0) return;
+        if (await confirm({ title: t('gpu.jobs.deleteEndedTitle'), confirmLabel: t('gpu.jobs.deleteEndedConfirm', { count }), message: t('gpu.jobs.deleteEndedMessage', { count }) })) removeEnded.mutate();
+    }
+    const anyEnded = jobList.some(j => !isActive(j));
+
     return (
         <Container size="xl" py="md">
             <Paper p="lg" radius="md" withBorder>
@@ -138,6 +160,13 @@ export function GpuJobs() {
                 {isAdmin && chosen && <JobSettingsModal key={chosen.slug} project={chosen} opened={settingsOpen} onClose={() => setSettingsOpen(false)} />}
                 {jobs.isPending && <Loading />}
                 {jobs.isError && <LoadError query={jobs} />}
+                {jobs.isSuccess && anyEnded && (
+                    <Group justify="flex-end" mt="md">
+                        <Button size="xs" variant="subtle" color="red" leftSection={<Trash2 size={14} />} loading={counting || removeEnded.isPending} onClick={onDeleteEnded}>
+                            {t('gpu.jobs.deleteEnded')}
+                        </Button>
+                    </Group>
+                )}
                 {jobs.isSuccess && (
                     <Table.ScrollContainer minWidth={760}>
                         <Table striped highlightOnHover mt="md">
@@ -149,11 +178,12 @@ export function GpuJobs() {
                                     <Table.Th>{t('gpu.jobs.gpuHours')}</Table.Th>
                                     <Table.Th>{t('gpu.jobs.times')}</Table.Th>
                                     <Table.Th>{t('gpu.jobs.outcome')}</Table.Th>
+                                    <Table.Th aria-label={t('gpu.jobs.actions')} />
                                 </Table.Tr>
                             </Table.Thead>
                             <Table.Tbody>
                                 {jobList.length === 0 && (
-                                    <Table.Tr><Table.Td colSpan={6}><Text size="sm" c="dimmed">{t('gpu.jobs.none')}</Text></Table.Td></Table.Tr>
+                                    <Table.Tr><Table.Td colSpan={7}><Text size="sm" c="dimmed">{t('gpu.jobs.none')}</Text></Table.Td></Table.Tr>
                                 )}
                                 {jobList.map(j => (
                                     <Table.Tr key={j.id}>
@@ -172,6 +202,15 @@ export function GpuJobs() {
                                             {j.started && <Text size="xs" c="dimmed">{j.ended ? t('gpu.jobs.ranFor', { duration: runTime(j, i18n.language) }) : t('gpu.jobs.runningFor', { duration: runTime(j, i18n.language) })}</Text>}
                                         </Table.Td>
                                         <Table.Td><Text size="xs">{outcome(j, t) || '–'}</Text></Table.Td>
+                                        <Table.Td align="right">
+                                            {!isActive(j) && (
+                                                <Tooltip withArrow label={t('gpu.jobs.delete')}>
+                                                    <ActionIcon variant="subtle" color="red" aria-label={t('gpu.jobs.delete')} loading={removeJob.isPending && removeJob.variables === j.id} onClick={() => onDelete(j)}>
+                                                        <Trash2 size={16} />
+                                                    </ActionIcon>
+                                                </Tooltip>
+                                            )}
+                                        </Table.Td>
                                     </Table.Tr>
                                 ))}
                             </Table.Tbody>
@@ -209,6 +248,13 @@ export function GpuJobDetail({ params }) {
         refetchInterval: running ? LOG_REFRESH_MS : false,
     });
     const cancel = useApiMutation({ mutationFn: () => api.cancelJob(id), invalidates: [gpuKeys.job(id), gpuKeys.jobs(), gpuKeys.jobLog(id)] });
+    const [, navigate] = useLocation();
+    const remove = useApiMutation({ mutationFn: () => api.deleteJob(id), invalidates: [gpuKeys.jobs()], onSuccess: () => navigate('/jobs') });
+
+    async function onDelete() {
+        const name = job.data.name || job.data.id;
+        if (await confirm({ title: t('gpu.jobs.deleteTitle'), confirmLabel: t('gpu.jobs.deleteConfirm'), message: t('gpu.jobs.deleteMessage', { name }) })) remove.mutate();
+    }
 
     async function onCancel() {
         const ok = await confirm({
@@ -243,6 +289,11 @@ export function GpuJobDetail({ params }) {
                         {isActive(j) && (
                             <Button size="xs" variant="light" color="red" leftSection={<Square size={14} />} loading={cancel.isPending} onClick={onCancel}>
                                 {t('gpu.jobs.cancel')}
+                            </Button>
+                        )}
+                        {!isActive(j) && (
+                            <Button size="xs" variant="subtle" color="red" leftSection={<Trash2 size={14} />} loading={remove.isPending} onClick={onDelete}>
+                                {t('gpu.jobs.delete')}
                             </Button>
                         )}
                     </Group>
