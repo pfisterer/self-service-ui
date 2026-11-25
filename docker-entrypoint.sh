@@ -17,6 +17,7 @@ done
 # Dynamically generate the config file
 cat > /srv/www/config.js << EOF
 window.appconfig = {
+  appVersion: "${APP_VERSION}",
   dynamicZonesBaseUrl: "${DYN_ZONES_BASE_URL}",
   cloudResourcesBaseUrl: "${CLOUD_RESOURCES_BASE_URL}",
   cloudResourcesMcpUrl: "${CLOUD_RESOURCES_MCP_URL}",

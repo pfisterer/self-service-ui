@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { lazy, Suspense } from 'react';
 import { Redirect, Router, Route, Switch, useLocation } from 'wouter';
 
-import { cloudProjectsEnabled, dnsZonesEnabled, groupsEnabled, llmEnabled, notificationsEnabled } from '/features.js';
+import { cloudProjectsEnabled, dnsZonesEnabled, groupsEnabled, llmEnabled, notificationsEnabled, runningVersion } from '/features.js';
 // Imported for its side effect: initialising i18next before the first render,
 // so nothing flashes in one language and settles in another.
 import '/i18n/index.js';
@@ -176,7 +176,7 @@ function AppRoutes() {
 function Main() {
     const { t } = useTranslation();
     const { user, login } = useAuth()
-    const footer = <Footer title={<b>dhbwCloud Self Service</b>} version={__APP_VERSION__} />
+    const footer = <Footer title={<b>dhbwCloud Self Service</b>} version={runningVersion()} />
 
     // Router and clients wrap the WHOLE shell, not just the routes: the header
     // menu needs the cloud status (root admin? open requests?), and that comes

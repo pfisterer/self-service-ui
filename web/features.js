@@ -47,3 +47,9 @@ export const apiTokensEnabled = dnsZonesEnabled || cloudProjectsEnabled || llmEn
 // not, and offering an address that answers 404 is worse than offering none.
 export const cloudProjectsMcpUrl = window?.appconfig?.cloudResourcesMcpUrl || '';
 export const dnsZonesMcpUrl = window?.appconfig?.dynamicZonesMcpUrl || '';
+
+// runningVersion is the version shown in the footer: the tag the container is deployed under (APP_VERSION, written into config.js at start), else the version the bundle was built with. A stable release retags the image of the pre-release before it without rebuilding, so the built-in version can be the pre-release's.
+export function runningVersion(config = window?.appconfig, builtIn = __APP_VERSION__) {
+    const v = typeof config?.appVersion === 'string' ? config.appVersion.trim() : '';
+    return v || builtIn;
+}
