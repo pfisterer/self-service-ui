@@ -28,6 +28,18 @@ describe('AssistantPanel', () => {
         expect(screen.queryByText('Assistent')).toBeNull();
     });
 
+    it('is not shown while its feature gate is closed for the person', () => {
+        globalThis.__testApi = {};
+        renderView(<AssistantPanel />, { config: { resources: [], assistant: 'read_only', features: { assistant: false } } });
+        expect(screen.queryByText('Assistent')).toBeNull();
+    });
+
+    it('is shown when set up and its feature gate is open', () => {
+        globalThis.__testApi = {};
+        renderView(<AssistantPanel />, { config: { resources: [], assistant: 'read_only', features: { assistant: true } } });
+        expect(screen.getByText('Assistent')).toBeTruthy();
+    });
+
     it('asks, shows the answer as text and the queries behind it, and sends the history along', async () => {
         const askAssistant = vi.fn()
             .mockResolvedValueOnce({ answer: 'Ein Projekt: <b>Kurs R</b>', tool_calls: [{ name: 'list_my_projects', arguments: {}, ok: true, result: '{"total":1}' }], stage: 'read_only' })
