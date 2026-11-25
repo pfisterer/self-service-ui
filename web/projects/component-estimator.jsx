@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useNodesApi } from './api-nodes.jsx';
 import { formatError } from '/helper/api-error.js';
 import { COLOR, kindOfResource, PROJECT_KINDS, resourceLabel } from './util-project.jsx';
+import { useFeature } from './use-features.js';
 
 // The resource estimator (Schätzhelfer, os-mgt-api /v1/estimate): computes what a project would ask for from how it will be used — an LLM tool with people and times, workspaces of a kind, a composition of the flavours the person may use — and, where one budget pays, what that budget grants of it. The numbers come from the server's deterministic estimate; a description in free text (only where the server has a language model for it) only fills the form. "Übernehmen" writes the proposed amounts into the fields, which stay editable.
 
@@ -181,8 +182,12 @@ export function EstimateResult({ t, result, budget, described, offered, onApply 
     );
 }
 
-// EstimatorSection is the "Schätzen" helper above a resources tab. kind is the tab's area (null: every area the form offers); budgetId the one budget paying (none while the project is split over budgets); onApply gets the amounts to write into the fields.
-export function EstimatorSection({ kind, offered, budgetId, terminationDate, onApply }) {
+// EstimatorSection is the "Schätzen" helper above a resources tab, shown where the feature gate estimator is open to the person (use-features.js). kind is the tab's area (null: every area the form offers); budgetId the one budget paying (none while the project is split over budgets); onApply gets the amounts to write into the fields.
+export function EstimatorSection(props) {
+    return useFeature('estimator') ? <EstimatorPanel {...props} /> : null;
+}
+
+function EstimatorPanel({ kind, offered, budgetId, terminationDate, onApply }) {
     const { t, i18n } = useTranslation();
     const api = useNodesApi();
     const kinds = kind ? [kind] : PROJECT_KINDS.filter(k => (offered || []).some(r => kindOfResource(r) === k));

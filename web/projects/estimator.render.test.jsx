@@ -90,6 +90,16 @@ describe('budgetVerdict', () => {
 });
 
 describe('EstimatorSection', () => {
+    // The feature gate (GET /v1/config features.estimator): closed, the helper is not there at all; a config without features leaves it open.
+    it('is hidden where the estimator gate is closed to the person', () => {
+        globalThis.__testApi = { ...fakeNodesApi(fixtureTree()) };
+        renderView(<EstimatorSection kind="llm" offered={LLM} budgetId="b_ma" onApply={() => {}} />, { config: { resources: LLM, roles: [], features: { estimator: false } } });
+        expect(screen.queryByRole('button', { name: 'Schätzen' })).toBeNull();
+        cleanup();
+        renderView(<EstimatorSection kind="llm" offered={LLM} budgetId="b_ma" onApply={() => {}} />, { config: { resources: LLM, roles: [], features: { estimator: true } } });
+        expect(screen.getAllByRole('button', { name: 'Schätzen' }).length).toBeGreaterThan(0);
+    });
+
     it('computes, shows assumptions, warnings and the budget, and takes the offered amounts into the fields', async () => {
         const estimate = vi.fn(async () => RESULT);
         globalThis.__testApi = { ...fakeNodesApi(fixtureTree()), estimate };
