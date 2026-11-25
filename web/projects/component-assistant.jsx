@@ -6,8 +6,9 @@ import { useNodesApi } from './api-nodes.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { featureOpen } from './use-features.js';
 import { formatError } from '/helper/api-error.js';
+import { SafeMarkdown } from '/helper/safe-markdown.jsx';
 
-// The portal assistant, stage 1 (read only; docs/portal-assistant.md in os-mgt-api): a question in one's own words, answered by the platform's model from what the read tools return as the signed-in person. Shown only where /v1/config says it is set up and its feature gate assistant is open for the person (on production first only for a small group). The answer is shown as plain text, never rendered as Markdown or HTML: it may quote names and reasons other people wrote, and a rendered link or image would be a way out for them. The tool calls it rests on are listed under it. The conversation lives only in this component; the service keeps none.
+// The portal assistant, stage 1 (read only; docs/portal-assistant.md in os-mgt-api): a question in one's own words, answered by the platform's model from what the read tools return as the signed-in person. Shown only where /v1/config says it is set up and its feature gate assistant is open for the person (on production first only for a small group). The answer is rendered as a small safe Markdown subset (SafeMarkdown: paragraphs, lists, bold, italics, inline code), as React text nodes and never as HTML, without links or images: it may quote names and reasons other people wrote, and a rendered link or image would be a way out for them. The tool calls it rests on are listed under it. The conversation lives only in this component; the service keeps none.
 
 // HISTORY_TURNS is how many earlier turns go along with a question (the service takes at most 6).
 const HISTORY_TURNS = 6;
@@ -90,7 +91,7 @@ function AssistantTurn({ question, answer }) {
     return (
         <Stack gap={4}>
             <Text size="sm" fw={500} style={{ whiteSpace: 'pre-wrap' }}>{question}</Text>
-            <Text size="sm" style={{ whiteSpace: 'pre-wrap' }} data-testid="assistant-answer">{answer.answer}</Text>
+            <SafeMarkdown text={answer.answer} data-testid="assistant-answer" />
             {answer.stopped && <Text size="xs" c="orange">{t(`projects.assistant.stopped.${answer.stopped}`, { defaultValue: t('projects.assistant.stopped.other') })}</Text>}
             {calls.length > 0 && (
                 <>
