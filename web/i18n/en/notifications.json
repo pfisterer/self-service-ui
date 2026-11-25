@@ -32,13 +32,6 @@
         "daily": "Daily",
         "weekly": "Weekly (Mondays)"
     },
-    "quiet": {
-        "title": "Quiet hours",
-        "text": "No mails during this time; they are delivered afterwards. Deadlines within the next 48 hours come anyway.",
-        "from": "From",
-        "to": "To",
-        "weekends": "Quiet on weekends too"
-    },
     "language": {
         "title": "Language of the mails"
     },
@@ -57,6 +50,7 @@
             "sent": "sent",
             "digested": "in the summary",
             "failed": "failed"
-        }
+        },
+        "open": "Open"
     }
 }

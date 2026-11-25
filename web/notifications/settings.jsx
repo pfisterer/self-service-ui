@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Badge, Button, Checkbox, Container, Group, Loader, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title } from '@mantine/core';
-import { Bell } from 'lucide-react';
+import { Accordion, Alert, Badge, Button, Checkbox, Container, Group, Loader, Paper, SegmentedControl, Stack, Text, Title } from '@mantine/core';
+import { Bell, ExternalLink } from 'lucide-react';
+import { Link } from 'wouter';
 import { notificationsApi, notificationsKeys } from '/notifications/api.js';
 import { formatDateTime } from '/format-date.js';
 
 const CLASSES = ['action', 'disruption', 'info'];
 
-// The person's notification settings (/settings/notifications, from the account menu): how each class of event reaches them, how often the summary comes, quiet hours, the language of the mails and the kinds of event they want no mail about. The notification service decides what is allowed (GET /v1/types names the modes per class) and keeps the defaults; this page only edits them. Every mail links here.
+// The person's notification settings (/settings/notifications, from the account menu): how each class of event reaches them, how often the summary comes, the language of the mails and the kinds of event they want no mail about. The notification service decides what is allowed (GET /v1/types names the modes per class) and keeps the defaults; this page only edits them. Every mail links here.
 export function NotificationSettings() {
     const { t, i18n } = useTranslation();
     const lang = i18n.resolvedLanguage || 'de';
@@ -39,7 +40,6 @@ export function NotificationSettings() {
 
     const set = (patch) => { save.reset(); setEdits({ ...draft, ...patch }); };
     const setClass = (c, mode) => set({ classes: { ...draft.classes, [c]: mode } });
-    const setQuiet = (patch) => set({ quiet_hours: { ...draft.quiet_hours, ...patch } });
     const unsubscribed = new Set(draft.unsubscribed ?? []);
     const toggleType = (type, wanted) => {
         const next = new Set(unsubscribed);
@@ -85,22 +85,6 @@ export function NotificationSettings() {
 
                 <Paper withBorder radius="md" p="md">
                     <Stack gap="sm">
-                        <Switch checked={!!draft.quiet_hours?.enabled} onChange={(e) => setQuiet({ enabled: e.currentTarget.checked })}
-                            label={<Text fw={700}>{t('notifications.quiet.title')}</Text>} />
-                        <Text size="xs" c="dimmed">{t('notifications.quiet.text')}</Text>
-                        <Group gap="sm">
-                            <TextInput type="time" size="xs" label={t('notifications.quiet.from')} value={draft.quiet_hours?.start ?? ''} disabled={!draft.quiet_hours?.enabled}
-                                onChange={(e) => setQuiet({ start: e.currentTarget.value })} />
-                            <TextInput type="time" size="xs" label={t('notifications.quiet.to')} value={draft.quiet_hours?.end ?? ''} disabled={!draft.quiet_hours?.enabled}
-                                onChange={(e) => setQuiet({ end: e.currentTarget.value })} />
-                        </Group>
-                        <Checkbox size="xs" checked={!!draft.quiet_hours?.weekends} disabled={!draft.quiet_hours?.enabled}
-                            onChange={(e) => setQuiet({ weekends: e.currentTarget.checked })} label={t('notifications.quiet.weekends')} />
-                    </Stack>
-                </Paper>
-
-                <Paper withBorder radius="md" p="md">
-                    <Stack gap="sm">
                         <Text fw={700}>{t('notifications.language.title')}</Text>
                         <SegmentedControl size="xs" w="fit-content" value={draft.language} onChange={(l) => set({ language: l })}
                             data={[{ value: 'de', label: 'Deutsch' }, { value: 'en', label: 'English' }]} />
@@ -137,11 +121,21 @@ export function NotificationSettings() {
 // The fields the service accepts on PUT, without what it adds to its answer.
 function strip(p) {
     if (!p) return p;
-    const { language, classes, digest, quiet_hours, unsubscribed } = p;
-    return { language, classes, digest, quiet_hours, unsubscribed: [...(unsubscribed ?? [])].sort() };
+    const { language, classes, digest, unsubscribed } = p;
+    return { language, classes, digest, unsubscribed: [...(unsubscribed ?? [])].sort() };
 }
 
-// The latest notifications, so a person can see what was sent and why nothing came.
+// portalPath is url as a path inside this app when it points here (so the link navigates without reloading the page), else null.
+export function portalPath(url) {
+    try {
+        const u = new URL(url, window.location.href);
+        return u.origin === window.location.origin ? u.pathname + u.search + u.hash : null;
+    } catch {
+        return null;
+    }
+}
+
+// The latest notifications, so a person can see what was sent and why nothing came. A click on one opens its text and the link to what it is about.
 function Recent() {
     const { t, i18n } = useTranslation();
     const lang = i18n.resolvedLanguage || 'de';
@@ -154,19 +148,34 @@ function Recent() {
             <Stack gap="xs">
                 <Text fw={700}>{t('notifications.recent.title')}</Text>
                 {rows.length === 0 ? <Text size="sm" c="dimmed">{t('notifications.recent.none')}</Text> : (
-                    <Table.ScrollContainer minWidth={480}>
-                        <Table verticalSpacing={4} fz="sm">
-                            <Table.Tbody>
-                                {rows.map(n => (
-                                    <Table.Tr key={n.id}>
-                                        <Table.Td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(n.created_at)}</Table.Td>
-                                        <Table.Td>{n.url ? <a href={n.url}>{n.title}</a> : n.title}</Table.Td>
-                                        <Table.Td><Badge size="xs" variant="light" color={n.status === 'failed' ? 'red' : 'gray'}>{t(`notifications.recent.status.${n.status}`, { defaultValue: n.status })}</Badge></Table.Td>
-                                    </Table.Tr>
-                                ))}
-                            </Table.Tbody>
-                        </Table>
-                    </Table.ScrollContainer>
+                    <Accordion variant="contained" chevronPosition="left">
+                        {rows.map(n => {
+                            const path = n.url ? portalPath(n.url) : null;
+                            return (
+                                <Accordion.Item key={n.id} value={String(n.id)}>
+                                    <Accordion.Control>
+                                        <Group justify="space-between" wrap="nowrap" gap="xs">
+                                            <Text size="sm" style={{ minWidth: 0 }} truncate>{n.title}</Text>
+                                            <Group gap={6} wrap="nowrap">
+                                                <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>{formatDateTime(n.created_at)}</Text>
+                                                <Badge size="xs" variant="light" color={n.status === 'failed' ? 'red' : 'gray'}>{t(`notifications.recent.status.${n.status}`, { defaultValue: n.status })}</Badge>
+                                            </Group>
+                                        </Group>
+                                    </Accordion.Control>
+                                    <Accordion.Panel>
+                                        <Stack gap="xs">
+                                            {n.text ? n.text.split('\n\n').map((p, i) => <Text key={i} size="sm">{p}</Text>) : null}
+                                            {path ? (
+                                                <Button component={Link} href={`~${path}`} size="xs" variant="light" w="fit-content">{t('notifications.recent.open')}</Button>
+                                            ) : n.url ? (
+                                                <Button component="a" href={n.url} target="_blank" rel="noopener noreferrer" size="xs" variant="light" w="fit-content" rightSection={<ExternalLink size={12} />}>{t('notifications.recent.open')}</Button>
+                                            ) : null}
+                                        </Stack>
+                                    </Accordion.Panel>
+                                </Accordion.Item>
+                            );
+                        })}
+                    </Accordion>
                 )}
             </Stack>
         </Paper>

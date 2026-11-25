@@ -12,6 +12,7 @@ import { useCloudStatus } from './cloud-status.jsx';
 
 import { MyProjectsView } from './view-my-projects.jsx';
 import { StartView } from './view-start.jsx';
+import { ProjectLink } from './view-project-link.jsx';
 import { MyBudgetsView } from './view-my-budgets.jsx';
 import { RootAdminView } from './root-admin-view.jsx';
 import { ApiTokens } from '/tokens/api-tokens.jsx';
@@ -116,11 +117,14 @@ export function BudgetsSection() {
 }
 
 // ProjectsStart (/projects): the start page that gets somebody a project of an area
-// (/projects/start?for=…, linked from the other services).
+// (/projects/start?for=…, linked from the other services), and the address of a single object (/projects?project=…, the links in notification mails), which ProjectLink sends on to where the viewer sees it.
 export function ProjectsStart() {
     return (
         <ProjectsShell page="start">
-            <Route path="/start" component={StartView} />
+            <Switch>
+                <Route path="/start" component={StartView} />
+                <Route component={ProjectLink} />
+            </Switch>
         </ProjectsShell>
     );
 }

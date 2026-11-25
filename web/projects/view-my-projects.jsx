@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearch } from 'wouter';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { ArrowUpDown } from 'lucide-react';
 import { useLocalStorage } from '@mantine/hooks';
-import { Alert, Divider, Group, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Alert, Box, Divider, Group, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useNodesApi } from './api-nodes.jsx';
@@ -54,6 +55,8 @@ export function MyProjectsView({ area = 'cloud' }) {
     // The budget a sub-budget is being requested from, or null.
     const [budgetRequestFrom, setBudgetRequestFrom] = useState(null);
     const dlg = useNodeDialog();
+    // The project a link names (?project=…, from a notification mail via /projects?project=…): its card is marked and scrolled to.
+    const linkedProject = new URLSearchParams(useSearch()).get('project');
 
     // Three lists, one screen. useQueries keeps them independent (a failing
     // eligible-budget lookup does not blank out the projects) while still
@@ -95,6 +98,12 @@ export function MyProjectsView({ area = 'cloud' }) {
     });
 
     const endAllocation = useEndAllocation();
+    // Scroll the linked card into view once the list is there.
+    const listed = !!projectsQuery.data;
+    useEffect(() => {
+        if (!linkedProject || !listed) return;
+        document.getElementById(`project-${linkedProject}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    }, [linkedProject, listed]);
     // Giving back one allocation of a project is a confirmation, no dialog; everything else opens one.
     const handleAction = (action, node, tab) => (action === 'allocation-end'
         ? endAllocation(node, { holder: holdsProject(node.project, getAuthUserEmail(user)), resources: config?.resources })
@@ -191,8 +200,8 @@ export function MyProjectsView({ area = 'cloud' }) {
                     ...sortProjects(shown.filter(n => !ownProjects.includes(n) && !memberOnly(n)), sort),
                     ...sortProjects(shown.filter(n => !ownProjects.includes(n) && memberOnly(n)), sort),
                 ].map(node => (
+                    <Box key={node.id} id={`project-${node.id}`} style={node.id === linkedProject ? { outline: `2px solid var(--mantine-color-${COLOR.attention}-5)`, borderRadius: 'var(--mantine-radius-sm)' } : undefined}>
                     <ProjectCard
-                        key={node.id}
                         node={node}
                         resources={areaResources}
                         parentName={node.parent_name}
@@ -204,6 +213,7 @@ export function MyProjectsView({ area = 'cloud' }) {
                         isRoot={cloudStatus.isRoot}
                         onAction={handleAction}
                     />
+                    </Box>
                 ))}
             </SimpleGrid>
             </Stack>
