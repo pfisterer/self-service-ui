@@ -47,6 +47,9 @@ export function NotificationSettings() {
         set({ unsubscribed: [...next].sort() });
     };
     const modes = types.data?.modes ?? {};
+    // The few types with a mode of their own (approval.decided: at once or in the summary); without a choice their default applies, or nothing when their class is off.
+    const setTypeMode = (type, mode) => set({ types: { ...(draft.types ?? {}), [type]: mode } });
+    const typeMode = (ty) => draft.types?.[ty.type] ?? (draft.classes?.[ty.class] === 'off' ? 'off' : ty.default_mode);
     const dirty = JSON.stringify(strip(draft)) !== JSON.stringify(strip(prefs.data));
 
     return (
@@ -96,8 +99,14 @@ export function NotificationSettings() {
                         <Text fw={700}>{t('notifications.types.title')}</Text>
                         <Text size="xs" c="dimmed">{t('notifications.types.text')}</Text>
                         {(types.data?.types ?? []).map(ty => (
-                            <Checkbox key={ty.type} size="sm" checked={!unsubscribed.has(ty.type)} onChange={(e) => toggleType(ty.type, e.currentTarget.checked)}
-                                label={<Group gap={6}>{ty.name}<Badge size="xs" variant="light" color="gray">{t(`notifications.classes.${ty.class}.short`)}</Badge></Group>} />
+                            <Group key={ty.type} justify="space-between" wrap="wrap" gap="xs">
+                                <Checkbox size="sm" checked={!unsubscribed.has(ty.type)} onChange={(e) => toggleType(ty.type, e.currentTarget.checked)}
+                                    label={<Group gap={6}>{ty.name}<Badge size="xs" variant="light" color="gray">{t(`notifications.classes.${ty.class}.short`)}</Badge></Group>} />
+                                {ty.modes?.length > 0 && !unsubscribed.has(ty.type) && (
+                                    <SegmentedControl size="xs" value={typeMode(ty)} onChange={(m) => setTypeMode(ty.type, m)} aria-label={ty.name}
+                                        data={[...ty.modes, ...(typeMode(ty) === 'off' ? ['off'] : [])].map(m => ({ value: m, label: t(`notifications.modes.${m}`), disabled: m === 'off' }))} />
+                                )}
+                            </Group>
                         ))}
                         {/* Kinds unsubscribed from by a mail's link that have no text of their own here. */}
                         {[...unsubscribed].filter(u => !(types.data?.types ?? []).some(ty => ty.type === u)).map(u => (
@@ -121,8 +130,8 @@ export function NotificationSettings() {
 // The fields the service accepts on PUT, without what it adds to its answer.
 function strip(p) {
     if (!p) return p;
-    const { language, classes, digest, unsubscribed } = p;
-    return { language, classes, digest, unsubscribed: [...(unsubscribed ?? [])].sort() };
+    const { language, classes, digest, unsubscribed, types } = p;
+    return { language, classes, digest, unsubscribed: [...(unsubscribed ?? [])].sort(), types: types ?? {} };
 }
 
 // portalPath is url as a path inside this app when it points here (so the link navigates without reloading the page), else null.

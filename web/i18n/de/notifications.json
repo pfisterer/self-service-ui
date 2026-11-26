@@ -18,7 +18,7 @@
         "info": {
             "label": "Infos",
             "short": "Info",
-            "text": "Gut zu wissen, etwa ein genehmigter Antrag. Kommt nie sofort, nur in der Zusammenfassung."
+            "text": "Gut zu wissen, etwa ein neues Budget. Kommt nur in der Zusammenfassung. Die Entscheidung über einen eigenen Antrag kommt dagegen sofort; das lässt sich unten bei den Arten ändern."
         }
     },
     "modes": {
@@ -37,7 +37,7 @@
     },
     "types": {
         "title": "Arten",
-        "text": "Ohne Haken kommt zu dieser Art keine Mail mehr, auch nicht in der Zusammenfassung."
+        "text": "Ohne Haken kommt zu dieser Art keine Mail mehr, auch nicht in der Zusammenfassung. Bei einzelnen Arten lässt sich außerdem wählen, ob sie sofort oder in der Zusammenfassung kommen."
     },
     "save": "Speichern",
     "saved": "Gespeichert",

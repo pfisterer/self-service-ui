@@ -18,7 +18,7 @@
         "info": {
             "label": "Information",
             "short": "Info",
-            "text": "Good to know, such as an approved request. Never immediately, only in the summary."
+            "text": "Good to know, such as a new budget. Only in the summary. The decision on one's own request comes at once instead; this can be changed below under kinds."
         }
     },
     "modes": {
@@ -37,7 +37,7 @@
     },
     "types": {
         "title": "Kinds",
-        "text": "Unticked kinds send no more mail, not even in the summary."
+        "text": "Unticked kinds send no more mail, not even in the summary. For some kinds you can also choose whether they come at once or in the summary."
     },
     "save": "Save",
     "saved": "Saved",

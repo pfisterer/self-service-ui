@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import i18n from '/i18n/index.js';
 import { renderView } from '/test/render-harness.jsx';
 import { NotificationSettings } from './settings.jsx';
 
 const PREFS = { recipient: 'person@example.edu', is_default: true, language: 'de', classes: { action: 'immediate', disruption: 'immediate', info: 'digest' }, digest: 'weekly', unsubscribed: [] };
-const TYPES = { types: [{ type: 'approval.waiting', class: 'action', name: 'Request awaiting a decision' }], modes: { action: ['immediate', 'digest'], disruption: ['immediate', 'digest', 'off'], info: ['digest', 'off'] } };
+const TYPES = { types: [{ type: 'approval.waiting', class: 'action', name: 'Request awaiting a decision' }, { type: 'approval.decided', class: 'info', name: 'Request decided', modes: ['immediate', 'digest'], default_mode: 'immediate' }], modes: { action: ['immediate', 'digest'], disruption: ['immediate', 'digest', 'off'], info: ['digest', 'off'] } };
 
 const RECENT = [{ id: 7, type: 'allocation.expired', class: 'action', title: 'Allocation expired: Course project', text: 'The allocation from the budget “DSKI” has expired.', url: `${window.location.origin}/projects?project=p_1`, status: 'sent', created_at: '2026-11-25T09:00:00Z', open: true }];
 
@@ -38,6 +38,22 @@ describe('NotificationSettings', () => {
         const put = JSON.parse(calls.find(c => c.method === 'PUT').body);
         expect(put.unsubscribed).toEqual(['approval.waiting']);
         expect(put.recipient).toBeUndefined();
+    });
+
+    it('lets a type with a mode of its own be collected in the summary', async () => {
+        await i18n.changeLanguage('en');
+        const calls = [];
+        stubFetch(calls);
+        renderView(<NotificationSettings />);
+        const group = await screen.findByRole('radiogroup', { name: 'Request decided' });
+        const immediate = within(group).getByLabelText('Immediately');
+        expect(immediate.checked).toBe(true);
+        fireEvent.click(within(group).getByLabelText('Summary'));
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+        await waitFor(() => expect(calls.some(c => c.method === 'PUT')).toBe(true));
+        const put = JSON.parse(calls.find(c => c.method === 'PUT').body);
+        expect(put.types).toEqual({ 'approval.decided': 'digest' });
+        expect(put.unsubscribed).toEqual([]);
     });
 
     it('opens a recent notification on click, with its text and a link into the portal', async () => {
