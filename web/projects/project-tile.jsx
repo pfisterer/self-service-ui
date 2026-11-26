@@ -107,6 +107,15 @@ export function MoreMenu({ items, run, copied, size = 'sm' }) {
     const { t } = useTranslation();
     const [opened, setOpened] = useState(false);
     if (!items.length) return null;
+    // A menu of one entry is a detour: the entry is its own button then (red when it is a dangerous one).
+    if (items.length === 1) {
+        const [item] = items;
+        return (
+            <Button variant={item.danger ? 'light' : 'default'} color={item.danger ? 'red' : undefined} size={size} title={t(`projects.v2.hint.${item.id}`)} onClick={() => run(item.id)}>
+                {item.id === 'link' && copied ? t('projects.actions.linkCopied') : t(`projects.v2.action.${item.id}`)}
+            </Button>
+        );
+    }
     const firstDanger = items.findIndex(i => i.danger);
     return (
         <Menu opened={opened} onChange={setOpened} position="bottom-end" width={270} shadow="md" withinPortal>
@@ -116,7 +125,7 @@ export function MoreMenu({ items, run, copied, size = 'sm' }) {
             <Menu.Dropdown>
                 {items.map((item, i) => (
                     <Box key={item.id}>
-                        {i === firstDanger && <Menu.Divider />}
+                        {i === firstDanger && i > 0 && <Menu.Divider />}
                         <Menu.Item color={item.danger ? 'red' : undefined} onClick={() => run(item.id)} closeMenuOnClick={item.id !== 'link'}>
                             <Text size="sm" fw={600} c={item.danger ? 'red.7' : undefined}>
                                 {item.id === 'link' && copied ? t('projects.actions.linkCopied') : t(`projects.v2.action.${item.id}`)}

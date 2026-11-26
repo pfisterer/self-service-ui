@@ -1344,7 +1344,7 @@
             "members": "Mitglieder",
             "history": "Verlauf",
             "link": "Link kopieren",
-            "release": "Zurückgeben",
+            "release": "Löschen",
             "delete-for-good": "Endgültig löschen"
         },
         "hint": {
@@ -1360,7 +1360,7 @@
             "members": "wer im Projekt arbeitet",
             "history": "Änderungen und Anträge",
             "link": "zum Teilen",
-            "release": "Ressourcen ans Budget zurück",
+            "release": "Projekt beenden, die Ressourcen gehen ans Budget zurück",
             "delete-for-good": "mit allen Daten, nicht umkehrbar"
         },
         "flag": {
