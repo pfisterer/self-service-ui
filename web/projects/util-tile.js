@@ -85,3 +85,8 @@ export function panelActions({ primary = null, secondary = null, menu = [] } = {
     // Copying the project's link is left out too: the panel is where one already is, and nobody missed it there.
     return { primary: first ?? second, secondary: first ? second : null, menu: menu.filter(i => !PANEL_TAB_ACTIONS.has(i.id) && i.id !== 'link') };
 }
+
+// tileHasDetails says whether a tile or row needs its own "Details" button: it takes the place of the "Mehr" menu there, because everything in that menu is in the side panel (as a tab or in the panel's own "Mehr"). Not when one of the two visible actions already is "Details".
+export function tileHasDetails({ primary = null, secondary = null } = {}) {
+    return primary !== 'details' && secondary !== 'details';
+}

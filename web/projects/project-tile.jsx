@@ -18,9 +18,9 @@ import {
     liveAllocations, managesAllocation, measuredUse, nodeTitle, openstackProjectUrl, openstackSide, overageEntries, ownerEmail, projectActions, projectKinds,
     resourceName, resourceSummaryText, resourceUnitName,
 } from './util-project.jsx';
-import { panelActions, tileActions, tileBars, tileFlag, tileKind } from './util-tile.js';
+import { panelActions, tileActions, tileBars, tileFlag, tileHasDetails, tileKind } from './util-tile.js';
 
-// The unified project tile of the new layout (gate ui-v2) and what belongs to it: the list row, the "Mehr" menu and the side panel. One shape for every kind: the kind, a chip only where something differs, the name (opening the side panel), the purpose in two lines, at most three bars, one line of facts, and two buttons plus "Mehr". The decisions are in util-tile.js.
+// The unified project tile of the new layout (gate ui-v2) and what belongs to it: the list row, the "Mehr" menu and the side panel. One shape for every kind: the kind, a chip only where something differs, the name (opening the side panel), the purpose in two lines, at most three bars, one line of facts, and two buttons plus "Details" (the side panel; "Mehr" is only there). The decisions are in util-tile.js.
 
 export const PANEL_TABS = ['overview', 'allocations', 'members', 'usage', 'history'];
 
@@ -130,16 +130,19 @@ export function MoreMenu({ items, run, copied, size = 'sm' }) {
     );
 }
 
-// TileButtons: the primary action (filled), the second one (outlined) and "Mehr". actions defaults to the tile's; nothing to show draws nothing.
-export function TileButtons({ model, acts, actions = model.actions, size = 'sm', grow = true }) {
+// TileButtons: the primary action (filled), the second one (outlined) and "Mehr". actions defaults to the tile's; nothing to show draws nothing. With details, a "Details" button that opens the side panel stands in for "Mehr" (tiles and rows: the panel holds everything the menu would).
+export function TileButtons({ model, acts, actions = model.actions, size = 'sm', grow = true, details = false }) {
     const { t } = useTranslation();
     const { primary, secondary, menu } = actions;
-    if (!primary && !secondary && menu.length === 0) return null;
+    const showDetails = details && tileHasDetails(actions);
+    if (!primary && !secondary && (details ? !showDetails : menu.length === 0)) return null;
     return (
         <Group gap="xs" wrap="wrap">
             {primary && <Button size={size} style={grow ? { flex: '1 0 auto' } : undefined} color={primary === 'decide' ? COLOR.attention : undefined} onClick={() => acts.run(primary)}>{t(`projects.v2.action.${primary}`)}</Button>}
             {secondary && <Button size={size} variant="outline" style={grow ? { flex: '1 0 auto' } : undefined} onClick={() => acts.run(secondary)}>{t(`projects.v2.action.${secondary}`)}</Button>}
-            <MoreMenu items={menu} run={acts.run} copied={acts.copied} size={size} />
+            {details
+                ? showDetails && <Button size={size} variant="default" onClick={() => acts.run('details')}>{t('projects.v2.action.details')}</Button>
+                : <MoreMenu items={menu} run={acts.run} copied={acts.copied} size={size} />}
         </Group>
     );
 }
@@ -214,7 +217,7 @@ export function ProjectTile({ node, ctx, onAction, onOpen, marked = false }) {
                 {model.bars.length === 0 && <Text size="xs" c="dimmed">{model.summary || t('projects.v2.nothingYet')}</Text>}
             </Stack>
             <Box pt={6} style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}><MetaLine model={model} /></Box>
-            <TileButtons model={model} acts={acts} />
+            <TileButtons model={model} acts={acts} details />
         </Card>
     );
 }
@@ -236,7 +239,7 @@ function ProjectRow({ node, ctx, onAction, onOpen, marked }) {
             <Table.Td><Text size="sm">{model.node.termination_date ? formatDate(model.node.termination_date) : '–'}</Text></Table.Td>
             <Table.Td><Text size="sm">{model.budgets.join(' + ') || '–'}</Text></Table.Td>
             <Table.Td miw={170}>{top ? <TileBar bar={top} /> : <Text size="xs" c="dimmed">–</Text>}</Table.Td>
-            <Table.Td><TileButtons model={model} acts={acts} size="xs" grow={false} /></Table.Td>
+            <Table.Td><TileButtons model={model} acts={acts} size="xs" grow={false} details /></Table.Td>
         </Table.Tr>
     );
 }

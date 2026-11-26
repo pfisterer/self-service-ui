@@ -424,11 +424,12 @@ describe('the cloud project views render', () => {
 // The new layout (gate ui-v2): the same views with the unified tiles, the side panel, the budget sections and "Was ich bekommen kann".
 describe('the new layout renders', () => {
 
-    it('My Projects shows tiles; the name opens the side panel and "Mehr" its menu', async () => {
+    it('My Projects shows tiles with "Details" instead of "Mehr"; the name and "Details" open the side panel', async () => {
         renderView(<MyProjectsView area="all" v2 />);
         const name = await screen.findByText('Mein Projekt');
-        fireEvent.click(screen.getAllByRole('button', { name: i18n.t('projects.v2.more') })[0]);
-        expect(await screen.findByText(i18n.t('projects.v2.hint.link'))).toBeDefined();
+        expect(screen.queryByRole('button', { name: i18n.t('projects.v2.more') })).toBeNull();
+        fireEvent.click(screen.getAllByRole('button', { name: i18n.t('projects.v2.action.details') })[0]);
+        expect(await screen.findByRole('tab', { name: i18n.t('projects.v2.tab.allocations') })).toBeDefined();
         fireEvent.click(name);
         expect(await screen.findByRole('tab', { name: i18n.t('projects.v2.tab.allocations') })).toBeDefined();
         expectNoRenderFailure();

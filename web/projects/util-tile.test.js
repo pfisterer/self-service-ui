@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { panelActions, tileActions, tileBars, tileFlag, tileKind } from './util-tile.js';
+import { panelActions, tileActions, tileBars, tileFlag, tileHasDetails, tileKind } from './util-tile.js';
 
 const OWNER = { details: true, change: true, release: true };
 
@@ -99,5 +99,13 @@ describe('panelActions', () => {
 
     it('ends up empty when only tabs were left', () => {
         expect(panelActions({ primary: 'details', secondary: 'usage', menu: [{ id: 'members', danger: false }] })).toEqual({ primary: null, secondary: null, menu: [] });
+    });
+});
+
+describe('tileHasDetails', () => {
+    it('adds "Details" next to the two actions, unless one of them already is it', () => {
+        expect(tileHasDetails({ primary: 'openstack', secondary: 'edit' })).toBe(true);
+        expect(tileHasDetails({ primary: 'start', secondary: 'details' })).toBe(false);
+        expect(tileHasDetails({ primary: 'details', secondary: 'usage' })).toBe(false);
     });
 });

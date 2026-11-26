@@ -69,7 +69,7 @@ export function BudgetResourceSections({ node, resources }) {
                             <Text size="xs" c="dimmed" ml="auto" ta="right">{summaryOf(id)}</Text>
                         </Group>
                     </UnstyledButton>
-                    <Collapse in={!!open[id]}>
+                    <Collapse expanded={!!open[id]}>
                         <Box p="md">
                             {id === 'gpu' ? <GpuTable node={node} resources={by.gpu} fmt={fmt} />
                                 : id === 'free' ? (
