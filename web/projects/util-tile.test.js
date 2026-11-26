@@ -85,7 +85,7 @@ describe('tileBars', () => {
 describe('panelActions', () => {
     it('leaves out what a tab of the panel covers and keeps the rest', () => {
         const a = tileActions({ kind: 'cloud', can: OWNER, openstackUrl: 'https://os', releasable: true, usage: true });
-        expect(panelActions(a)).toEqual({ primary: 'openstack', secondary: 'edit', menu: [{ id: 'link', danger: false }, { id: 'release', danger: true }] });
+        expect(panelActions(a)).toEqual({ primary: 'openstack', secondary: 'edit', menu: [{ id: 'release', danger: true }] });
     });
 
     it('moves the second action up when the first one is a tab', () => {
@@ -94,7 +94,7 @@ describe('panelActions', () => {
 
     it('keeps for a member only what no tab covers', () => {
         const a = tileActions({ kind: 'cloud', can: { details: true }, openstackUrl: null, usage: true, memberView: true });
-        expect(panelActions(a)).toEqual({ primary: null, secondary: null, menu: [{ id: 'link', danger: false }] });
+        expect(panelActions(a)).toEqual({ primary: null, secondary: null, menu: [] });
     });
 
     it('ends up empty when only tabs were left', () => {

@@ -82,5 +82,6 @@ export const PANEL_TAB_ACTIONS = new Set(['details', 'usage', 'members', 'histor
 export function panelActions({ primary = null, secondary = null, menu = [] } = {}) {
     const keep = (id) => (id && !PANEL_TAB_ACTIONS.has(id) ? id : null);
     const first = keep(primary), second = keep(secondary);
-    return { primary: first ?? second, secondary: first ? second : null, menu: menu.filter(i => !PANEL_TAB_ACTIONS.has(i.id)) };
+    // Copying the project's link is left out too: the panel is where one already is, and nobody missed it there.
+    return { primary: first ?? second, secondary: first ? second : null, menu: menu.filter(i => !PANEL_TAB_ACTIONS.has(i.id) && i.id !== 'link') };
 }
