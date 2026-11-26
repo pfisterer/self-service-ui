@@ -32,7 +32,6 @@
         "groups": "Groups",
         "v2": {
             "projects": "Projects",
-            "myProjects": "My projects",
             "filter_all": "All",
             "filter_cloud": "Cloud",
             "filter_workspaces": "Workspaces",

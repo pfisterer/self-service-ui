@@ -3,14 +3,14 @@ import { Link, useSearch } from 'wouter';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { ArrowUpDown } from 'lucide-react';
 import { useLocalStorage } from '@mantine/hooks';
-import { Alert, Anchor, Box, Button, Divider, Group, SegmentedControl, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Alert, Anchor, Box, Divider, Group, SegmentedControl, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { ProjectCard } from './card-project.jsx';
 import { ProjectPanel, ProjectsBoard } from './project-tile.jsx';
-import { OFFERS_PATH, PROJECT_FILTERS } from '/nav-v2.js';
+import { OFFERS_PATH } from '/nav-v2.js';
 import { BudgetOffers } from './component-budget-offers.jsx';
 import { NewProjectButton } from './component-new-project-button.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
@@ -194,20 +194,6 @@ export function MyProjectsView({ area = 'cloud', v2 = false }) {
                         <NewProjectButton kinds={kinds} available={availableKinds} label={area === 'all' ? t('projects.v2.newProject') : t(`projects.kind.${area}Project`)} menu={v2} onPick={(k) => setNewProject({ budget: '', kind: k })} />
                     </Group>
                 </Group>
-                {/* The kinds as filters of this page (new layout): each with its own address, so links from guides and mails still land filtered. A project holding nothing yet counts under every kind, as in the list. */}
-                {v2 && (
-                    <Group gap="xs" role="tablist" aria-label={t('projects.v2.filterLabel')}>
-                        {PROJECT_FILTERS.filter(f => f.kind === 'all' || catalogKinds(resources).includes(f.kind)).map(f => {
-                            const count = projects.items.filter(n => f.kind === 'all' || projectKinds(n, resources).length === 0 || projectKinds(n, resources).includes(f.kind)).length;
-                            return (
-                                <Button key={f.kind} component={Link} href={f.path.replace('/projects', '')} role="tab" aria-selected={area === f.kind}
-                                    size="xs" radius="xl" variant={area === f.kind ? 'filled' : 'default'} color={area === f.kind ? 'dark' : undefined}>
-                                    {t(`nav.v2.filter_${f.kind}`)}<Text span size="xs" ml={6} opacity={0.7}>{count}</Text>
-                                </Button>
-                            );
-                        })}
-                    </Group>
-                )}
 
             {/* One person's own projects fit in one request. If that ever stops
                 being true, say it — a missing project is worse than a long list. */}

@@ -1,6 +1,6 @@
 // The navigation of the new layout (gate ui-v2), as plain data so it can be tested without React: at most five entries at the top, Start only through the logo.
 //
-//   Projekte             "Meine Projekte" (every project in one place; the kind is a filter on that page, each with its own address) and, apart from it, "Meine Ressourcen"
+//   Projekte             every project in one place, the kind as a filter with its own address, and "Was ich bekommen kann"
 //   Workspaces           its tools: servers, batch jobs, usage
 //   Sprachmodelle        its tools: overview, available models, keys, usage
 //   DNS und Zertifikate  zones, TLS certificates, the zones' administration
@@ -33,9 +33,9 @@ export function navSectionsV2(t, ctx) {
             label: t('nav.v2.projects'),
             base: '/projects',
             items: [
-                // One item for the projects: the kinds are filters on its page, not items of their own, so "Meine Ressourcen" stands apart. `also` marks the item on every filter's address.
-                { label: t('nav.v2.myProjects'), href: PROJECT_FILTERS[0].path, also: PROJECT_FILTERS.filter(f => shows[f.kind]).map(f => f.path) },
-                { label: t('nav.v2.offers'), href: OFFERS_PATH },
+                // The kinds are filters of one page and are drawn as one group (group: the header frames consecutive items of the same group); "Meine Ressourcen" is something else and stands apart behind a divider (apart).
+                ...PROJECT_FILTERS.filter(f => shows[f.kind]).map(f => ({ label: t(`nav.v2.filter_${f.kind}`), href: f.path, group: 'projects' })),
+                { label: t('nav.v2.offers'), href: OFFERS_PATH, apart: true },
             ],
         },
         workspaces === 'member' && {
@@ -112,4 +112,15 @@ export function legacyRedirect(path, search = '') {
         }
     }
     return null;
+}
+
+// subNavRuns splits the items of a section into runs: consecutive items with the same `group` form one run, every other item a run of its own. An item marked `apart` starts its run behind a divider.
+export function subNavRuns(items) {
+    const runs = [];
+    for (const item of items) {
+        const last = runs[runs.length - 1];
+        if (item.group && last?.group === item.group && !item.apart) last.items.push(item);
+        else runs.push({ group: item.group, apart: !!item.apart, items: [item] });
+    }
+    return runs;
 }

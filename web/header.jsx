@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { LANGUAGES } from '/i18n/index.js';
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
 import { ActAsButton } from '/act-as-controls.jsx';
+import { subNavRuns } from '/nav-v2.js';
 import { Burger, Group, Button, Menu, Image, Box, Divider, Stack, Text } from '@mantine/core';
 
 import dhbwLogoUrl from '/img/DHBW-Logo.svg';
@@ -67,7 +68,8 @@ function PendingDot({ ml = 0 }) {
 // A vertical list gets the same marker turned 90°: an accent on the leading
 // edge. A full-width underline down there would read as a divider between
 // items, not as "this is the one you are on".
-export function SubNavItem({ item, active, onClick, vertical = false }) {
+// tight: a filter inside a group, closer to its neighbours, so nearness alone shows that they belong together.
+export function SubNavItem({ item, active, onClick, vertical = false, tight = false }) {
     const accent = `2px solid ${active ? 'var(--mantine-color-dhbw-6)' : 'transparent'}`;
     return (
         <Link href={item.href} onClick={onClick} style={vertical ? { width: '100%' } : undefined}>
@@ -76,7 +78,7 @@ export function SubNavItem({ item, active, onClick, vertical = false }) {
                 // (Mantine's --button-padding-x-sm, scoped to the button itself,
                 // so its definition is repeated rather than referenced). This is
                 // what puts a tab label on the same x as the category above it.
-                paddingInline: 'calc(1.125rem * var(--mantine-scale))',
+                paddingInline: tight ? 'calc(0.375rem * var(--mantine-scale))' : 'calc(1.125rem * var(--mantine-scale))',
                 display: 'flex',
                 alignItems: 'center',
                 height: vertical ? undefined : '100%',
@@ -92,6 +94,32 @@ export function SubNavItem({ item, active, onClick, vertical = false }) {
             </Box>
         </Link>
     );
+}
+
+// SubNavItems draws a section's items. A group (the projects page and its kinds) reads as its first item with the others in brackets after it, close together and dotted apart — "All (Cloud · Workspaces · LLM)" —, in the vertical menu indented under it instead. An item apart from the rest ("Meine Ressourcen") follows a divider.
+function SubNavItems({ items, activeItem, onClick, vertical = false }) {
+    const link = (item, tight) => <SubNavItem key={item.href} item={item} onClick={onClick} vertical={vertical} tight={tight} active={activeItem?.href === item.href} />;
+    const mark = (key, text) => <Text key={key} span size="sm" c="dimmed" aria-hidden="true" style={{ alignSelf: 'center' }}>{text}</Text>;
+    return subNavRuns(items).map(run => {
+        const first = run.items[0];
+        const divider = run.apart && (vertical
+            ? <Divider key={`d-${first.href}`} my="6" />
+            : <Divider key={`d-${first.href}`} orientation="vertical" mx="10" my="10" />);
+        if (!run.group || run.items.length === 1) return [divider, ...run.items.map(i => link(i, false))];
+        const rest = run.items.slice(1);
+        if (vertical) {
+            return [divider, link(first, false), <Box key={`g-${first.href}`} pl="md">{rest.map(i => link(i, false))}</Box>];
+        }
+        const inner = rest.flatMap((item, i) => (i === 0 ? [link(item, true)] : [mark(`dot-${item.href}`, '·'), link(item, true)]));
+        return [divider, (
+            <Box key={`g-${first.href}`} style={{ display: 'flex', alignItems: 'stretch', height: '100%' }}>
+                {link(first, false)}
+                {mark(`open-${first.href}`, '(')}
+                {inner}
+                {mark(`close-${first.href}`, ')')}
+            </Box>
+        )];
+    });
 }
 
 export function Header() {
@@ -199,10 +227,7 @@ export function Header() {
                             // instead of floating above the page.
                             <Group gap="0" wrap="nowrap" h={SUBNAV_HEIGHT}
                                 style={{ marginBottom: -1 }}>
-                                {subNavItems.map(item => (
-                                    <SubNavItem key={item.href} item={item} onClick={close}
-                                        active={activeItem?.href === item.href} />
-                                ))}
+                                <SubNavItems items={subNavItems} activeItem={activeItem} onClick={close} />
                             </Group>
                         )}
                     </Box>
@@ -265,10 +290,7 @@ export function Header() {
                                     the two levels apart. */}
                                 {section.items.length > 0 && (
                                     <Stack gap="0" pl="lg" mt="4">
-                                        {section.items.map(item => (
-                                            <SubNavItem key={item.href} item={item} onClick={close} vertical
-                                                active={activeItem?.href === item.href} />
-                                        ))}
+                                        <SubNavItems items={section.items} activeItem={activeItem} onClick={close} vertical />
                                     </Stack>
                                 )}
                             </Box>
