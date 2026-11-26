@@ -29,7 +29,19 @@
         "workspaces": "Workspaces",
         "cloud": "Cloud",
         "budgets": "Budgets",
-        "groups": "Gruppen"
+        "groups": "Gruppen",
+        "v2": {
+            "projects": "Projekte",
+            "filter_all": "Alle",
+            "filter_cloud": "Cloud",
+            "filter_workspaces": "Workspaces",
+            "filter_llm": "Sprachmodelle",
+            "offers": "Was ich bekommen kann",
+            "dns": "DNS und Zertifikate",
+            "tls": "TLS-Zertifikate",
+            "admin": "Verwaltung",
+            "adminNothing": "Hier gibt es für dich nichts zu verwalten."
+        }
     },
     "account": {
         "signIn": "Anmelden",

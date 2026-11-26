@@ -4,6 +4,7 @@ import { useAuth } from '/providers/auth.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { budgetKinds, PROJECT_KINDS } from './util-project.jsx';
+import { featureOn, UI_V2 } from './feature-gates.js';
 
 // What the header has to know about the cloud section without opening it:
 //
@@ -25,7 +26,7 @@ import { budgetKinds, PROJECT_KINDS } from './util-project.jsx';
 // what just happened.
 
 const CloudStatusContext = createContext(null);
-const EMPTY = { isRoot: false, pending: 0, hasBudgets: false, canRequestBudgets: false, offered: [], ready: false, refresh: () => {} };
+const EMPTY = { isRoot: false, pending: 0, hasBudgets: false, canRequestBudgets: false, offered: [], uiV2: false, ready: false, refresh: () => {} };
 
 export function CloudStatusProvider({ children }) {
     const api = useNodesApi();
@@ -66,6 +67,8 @@ export function CloudStatusProvider({ children }) {
                 canRequestBudgets: items(eligible).some(b => b.allow_sub_budget_requests !== false),
                 // The kinds a budget in reach offers (managed or requestable): a section without a project shows the way to one only then.
                 offered: PROJECT_KINDS.filter(k => [...items(mine), ...items(eligible)].some(b => budgetKinds(b, resources).includes(k))),
+                // The new layout (navigation, project cards, budget detail): an opt-in gate, see featureOn in use-features.js.
+                uiV2: config.status === 'fulfilled' && featureOn(config.value, UI_V2),
             };
         },
         enabled: !!api && !!user,
@@ -77,6 +80,7 @@ export function CloudStatusProvider({ children }) {
         hasBudgets: statusQuery.data?.hasBudgets ?? false,
         canRequestBudgets: statusQuery.data?.canRequestBudgets ?? false,
         offered: statusQuery.data?.offered ?? [],
+        uiV2: statusQuery.data?.uiV2 ?? false,
         // Whether the answers above are KNOWN yet. Until the query settles,
         // isRoot is false because nothing has been asked — not because the user
         // is not root. Anything that acts on the difference (a route that

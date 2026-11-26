@@ -2,7 +2,8 @@ import { Eye, FolderOpen, Pencil, Plus, Scale, Trash2, Zap } from 'lucide-react'
 import { Badge, Button, Card, Divider, Group, Stack, Text } from '@mantine/core';
 import { CopyLinkButton, FactRow, formatTerm, NodeChangesDiff, NodeStatusBadge, NodeUsageBars, PersonBadge, TokenBadgeList } from './component-common.jsx';
 import { useTranslation } from 'react-i18next';
-import { autoApproveFacts, COLOR, expiryTone, expiryValue, hasAutoApprove } from './util-project.jsx';
+import { autoApproveFacts, COLOR, expiryTone, expiryValue, hasAutoApprove, visibleResources } from './util-project.jsx';
+import { BudgetResourceSections } from './component-budget-sections.jsx';
 
 // BudgetCard renders one budget (inner tree node): who manages it, who may
 // request under it, and how full it is. Like ProjectCard it is presentational —
@@ -12,7 +13,8 @@ import { autoApproveFacts, COLOR, expiryTone, expiryValue, hasAutoApprove } from
 //   onOpen          when set, an "Open" button drills into the budget's children
 //   manageable      the viewer manages this budget → edit/delegate/delete actions
 //   link            when set, a button copies this link to the budget
-export function BudgetCard({ node, resources, onOpen, onAction, manageable = false, link }) {
+// v2 (new layout): the resources in folded sections (BudgetResourceSections) instead of one long list of bars.
+export function BudgetCard({ node, resources, onOpen, onAction, manageable = false, link, v2 = false }) {
     const { t } = useTranslation();
     const act = (action) => onAction?.(action, node);
 
@@ -50,7 +52,7 @@ export function BudgetCard({ node, resources, onOpen, onAction, manageable = fal
             {/* ── Usage ──────────────────────────────────────────────────── */}
             <Stack gap="xs" mb="md" style={{ flex: 1 }}>
                 <Text size="xs" fw={600} c="dimmed" tt="uppercase">{t('projects.budgetCard.resourceUsage')}</Text>
-                <NodeUsageBars resources={resources} node={node} />
+                {v2 ? <BudgetResourceSections node={node} resources={visibleResources(resources, node)} /> : <NodeUsageBars resources={resources} node={node} />}
 
                 <Divider my="xs" />
 

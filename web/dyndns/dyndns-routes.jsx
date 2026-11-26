@@ -6,6 +6,7 @@ import { DynDnsZones } from '/dyndns/zones.jsx';
 import { DnsPolicy } from '/dyndns/policy.jsx';
 import { DynDnsLoadState } from '/dyndns/dyndns-load-state.jsx';
 import { ApiTokens } from '/tokens/api-tokens.jsx';
+import { TlsCertificatesPage } from '/dyndns/tls-page.jsx';
 
 // Swagger UI is ~1 MB — load it only when the API-doc route is opened.
 const DynamicZonesApiSwagger = lazy(() =>
@@ -34,6 +35,8 @@ export function DynamicDnsManagement() {
                     so a reload and a shared link land on the SAME tab — plain
                     component state used to reset to the first tab on reload. */}
                 <Route path="/administration/:tab?" component={DnsPolicy} />
+                {/* The certificates as a page of their own (the new layout's menu links here); the zone's TLS tab stays. */}
+                <Route path="/tls" component={TlsCertificatesPage} />
                 <Route path="/">
                     <Redirect to="/zones" replace />
                 </Route>

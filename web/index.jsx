@@ -5,7 +5,7 @@ import './app.css';
 
 import { createRoot } from 'react-dom/client';
 import { lazy, Suspense } from 'react';
-import { Redirect, Router, Route, Switch, useLocation } from 'wouter';
+import { Redirect, Router, Route, Switch, useLocation, useSearch } from 'wouter';
 
 import { cloudProjectsEnabled, dnsZonesEnabled, groupsEnabled, llmEnabled, notificationsEnabled, runningVersion } from '/features.js';
 // Imported for its side effect: initialising i18next before the first render,
@@ -30,7 +30,8 @@ import { QueryProvider } from '/providers/query.jsx';
 import { Header } from '/header.jsx';
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
 import { Footer } from '/footer.jsx';
-import { CloudStatusProvider } from './projects/cloud-status.jsx';
+import { CloudStatusProvider, useCloudStatus } from './projects/cloud-status.jsx';
+import { legacyRedirect } from '/nav-v2.js';
 import { Home } from '/home/home.jsx';
 import { Developer } from '/developer/developer.jsx';
 import { Delayed } from '/helper/delayed.jsx';
@@ -55,6 +56,8 @@ const LlmManagement = lazy(() =>
     import('./llm/llm-routes.jsx').then(m => ({ default: m.LlmManagement })));
 const GpuManagement = lazy(() =>
     import('./gpu/gpu-routes.jsx').then(m => ({ default: m.GpuManagement })));
+const AdminSection = lazy(() =>
+    import('./admin-routes.jsx').then(m => ({ default: m.AdminSection })));
 const GroupsSection = lazy(() =>
     import('./groups/groups-routes.jsx').then(m => ({ default: m.GroupsSection })));
 const NotificationSettings = lazy(() =>
@@ -150,6 +153,11 @@ function AppRoutes() {
     // refetched everything (zone list + zone + tokens) and made the page collapse
     // and the footer jump. The first path segment is stable across sub-routes.
     const section = '/' + (location.split('/')[1] || '');
+    // The new layout (gate ui-v2) moved some addresses (nav-v2.js): an old one, from a bookmark, a mail or a guide, is sent on to where its page lives now.
+    const { uiV2, ready } = useCloudStatus();
+    const search = useSearch();
+    const moved = uiV2 ? legacyRedirect(location, search) : null;
+    if (moved) return <Redirect to={moved} replace />;
 
     return (
         <Suspense fallback={<Loading />}>
@@ -164,6 +172,10 @@ function AppRoutes() {
                     {llmEnabled && <Route path="/llm" component={LlmManagement} nest />}
                     {llmEnabled && <Route path="/workspaces" component={GpuManagement} nest />}
                     {groupsEnabled && <Route path="/groups" component={GroupsSection} nest />}
+                    {/* "Verwaltung" of the new layout: budgets, groups, fleets and models below one address. */}
+                    {uiV2 && <Route path="/admin" component={AdminSection} nest />}
+                    {/* Until the gate is known, a reload on /admin waits instead of saying "not found". */}
+                    {!ready && <Route path="/admin/*?"><Loading /></Route>}
                     {notificationsEnabled && <Route path="/settings/notifications" component={NotificationSettings} />}
                     <Route path="/developer" component={Developer} />
                     <Route component={NotFound} />

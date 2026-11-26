@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useSearch } from 'wouter';
+import { Link, useSearch } from 'wouter';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { ArrowUpDown } from 'lucide-react';
 import { useLocalStorage } from '@mantine/hooks';
-import { Alert, Box, Divider, Group, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Alert, Anchor, Box, Divider, Group, SegmentedControl, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import { Loading, LoadError } from '/helper/query-state.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { ProjectCard } from './card-project.jsx';
+import { ProjectPanel, ProjectsBoard } from './project-tile.jsx';
+import { OFFERS_PATH } from '/nav-v2.js';
 import { BudgetOffers } from './component-budget-offers.jsx';
 import { NewProjectButton } from './component-new-project-button.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
@@ -27,7 +29,7 @@ import { useGpuApi } from '/gpu/api-gpu.jsx';
 import { gpuKeys } from '/gpu/query-keys.js';
 import { jobMaxHours, projectHasJobs } from '/gpu/jobs.js';
 import { GroupChoices } from '/gpu/group-choice.jsx';
-import { COLOR, PROJECT_SORTS, budgetKinds, deletionRequested, getAuthUserEmail, holdsProject, isRetired, mostSpecificFirst, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
+import { COLOR, PROJECT_SORTS, budgetKinds, catalogKinds, deletionRequested, getAuthUserEmail, holdsProject, isRetired, mostSpecificFirst, ownerEmail, projectKinds, resourcesOfKinds, sortProjects, pollWhileDeleting } from './util-project.jsx';
 
 // MyProjectsView lists the projects of one area (cloud, workspaces, llm) the
 // signed-in user owns or shares, and lets them request new ones, propose changes
@@ -35,7 +37,7 @@ import { COLOR, PROJECT_SORTS, budgetKinds, deletionRequested, getAuthUserEmail,
 // Each section of the menu shows its own (see nav.jsx). A project of several
 // areas appears in each, its card showing only that area's resources; the
 // dialogs keep the whole project.
-export function MyProjectsView({ area = 'cloud' }) {
+export function MyProjectsView({ area = 'cloud', v2 = false }) {
     const { t } = useTranslation();
     // The order the viewer picked last; anything the browser kept that is no
     // longer an option falls back to the name.
@@ -57,6 +59,9 @@ export function MyProjectsView({ area = 'cloud' }) {
     const dlg = useNodeDialog();
     // The project a link names (?project=…, from a notification mail via /projects?project=…): its card is marked and scrolled to.
     const linkedProject = new URLSearchParams(useSearch()).get('project');
+    // The new layout (v2): cards or list, the viewer's choice kept per browser; the side panel of one project ({ id, tab }), opened on the linked project.
+    const [view, setView] = useLocalStorage({ key: 'self-service.projects.view', defaultValue: 'cards', getInitialValueInEffect: false });
+    const [panel, setPanel] = useState(v2 && linkedProject ? { id: linkedProject, tab: 'overview' } : null);
 
     // Three lists, one screen. useQueries keeps them independent (a failing
     // eligible-budget lookup does not blank out the projects) while still
@@ -66,7 +71,7 @@ export function MyProjectsView({ area = 'cloud' }) {
     const workspaceProjects = useQuery({
         queryKey: gpuKeys.projects(false),
         queryFn: () => gpuApi.listProjects(false),
-        enabled: llmEnabled && area === 'workspaces',
+        enabled: llmEnabled && (area === 'workspaces' || area === 'all'),
         refetchInterval: (q) => ((q.state.data ?? []).some(p => p.image_build?.status === 'building') ? 10 * 1000 : false),
     });
     const envBuildOf = (node) => {
@@ -116,16 +121,17 @@ export function MyProjectsView({ area = 'cloud' }) {
     const projects = projectsQuery.data ?? { items: [], total: 0 };
     // The projects of this area. One that holds nothing yet belongs to every
     // area, so it never goes missing.
-    const kinds = [area];
-    const ofKind = (n) => projectKinds(n, resources).length === 0 || projectKinds(n, resources).includes(area);
+    // 'all' (new layout): every project, every kind the catalogue has.
+    const kinds = area === 'all' ? catalogKinds(resources) : [area];
+    const ofKind = (n) => area === 'all' || projectKinds(n, resources).length === 0 || projectKinds(n, resources).includes(area);
     const shown = projects.items.filter(ofKind);
     const areaResources = resourcesOfKinds(resources, kinds);
     const myBudgets = myBudgetsQuery.data?.items ?? [];
     const eligibleBudgets = eligibleQuery.data?.items ?? [];
     // A project can be started where a budget in reach offers the area: one the
     // viewer manages or may request from.
-    const offersArea = (b) => budgetKinds(b, resources).includes(area);
-    const availableKinds = [...myBudgets, ...eligibleBudgets].some(offersArea) ? kinds : [];
+    const offersArea = (b) => budgetKinds(b, resources).some(k => kinds.includes(k));
+    const availableKinds = kinds.filter(k => [...myBudgets, ...eligibleBudgets].some(b => budgetKinds(b, resources).includes(k)));
     // The list also holds projects the viewer only administers. What counts
     // against a per-person share is what they OWN — the server sums by owner —
     // so only those go into the arithmetic below.
@@ -140,6 +146,21 @@ export function MyProjectsView({ area = 'cloud' }) {
     const offers = mostSpecificFirst(eligibleBudgets).filter(b => !managedIds.has(b.id) && offersArea(b));
     const budgetRequestTargets = offers.filter(b => b.allow_sub_budget_requests !== false);
 
+    // Own projects first, then the ones administered with others, then those the viewer is a member of.
+    const ordered = [
+        ...sortProjects(ownProjects.filter(ofKind), sort),
+        ...sortProjects(shown.filter(n => !ownProjects.includes(n) && !memberOnly(n)), sort),
+        ...sortProjects(shown.filter(n => !ownProjects.includes(n) && memberOnly(n)), sort),
+    ];
+    // What a tile of the new layout needs of a project.
+    const slugOf = (node) => (workspaceProjects.data ?? []).find(x => x.tree_node === node.id)?.slug;
+    const tileCtx = (node) => ({
+        resources: areaResources, filter: area, perspective: memberOnly(node) ? 'member' : 'owner', start: startOf(node), envBuild: envBuildOf(node),
+        jobsHref: jobsOf(node) && slugOf(node) ? `/workspaces/jobs?project=${encodeURIComponent(slugOf(node))}` : null,
+        managedIds, isRoot: cloudStatus.isRoot,
+    });
+    const panelNode = panel ? projects.items.find(n => n.id === panel.id) ?? null : null;
+
     return (
         <Stack>
             {/* Two sections, the projects first: they are what this page is
@@ -150,10 +171,14 @@ export function MyProjectsView({ area = 'cloud' }) {
                 {/* One row: the heading, the order, and the way to a new one at its end. */}
                 <Group justify="space-between" align="center" gap="sm">
                     <Stack gap={0}>
-                        <Title order={4}>{t(`projects.kind.heading_${area}`)}</Title>
-                        <Text size="xs" c="dimmed">{t(`projects.kind.${area}Hint`)}</Text>
+                        <Title order={v2 ? 3 : 4}>{v2 ? t(`projects.v2.heading_${area}`) : t(`projects.kind.heading_${area}`)}</Title>
+                        <Text size="xs" c="dimmed">{v2 ? t('projects.v2.headingHint') : t(`projects.kind.${area}Hint`)}</Text>
                     </Stack>
                     <Group gap="sm" align="center" ml="auto">
+                        {v2 && (
+                            <SegmentedControl size="xs" value={view} onChange={setView} aria-label={t('projects.v2.viewLabel')}
+                                data={[{ value: 'cards', label: t('projects.v2.viewCards') }, { value: 'list', label: t('projects.v2.viewList') }]} />
+                        )}
                         {shown.length > 1 && (
                             <Select
                                 size="xs"
@@ -166,7 +191,7 @@ export function MyProjectsView({ area = 'cloud' }) {
                                 allowDeselect={false}
                             />
                         )}
-                        <NewProjectButton kinds={kinds} available={availableKinds} label={t(`projects.kind.${area}Project`)} onPick={(k) => setNewProject({ budget: '', kind: k })} />
+                        <NewProjectButton kinds={kinds} available={availableKinds} label={area === 'all' ? t('projects.v2.newProject') : t(`projects.kind.${area}Project`)} menu={v2} onPick={(k) => setNewProject({ budget: '', kind: k })} />
                     </Group>
                 </Group>
 
@@ -193,13 +218,13 @@ export function MyProjectsView({ area = 'cloud' }) {
             {/* Workspaces: projects where the person chooses a group themself right now, above the cards, so it is not missed. */}
             {area === 'workspaces' && <GroupChoices projects={workspaceProjects.data} />}
 
+            {v2 ? (
+                <ProjectsBoard nodes={ordered} ctxOf={tileCtx} view={view} onAction={handleAction} marked={linkedProject}
+                    onOpen={(node, tab) => setPanel({ id: node.id, tab: tab || 'overview' })} />
+            ) : (
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 {/* Own projects first, then the ones administered with others, then those the viewer is a member of. */}
-                {[
-                    ...sortProjects(ownProjects.filter(ofKind), sort),
-                    ...sortProjects(shown.filter(n => !ownProjects.includes(n) && !memberOnly(n)), sort),
-                    ...sortProjects(shown.filter(n => !ownProjects.includes(n) && memberOnly(n)), sort),
-                ].map(node => (
+                {ordered.map(node => (
                     <Box key={node.id} id={`project-${node.id}`} style={node.id === linkedProject ? { outline: `2px solid var(--mantine-color-${COLOR.attention}-5)`, borderRadius: 'var(--mantine-radius-sm)' } : undefined}>
                     <ProjectCard
                         node={node}
@@ -215,18 +240,29 @@ export function MyProjectsView({ area = 'cloud' }) {
                     </Box>
                 ))}
             </SimpleGrid>
+            )}
             </Stack>
 
-            {offers.length > 0 && <Divider my="sm" />}
+            {/* The new layout shows what one can get on a page of its own (Projekte › Was ich bekommen kann). */}
+            {v2 && offers.length > 0 && (
+                <Text size="sm"><Anchor component={Link} href={OFFERS_PATH.replace('/projects', '')}>{t('projects.v2.toOffers')}</Anchor></Text>
+            )}
+            {!v2 && offers.length > 0 && <Divider my="sm" />}
 
-            <BudgetOffers
+            {!v2 && <BudgetOffers
                 budgets={offers}
                 resources={areaResources}
                 myProjects={ownProjects}
                 kinds={kinds}
                 onNewProject={(b, k) => setNewProject({ budget: b.id, kind: k })}
                 onRequestBudget={(b) => setBudgetRequestFrom(b)}
-            />
+            />}
+
+            {v2 && (
+                <ProjectPanel node={panelNode} ctx={panelNode ? tileCtx(panelNode) : {}} tab={panel?.tab ?? 'overview'}
+                    onTab={(tab) => setPanel(p => (p ? { ...p, tab } : p))} onClose={() => setPanel(null)}
+                    onAction={handleAction} onOpen={(node, tab) => setPanel({ id: node.id, tab: tab || 'overview' })} />
+            )}
 
             {/* ── Dialogs (one instance per view) ────────────────────────── */}
             <ProjectFormModal

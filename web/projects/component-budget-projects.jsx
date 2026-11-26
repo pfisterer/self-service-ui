@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Activity, ArrowDown, ArrowUp, CalendarX, CircleMinus, Eye, Layers, LogOut, Package, Pencil, Rocket, Scale, Search, Server, Sparkles, SquareTerminal, Tags, Trash2, X } from 'lucide-react';
-import { ActionIcon, Badge, Box, Group, Loader, MultiSelect, Pagination, Paper, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
+import { ActionIcon, Badge, Box, Group, Loader, MultiSelect, Pagination, Paper, Progress, SegmentedControl, Stack, Switch, Table, Text, TextInput, Title, Tooltip, UnstyledButton, VisuallyHidden } from '@mantine/core';
 import { useDebouncedValue, useElementSize, useLocalStorage } from '@mantine/hooks';
 import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +8,7 @@ import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { InfoPopover, NodeStatusBadge } from './component-common.jsx';
 import { ProjectsPrincipalAutocomplete } from './principal-search.jsx';
-import { COLOR, UNLIMITED_QUOTA, budgetKinds, resourcesOfKinds, deletesOnRequest, deletionRequested, finalDeletion, isRetired, expiryTone, expiryValue, isAvailability, isCoFunded, liveAllocations, nodeTitle, ownerEmail, projectActions, projectOf, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting, resourceName, resourceShortName, resourceUnitName, allocationActions, getAuthUserEmail, holdsProject } from './util-project.jsx';
+import { COLOR, UNLIMITED_QUOTA, budgetKinds, kindOfResource, resourcesOfKinds, deletesOnRequest, deletionRequested, finalDeletion, isRetired, expiryTone, expiryValue, isAvailability, isCoFunded, liveAllocations, nodeTitle, ownerEmail, projectActions, projectOf, resourceSummaryText, statusLabel, USAGE_COLOR, usageLevel, measuredUse, openstackSide, pollWhileDeleting, resourceName, resourceShortName, resourceUnitName, allocationActions, getAuthUserEmail, holdsProject } from './util-project.jsx';
 import { useProjectConfig } from './projects.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { LoadError } from '/helper/query-state.jsx';
@@ -35,7 +35,8 @@ const FILTER_STATUSES = ['approved', 'pending', 'change_pending', 'ended', 'reje
 // one page. Each row offers what the viewer may do — with this allocation
 // (change, decide, withdraw) and with the project (its dialog, releasing it
 // where the viewer manages all of it); clicking a row opens the project.
-export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
+// v2 (new layout): one tab per kind (no "all"), a column per resource always (the table scrolls instead of summing up), each cell a two-tone bar (used of granted), two labelled sorts per column ("belegt" or "verbraucht", and "zugeteilt"), and by default the biggest user of the kind's first resource on top.
+export function BudgetProjectsTable({ budget, resources, onAction, onOpen, v2 = false }) {
     const { t } = useTranslation();
     const api = useNodesApi();
     const { user } = useAuth();
@@ -54,8 +55,10 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
         getInitialValueInEffect: false,
     });
     // Whatever the browser kept is only trusted in the shape it was written.
-    const sort = typeof storedSort?.key === 'string' && (storedSort.order === 'asc' || storedSort.order === 'desc')
+    const storedOrDefault = typeof storedSort?.key === 'string' && (storedSort.order === 'asc' || storedSort.order === 'desc')
         ? storedSort : DEFAULT_SORT;
+    // The new layout keeps the order for this visit only, starting at what is in use most.
+    const [v2Sort, setV2Sort] = useState(null);
     const [page, setPage] = useState(1);
     // Projects of the sub-budgets too: a budget that only structures its
     // sub-budgets has no projects of its own and would show an empty table.
@@ -75,7 +78,11 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
         defaultValue: 'all',
         getInitialValueInEffect: false,
     });
-    const kind = kinds.length > 1 && kinds.includes(storedKind) ? storedKind : 'all';
+    const kind = v2
+        ? (kinds.includes(storedKind) ? storedKind : kinds[0] ?? 'all')
+        : kinds.length > 1 && kinds.includes(storedKind) ? storedKind : 'all';
+    const sort = v2 ? (v2Sort ?? defaultV2Sort(kind === 'all' ? resources : resourcesOfKinds(resources, [kind]), kind)) : storedOrDefault;
+    const writeSort = (update) => (v2 ? setV2Sort(update(sort)) : setSort(update));
     const area = kind === 'all' ? '' : kind;
 
     // Every filter change starts over at the first page: page 7 of the old
@@ -99,7 +106,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
 
     // How many projects each kind has under the same filters, for the switch.
     const counts = useQueries({
-        queries: (kinds.length > 1 ? ['all', ...kinds] : []).map(k => {
+        queries: (kinds.length > 1 ? (v2 ? kinds : ['all', ...kinds]) : []).map(k => {
             const p = { ...params, page: 1, area: k === 'all' ? '' : k, count: true };
             return {
                 queryKey: projectKeys.budgetProjects(budget.id, p),
@@ -109,7 +116,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
             };
         }),
     });
-    const countOf = (k) => counts[['all', ...kinds].indexOf(k)]?.data?.total ?? '…';
+    const countOf = (k) => counts[(v2 ? kinds : ['all', ...kinds]).indexOf(k)]?.data?.total ?? '…';
 
     const items = query.data?.items ?? [];
     const kindResources = kind === 'all' ? resources : resourcesOfKinds(resources, [kind]);
@@ -118,7 +125,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
     // Too narrow for a column per resource, the table shows a few sums instead (summaryColumns), the rest in the project's dialog. Measured, not guessed from the screen: the panel's width depends
     // on the layout around it as much as on the window.
     const { ref: tableBoxRef, width: tableWidth } = useElementSize();
-    const compact = tableWidth > 0 && tableWidth < 440 + 58 * columns.length;
+    const compact = !v2 && tableWidth > 0 && tableWidth < 440 + 58 * columns.length;
     const total = query.data?.total ?? 0;
     const pages = Math.max(1, Math.ceil(total / TABLE_PAGE_SIZE));
     const filtered = q || statuses.length > 0 || group;
@@ -126,7 +133,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
     // Amounts start with the biggest: "who uses most" is the question there.
     const toggleSort = (key) => {
         const numeric = key === 'servers' || key.includes(':');
-        setSort(prev => (prev.key === key
+        writeSort(prev => (prev.key === key
             ? { key, order: prev.order === 'asc' ? 'desc' : 'asc' }
             : { key, order: numeric ? 'desc' : 'asc' }));
         setPage(1);
@@ -156,8 +163,8 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
                         style={{ alignSelf: 'flex-start' }}
                         aria-label={t('projects.kind.label')}
                         value={kind}
-                        onChange={(k) => { setStoredKind(k); setPage(1); }}
-                        data={['all', ...kinds].map(k => ({
+                        onChange={(k) => { setStoredKind(k); setPage(1); setV2Sort(null); }}
+                        data={(v2 ? kinds : ['all', ...kinds]).map(k => ({
                             value: k,
                             label: (
                                 <Group gap={6} wrap="nowrap">
@@ -251,7 +258,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
                     // all rows, so the figures line up from row to row. Only a
                     // phone-narrow panel still scrolls.
                     <div ref={tableBoxRef}>
-                    <Table.ScrollContainer minWidth={480}>
+                    <Table.ScrollContainer minWidth={v2 ? 420 + 150 * columns.length : 480}>
                         <Table highlightOnHover verticalSpacing="xs" fz="sm" layout="fixed">
                             <Table.Thead>
                                 <Table.Tr>
@@ -291,6 +298,17 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
                                             {/* One sort per line of the cells below: what is
                                                 in use, what was granted — the same marks as
                                                 in front of the rows. VMs have only the first. */}
+                                            {v2 ? (
+                                                <Group gap={4} justify="flex-end" wrap="nowrap" mt={4}>
+                                                    <LabelledSort label={t(c.window ? 'projects.v2.table.consumed' : 'projects.v2.table.inUse')}
+                                                        title={t(c.window ? 'projects.resources.sortConsumed' : 'projects.resources.sortInUse', { name: c.label })}
+                                                        sortKey={c.id === VMS ? 'servers' : `used:${c.id}`} sort={sort} onSort={toggleSort} />
+                                                    {c.id !== VMS && (
+                                                        <LabelledSort label={t('projects.v2.table.granted')} title={t('projects.resources.sortReserved', { name: c.label })}
+                                                            sortKey={`reserved:${c.id}`} sort={sort} onSort={toggleSort} />
+                                                    )}
+                                                </Group>
+                                            ) : (
                                             <Group gap={2} justify="flex-end" wrap="nowrap" mt={2}>
                                                 <ResourceSort icon={Activity} label={t(c.window ? 'projects.resources.sortConsumed' : 'projects.resources.sortInUse', { name: c.label })}
                                                     sortKey={c.id === VMS ? 'servers' : `used:${c.id}`} sort={sort} onSort={toggleSort} />
@@ -299,6 +317,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
                                                         sortKey={`reserved:${c.id}`} sort={sort} onSort={toggleSort} />
                                                 )}
                                             </Group>
+                                            )}
                                         </Table.Th>
                                     ))}
                                     <Table.Th w={84}><VisuallyHidden>{t('projects.budgetProjects.colActions')}</VisuallyHidden></Table.Th>
@@ -306,7 +325,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen }) {
                             </Table.Thead>
                             <Table.Tbody>
                                 {items.map(node => (
-                                    <ProjectRow key={node.id} node={node} resources={resources} columns={columns} summaries={summaries} compact={compact}
+                                    <ProjectRow key={node.id} node={node} resources={resources} columns={columns} summaries={summaries} compact={compact} v2={v2}
                                         showBudget={deep && node.parent_id !== budget.id} me={me}
                                         onAction={onAction} onOpen={onOpen} />
                                 ))}
@@ -453,8 +472,16 @@ function RowMarker({ icon: Icon, label }) {
     );
 }
 
-function ResourceCells({ node, columns }) {
+function ResourceCells({ node, columns, bars = false }) {
     const { t } = useTranslation();
+    if (bars) {
+        return (
+            <>
+                <Table.Td px={0} />
+                {columns.map(c => <Table.Td key={c.id} px={6}><BarCell figures={resourceFigures(node, c)} /></Table.Td>)}
+            </>
+        );
+    }
     return (
         <>
             <Table.Td px={0}>
@@ -475,7 +502,7 @@ function ResourceCells({ node, columns }) {
     );
 }
 
-function ProjectRow({ node, resources, columns, summaries, compact = false, onAction, onOpen, showBudget = false, me = '' }) {
+function ProjectRow({ node, resources, columns, summaries, compact = false, v2 = false, onAction, onOpen, showBudget = false, me = '' }) {
     const { t } = useTranslation();
     const config = useProjectConfig();
     // The row is the budget's allocation; the project it pays for is everything else.
@@ -558,7 +585,7 @@ function ProjectRow({ node, resources, columns, summaries, compact = false, onAc
             </Table.Td>
             {compact ? summaries.map(c => (
                 <Table.Td key={c.key} ta="right" px={6}>{figure(summaryValue(node, c))}</Table.Td>
-            )) : <ResourceCells node={node} columns={columns} />}
+            )) : <ResourceCells node={node} columns={columns} bars={v2} />}
             <Table.Td>
                 <Group gap="2" wrap="wrap" justify="flex-end">
                     {/* The project's one dialog: editable where it may be changed. */}
@@ -580,6 +607,53 @@ function ProjectRow({ node, resources, columns, summaries, compact = false, onAc
             </Table.Td>
         </Table.Tr>
     );
+}
+
+// BarCell is one resource of a row in the new layout: "used / granted" and a bar of two tones, the used part solid (orange from 80 %), the rest of what is granted lighter.
+function BarCell({ figures }) {
+    const { used, reserved } = figures;
+    const capped = typeof reserved === 'number' && reserved > 0;
+    const measured = typeof used === 'number';
+    const level = figureLevel(figures);
+    const high = level === 'high' || level === 'full';
+    const pct = capped && measured ? Math.min(100, (used / reserved) * 100) : 0;
+    if (reserved === null && !measured) return <Text size="xs" c="dimmed" ta="right">–</Text>;
+    return (
+        <Stack gap={4}>
+            <Text size="xs" ta="right" fw={high ? 600 : undefined} c={high ? 'orange.8' : undefined} style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                {measured ? used : '–'} / {reserved ?? '–'}
+            </Text>
+            {capped && (
+                <Progress.Root size="sm">
+                    {pct > 0 && <Progress.Section value={pct} color={high ? 'orange' : 'blue'} />}
+                    <Progress.Section value={100 - pct} color={high ? 'orange.2' : 'blue.2'} />
+                </Progress.Root>
+            )}
+        </Stack>
+    );
+}
+
+// LabelledSort is a sort control with words ("belegt", "zugeteilt"), for the new layout.
+function LabelledSort({ label, title, sortKey, sort, onSort }) {
+    const active = sort.key === sortKey;
+    const Arrow = sort.order === 'asc' ? ArrowUp : ArrowDown;
+    return (
+        <Tooltip label={title} openDelay={300}>
+            <UnstyledButton onClick={(e) => { e.stopPropagation(); onSort(sortKey); }} aria-label={title}
+                aria-sort={active ? (sort.order === 'asc' ? 'ascending' : 'descending') : undefined}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: '1px 6px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                    border: `1px solid ${active ? 'var(--mantine-color-text)' : 'var(--mantine-color-default-border)'}`,
+                    background: active ? 'var(--mantine-color-text)' : 'transparent', color: active ? 'var(--mantine-color-body)' : 'var(--mantine-color-dimmed)' }}>
+                {label}{active && <Arrow size={10} />}
+            </UnstyledButton>
+        </Tooltip>
+    );
+}
+
+// defaultV2Sort is where the new layout's table starts: the biggest user of the kind's first quantity.
+export function defaultV2Sort(resources, kind) {
+    const first = (resources || []).find(r => !isAvailability(r) && (kind === 'all' || kindOfResource(r) === kind));
+    return first ? { key: `used:${first.id}`, order: 'desc' } : DEFAULT_SORT;
 }
 
 function RowAction({ label, color = 'gray', onClick, children }) {

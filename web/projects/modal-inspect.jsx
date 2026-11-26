@@ -141,7 +141,7 @@ function ResourcesTab({ node, resources }) {
 
 // AccessTab: on a budget who runs it and who may ask; on a project who works
 // in it.
-function AccessTab({ node, resources }) {
+export function AccessTab({ node, resources }) {
     const { t } = useTranslation();
     if (!isBudget(node) && isMemberView(node)) {
         // A member sees how many others work in it, not who.
@@ -207,7 +207,7 @@ function AutoApproveTab({ node, resources }) {
 // NodeFacts is what the edit dialogs do not show as fields: status, who
 // created it and when, its ID and where it runs at each provider. It heads
 // their History tab.
-function NodeFacts({ node }) {
+export function NodeFacts({ node }) {
     const { t } = useTranslation();
     return (
         <Table withRowBorders={false} verticalSpacing="4">
@@ -232,7 +232,7 @@ function NodeFacts({ node }) {
 const showsUsage = (node) => (isBudget(node) ? !node.request_only : true);
 
 // ProjectConsumption is a project's "Consumption" tab: what it uses now of what it was granted, per resource (Cloud, Workspaces, LLM alike, as the services report it), and below the daily history where there is one (OpenStack).
-function ProjectConsumption({ node, resources }) {
+export function ProjectConsumption({ node, resources }) {
     const { t } = useTranslation();
     const cloud = !!openstackSide(node).external_id;
     return (
@@ -267,7 +267,7 @@ export function nodeExtraTabs(t, node, resources, activeTab) {
 }
 
 // NodeHistoryPanel shows a node's lifecycle as a timeline, newest first.
-function NodeHistoryPanel({ node, resources }) {
+export function NodeHistoryPanel({ node, resources }) {
     const { t } = useTranslation();
     // The caps by their names, units and choices from the providers' catalogue; an id gone from it shows as itself.
     const capCatalog = useProjectConfig()?.caps ?? [];

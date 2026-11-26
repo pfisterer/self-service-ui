@@ -5,6 +5,7 @@ import { useGroupsMe } from '/groups/use-groups-me.jsx';
 import { useCloudStatus } from '/projects/cloud-status.jsx';
 import { useDnsPolicyStatus } from '/dyndns/use-policy.jsx';
 import { useAiAreasVisible } from '/ai-areas.jsx';
+import { navSectionsV2 } from '/nav-v2.js';
 
 // The whole navigation as data, in one place: the header renders it two ways
 // (two bars on a wide screen, one vertical list in the burger) and the shell
@@ -35,14 +36,18 @@ export const NAV_BREAKPOINT = 'md';
 export function useNav() {
     const [currentPath] = useLocation();
     const { t } = useTranslation();
-    const { isRoot, pending, hasBudgets, canRequestBudgets } = useCloudStatus();
+    const { isRoot, pending, hasBudgets, canRequestBudgets, uiV2 } = useCloudStatus();
     const { hasPolicy, adminEvents, ownEvents } = useDnsPolicyStatus();
     // Which of the AI service's areas are visible, and how (ai-areas.jsx, shared with the footer).
     const { llm, workspaces, llmArea } = useAiAreasVisible();
     // Only for whoever maintains a group (or admins), as the role provider answers.
     const groups = useGroupsMe();
 
-    const sections = [
+    // The new layout (gate ui-v2): its own, shorter menu (nav-v2.js); the classic one below otherwise.
+    const sections = uiV2 ? navSectionsV2(t, {
+        cloudProjects: cloudProjectsEnabled, dnsZones: dnsZonesEnabled, workspaces, llmArea, llm,
+        isRoot, pending, hasBudgets, canRequestBudgets, hasPolicy, adminEvents, ownEvents, groupsVisible: !!groups.visible,
+    }) : [
         { id: 'home', label: t('nav.home'), href: '/', items: [] },
         // One section per concern: Cloud, Workspaces, LLM and DNS each with their
         // own projects (a project of several areas shows in each), and Budgets

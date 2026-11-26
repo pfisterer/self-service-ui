@@ -359,5 +359,12 @@
             "user": "Person",
             "pattern": "Pattern for e-mail addresses"
         }
+    },
+    "tlsPage": {
+        "title": "TLS certificates",
+        "intro": "Certificates for your zones come from the DHBW's ACME server. Pick a zone and the instructions for certbot, acme.sh and cert-manager are filled in for it.",
+        "zone": "Zone",
+        "noZones": "You have no zone yet.",
+        "toZones": "To the zones"
     }
 }

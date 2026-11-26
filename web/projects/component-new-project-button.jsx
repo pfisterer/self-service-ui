@@ -1,5 +1,5 @@
-import { Plus } from 'lucide-react';
-import { Button, Group, Tooltip } from '@mantine/core';
+import { ChevronDown, Plus } from 'lucide-react';
+import { Button, Group, Menu, Text, Tooltip } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 
 // NewProjectButton starts a new project of one kind, picked here before the
@@ -12,8 +12,29 @@ import { useTranslation } from 'react-i18next';
 //
 // available: the kinds a budget in reach offers; omitted = all of `kinds`.
 // label: the text of the one button for a single kind (default "New project").
-export function NewProjectButton({ kinds, available = null, onPick, size = 'sm', label = null }) {
+export function NewProjectButton({ kinds, available = null, onPick, size = 'sm', label = null, menu = false }) {
     const { t } = useTranslation();
+    // menu (new layout): one button "Neues Projekt" that asks for the kind, instead of a button per kind.
+    if (menu && kinds?.length > 1) {
+        return (
+            <Menu position="bottom-end" withinPortal>
+                <Menu.Target>
+                    <Button size={size} leftSection={<Plus size="16" />} rightSection={<ChevronDown size="14" />}>{label || t('projects.actions.newProject')}</Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                    {kinds.map(k => {
+                        const enabled = !available || available.includes(k);
+                        return (
+                            <Menu.Item key={k} disabled={!enabled} onClick={() => onPick(k)}>
+                                <Text size="sm" fw={600}>{t(`projects.kind.${k}Project`)}</Text>
+                                <Text size="xs" c="dimmed" maw={280}>{enabled ? t(`projects.kind.${k}Hint`) : t('projects.kind.noBudget')}</Text>
+                            </Menu.Item>
+                        );
+                    })}
+                </Menu.Dropdown>
+            </Menu>
+        );
+    }
     if (!kinds || kinds.length < 2) {
         const enabled = !available || !kinds?.length || available.includes(kinds[0]);
         const button = (

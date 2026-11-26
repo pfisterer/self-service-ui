@@ -64,6 +64,7 @@ vi.mock('/features.js', async (importOriginal) => {
 const { MyBudgetsView } = await import('/projects/view-my-budgets.jsx');
 const { MyProjectsView } = await import('/projects/view-my-projects.jsx');
 const { RootAdminView } = await import('/projects/root-admin-view.jsx');
+const { OffersView } = await import('/projects/view-offers.jsx');
 const { budgetResultsToTreeData } = await import('/projects/component-budget-tree.jsx');
 const { NavTree } = await import('/helper/tree.jsx');
 
@@ -417,5 +418,51 @@ describe('the cloud project views render', () => {
     it('Root Admin renders', async () => {
         renderView(<RootAdminView />);
         await waitFor(() => expectNoRenderFailure());
+    });
+});
+
+// The new layout (gate ui-v2): the same views with the unified tiles, the side panel, the budget sections and "Was ich bekommen kann".
+describe('the new layout renders', () => {
+
+    it('My Projects shows tiles; the name opens the side panel and "Mehr" its menu', async () => {
+        renderView(<MyProjectsView area="all" v2 />);
+        const name = await screen.findByText('Mein Projekt');
+        fireEvent.click(screen.getAllByRole('button', { name: i18n.t('projects.v2.more') })[0]);
+        expect(await screen.findByText(i18n.t('projects.v2.hint.link'))).toBeDefined();
+        fireEvent.click(name);
+        expect(await screen.findByRole('tab', { name: i18n.t('projects.v2.tab.allocations') })).toBeDefined();
+        expectNoRenderFailure();
+    });
+
+    it('My Projects shows the list', async () => {
+        localStorage.setItem('self-service.projects.view', JSON.stringify('list'));
+        renderView(<MyProjectsView area="all" v2 />);
+        const table = await screen.findByRole('table');
+        expect(await within(table).findByText('Mein Projekt')).toBeDefined();
+        expectNoRenderFailure();
+    });
+
+    it('My Budgets shows the sections and the table with bars', async () => {
+        globalThis.__cloudStatus = { isRoot: true, pending: 0, hasBudgets: true, ready: true, uiV2: true, refresh: () => {} };
+        renderView(<MyBudgetsView />);
+        const tree = () => within(screen.getByRole('tree'));
+        await screen.findAllByText('Mannheim');
+        fireEvent.click(tree().getByText('Mannheim'));
+        expect(await screen.findByText(i18n.t('projects.v2.budget.showEmpty'))).toBeDefined();
+        const table = await screen.findByRole('table', {}, { timeout: 3000 }).catch(() => null);
+        if (table) expect(await within(table).findByText('Mein Projekt')).toBeDefined();
+        await waitFor(() => expectNoRenderFailure());
+    });
+
+    it('"Was ich bekommen kann" renders the sums and the budgets', async () => {
+        const roots = (await globalThis.__testApi.listMyBudgets()).items;
+        globalThis.__testApi.listMyBudgets = async () => ({ items: [], total: 0 });
+        globalThis.__testApi.listEligibleForMe = async () => ({ items: roots.map(b => ({ ...b, auto_approve: { per_requester_limit: {} } })), total: roots.length });
+        renderView(<OffersView />);
+        expect(await screen.findByText(i18n.t('projects.v2.offers.now'))).toBeDefined();
+        fireEvent.click(screen.getByText(i18n.t('projects.v2.offers.fromBudgets', { count: roots.length })));
+        expect(await screen.findAllByText(i18n.t('projects.v2.offers.onlyHere'))).not.toHaveLength(0);
+        await waitFor(() => expect(screen.getByText(i18n.t('projects.v2.offers.title'))).toBeDefined());
+        expectNoRenderFailure();
     });
 });

@@ -14,6 +14,7 @@ import { BudgetCard } from './card-budget.jsx';
 import { ProjectCard } from './card-project.jsx';
 import { BudgetTree, budgetResultsToTreeData, budgetsToTreeData, budgetChildCount } from './component-budget-tree.jsx';
 import { BudgetProjectsTable } from './component-budget-projects.jsx';
+import { ProjectPanel } from './project-tile.jsx';
 import { RetireModal } from './modal-retire.jsx';
 import { DecisionModal } from './modal-decide.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
@@ -115,6 +116,9 @@ export function MyBudgetsView({ params }) {
     // see the whole organization).
     const dlg = useNodeDialog();
     const [budgetForm, setBudgetForm] = useState(null); // { mode, parent?, node? } | null
+    // The new layout (gate ui-v2): a project of the table opens in the side panel ({ node, tab }).
+    const uiV2 = cloudStatus.uiV2;
+    const [panel, setPanel] = useState(null);
     const endAllocation = useEndAllocation();
 
     // Which of the managed budgets are drawn at the top.
@@ -657,7 +661,7 @@ export function MyBudgetsView({ params }) {
                         )}
                         {selected && (isBudget(selected) ? (
                             <Stack>
-                                <BudgetCard node={selected} resources={resources}
+                                <BudgetCard node={selected} resources={resources} v2={uiV2}
                                     link={linkTo(selected)}
                                     onAction={handleAction}
                                     manageable={!selected.request_only} />
@@ -666,12 +670,13 @@ export function MyBudgetsView({ params }) {
                                     to show. Keyed by budget so its filters reset
                                     when another budget is picked. */}
                                 {!selected.request_only && (
-                                    <BudgetProjectsTable key={selected.id} budget={selected} resources={resources}
+                                    <BudgetProjectsTable key={selected.id} budget={selected} resources={resources} v2={uiV2}
                                         onAction={handleAction}
                                         // A row opens the project's one dialog, as its
                                         // Edit or Details button does.
                                         // A row opens its project on what it consumes: the table shows only the summary of it.
-                                        onOpen={(node) => handleAction(projectActions(node, { manager: true }).change ? 'change' : 'details', node, TAB_USAGE)} />
+                                        onOpen={(node) => (uiV2 ? setPanel({ node, tab: 'overview' })
+                                            : handleAction(projectActions(node, { manager: true }).change ? 'change' : 'details', node, TAB_USAGE))} />
                                 )}
                             </Stack>
                         ) : (
@@ -685,6 +690,13 @@ export function MyBudgetsView({ params }) {
                 </Flex>
             )}
 
+
+            {uiV2 && (
+                <ProjectPanel node={panel?.node ?? null} tab={panel?.tab ?? 'overview'}
+                    ctx={{ resources, filter: 'all', perspective: 'manager', managedIds, isRoot: cloudStatus.isRoot }}
+                    onTab={(tab) => setPanel(p => (p ? { ...p, tab } : p))} onClose={() => setPanel(null)}
+                    onAction={handleAction} onOpen={(node, tab) => setPanel({ node, tab: tab || 'overview' })} />
+            )}
 
             {/* ── Dialogs (one instance per view) ────────────────────────── */}
             {/* Keyed like every other dialog here, and for a sharper reason: this

@@ -1,6 +1,6 @@
 import { createContext, useContext, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Route, Switch, useRoute, Redirect } from 'wouter';
+import { Route, Switch, useRoute, useSearch, Redirect } from 'wouter';
 import { Container } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { useNodesApi } from './api-nodes.jsx';
@@ -17,6 +17,8 @@ import { MyBudgetsView } from './view-my-budgets.jsx';
 import { RootAdminView } from './root-admin-view.jsx';
 import { ApiTokens } from '/tokens/api-tokens.jsx';
 import { AssistantPanel } from './component-assistant.jsx';
+import { OffersView } from './view-offers.jsx';
+import { OFFERS_PATH, PROJECT_FILTERS } from '/nav-v2.js';
 
 // Swagger UI is ~1 MB — load it only when the API-doc route is opened. Same
 // component as the dyndns section's, pointed at the other API.
@@ -124,6 +126,26 @@ export function BudgetsSection() {
 // ProjectsStart (/projects): the start page that gets somebody a project of an area
 // (/projects/start?for=…, linked from the other services), and the address of a single object (/projects?project=…, the links in notification mails), which ProjectLink sends on to where the viewer sees it.
 export function ProjectsStart() {
+    const { uiV2 } = useCloudStatus();
+    const search = useSearch();
+    const [matchKind, kindParams] = useRoute('/:kind');
+    if (uiV2) {
+        return (
+            <ProjectsShell page={matchKind ? kindParams.kind : 'start'}>
+                <Switch>
+                    {/* The new layout: every project on one page, the kind a filter with its own address, and what the viewer can get for a new one. */}
+                    {PROJECT_FILTERS.map(f => (
+                        <Route key={f.kind} path={f.path.replace('/projects', '')}><MyProjectsView area={f.kind} v2 /></Route>
+                    ))}
+                    <Route path={OFFERS_PATH.replace('/projects', '')} component={OffersView} />
+                    <Route path="/start" component={StartView} />
+                    {/* /projects with a link's query (?project=…) finds the object; without one it is the list. */}
+                    <Route path="/">{search ? <ProjectLink /> : <Redirect to="/all" replace />}</Route>
+                    <Route component={ProjectLink} />
+                </Switch>
+            </ProjectsShell>
+        );
+    }
     return (
         <ProjectsShell page="start">
             <Switch>
