@@ -55,7 +55,9 @@ describe('navSectionsV2', () => {
 
     it('has the TLS certificates beside the zones, the administration only with a rule', () => {
         expect(items(navSectionsV2(t, STUDENT), 'dyndns')).toEqual(['/dyndns/zones', '/dyndns/tls']);
-        expect(items(navSectionsV2(t, { ...STUDENT, hasPolicy: true }), 'dyndns')).toEqual(['/dyndns/zones', '/dyndns/tls', '/dyndns/administration']);
+        // The zones' administration is under "Verwaltung", not next to the zones.
+        expect(items(navSectionsV2(t, { ...STUDENT, hasPolicy: true }), 'dyndns')).toEqual(['/dyndns/zones', '/dyndns/tls']);
+        expect(items(navSectionsV2(t, { ...STUDENT, hasPolicy: true }), 'admin')).toContain('/admin/dns/administration');
     });
 
     it('goes to the first item and marks waiting decisions on Verwaltung', () => {
@@ -79,6 +81,7 @@ describe('legacyRedirect', () => {
         expect(legacyRedirect('/budgets/b_1')).toBe('/admin/budgets/b_1');
         expect(legacyRedirect('/budgets/admin/users')).toBe('/admin/budgets/admin/users');
         expect(legacyRedirect('/groups/g1')).toBe('/admin/groups/g1');
+        expect(legacyRedirect('/dyndns/administration/delegations')).toBe('/admin/dns/administration/delegations');
         expect(legacyRedirect('/workspaces/gpus')).toBe('/admin/workspaces/gpus');
         expect(legacyRedirect('/llm/fleet/nodes')).toBe('/admin/llm/fleet/nodes');
         expect(legacyRedirect('/llm/models')).toBe('/admin/llm/models');

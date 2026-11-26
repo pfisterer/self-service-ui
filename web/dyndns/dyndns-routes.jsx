@@ -44,3 +44,18 @@ export function DynamicDnsManagement() {
         </Suspense>
     );
 }
+
+// DnsAdministration (/admin/dns, new layout): the zones' administration under "Verwaltung", the same page as /dyndns/administration in the classic layout. Its tabs stay in the URL (/admin/dns/administration/delegations, ...), relative as before.
+export function DnsAdministration() {
+    const { t } = useTranslation();
+    const { config: dynDnsConfig, error: configLoadError } = useDynDnsConfig();
+    if (!dynDnsConfig) return <DynDnsLoadState configLoadError={configLoadError} />;
+    return (
+        <Suspense fallback={<div style={{ padding: '2rem' }}>{t('dyndns.loading')}</div>}>
+            <Switch>
+                <Route path="/administration/:tab?" component={DnsPolicy} />
+                <Route><Redirect to="/administration" replace /></Route>
+            </Switch>
+        </Suspense>
+    );
+}

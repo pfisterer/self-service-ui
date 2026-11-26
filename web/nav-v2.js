@@ -3,8 +3,8 @@
 //   Projekte             every project in one place, the kind as a filter with its own address, and "Was ich bekommen kann"
 //   Workspaces           its tools: servers, batch jobs, usage
 //   Sprachmodelle        its tools: overview, available models, keys, usage
-//   DNS und Zertifikate  zones, TLS certificates, the zones' administration
-//   Verwaltung           what few people need: budgets, groups, and for admins the fleets, the models and the root admin
+//   DNS und Zertifikate  zones, TLS certificates
+//   Verwaltung           what few people need: budgets, groups, the zones' administration, and for admins the fleets, the models and the root admin
 //
 // Who sees what follows the same conditions as the classic navigation (nav.jsx): an entry nobody may use there is left out here too. A section without items is left out.
 
@@ -18,6 +18,8 @@ export const PROJECT_FILTERS = [
 
 export const OFFERS_PATH = '/projects/offers';
 export const TLS_PATH = '/dyndns/tls';
+// DNS_ADMIN_PATH is the zones' administration in the new layout: under "Verwaltung", with the other things few people need.
+export const DNS_ADMIN_PATH = '/admin/dns/administration';
 
 // navSectionsV2 returns the sections (id, label, base, href, items, dot) for the viewer. ctx holds what nav.jsx knows about them: which services exist (cloudProjects, dnsZones), the AI areas (workspaces and llmArea: 'member', 'offer' or false; llm: isAdmin, isFleetAdmin), the cloud status (isRoot, pending, hasBudgets, canRequestBudgets), DNS (hasPolicy, adminEvents, ownEvents) and groups (groupsVisible).
 export function navSectionsV2(t, ctx) {
@@ -63,24 +65,24 @@ export function navSectionsV2(t, ctx) {
             id: 'dyndns',
             label: t('nav.v2.dns'),
             base: '/dyndns',
-            dot: adminEvents > 0 || ownEvents > 0,
+            dot: ownEvents > 0,
             items: [
                 { label: t('nav.zoneManagement'), href: '/dyndns/zones', dot: ownEvents > 0 },
                 { label: t('nav.v2.tls'), href: TLS_PATH },
-                hasPolicy && { label: t('nav.administration'), href: '/dyndns/administration', dot: adminEvents > 0 },
-            ].filter(Boolean),
+            ],
         },
         {
             id: 'admin',
             label: t('nav.v2.admin'),
             base: '/admin',
-            dot: pending > 0,
+            dot: pending > 0 || (hasPolicy && adminEvents > 0),
             items: [
                 cloudProjects && (hasBudgets || canRequestBudgets || isRoot) && { label: t('nav.budgets'), href: '/admin/budgets', dot: pending > 0 },
                 groupsVisible && { label: t('nav.groups'), href: '/admin/groups' },
                 workspaces === 'member' && llm.isAdmin && { label: t('nav.gpuFleet'), href: '/admin/workspaces/gpus' },
                 llmArea === 'member' && llm.isFleetAdmin && { label: t('nav.llmFleet'), href: '/admin/llm/fleet' },
                 llmArea === 'member' && llm.isAdmin && { label: t('nav.llmModels'), href: '/admin/llm/models' },
+                dnsZones && hasPolicy && { label: t('nav.v2.dnsAdmin'), href: DNS_ADMIN_PATH, dot: adminEvents > 0 },
                 cloudProjects && isRoot && { label: t('nav.rootAdmin'), href: '/admin/budgets/admin' },
             ].filter(Boolean),
         },
@@ -100,6 +102,7 @@ const MOVED = [
     ['/llm/models', '/admin/llm/models', false],
     ['/budgets', '/admin/budgets', false],
     ['/groups', '/admin/groups', false],
+    ['/dyndns/administration', '/admin/dns/administration', false],
 ];
 
 // legacyRedirect returns where an address of the classic layout lives in the new one (with its query, e.g. ?project= from a notification mail), or null when it stays where it is.

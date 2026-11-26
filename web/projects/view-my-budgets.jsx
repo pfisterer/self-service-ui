@@ -695,7 +695,7 @@ export function MyBudgetsView({ params }) {
                                         // A row opens the project's one dialog, as its
                                         // Edit or Details button does.
                                         // A row opens its project on what it consumes: the table shows only the summary of it.
-                                        onOpen={(node) => (uiV2 ? openPanel(node)
+                                        onOpen={(node, tab) => (uiV2 ? openPanel(node, tab)
                                             : handleAction(projectActions(node, { manager: true }).change ? 'change' : 'details', node, TAB_USAGE))} />
                                 )}
                             </Stack>

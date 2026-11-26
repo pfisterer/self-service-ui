@@ -583,7 +583,8 @@ function ProjectRow({ node, resources, columns, summaries, compact = false, v2 =
                     {mine.decide && <RowAction label={t('projects.actions.decide')} color={COLOR.attention} onClick={act('decide', node)}><Scale size="14" /></RowAction>}
                     {mine.change && others.length > 0 && <RowAction label={t('projects.allocation.change')} onClick={act('allocations', project, node.id)}><Package size="14" /></RowAction>}
                     {/* What this budget's part is booked to (cost centre and the like): the allocation dialog, where its managers set it. */}
-                    {mine.end && <RowAction label={t('projects.allocation.attributes')} onClick={act('allocations', project, node.id)}><Tags size="14" /></RowAction>}
+                    {/* In the new layout the side panel's allocations tab instead, like everything that only shows a project: the dialog is one click further, behind "Ändern" there. */}
+                    {mine.end && <RowAction label={t('projects.allocation.attributes')} onClick={v2 ? (e) => { e.stopPropagation(); onOpen(project, 'allocations'); } : act('allocations', project, node.id)}><Tags size="14" /></RowAction>}
                     {mine.endAlone && <RowAction label={t('projects.allocation.endAlone')} color={COLOR.attention} onClick={act('allocation-end-alone', { ...node, project })}><CalendarX size="14" /></RowAction>}
                     {!isAlloc && can.adopt && <RowAction label={t('projects.actions.adopt')} color={COLOR.outside} onClick={act('adopt', node)}><Rocket size="14" /></RowAction>}
                     {/* Every action as its own icon, none behind a menu: a row may
