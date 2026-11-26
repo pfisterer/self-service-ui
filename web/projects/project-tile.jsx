@@ -9,10 +9,9 @@ import { useProjectConfig } from './projects.jsx';
 import { useAuth } from '/providers/auth.jsx';
 import { useAiAreasVisible } from '/ai-areas.jsx';
 import { MemberSummary, PersonBadge } from './component-common.jsx';
-import { ProjectResources } from './component-project-resources.jsx';
-import { LlmLimitHints } from './component-llm-limits.jsx';
+import { AttributesView, hasAttributes } from './component-node-attributes.jsx';
 import { AllocationList, allocationNode } from './component-allocations.jsx';
-import { AccessTab, NodeFacts, NodeHistoryPanel, ProjectConsumption } from './modal-inspect.jsx';
+import { AccessTab, NodeFacts, NodeHistoryPanel, PendingChange, ProjectConsumption, ProjectResourcesNow } from './modal-inspect.jsx';
 import { SyncErrorDetails } from './component-project-resources.jsx';
 import {
     COLOR, UNLIMITED_QUOTA, deletesOnRequest, deletionRequested, expiryTone, getAuthUserEmail, holdsProject, isMemberView, isProvisioning, isRetired,
@@ -24,6 +23,12 @@ import { tileActions, tileBars, tileFlag, tileKind } from './util-tile.js';
 // The unified project tile of the new layout (gate ui-v2) and what belongs to it: the list row, the "Mehr" menu and the side panel. One shape for every kind: the kind, a chip only where something differs, the name (opening the side panel), the purpose in two lines, at most three bars, one line of facts, and two buttons plus "Mehr". The decisions are in util-tile.js.
 
 export const PANEL_TABS = ['overview', 'allocations', 'members', 'usage', 'history'];
+
+// panelTab is the side panel's tab for a tab of the project's dialogs (the details dialog's ids, see modal-inspect.jsx): the panel takes the place of that dialog in the new layout, so "Details" or "Verbrauch" from anywhere lands on the matching tab.
+export function panelTab(tab) {
+    if (PANEL_TABS.includes(tab)) return tab;
+    return { access: 'members' }[tab] ?? 'overview';
+}
 
 // useTileModel gathers what a tile, a row and the panel show of one project. ctx: resources (of the page), filter (the page's kind or 'all'), perspective ('owner' or 'member'), start (where a workspace starts, relative to /workspaces), jobsHref (the project's batch jobs), envBuild, managedIds, isRoot.
 export function useTileModel(node, ctx) {
@@ -304,8 +309,8 @@ function PanelBody({ node, ctx, tab, onTab, onAction, onOpen }) {
                         </Tabs.List>
                         <Tabs.Panel value="overview" pt="md">
                             <Stack gap="lg">
-                                <ProjectResources node={node} resources={resources} quota={node.limit} size="sm" />
-                                {model.kinds.includes('llm') && !isRetired(node) && <LlmLimitHints compact resources={resources} limit={node.limit} />}
+                                <Box><ProjectResourcesNow node={node} resources={resources} /></Box>
+                                <PendingChange node={node} resources={resources} />
                                 <Table withRowBorders={false} verticalSpacing={6}>
                                     <Table.Tbody>
                                         {model.owner && <Table.Tr><Table.Td w={150}><Text size="sm" c="dimmed">{t('projects.v2.fact.owner')}</Text></Table.Td><Table.Td><PersonBadge email={model.owner} size="sm" /></Table.Td></Table.Tr>}
@@ -320,12 +325,14 @@ function PanelBody({ node, ctx, tab, onTab, onAction, onOpen }) {
                                         {node.created_at && <Table.Tr><Table.Td><Text size="sm" c="dimmed">{t('projects.v2.fact.created')}</Text></Table.Td><Table.Td><Text size="sm">{formatDate(node.created_at)}</Text></Table.Td></Table.Tr>}
                                     </Table.Tbody>
                                 </Table>
-                                {model.jobsHref && (
+                                {/* Folded: the way to the batch jobs and what the project is booked to (its attributes, sent only to those who look after it). */}
+                                {(model.jobsHref || hasAttributes(node)) && (
                                     <Stack gap={6}>
                                         <UnstyledButton onClick={() => setExtras(v => !v)} aria-expanded={extras}>
                                             <Group gap={6}>{extras ? <ChevronDown size={14} /> : <ChevronRight size={14} />}<Text size="sm" fw={600}>{t('projects.v2.extras')}</Text></Group>
                                         </UnstyledButton>
-                                        {extras && <Anchor size="sm" onClick={() => acts.run('jobs')}>{t('projects.v2.action.jobs')}</Anchor>}
+                                        {extras && model.jobsHref && <Anchor size="sm" onClick={() => acts.run('jobs')}>{t('projects.v2.action.jobs')}</Anchor>}
+                                        {extras && hasAttributes(node) && <AttributesView node={node} />}
                                     </Stack>
                                 )}
                             </Stack>

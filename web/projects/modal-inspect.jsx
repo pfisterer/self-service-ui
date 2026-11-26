@@ -104,17 +104,37 @@ function DetailsTab({ node, resources }) {
                     <Row label={t('projects.endDate.label')}>{node.termination_date ? formatRelativeDate(node.termination_date) : '—'}</Row>
                 </Table.Tbody>
             </Table>
-            {/* Full before/after diff while a change awaits approval. */}
-            <NodeChangesDiff
-                resources={resources}
-                limitFrom={node.limit}
-                limitTo={node.pending?.limit}
-                dateFrom={node.termination_date}
-                dateTo={node.pending?.termination_date}
-                usersFrom={node.authorized_users}
-                usersTo={node.pending?.authorized_users}
-            />
+            <PendingChange node={node} resources={resources} />
         </Stack>
+    );
+}
+
+// PendingChange is the full before/after diff while a change awaits approval (nothing otherwise). Shared with the project's side panel (project-tile.jsx).
+export function PendingChange({ node, resources }) {
+    return (
+        <NodeChangesDiff
+            resources={resources}
+            limitFrom={node.limit}
+            limitTo={node.pending?.limit}
+            dateFrom={node.termination_date}
+            dateTo={node.pending?.termination_date}
+            usersFrom={node.authorized_users}
+            usersTo={node.pending?.authorized_users}
+        />
+    );
+}
+
+// ProjectResourcesNow is what a project holds: measured use of what it was granted where the services report it, the granted amounts otherwise, and the hints on an LLM project's limits. Shared with the project's side panel (project-tile.jsx).
+export function ProjectResourcesNow({ node, resources }) {
+    return (
+        <>
+            {measuredUse(node)
+                ? <ProjectResources node={node} resources={resources} quota={effectiveLimit(node, node.limit)} />
+                : <QuotaBadges resources={resources} quota={node.limit} size="xs" />}
+            {projectKinds(node, resources).includes('llm') && (
+                <Box mt="xs"><LlmLimitHints compact resources={resources} limit={effectiveLimit(node, node.limit)} /></Box>
+            )}
+        </>
     );
 }
 
@@ -122,12 +142,9 @@ function ResourcesTab({ node, resources }) {
     const { t } = useTranslation();
     return (
         <Section label={isBudget(node) ? t('projects.inspect.resourceCap') : t('projects.fact.resources')}>
-            {!isBudget(node) && measuredUse(node)
-                ? <ProjectResources node={node} resources={resources} quota={effectiveLimit(node, node.limit)} />
-                : <QuotaBadges resources={resources} quota={node.limit} size="xs" />}
-            {!isBudget(node) && projectKinds(node, resources).includes('llm') && (
-                <Box mt="xs"><LlmLimitHints compact resources={resources} limit={effectiveLimit(node, node.limit)} /></Box>
-            )}
+            {isBudget(node)
+                ? <QuotaBadges resources={resources} quota={node.limit} size="xs" />
+                : <ProjectResourcesNow node={node} resources={resources} />}
             {/* Who pays for what: every allocation, the ones that no longer count included (dimmed). */}
             {(node.allocations || []).length > 0 && (
                 <Box mt="md">

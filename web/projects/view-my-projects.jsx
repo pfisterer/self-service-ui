@@ -9,7 +9,7 @@ import { useAuth } from '/providers/auth.jsx';
 import { useNodesApi } from './api-nodes.jsx';
 import { projectKeys } from './query-keys.js';
 import { ProjectCard } from './card-project.jsx';
-import { ProjectPanel, ProjectsBoard } from './project-tile.jsx';
+import { ProjectPanel, ProjectsBoard, panelTab } from './project-tile.jsx';
 import { OFFERS_PATH } from '/nav-v2.js';
 import { BudgetOffers } from './component-budget-offers.jsx';
 import { NewProjectButton } from './component-new-project-button.jsx';
@@ -109,10 +109,14 @@ export function MyProjectsView({ area = 'cloud', v2 = false }) {
         if (!linkedProject || !listed) return;
         document.getElementById(`project-${linkedProject}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
     }, [linkedProject, listed]);
-    // Giving back one allocation of a project, or extending it without one, is a confirmation, no dialog; everything else opens one.
-    const handleAction = (action, node, tab) => (action === 'allocation-end' || action === 'allocation-end-alone'
-        ? endAllocation(node, { holder: holdsProject(node.project, getAuthUserEmail(user)), resources: config?.resources, atEnd: action === 'allocation-end-alone' })
-        : dlg.open(action, node, tab));
+    // Giving back one allocation of a project, or extending it without one, is a confirmation, no dialog; everything else opens one. In the new layout a project's details are its side panel, not a dialog.
+    const handleAction = (action, node, tab) => {
+        if (action === 'allocation-end' || action === 'allocation-end-alone') {
+            return endAllocation(node, { holder: holdsProject(node.project, getAuthUserEmail(user)), resources: config?.resources, atEnd: action === 'allocation-end-alone' });
+        }
+        if (v2 && action === 'details') return setPanel({ id: node.id, tab: panelTab(tab) });
+        return dlg.open(action, node, tab);
+    };
 
     if (!api || !config || projectsQuery.isPending) return <Loading />;
     if (projectsQuery.isError) return <LoadError query={projectsQuery} title={t('projects.myProjects.loadError')} />;
@@ -308,9 +312,9 @@ export function MyProjectsView({ area = 'cloud', v2 = false }) {
                 eligibleBudgets={budgetRequestTargets}
                 currentUserEmail={getAuthUserEmail(user)}
             />
-            {/* History is a tab in here, not a button of its own outside. */}
-            <NodeInspectModal key={`inspect:${dlg.key}`} opened={dlg.is('details')}
-                onClose={dlg.close} node={dlg.node} resources={resources} initialTab={dlg.tab} />
+            {/* History is a tab in here, not a button of its own outside. The new layout has the side panel instead. */}
+            {!v2 && <NodeInspectModal key={`inspect:${dlg.key}`} opened={dlg.is('details')}
+                onClose={dlg.close} node={dlg.node} resources={resources} initialTab={dlg.tab} />}
             <RetireModal key={`retire:${dlg.key}`} opened={dlg.is('release') || dlg.is('delete-for-good')}
                 mode={dlg.is('delete-for-good') ? 'delete' : 'release'} onClose={dlg.close} node={dlg.node} />
             {/* What each budget pays for a project: change it, give it back, or ask another budget for more. */}

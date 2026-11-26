@@ -434,6 +434,23 @@ describe('the new layout renders', () => {
         expectNoRenderFailure();
     });
 
+    it('"Details" of a project opens its side panel, not the details dialog — for a member without the history', async () => {
+        const api = globalThis.__testApi;
+        const listMine = api.listMine;
+        api.listMine = async () => {
+            const page = await listMine();
+            const shared = { ...page.items[0], id: 'p_shared', name: 'Geteiltes Projekt', owner: 'user:someone@dhbw.de', admin_scope: [], viewer_relation: 'member', authorized_users: [{ token: 'user:dennis.pfisterer@dhbw.de', role: 'member' }], members_hidden: 23, history: undefined };
+            return { items: [shared], total: 1 };
+        };
+        renderView(<MyProjectsView area="all" v2 />);
+        await screen.findByText('Geteiltes Projekt');
+        fireEvent.click(screen.getAllByRole('button', { name: i18n.t('projects.v2.action.details') })[0]);
+        expect(await screen.findByRole('tab', { name: i18n.t('projects.v2.tab.members') })).toBeDefined();
+        expect(screen.queryByRole('tab', { name: i18n.t('projects.v2.tab.history') })).toBeNull();
+        expect(screen.queryByText(i18n.t('projects.inspect.titleProject', { name: 'Geteiltes Projekt' }))).toBeNull();
+        expectNoRenderFailure();
+    });
+
     it('My Projects shows the list', async () => {
         localStorage.setItem('self-service.projects.view', JSON.stringify('list'));
         renderView(<MyProjectsView area="all" v2 />);

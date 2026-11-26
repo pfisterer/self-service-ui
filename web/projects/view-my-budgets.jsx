@@ -14,7 +14,7 @@ import { BudgetCard } from './card-budget.jsx';
 import { ProjectCard } from './card-project.jsx';
 import { BudgetTree, budgetResultsToTreeData, budgetsToTreeData, budgetChildCount } from './component-budget-tree.jsx';
 import { BudgetProjectsTable } from './component-budget-projects.jsx';
-import { ProjectPanel } from './project-tile.jsx';
+import { ProjectPanel, panelTab } from './project-tile.jsx';
 import { RetireModal } from './modal-retire.jsx';
 import { DecisionModal } from './modal-decide.jsx';
 import { BudgetFormModal } from './modal-budget-form.jsx';
@@ -119,6 +119,10 @@ export function MyBudgetsView({ params }) {
     // The new layout (gate ui-v2): a project of the table opens in the side panel ({ node, tab }).
     const uiV2 = cloudStatus.uiV2;
     const [panel, setPanel] = useState(null);
+    // A project from a budget's table is its allocation's copy, without its history: the panel gets the project as it is stored, as the dialogs do.
+    const openPanel = (node, tab = 'overview') => (node?.kind === 'project' && !node.history
+        ? api.getNode(node.id).catch(() => node).then(full => setPanel({ node: full ?? node, tab }))
+        : setPanel({ node, tab }));
     const endAllocation = useEndAllocation();
 
     // Which of the managed budgets are drawn at the top.
@@ -428,6 +432,8 @@ export function MyBudgetsView({ params }) {
             return endAllocation(node, { holder: holdsProject(node.project, userEmail), resources: config?.resources, atEnd: action === 'allocation-end-alone' })
                 .then(ok => ok && refresh());
         }
+        // In the new layout a project's details are its side panel, not a dialog (a budget's stay the dialog).
+        if (uiV2 && action === 'details' && node?.kind === 'project') return openPanel(node, panelTab(tab));
         // A project from a budget's table comes as its allocation's copy, without its history: the dialogs get the project as it is stored.
         if (node?.kind === 'project' && !node.history && ['change', 'details', 'release', 'delete-for-good'].includes(action)) {
             return api.getNode(node.id).catch(() => node).then(full => dlg.open(action, full ?? node, tab));
@@ -675,7 +681,7 @@ export function MyBudgetsView({ params }) {
                                         // A row opens the project's one dialog, as its
                                         // Edit or Details button does.
                                         // A row opens its project on what it consumes: the table shows only the summary of it.
-                                        onOpen={(node) => (uiV2 ? setPanel({ node, tab: 'overview' })
+                                        onOpen={(node) => (uiV2 ? openPanel(node)
                                             : handleAction(projectActions(node, { manager: true }).change ? 'change' : 'details', node, TAB_USAGE))} />
                                 )}
                             </Stack>
@@ -695,7 +701,7 @@ export function MyBudgetsView({ params }) {
                 <ProjectPanel node={panel?.node ?? null} tab={panel?.tab ?? 'overview'}
                     ctx={{ resources, filter: 'all', perspective: 'manager', managedIds, isRoot: cloudStatus.isRoot }}
                     onTab={(tab) => setPanel(p => (p ? { ...p, tab } : p))} onClose={() => setPanel(null)}
-                    onAction={handleAction} onOpen={(node, tab) => setPanel({ node, tab: tab || 'overview' })} />
+                    onAction={handleAction} onOpen={(node, tab) => openPanel(node, tab || 'overview')} />
             )}
 
             {/* ── Dialogs (one instance per view) ────────────────────────── */}
