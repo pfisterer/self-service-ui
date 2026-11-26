@@ -89,14 +89,18 @@ export function SubNavItem({ item, active, onClick, vertical = false, tight = fa
                 whiteSpace: 'nowrap',
                 cursor: 'pointer',
             }}>
-                {item.label}
+                {/* The label takes the width of its bold form from the start (an invisible bold copy in the same grid cell), so marking another item as active does not shift its neighbours. */}
+                <span style={{ display: 'inline-grid' }}>
+                    <span style={{ gridArea: '1 / 1' }}>{item.label}</span>
+                    <span aria-hidden="true" style={{ gridArea: '1 / 1', fontWeight: 600, visibility: 'hidden' }}>{item.label}</span>
+                </span>
                 {item.dot && <PendingDot ml="6" />}
             </Box>
         </Link>
     );
 }
 
-// SubNavItems draws a section's items. A group (the projects page and its kinds) reads as its first item with the others in brackets after it, close together and dotted apart — "All (Cloud · Workspaces · LLM)" —, in the vertical menu indented under it instead. An item apart from the rest ("Meine Ressourcen") follows a divider.
+// SubNavItems draws a section's items. A group (the projects page and its kinds) reads as its first item with the others in brackets after it, close together and dotted apart — "All [Cloud · Workspaces · LLM]" —, in the vertical menu indented under it instead. An item apart from the rest ("Meine Ressourcen") follows a divider.
 function SubNavItems({ items, activeItem, onClick, vertical = false }) {
     const link = (item, tight) => <SubNavItem key={item.href} item={item} onClick={onClick} vertical={vertical} tight={tight} active={activeItem?.href === item.href} />;
     const mark = (key, text) => <Text key={key} span size="sm" c="dimmed" aria-hidden="true" style={{ alignSelf: 'center' }}>{text}</Text>;
@@ -114,9 +118,9 @@ function SubNavItems({ items, activeItem, onClick, vertical = false }) {
         return [divider, (
             <Box key={`g-${first.href}`} style={{ display: 'flex', alignItems: 'stretch', height: '100%' }}>
                 {link(first, false)}
-                {mark(`open-${first.href}`, '(')}
+                {mark(`open-${first.href}`, '[')}
                 {inner}
-                {mark(`close-${first.href}`, ')')}
+                {mark(`close-${first.href}`, ']')}
             </Box>
         )];
     });
