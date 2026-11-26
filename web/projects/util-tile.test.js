@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tileActions, tileBars, tileFlag, tileKind } from './util-tile.js';
+import { panelActions, tileActions, tileBars, tileFlag, tileKind } from './util-tile.js';
 
 const OWNER = { details: true, change: true, release: true };
 
@@ -79,5 +79,25 @@ describe('tileBars', () => {
 
     it('keeps the catalogue order without a measurement', () => {
         expect(tileBars(R, { cores: 10, ram: 100 }, null).map(b => b.resource.id)).toEqual(['cores', 'ram']);
+    });
+});
+
+describe('panelActions', () => {
+    it('leaves out what a tab of the panel covers and keeps the rest', () => {
+        const a = tileActions({ kind: 'cloud', can: OWNER, openstackUrl: 'https://os', releasable: true, usage: true });
+        expect(panelActions(a)).toEqual({ primary: 'openstack', secondary: 'edit', menu: [{ id: 'link', danger: false }, { id: 'release', danger: true }] });
+    });
+
+    it('moves the second action up when the first one is a tab', () => {
+        expect(panelActions({ primary: 'details', secondary: 'edit', menu: [] })).toEqual({ primary: 'edit', secondary: null, menu: [] });
+    });
+
+    it('keeps for a member only what no tab covers', () => {
+        const a = tileActions({ kind: 'cloud', can: { details: true }, openstackUrl: null, usage: true, memberView: true });
+        expect(panelActions(a)).toEqual({ primary: null, secondary: null, menu: [{ id: 'link', danger: false }] });
+    });
+
+    it('ends up empty when only tabs were left', () => {
+        expect(panelActions({ primary: 'details', secondary: 'usage', menu: [{ id: 'members', danger: false }] })).toEqual({ primary: null, secondary: null, menu: [] });
     });
 });

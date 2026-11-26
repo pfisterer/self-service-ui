@@ -74,3 +74,13 @@ export function tileBars(resources, limit, inUse, max = 3) {
     bars.sort((a, b) => (b.share ?? -1) - (a.share ?? -1) || a.order - b.order);
     return bars.slice(0, max);
 }
+
+// PANEL_TAB_ACTIONS are the tile actions that only lead to a tab of the side panel; inside the panel the tabs are right there, so they are no buttons of their own.
+export const PANEL_TAB_ACTIONS = new Set(['details', 'usage', 'members', 'history']);
+
+// panelActions are a tile's actions as the side panel shows them: without those leading to one of its tabs. A second action moves up when the first one goes; "Mehr" keeps only what is left. All three may end up empty, and the panel then has no buttons at all.
+export function panelActions({ primary = null, secondary = null, menu = [] } = {}) {
+    const keep = (id) => (id && !PANEL_TAB_ACTIONS.has(id) ? id : null);
+    const first = keep(primary), second = keep(secondary);
+    return { primary: first ?? second, secondary: first ? second : null, menu: menu.filter(i => !PANEL_TAB_ACTIONS.has(i.id)) };
+}

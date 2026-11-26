@@ -18,7 +18,7 @@ import {
     liveAllocations, managesAllocation, measuredUse, nodeTitle, openstackProjectUrl, openstackSide, overageEntries, ownerEmail, projectActions, projectKinds,
     resourceName, resourceSummaryText, resourceUnitName,
 } from './util-project.jsx';
-import { tileActions, tileBars, tileFlag, tileKind } from './util-tile.js';
+import { panelActions, tileActions, tileBars, tileFlag, tileKind } from './util-tile.js';
 
 // The unified project tile of the new layout (gate ui-v2) and what belongs to it: the list row, the "Mehr" menu and the side panel. One shape for every kind: the kind, a chip only where something differs, the name (opening the side panel), the purpose in two lines, at most three bars, one line of facts, and two buttons plus "Mehr". The decisions are in util-tile.js.
 
@@ -130,10 +130,11 @@ export function MoreMenu({ items, run, copied, size = 'sm' }) {
     );
 }
 
-// TileButtons: the primary action (filled), the second one (outlined) and "Mehr".
-export function TileButtons({ model, acts, size = 'sm', grow = true }) {
+// TileButtons: the primary action (filled), the second one (outlined) and "Mehr". actions defaults to the tile's; nothing to show draws nothing.
+export function TileButtons({ model, acts, actions = model.actions, size = 'sm', grow = true }) {
     const { t } = useTranslation();
-    const { primary, secondary, menu } = model.actions;
+    const { primary, secondary, menu } = actions;
+    if (!primary && !secondary && menu.length === 0) return null;
     return (
         <Group gap="xs" wrap="wrap">
             {primary && <Button size={size} style={grow ? { flex: '1 0 auto' } : undefined} color={primary === 'decide' ? COLOR.attention : undefined} onClick={() => acts.run(primary)}>{t(`projects.v2.action.${primary}`)}</Button>}
@@ -302,7 +303,8 @@ function PanelBody({ node, ctx, tab, onTab, onAction, onOpen }) {
                         <Group gap="xs"><Text fw={700} size="xl" lh={1.25}>{model.title}</Text><TileFlag flag={model.flag} /></Group>
                         {model.description && <Text size="sm" c="dimmed">{model.description}</Text>}
                     </Stack>
-                    <TileButtons model={model} acts={acts} grow={false} />
+                    {/* Only what no tab covers: details, usage, members and history are the tabs right below. */}
+                    <TileButtons model={model} acts={acts} actions={panelActions(model.actions)} grow={false} />
                     <Tabs value={tab} onChange={(v) => v && onTab(v)} keepMounted={false}>
                         <Tabs.List>
                             {tabs.map(id => <Tabs.Tab key={id} value={id}>{t(`projects.v2.tab.${id}`)}</Tabs.Tab>)}

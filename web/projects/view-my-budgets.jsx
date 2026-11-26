@@ -27,7 +27,7 @@ import { useProjectConfig } from './projects.jsx';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useRouter } from 'wouter';
 import { childrenById, COLOR, formatError, getAuthUserEmail, holdsProject, isAllocation, isBudget, projectActions, requestedBy, requestTypes, requestType } from './util-project.jsx';
-import { linkedPaths } from './project-link.js';
+import { linkedBudgetId, linkedPaths } from './project-link.js';
 import { NodeStatusBadge } from './component-common.jsx';
 import { useCloudStatus } from './cloud-status.jsx';
 
@@ -391,6 +391,20 @@ export function MyBudgetsView({ params }) {
         setSelectedNode(node);
         navigate(`/${encodeURIComponent(node.id)}`, { replace: true });
     };
+
+    // New layout: a link to a project (from a mail, /projects?project=… for somebody who sees it through a budget) opens the project in its side panel over the budget paying for it, selected in the tree, instead of showing the project in place of a budget. linkedBudgetId prefers a budget the viewer manages.
+    useEffect(() => {
+        if (!uiV2 || linked?.kind !== 'project') return;
+        const project = linked;
+        const budgetId = linkedBudgetId(project, rootBudgets.map(b => b.id));
+        // Panel and budget together, once the budget is known; a budget the viewer may not fetch leaves the project where it is, with its panel open.
+        Promise.resolve(budgetId ? api.getNode(budgetId).catch(() => null) : null).then(budget => {
+            setPanel({ node: project, tab: 'overview' });
+            if (budget) select(budget);
+        });
+        // select and api are new every render; the link is what matters.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [uiV2, linked?.id]);
 
     const handleDelete = async (node) => {
         // Like deleting a project for good: it cannot be undone, so the name

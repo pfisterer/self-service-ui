@@ -28,3 +28,13 @@ export function linkedPaths(node) {
     }
     return [(node.parent_path || []).map(p => p.id)];
 }
+
+// linkedBudgetId is the budget a linked project is shown under: of the budgets paying for it, the first one inside the viewer's tree (a path through one of the budgets drawn at the top, shownIds; 'root' stands for the whole tree), else the first one paying. null for anything but a project, or one nobody pays for.
+export function linkedBudgetId(node, shownIds = []) {
+    if (node?.kind !== 'project') return null;
+    const paths = linkedPaths(node).filter(p => p.length > 0);
+    const shown = new Set(shownIds);
+    const inTree = paths.find(p => shown.has('root') || p.some(id => shown.has(id)));
+    const path = inTree ?? paths[0];
+    return path ? path[path.length - 1] : null;
+}

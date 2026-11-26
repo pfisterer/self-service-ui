@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { linkTarget, linkedPaths } from './project-link.js';
+import { linkTarget, linkedBudgetId, linkedPaths } from './project-link.js';
 
 const RES = [{ id: 'cores', kind: 'cloud' }];
 const p = (s) => new URLSearchParams(s);
@@ -34,5 +34,25 @@ describe('linkedPaths', () => {
     it('follows a budget’s or an allocation’s own parents', () => {
         expect(linkedPaths({ kind: 'allocation', parent_path: [{ id: 'b_ma' }, { id: 'b_grund' }] })).toEqual([['b_ma', 'b_grund']]);
         expect(linkedPaths(null)).toEqual([]);
+    });
+});
+
+describe('linkedBudgetId', () => {
+    const project = { kind: 'project', allocations: [
+        { status: 'approved', budget_id: 'b1', budget_path: [{ id: 'org' }, { id: 'b1' }] },
+        { status: 'approved', budget_id: 'b2', budget_path: [{ id: 'fac' }, { id: 'b2' }] },
+    ] };
+
+    it('prefers a paying budget inside the viewer\'s tree', () => {
+        expect(linkedBudgetId(project, ['fac'])).toBe('b2');
+    });
+
+    it('falls back to the first paying budget', () => {
+        expect(linkedBudgetId(project, ['other'])).toBe('b1');
+    });
+
+    it('is null for a budget or a project nobody pays', () => {
+        expect(linkedBudgetId({ kind: 'budget', parent_path: [] }, [])).toBeNull();
+        expect(linkedBudgetId({ kind: 'project', allocations: [] }, [])).toBeNull();
     });
 });
