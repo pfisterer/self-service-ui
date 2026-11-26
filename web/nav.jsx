@@ -141,7 +141,7 @@ export function useNav() {
     // Longest match wins, so /dyndns/zones/example.org still marks "Zone
     // Management" — sub-routes belong to the item they hang under.
     const activeItem = (activeSection?.items || [])
-        .filter(i => currentPath === i.href || currentPath.startsWith(i.href + '/'))
+        .filter(i => [i.href, ...(i.also || [])].some(h => currentPath === h || currentPath.startsWith(h + '/')))
         .sort((a, b) => b.href.length - a.href.length)[0] ?? null;
 
     return {

@@ -1,6 +1,6 @@
 // The navigation of the new layout (gate ui-v2), as plain data so it can be tested without React: at most five entries at the top, Start only through the logo.
 //
-//   Projekte             every project in one place, the kind as a filter with its own address, and "Was ich bekommen kann"
+//   Projekte             "Meine Projekte" (every project in one place; the kind is a filter on that page, each with its own address) and, apart from it, "Meine Ressourcen"
 //   Workspaces           its tools: servers, batch jobs, usage
 //   Sprachmodelle        its tools: overview, available models, keys, usage
 //   DNS und Zertifikate  zones, TLS certificates, the zones' administration
@@ -33,7 +33,8 @@ export function navSectionsV2(t, ctx) {
             label: t('nav.v2.projects'),
             base: '/projects',
             items: [
-                ...PROJECT_FILTERS.filter(f => shows[f.kind]).map(f => ({ label: t(`nav.v2.filter_${f.kind}`), href: f.path })),
+                // One item for the projects: the kinds are filters on its page, not items of their own, so "Meine Ressourcen" stands apart. `also` marks the item on every filter's address.
+                { label: t('nav.v2.myProjects'), href: PROJECT_FILTERS[0].path, also: PROJECT_FILTERS.filter(f => shows[f.kind]).map(f => f.path) },
                 { label: t('nav.v2.offers'), href: OFFERS_PATH },
             ],
         },

@@ -36,15 +36,17 @@ describe('navSectionsV2', () => {
         expect(items(navSectionsV2(t, { ...STUDENT, canRequestBudgets: true }), 'admin')).toEqual(['/admin/budgets']);
     });
 
-    it('lists the kinds as filters of the projects, and what one can get', () => {
-        expect(items(navSectionsV2(t, STUDENT), 'projects')).toEqual(['/projects/all', '/projects/cloud', '/projects/workspaces', '/projects/llm', '/projects/offers']);
-        expect(items(navSectionsV2(t, { cloudProjects: true }), 'projects')).toEqual(['/projects/all', '/projects/cloud', '/projects/offers']);
+    it('has one item for the projects, with the kinds as its filters, and the resources apart from it', () => {
+        expect(items(navSectionsV2(t, STUDENT), 'projects')).toEqual(['/projects/all', '/projects/offers']);
+        const mine = (ctx) => navSectionsV2(t, ctx).find(s => s.id === 'projects').items[0].also;
+        expect(mine(STUDENT)).toEqual(['/projects/all', '/projects/cloud', '/projects/workspaces', '/projects/llm']);
+        expect(mine({ cloudProjects: true })).toEqual(['/projects/all', '/projects/cloud']);
     });
 
     it('keeps the workspace and LLM tools for their members only; an offer is reached through the projects', () => {
         const s = navSectionsV2(t, { ...STUDENT, workspaces: 'offer', llmArea: false });
         expect(ids(s)).toEqual(['projects', 'dyndns']);
-        expect(items(s, 'projects')).toContain('/projects/workspaces');
+        expect(s.find(x => x.id === 'projects').items[0].also).toContain('/projects/workspaces');
     });
 
     it('has the TLS certificates beside the zones, the administration only with a rule', () => {
