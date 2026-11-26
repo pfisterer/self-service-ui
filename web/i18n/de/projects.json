@@ -1448,11 +1448,6 @@
             "poolShared": "gemeinsamer Topf",
             "onlyHere": "Nur hieraus"
         },
-        "table": {
-            "consumed": "verbraucht",
-            "inUse": "belegt",
-            "granted": "zugeteilt"
-        },
         "budget": {
             "grants_one": "1 Freigabe",
             "grants_other": "{{count}} Freigaben",

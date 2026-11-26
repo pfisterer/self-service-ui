@@ -35,7 +35,7 @@ const FILTER_STATUSES = ['approved', 'pending', 'change_pending', 'ended', 'reje
 // one page. Each row offers what the viewer may do — with this allocation
 // (change, decide, withdraw) and with the project (its dialog, releasing it
 // where the viewer manages all of it); clicking a row opens the project.
-// v2 (new layout): one tab per kind (no "all"), a column per resource always (the table scrolls instead of summing up), each cell a two-tone bar (used of granted), two labelled sorts per column ("belegt" or "verbraucht", and "zugeteilt"), and by default the biggest user of the kind's first resource on top.
+// v2 (new layout): one tab per kind (no "all"), a column per resource always (the table scrolls instead of summing up), each cell a two-tone bar (used of granted), two sorts per column, the same marks as the old layout (Activity: belegt or verbraucht, Package: zugeteilt; the words in their tooltips), and by default the biggest user of the kind's first resource on top.
 export function BudgetProjectsTable({ budget, resources, onAction, onOpen, v2 = false }) {
     const { t } = useTranslation();
     const api = useNodesApi();
@@ -258,7 +258,7 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, v2 = 
                     // all rows, so the figures line up from row to row. Only a
                     // phone-narrow panel still scrolls.
                     <div ref={tableBoxRef}>
-                    <Table.ScrollContainer minWidth={v2 ? 420 + 150 * columns.length : 480}>
+                    <Table.ScrollContainer minWidth={v2 ? 420 + 72 * columns.length : 480}>
                         <Table highlightOnHover verticalSpacing="xs" fz="sm" layout="fixed">
                             <Table.Thead>
                                 <Table.Tr>
@@ -298,17 +298,6 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, v2 = 
                                             {/* One sort per line of the cells below: what is
                                                 in use, what was granted — the same marks as
                                                 in front of the rows. VMs have only the first. */}
-                                            {v2 ? (
-                                                <Group gap={4} justify="flex-end" wrap="nowrap" mt={4}>
-                                                    <LabelledSort label={t(c.window ? 'projects.v2.table.consumed' : 'projects.v2.table.inUse')}
-                                                        title={t(c.window ? 'projects.resources.sortConsumed' : 'projects.resources.sortInUse', { name: c.label })}
-                                                        sortKey={c.id === VMS ? 'servers' : `used:${c.id}`} sort={sort} onSort={toggleSort} />
-                                                    {c.id !== VMS && (
-                                                        <LabelledSort label={t('projects.v2.table.granted')} title={t('projects.resources.sortReserved', { name: c.label })}
-                                                            sortKey={`reserved:${c.id}`} sort={sort} onSort={toggleSort} />
-                                                    )}
-                                                </Group>
-                                            ) : (
                                             <Group gap={2} justify="flex-end" wrap="nowrap" mt={2}>
                                                 <ResourceSort icon={Activity} label={t(c.window ? 'projects.resources.sortConsumed' : 'projects.resources.sortInUse', { name: c.label })}
                                                     sortKey={c.id === VMS ? 'servers' : `used:${c.id}`} sort={sort} onSort={toggleSort} />
@@ -317,7 +306,6 @@ export function BudgetProjectsTable({ budget, resources, onAction, onOpen, v2 = 
                                                         sortKey={`reserved:${c.id}`} sort={sort} onSort={toggleSort} />
                                                 )}
                                             </Group>
-                                            )}
                                         </Table.Th>
                                     ))}
                                     <Table.Th w={84}><VisuallyHidden>{t('projects.budgetProjects.colActions')}</VisuallyHidden></Table.Th>
@@ -630,23 +618,6 @@ function BarCell({ figures }) {
                 </Progress.Root>
             )}
         </Stack>
-    );
-}
-
-// LabelledSort is a sort control with words ("belegt", "zugeteilt"), for the new layout.
-function LabelledSort({ label, title, sortKey, sort, onSort }) {
-    const active = sort.key === sortKey;
-    const Arrow = sort.order === 'asc' ? ArrowUp : ArrowDown;
-    return (
-        <Tooltip label={title} openDelay={300}>
-            <UnstyledButton onClick={(e) => { e.stopPropagation(); onSort(sortKey); }} aria-label={title}
-                aria-sort={active ? (sort.order === 'asc' ? 'ascending' : 'descending') : undefined}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: '1px 6px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                    border: `1px solid ${active ? 'var(--mantine-color-text)' : 'var(--mantine-color-default-border)'}`,
-                    background: active ? 'var(--mantine-color-text)' : 'transparent', color: active ? 'var(--mantine-color-body)' : 'var(--mantine-color-dimmed)' }}>
-                {label}{active && <Arrow size={10} />}
-            </UnstyledButton>
-        </Tooltip>
     );
 }
 

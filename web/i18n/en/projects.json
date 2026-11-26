@@ -1448,11 +1448,6 @@
             "poolShared": "shared pool",
             "onlyHere": "Only from here"
         },
-        "table": {
-            "consumed": "consumed",
-            "inUse": "in use",
-            "granted": "granted"
-        },
         "budget": {
             "grants_one": "1 grant",
             "grants_other": "{{count}} grants",
