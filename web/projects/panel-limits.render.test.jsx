@@ -39,9 +39,9 @@ const project = (extra = {}) => ({
     ...extra,
 });
 
-function renderPanel(node, perspective = 'owner') {
+function renderPanel(node, perspective = 'owner', ctx = { resources: RESOURCES, filter: 'all' }) {
     const onAction = vi.fn();
-    renderView(<ProjectPanel node={node} ctx={{ resources: RESOURCES, filter: 'all', perspective }} tab="overview"
+    renderView(<ProjectPanel node={node} ctx={{ ...ctx, perspective }} tab="overview"
         onTab={() => {}} onClose={() => {}} onAction={onAction} onOpen={() => {}} />, { config: CONFIG, user: { profile: { email: 'owner@example.org' } } });
     return onAction;
 }
@@ -52,6 +52,13 @@ describe('the side panel of an LLM project', () => {
         fireEvent.click(await screen.findByRole('button', { name: i18n.t('projects.v2.more') }));
         fireEvent.click(await screen.findByText(i18n.t('projects.v2.action.limits')));
         expect(onAction).toHaveBeenCalledWith('change', expect.objectContaining({ id: 'p_llm' }), 'resources-llm');
+    });
+
+    it('offers "Modelle und Grenzen" also on a page filtered to another kind, which only knows that kind\'s resources', async () => {
+        const workspaces = RESOURCES.filter(r => r.area === 'workspaces');
+        renderPanel(project(), 'owner', { resources: workspaces, allResources: RESOURCES, filter: 'workspaces' });
+        fireEvent.click(await screen.findByRole('button', { name: i18n.t('projects.v2.more') }));
+        expect(await screen.findByText(i18n.t('projects.v2.action.limits'))).toBeTruthy();
     });
 
     it('shows the caps of its budgets in the overview, by group', async () => {

@@ -159,7 +159,8 @@ export function MyProjectsView({ area = 'cloud', v2 = false }) {
     // What a tile of the new layout needs of a project.
     const slugOf = (node) => (workspaceProjects.data ?? []).find(x => x.tree_node === node.id)?.slug;
     const tileCtx = (node) => ({
-        resources: areaResources, filter: area, perspective: memberOnly(node) ? 'member' : 'owner', start: startOf(node), envBuild: envBuildOf(node),
+        // allResources: what the page's filter leaves out still counts for actions that are about another kind ("Modelle und Grenzen" on a cloud project that also has LLM resources).
+        resources: areaResources, allResources: resources, filter: area, perspective: memberOnly(node) ? 'member' : 'owner', start: startOf(node), envBuild: envBuildOf(node),
         jobsHref: jobsOf(node) && slugOf(node) ? `/workspaces/jobs?project=${encodeURIComponent(slugOf(node))}` : null,
         managedIds, isRoot: cloudStatus.isRoot,
     });

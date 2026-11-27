@@ -37,7 +37,7 @@ export function useTileModel(node, ctx) {
     const config = useProjectConfig();
     const { user } = useAuth();
     const { llmArea } = useAiAreasVisible();
-    const { resources = [], filter = 'all', perspective = 'owner', start = null, jobsHref = null, envBuild = null, managedIds = null, isRoot = false } = ctx;
+    const { resources = [], allResources = resources, filter = 'all', perspective = 'owner', start = null, jobsHref = null, envBuild = null, managedIds = null, isRoot = false } = ctx;
     const me = getAuthUserEmail(user).toLowerCase();
     const memberView = perspective === 'member' || isMemberView(node);
     const can = memberView ? { details: true } : projectActions(node, { manager: perspective === 'manager', canDelete: deletesOnRequest(config?.retirement) });
@@ -52,7 +52,7 @@ export function useTileModel(node, ctx) {
     const usage = !!openstackSide(node).external_id;
     const actions = tileActions({
         kind, can, openstackUrl, start, keys: kind === 'llm' && llmArea === 'member' && node.status === 'approved',
-        jobs: !!jobsHref, llm: kinds.includes('llm'), decide: !!decideOn, releasable, usage, memberView,
+        jobs: !!jobsHref, llm: projectKinds(node, allResources).includes('llm'), decide: !!decideOn, releasable, usage, memberView,
     });
     const limit = node.limit || {};
     const inUse = measuredUse(node);
