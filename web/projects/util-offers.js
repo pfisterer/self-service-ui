@@ -1,4 +1,4 @@
-// "Was ich bekommen kann" (new layout): what the budgets a person may request from offer them, added up per resource. Plain functions, tested without rendering.
+// "Meine Ressourcen" (new layout): what the budgets a person may request from offer them, added up per resource. Plain functions, tested without rendering.
 
 import { autoApproveHeadroom, beyondAutoApproveRefused, freeAmount, hasAutoApprove, isAvailability, isPoolAutoApprove, kindOfResource, visibleResources } from './util-project.jsx';
 

@@ -40,6 +40,13 @@ describe('translations', () => {
             for (const key of keys(file)) expect(String(at(file, key)).trim(), key).not.toBe('');
         }
     });
+
+    // German is neutral and does not address the reader (README.md here): the texts of the new layout once said „du“ and „dein“ while everything around them did not. Placeholders are left out first, {{dir}} is no pronoun.
+    it('does not address the reader with du in German', () => {
+        const du = /\b(du|dich|dir|dein|deine|deinen|deinem|deiner|deines|kannst|darfst|hast|bist|musst|willst|möchtest)\b/i;
+        const found = keys(de).filter(key => du.test(String(at(de, key)).replace(/\{\{\w+\}\}/g, '')));
+        expect(found).toEqual([]);
+    });
 });
 
 // Every key a component asks for has to exist: a typo or a renamed key would

@@ -15,7 +15,7 @@ import { formatTerm, TokenBadgeList } from './component-common.jsx';
 import { COLOR, UNLIMITED_QUOTA, beyondAutoApproveRefused, budgetKinds, catalogKinds, getAuthUserEmail, hasAutoApprove, isAvailability, isPoolAutoApprove, kindOfResource, mostSpecificFirst, ownerEmail, resourceName, resourceSummaryText, resourceUnitName, resourcesOfKinds } from './util-project.jsx';
 import { offerOf, offerTotals, offeredAvailabilities, termOf } from './util-offers.js';
 
-// OffersView (/projects/offers, new layout): "Was ich bekommen kann" — what the budgets one may request from offer, added up per kind ("Sofort" and "Mit Antrag, höchstens"), and below, folded, each budget on its own with a button to start a project from it alone. The same budgets as the former "Budgets für neue Projekte" under the project lists: those the viewer may request from and does not manage.
+// OffersView (/projects/offers, new layout): "Meine Ressourcen" — what the budgets one may request from offer, added up per kind ("Sofort" and "Mit Antrag, höchstens"), and below, folded, each budget on its own with a button to start a project from it alone. The same budgets as the former "Budgets für neue Projekte" under the project lists: those the viewer may request from and does not manage.
 export function OffersView() {
     const { t } = useTranslation();
     const api = useNodesApi();

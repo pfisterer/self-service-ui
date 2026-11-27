@@ -1,6 +1,6 @@
 // The navigation of the new layout (gate ui-v2), as plain data so it can be tested without React: at most five entries at the top, Start only through the logo.
 //
-//   Projekte             every project in one place, the kind as a filter with its own address, and "Was ich bekommen kann"
+//   Projekte             every project in one place, the kind as a filter with its own address, and "Meine Ressourcen"
 //   Workspaces           its tools: servers, batch jobs, usage
 //   Sprachmodelle        its tools: overview, available models, keys, usage
 //   DNS und Zertifikate  zones, TLS certificates

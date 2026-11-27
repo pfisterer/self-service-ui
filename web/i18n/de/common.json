@@ -40,7 +40,7 @@
             "dns": "DNS und Zertifikate",
             "tls": "TLS-Zertifikate",
             "admin": "Verwaltung",
-            "adminNothing": "Hier gibt es für dich nichts zu verwalten.",
+            "adminNothing": "Hier gibt es nichts zu verwalten.",
             "dnsAdmin": "DNS-Verwaltung"
         }
     },

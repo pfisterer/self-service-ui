@@ -247,7 +247,7 @@ export function MyProjectsView({ area = 'cloud', v2 = false }) {
             )}
             </Stack>
 
-            {/* The new layout shows what one can get on a page of its own (Projekte › Was ich bekommen kann). */}
+            {/* The new layout shows what one can get on a page of its own (Projekte › Meine Ressourcen). */}
             {v2 && offers.length > 0 && (
                 <Text size="sm"><Anchor component={Link} href={OFFERS_PATH.replace('/projects', '')}>{t('projects.v2.toOffers')}</Anchor></Text>
             )}

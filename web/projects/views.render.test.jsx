@@ -421,7 +421,7 @@ describe('the cloud project views render', () => {
     });
 });
 
-// The new layout (gate ui-v2): the same views with the unified tiles, the side panel, the budget sections and "Was ich bekommen kann".
+// The new layout (gate ui-v2): the same views with the unified tiles, the side panel, the budget sections and "Meine Ressourcen".
 describe('the new layout renders', () => {
 
     it('My Projects shows tiles with "Details" instead of "Mehr"; the name and "Details" open the side panel', async () => {
@@ -472,7 +472,7 @@ describe('the new layout renders', () => {
         await waitFor(() => expectNoRenderFailure());
     });
 
-    it('"Was ich bekommen kann" renders the sums and the budgets', async () => {
+    it('"Meine Ressourcen" renders the sums and the budgets', async () => {
         const roots = (await globalThis.__testApi.listMyBudgets()).items;
         globalThis.__testApi.listMyBudgets = async () => ({ items: [], total: 0 });
         globalThis.__testApi.listEligibleForMe = async () => ({ items: roots.map(b => ({ ...b, auto_approve: { per_requester_limit: {} } })), total: roots.length });
