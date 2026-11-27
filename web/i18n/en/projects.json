@@ -1392,7 +1392,6 @@
         "nothingYet": "No resources yet",
         "col": {
             "project": "Project",
-            "kind": "Kind",
             "end": "End",
             "paidFrom": "Paid from",
             "usage": "Utilisation"

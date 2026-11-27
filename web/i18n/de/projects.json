@@ -1392,7 +1392,6 @@
         "nothingYet": "Noch keine Ressourcen",
         "col": {
             "project": "Projekt",
-            "kind": "Art",
             "end": "Ende",
             "paidFrom": "Bezahlt aus",
             "usage": "Auslastung"

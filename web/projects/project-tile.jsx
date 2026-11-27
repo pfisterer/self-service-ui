@@ -171,14 +171,14 @@ export function TileBar({ bar }) {
     const limitText = unlimited ? '∞' : bar.limit;
     const unit = resourceUnitName(t, bar.resource);
     return (
-        <Stack gap={3}>
+        <Stack gap={2}>
             <Group justify="space-between" wrap="nowrap" gap="xs">
                 <Text size="xs" c="dimmed" truncate>{resourceName(t, bar.resource)}</Text>
                 <Text size="xs" fw={bar.high ? 600 : 500} c={bar.high ? 'orange.8' : undefined} style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                     {measured ? `${bar.used} / ${limitText}` : limitText}{unit ? ` ${unit}` : ''}
                 </Text>
             </Group>
-            {measured && !unlimited && <Progress size="sm" value={Math.min(100, (bar.share ?? 0) * 100)} color={bar.high ? 'orange' : 'blue'} />}
+            {measured && !unlimited && <Progress size="xs" value={Math.min(100, (bar.share ?? 0) * 100)} color={bar.high ? 'orange' : 'blue'} />}
         </Stack>
     );
 }
@@ -209,24 +209,25 @@ export function ProjectTile({ node, ctx, onAction, onOpen, marked = false }) {
     const model = useTileModel(node, ctx);
     const acts = useTileActs(model, { onAction, onOpen });
     return (
-        <Card withBorder radius="md" padding="lg" id={`project-${model.node.id}`}
-            style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%', ...(marked ? { outline: `2px solid var(--mantine-color-${COLOR.attention}-5)` } : {}) }}>
-            <Stack gap={4}>
+        <Card withBorder radius="md" padding="md" id={`project-${model.node.id}`}
+            style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%', ...(marked ? { outline: `2px solid var(--mantine-color-${COLOR.attention}-5)` } : {}) }}>
+            <Stack gap={0}>
                 <Group gap="xs" wrap="wrap">
-                    <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.06em' }}>{kindLabel(t, model)}</Text>
+                    <Text size="10px" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.06em' }}>{kindLabel(t, model)}</Text>
                     <TileFlag flag={model.flag} />
                 </Group>
                 <UnstyledButton onClick={() => onOpen(model.node, 'overview')} aria-label={t('projects.v2.openPanel', { name: model.title })}>
-                    <Text fw={600} size="lg" lh={1.3}>{model.title}</Text>
+                    <Text fw={600} size="md" lh={1.3}>{model.title}</Text>
                 </UnstyledButton>
             </Stack>
-            <Text size="sm" c="dimmed" lineClamp={2} mih={42}>{model.description}</Text>
-            <Stack gap={10} style={{ flex: 1 }}>
+            {/* Compact: the purpose in at most two lines, no room kept for it; the bars below take what is left, so buttons still line up from tile to tile. */}
+            {model.description && <Text size="xs" c="dimmed" lineClamp={2}>{model.description}</Text>}
+            <Stack gap={6} style={{ flex: 1 }}>
                 {model.bars.map(b => <TileBar key={b.resource.id} bar={b} />)}
                 {model.bars.length === 0 && <Text size="xs" c="dimmed">{model.summary || t('projects.v2.nothingYet')}</Text>}
             </Stack>
-            <Box pt={6} style={{ borderTop: '1px solid var(--mantine-color-default-border)' }}><MetaLine model={model} /></Box>
-            <TileButtons model={model} acts={acts} details />
+            <MetaLine model={model} />
+            <TileButtons model={model} acts={acts} size="xs" details />
         </Card>
     );
 }
@@ -236,19 +237,27 @@ function ProjectRow({ node, ctx, onAction, onOpen, marked }) {
     const { t } = useTranslation();
     const model = useTileModel(node, ctx);
     const acts = useTileActs(model, { onAction, onOpen });
-    const top = model.bars[0];
+    // One row reads like a small tile: the kind above the name, the purpose in one line, the chip; then end, who pays, the same bars as the tile (up to three) and the buttons.
     return (
         <Table.Tr id={`project-${model.node.id}`} style={marked ? { outline: `2px solid var(--mantine-color-${COLOR.attention}-5)` } : undefined}>
-            <Table.Td>
+            <Table.Td style={{ verticalAlign: 'top' }}>
+                <Group gap="xs" wrap="wrap">
+                    <Text size="10px" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.06em' }}>{kindLabel(t, model)}</Text>
+                    <TileFlag flag={model.flag} />
+                </Group>
                 <UnstyledButton onClick={() => onOpen(model.node, 'overview')}><Text fw={600} size="sm">{model.title}</Text></UnstyledButton>
-                {model.description && <Text size="xs" c="dimmed" truncate maw={360}>{model.description}</Text>}
-                {model.flag && <Box mt={4}><TileFlag flag={model.flag} /></Box>}
+                {model.description && <Text size="xs" c="dimmed" lineClamp={1}>{model.description}</Text>}
             </Table.Td>
-            <Table.Td><Text size="sm">{kindLabel(t, model)}</Text></Table.Td>
-            <Table.Td><Text size="sm">{model.node.termination_date ? formatDate(model.node.termination_date) : '–'}</Text></Table.Td>
-            <Table.Td><Text size="sm">{model.budgets.join(' + ') || '–'}</Text></Table.Td>
-            <Table.Td miw={170}>{top ? <TileBar bar={top} /> : <Text size="xs" c="dimmed">–</Text>}</Table.Td>
-            <Table.Td><TileButtons model={model} acts={acts} size="xs" grow={false} details /></Table.Td>
+            <Table.Td style={{ verticalAlign: 'top' }}><Text size="sm" style={{ whiteSpace: 'nowrap' }}>{endText(t, model.node)}</Text></Table.Td>
+            <Table.Td style={{ verticalAlign: 'top' }}><Text size="sm">{model.budgets.join(' + ') || '–'}</Text></Table.Td>
+            <Table.Td w={230} style={{ verticalAlign: 'top' }}>
+                {model.bars.length > 0
+                    ? <Stack gap={6}>{model.bars.map(b => <TileBar key={b.resource.id} bar={b} />)}</Stack>
+                    : <Text size="xs" c="dimmed">{model.summary || '–'}</Text>}
+            </Table.Td>
+            <Table.Td style={{ verticalAlign: 'top' }}>
+                <Group justify="flex-end"><TileButtons model={model} acts={acts} size="xs" grow={false} details /></Group>
+            </Table.Td>
         </Table.Tr>
     );
 }
@@ -259,11 +268,10 @@ export function ProjectsBoard({ nodes, ctxOf, view, onAction, onOpen, marked }) 
     if (view === 'list') {
         return (
             <Table.ScrollContainer minWidth={900}>
-                <Table verticalSpacing="sm" highlightOnHover>
+                <Table verticalSpacing="md" highlightOnHover>
                     <Table.Thead>
                         <Table.Tr>
                             <Table.Th>{t('projects.v2.col.project')}</Table.Th>
-                            <Table.Th>{t('projects.v2.col.kind')}</Table.Th>
                             <Table.Th>{t('projects.v2.col.end')}</Table.Th>
                             <Table.Th>{t('projects.v2.col.paidFrom')}</Table.Th>
                             <Table.Th>{t('projects.v2.col.usage')}</Table.Th>
@@ -279,7 +287,7 @@ export function ProjectsBoard({ nodes, ctxOf, view, onAction, onOpen, marked }) 
     }
     return (
         // As many columns as fit with room for the three buttons in one row.
-        <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 460px), 1fr))', gap: 'var(--mantine-spacing-lg)' }}>
+        <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 360px), 1fr))', gap: 'var(--mantine-spacing-md)' }}>
             {nodes.map(n => <ProjectTile key={n.id} node={n} ctx={ctxOf(n)} onAction={onAction} onOpen={onOpen} marked={n.id === marked} />)}
         </Box>
     );
