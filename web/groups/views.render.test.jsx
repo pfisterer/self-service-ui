@@ -102,7 +102,7 @@ describe('the groups views render', () => {
         renderView(<GroupsList />);
         expect(await screen.findByText('wwi23seb')).toBeTruthy();
         expect(screen.getByText('Kurs WWI23SEB')).toBeTruthy();
-        expect(screen.getAllByRole('button', { name: /Gruppe anlegen|Create group/ }).length).toBe(1);
+        expect(screen.getAllByRole('button', { name: /Gruppe anlegen|Create Group/ }).length).toBe(1);
         expectNoRenderFailure();
     });
 
@@ -129,11 +129,11 @@ describe('the groups views render', () => {
     it('a group shows everyone it counts, its managers and its history', async () => {
         renderView(<GroupDetail params={{ id: 'wwi23seb' }} />);
         await screen.findByText('anna@dhbw.de');
-        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder insgesamt|All members/ }));
+        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder insgesamt|All Members/ }));
         expect(await screen.findByText('ben@dhbw.de')).toBeTruthy();
         fireEvent.click(screen.getByRole('tab', { name: /Verwaltung|Managers/ }));
         expect(await screen.findByText('dekan@dhbw.de')).toBeTruthy();
-        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder einsehen|View members/ }));
+        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder einsehen|View Members/ }));
         expect(await screen.findByText('pruefungsamt#leitung')).toBeTruthy();
         expect(screen.getAllByLabelText(/Einsicht in die Mitglieder geben an|Grant viewing the members to/).length).toBeGreaterThan(0);
         fireEvent.click(screen.getByRole('tab', { name: /Verlauf|History/ }));
@@ -153,9 +153,9 @@ describe('the groups views render', () => {
         expect(screen.queryByRole('button', { name: /^(Bearbeiten|Edit)$/ })).toBeNull();
         expect(screen.queryByRole('button', { name: /^(Hinzufügen|Add)$/ })).toBeNull();
         expect(screen.queryByRole('tab', { name: /Verlauf|History/ })).toBeNull();
-        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder insgesamt|All members/ }));
+        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder insgesamt|All Members/ }));
         expect(await screen.findByText('ben@dhbw.de')).toBeTruthy();
-        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder einsehen|View members/ }));
+        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder einsehen|View Members/ }));
         expect(await screen.findByText('pruefungsamt#leitung')).toBeTruthy();
         expect(screen.queryByRole('button', { name: /^(Entfernen|Remove)$/ })).toBeNull();
         expectNoRenderFailure();
@@ -173,7 +173,7 @@ describe('the groups views render', () => {
     it('the browser shows every source as a tree and a Dualis group read-only', async () => {
         renderView(<GroupsBrowser params={{}} />);
         expect((await screen.findAllByText('dualis')).length).toBe(2);
-        expect(screen.getByText(/Letzter Import|Last import/)).toBeTruthy();
+        expect(screen.getByText(/Letzter Import|Last Import/)).toBeTruthy();
         expect(calls.some(c => c.source === 'dualis')).toBe(false);
 
         fireEvent.click(screen.getAllByText('dualis')[0]);
@@ -195,7 +195,7 @@ describe('the groups views render', () => {
         expect(screen.getByText(/nur festlegen, wer ihre Mitglieder einsehen darf|only who may view its members can be set/)).toBeTruthy();
         expect(screen.queryByText(/Diese Gruppe ist leer|This group is empty/)).toBeNull();
         // The viewers are the one thing an admin edits there.
-        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder einsehen|View members/ }));
+        fireEvent.click(screen.getByRole('tab', { name: /Mitglieder einsehen|View Members/ }));
         expect(await screen.findByText('sekretariat@dhbw.de')).toBeTruthy();
         expect(screen.getAllByLabelText(/Einsicht in die Mitglieder geben an|Grant viewing the members to/).length).toBeGreaterThan(0);
         expect(screen.getByRole('button', { name: /^(Entfernen|Remove)$/ })).toBeTruthy();

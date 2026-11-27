@@ -17,7 +17,7 @@
         "intro": "Groups whose members are maintained here: people, other groups and rules for whole address ranges, each with a role and, if wanted, until a date. Groups whose members may only be viewed are marked “view only”.",
         "introAdmin": "All groups of the source {{source}}. Groups from other sources (e.g. bwIDM) are maintained there and can be entered here as members.",
         "search": "Search groups",
-        "create": "Create group",
+        "create": "Create Group",
         "group": "Group",
         "description": "Description",
         "roles": "Roles",
@@ -26,7 +26,7 @@
         "viewOnly": "view only"
     },
     "create": {
-        "title": "Create group",
+        "title": "Create Group",
         "id": "Identifier",
         "idHint": "Becomes the token group:<identifier> by which rules name the group; cannot be changed later. Lowercase letters, digits, dot, hyphen and underscore.",
         "idInvalid": "Only lowercase letters, digits, dot, hyphen and underscore, starting with a letter or digit.",
@@ -42,12 +42,12 @@
     },
     "delete": {
         "button": "Delete",
-        "title": "Delete group?",
-        "confirm": "Delete for good",
+        "title": "Delete Group?",
+        "confirm": "Delete for Good",
         "message": "{{id}} is deleted with all its entries and removed from every other group. Rules in the services that name group:{{id}} no longer apply."
     },
     "detail": {
-        "back": "All groups",
+        "back": "All Groups",
         "token": "Token: {{token}}",
         "edit": "Edit",
         "readOnly": "This group comes from the source {{source}} and is maintained there; it is read-only here.",
@@ -57,30 +57,30 @@
     },
     "tabs": {
         "entries": "Entries ({{count}})",
-        "effective": "All members",
+        "effective": "All Members",
         "managers": "Managers ({{count}})",
-        "viewers": "View members ({{count}})",
+        "viewers": "View Members ({{count}})",
         "history": "History"
     },
     "entries": {
         "member": "Entry",
         "placeholder": "Address, group or pattern:*@domain",
         "relation": "Role",
-        "until": "Valid until",
+        "until": "Valid Until",
         "noEnd": "no end",
         "since": "Since",
         "add": "Add",
         "hint": "A group as entry makes all of its members members of this group, in the chosen role. An entry with an end date counts until the end of that day. The role can be changed right in the table; the end date stays.",
         "none": "No entries yet.",
         "expired": "expired on {{date}}",
-        "changeUntil": "End date",
+        "changeUntil": "End Date",
         "remove": "Remove",
-        "removeTitle": "Remove entry?",
+        "removeTitle": "Remove Entry?",
         "removeConfirm": "Remove",
         "removeMessage": "{{member}} loses the role “{{relation}}” in this group."
     },
     "expiry": {
-        "title": "Change end date",
+        "title": "Change End Date",
         "hint": "Without a date the entry does not end. An expired entry counts again with a new date."
     },
     "effective": {
@@ -96,16 +96,16 @@
         "none": "Only administrators manage this group.",
         "addedBy": "added by {{who}} on {{date}}",
         "remove": "Remove",
-        "removeTitle": "Take management away?",
-        "removeConfirm": "Take away",
+        "removeTitle": "Take Management Away?",
+        "removeConfirm": "Take Away",
         "removeMessage": "{{token}} can no longer manage this group."
     },
     "viewers": {
         "hint": "Whoever may view the members sees the entries of this group and all of its members, and those of every group it contains, at any depth. They cannot change anything and do not become members of the group.",
         "add": "Grant viewing the members to",
         "none": "Apart from the managers, nobody may view the members.",
-        "removeTitle": "Take viewing away?",
-        "removeConfirm": "Take away",
+        "removeTitle": "Take Viewing Away?",
+        "removeConfirm": "Take Away",
         "removeMessage": "{{token}} can no longer view the members of this group."
     },
     "history": {
@@ -139,7 +139,7 @@
         "source": "Source",
         "kind": "Kind",
         "groups": "Groups",
-        "lastSync": "Last import",
+        "lastSync": "Last Import",
         "local": "maintained here",
         "synced": "import ({{type}})",
         "clear": "Clear search",

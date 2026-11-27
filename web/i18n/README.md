@@ -20,6 +20,10 @@ time; one big file per language would be a merge conflict on every branch.
   code. Where a count stands beside a label (`Selected records: 3`) no plural
   is needed at all, which is usually the better screen anyway.
 
+## English
+
+* Headings, navigation, tabs, section titles, column headers, buttons, menu items and dialog titles are in title case (Chicago style): "DNS and Certificates", "Show Keys", "Delete Zone?". Articles, short prepositions and conjunctions stay lowercase inside a label; names keep their spelling (vCPU, nsupdate, k3s) and so do units (GPU h). Everything else — sentences, hints, descriptions, error messages, placeholders, tooltips, form field labels, badges — is in sentence case. `i18n.test.js` checks the navigation and the tabs.
+
 ## German
 
 * Neutral, without addressing the reader: infinitives ("Bitte ein Budget wählen"), passive or "die eigenen Projekte" instead of "deine"/"Ihre". Where an address cannot be avoided, "Sie" — e.g. the mail to zone owners.

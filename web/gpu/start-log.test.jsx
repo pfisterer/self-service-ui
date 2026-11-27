@@ -15,14 +15,14 @@ afterEach(cleanup);
 describe('StartLog', () => {
     it('is folded until asked for', () => {
         renderLog({ events, open: false });
-        const toggle = screen.getByText(/Protokoll anzeigen|Show log/);
+        const toggle = screen.getByText(/Protokoll anzeigen|Show Log/);
         fireEvent.click(toggle);
         expect(screen.getByText(/Pulling image registry\/x:1/)).toBeTruthy();
-        expect(screen.getByText(/Protokoll ausblenden|Hide log/)).toBeTruthy();
+        expect(screen.getByText(/Protokoll ausblenden|Hide Log/)).toBeTruthy();
     });
     it('is open when the start failed', () => {
         renderLog({ events, open: true });
-        expect(screen.getByText(/Protokoll ausblenden|Hide log/)).toBeTruthy();
+        expect(screen.getByText(/Protokoll ausblenden|Hide Log/)).toBeTruthy();
         expect(screen.getByText(/Server requested/)).toBeTruthy();
     });
     it('says when there is nothing yet', () => {

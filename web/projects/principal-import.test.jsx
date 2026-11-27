@@ -26,10 +26,10 @@ describe('PrincipalImportModal', () => {
         renderModal({ onImport, existing: ['user:b@dhbw.de'] });
 
         paste('A <a@dhbw.de>; b@dhbw.de; group:wwi23seb; kaputt; a@dhbw.de');
-        const submit = screen.getByRole('button', { name: 'Add 2 entries' });
+        const submit = screen.getByRole('button', { name: 'Add 2 Entries' });
         expect(submit.disabled).toBe(true);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Remove 3 entries that cannot be added' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Remove 3 Entries That Cannot Be Added' }));
         expect(submit.disabled).toBe(false);
         fireEvent.click(submit);
 
@@ -42,7 +42,7 @@ describe('PrincipalImportModal', () => {
 
         paste('a@dhbw.de\nb@dhbw.de\na@dhbw.de');
         fireEvent.click(screen.getAllByRole('button', { name: 'Remove user:a@dhbw.de' })[0]);
-        fireEvent.click(screen.getByRole('button', { name: 'Add 2 entries' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Add 2 Entries' }));
 
         expect(onImport).toHaveBeenCalledWith([{ token: 'user:b@dhbw.de' }, { token: 'user:a@dhbw.de' }]);
     });
@@ -52,12 +52,12 @@ describe('PrincipalImportModal', () => {
         renderModal({ onImport, roles: ['member', 'reader'] });
 
         paste('E-Mail;Rolle\na@dhbw.de;Reader\nb@dhbw.de;Dozent');
-        const submit = screen.getByRole('button', { name: 'Add 2 entries' });
+        const submit = screen.getByRole('button', { name: 'Add 2 Entries' });
         expect(submit.disabled).toBe(true);
 
         expect(screen.queryByText('“Dozent” is not a known role')).not.toBeNull();
 
-        fireEvent.click(screen.getByRole('button', { name: 'Only rows without a role' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Only Rows without a Role' }));
         // Once the row has a role, the complaint about the file's value is moot.
         expect(screen.queryByText('“Dozent” is not a known role')).toBeNull();
         fireEvent.click(submit);

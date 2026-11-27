@@ -5,7 +5,7 @@
         "page": "This page does not exist."
     },
     "servers": {
-        "title": "Active workspaces",
+        "title": "Active Workspaces",
         "intro": "Your active workspaces in JupyterHub. Each active workspace ends by itself when it is not used, and at the latest after its environment's run time (see state).",
         "name": "Workspace",
         "profile": "Kind",
@@ -17,10 +17,10 @@
         "stopping": "stopping",
         "open": "Open",
         "stop": "Stop",
-        "stopTitle": "Stop workspace?",
+        "stopTitle": "Stop Workspace?",
         "stopConfirm": "Stop",
         "stopMessage": "“{{name}}” is stopped. Files in the home stay, unsaved changes in open notebooks are lost.",
-        "startServer": "Start workspace",
+        "startServer": "Start Workspace",
         "ends": "Ends after {{idle}} without activity, in {{left}} at the latest."
     },
     "profiles": {
@@ -45,10 +45,10 @@
         "vcpuHours": "vCPU h",
         "ramGbHours": "RAM GB h",
         "gpuHours": "GPU h",
-        "homeGbDays": "Home GB-days",
-        "cpuUsed": "CPU used",
-        "cpuUsedHours": "vCPU h used",
-        "ramUsedGbHours": "RAM GB h used",
+        "homeGbDays": "Home GB-Days",
+        "cpuUsed": "CPU Used",
+        "cpuUsedHours": "vCPU h Used",
+        "ramUsedGbHours": "RAM GB h Used",
         "noGpu": "no GPU",
         "empty": "No usage in this period.",
         "csvHint": "The grouping shown as CSV, with the measured values.",
@@ -74,7 +74,7 @@
                 "ready": "ready",
                 "failed": "failed"
             },
-            "log": "Build log",
+            "log": "Build Log",
             "logEmpty": "(no output yet)",
             "rebuild": "Rebuild",
             "current": "In use now:",
@@ -89,7 +89,7 @@
             "notDerived": "This image is not built on one of our bases: it runs as it is, without “CPU + GPU kernel” and without the DHBW extensions.",
             "pinned": "Runs pinned at version",
             "updateAvailable": "The tag now points at a newer version. Running and new workspaces stay on the current one until it is taken.",
-            "update": "Take the newer version",
+            "update": "Take the Newer Version",
             "autoUpdate": "Take new versions of the tag automatically",
             "autoUpdateHint": "Otherwise a newer version is only shown and taken at the press of a button. New workspaces then start with it, running ones keep theirs.",
             "gitHint": "Built like Binder from requirements.txt, environment.yml, apt.txt and postBuild (top level, binder/ or .binder/) on the chosen base. The repository’s files reach the workspaces as “Material from Git” (below). A new version of the base triggers a rebuild; until a build is ready, the previous image stays. A private repository needs an access for its host under “Access to private repositories and images” below.",
@@ -117,7 +117,7 @@
             "refPlaceholder": "default branch"
         },
         "llm": {
-            "title": "LLM project for workspaces",
+            "title": "LLM Project for Workspaces",
             "auto": "Automatic",
             "none": "Without LLM",
             "autoHint": "The workspaces use this project's LLM tokens if it has any, otherwise the first LLM project of each person.",
@@ -131,17 +131,17 @@
             "hint": "Fetched into ~/projects/<repository> and updated at every workspace start, without overwriting one’s own changes; JupyterLab opens that folder. Independent of the environment, so with an existing image too."
         },
         "credentials": {
-            "title": "Access to private repositories and images",
+            "title": "Access to Private Repositories and Images",
             "hint": "With access to a host, the material from Git and an existing image can be private there; the project's workspaces use it when they start. The token is stored encrypted and not shown again; a new one for the same host replaces it. A project image from a private repository is built with it as well; it then lives in a non-public part of the registry, and only this project uses it.",
             "host": "Host",
             "username": "User name",
             "token": "Token",
-            "add": "Add access",
+            "add": "Add Access",
             "save": "Save",
             "setBy": "set by {{who}} on {{when}}",
             "providers": "GitHub: classic token with “repo” and “read:packages”, user name = GitHub name. GitLab: deploy token of the project or group with “read_repository” and “read_registry”, user name = the token's name (add the registry host separately, e.g. registry.gitlab.com). Forgejo/Gitea: token with “read:repository” and “read:package”."
         },
-        "limits": "Limits per person (at the same time)",
+        "limits": "Limits per Person (at the Same Time)",
         "limitsHint": "Counted is what one person runs in this project at the same time.",
         "cancel": "Cancel",
         "save": "Save",
@@ -154,8 +154,8 @@
             "noLimit": "0 = no limit",
             "noGpu": "0 = no GPU"
         },
-        "budgets": "Additional usage limits",
-        "addBudget": "Add a limit",
+        "budgets": "Additional Usage Limits",
+        "addBudget": "Add a Limit",
         "budgetsHint": "Tighter limits within the project quotas, e.g. at most 40 vCPU hours per person in 7 days, so nobody uses up the quota alone. Windows in calendar days: “today”, 7 or 30 days including today, “total” since the project was created. Once a limit is reached, no workspace starts and running workspaces end within 5 minutes (the home stays).",
         "budget": {
             "line": "{{amount}} {{unit}} {{window}} {{who}}",
@@ -183,7 +183,7 @@
         },
         "profilesHint": "What members can choose when starting a workspace in JupyterHub. The platform sets the list; GPU types count against the project's GPU quotas.",
         "jobs": {
-            "title": "Batch jobs",
+            "title": "Batch Jobs",
             "allow": "Allow batch jobs",
             "allowHint": "Commands and notebooks run as a job on one of the project's GPUs, without an open workspace.",
             "noGpu": "The project has no GPU class; GPUs are requested in the budget.",
@@ -204,8 +204,8 @@
         "sub": {
             "environment": "Environment",
             "limits": "Limits",
-            "jobs": "Batch jobs",
-            "release": "Release times",
+            "jobs": "Batch Jobs",
+            "release": "Release Times",
             "groups": "Groups",
             "storage": "Storage"
         },
@@ -223,7 +223,7 @@
             "addPerson": "Add {{email}}",
             "nothingFound": "Nobody found; a person can be added by their e-mail address.",
             "resolve": {
-                "show": "Show the people of the {{count}} course groups",
+                "show": "Show the People of the {{count}} Course Groups",
                 "why": "Their people can then be chosen into groups one by one and are dealt out too.",
                 "count_one": "{{count}} person, can be chosen one by one and is dealt out",
                 "count_other": "{{count}} people, can be chosen one by one and are dealt out",
@@ -231,7 +231,7 @@
                 "failed": "The members of {{group}} cannot be fetched right now. People can also be added by their e-mail address.",
                 "unavailable": "The people in course groups cannot be shown here. People can be added by their e-mail address."
             },
-            "add": "Add group",
+            "add": "Add Group",
             "hint": "Changes apply from the next start of a workspace or job. The group folders count against the project’s storage. “Deal out …” puts the people not yet in a group into new groups or free places: members entered one by one and the people of the course groups shown, each once.",
             "noStorage": "Groups need workspace storage in the project; without it there are no folders.",
             "storage": "Storage limit of the group",
@@ -249,7 +249,7 @@
                 "hint": "Groups take persons only now; assign the people of a course one by one. Earlier entries keep working until they are removed."
             },
             "removeConfirm": {
-                "title": "Remove group {{name}}?",
+                "title": "Remove Group {{name}}?",
                 "text": "Its folder ~/dhbw/groups/{{name}} is deleted with all its files{{used}}. The deletion happens once the project is saved.",
                 "used": " ({{gb}} GB used)",
                 "archiveHint": "To keep it, archive the group instead: its members lose the folder, the managers keep reading it.",
@@ -271,17 +271,17 @@
             },
             "action": {
                 "storage": "Storage limit …",
-                "readOnly": "Members only read",
+                "readOnly": "Members Only Read",
                 "archive": "Archive",
                 "restore": "Restore",
                 "remove": "Remove …"
             },
-            "storageTitle": "Storage limit of group {{name}}",
+            "storageTitle": "Storage Limit of Group {{name}}",
             "storageHint": "Empty = no limit; at most {{gb}} GB (the project’s storage).",
             "storageApply": "Apply",
             "deal": {
-                "button": "Deal out …",
-                "title": "Deal people out to groups",
+                "button": "Deal Out …",
+                "title": "Deal People Out to Groups",
                 "allAssigned": "Everyone is in a group already.",
                 "people_one": "{{count}} person is in no group yet.",
                 "people_other": "{{count}} people are in no group yet.",
@@ -297,19 +297,19 @@
                 "left_other": "{{count}} people stay without a group.",
                 "hint": "Only people without a group are dealt out; existing assignments stay. Takes effect when the project is saved.",
                 "cancel": "Cancel",
-                "apply": "Deal out"
+                "apply": "Deal Out"
             }
         },
         "storageLimits": {
             "noStorage": "The project has no workspace storage; without it there are no limits.",
             "intro": "The project has {{gb}} GB of workspace storage for all homes and shared folders together. Limits below keep one person or folder from filling it for everyone.",
-            "sharedTitle": "Shared folder ~/dhbw/project",
+            "sharedTitle": "Shared Folder ~/dhbw/project",
             "writeAll": "All members write",
             "writeManagers": "Only managers write",
             "writeHint": "Managers always write. “Only managers” suits handing out material and data sets; group work has the group folders.",
             "sharedGb": "Limit of the shared folder",
             "sharedGbHint": "0 = no limit of its own",
-            "homeTitle": "Home per member",
+            "homeTitle": "Home per Member",
             "homeGb": "Limit per home",
             "homeGbHint": "0 = automatic: twice the fair share (storage divided by the number of homes), at least 1 GB. Does not apply to managers.",
             "hint": "Limits apply a few minutes after saving. When one is reached, only writing into that folder fails. Limits for groups are in the Groups tab."
@@ -322,7 +322,7 @@
         "conflictReload": "Reload"
     },
     "storage": {
-        "title": "Storage (admins)",
+        "title": "Storage (Admins)",
         "hint": "Workspace storage on JuiceFS: one volume per project with storage, plus homes from before the projects. Measured hourly.",
         "files": "Files (all directories)",
         "metadata": "Metadata (Valkey, in RAM)",
@@ -331,7 +331,7 @@
         "asOf": "As of: {{when}}",
         "never": "not measured yet",
         "noReport": "No measurement since the AI service last restarted; the next comes on the hour.",
-        "dir": "Project / directory",
+        "dir": "Project / Directory",
         "used": "Used (GB)",
         "quota": "Limit (GB)",
         "share": "Usage",
@@ -341,7 +341,7 @@
         "explain": "A project's limit is its workspace storage from the budget tree; a full volume refuses further writes. The metadata grow with the number of files (roughly 1 GB RAM per 2–3 million files); when RAM runs short, JuiceFS stops."
     },
     "gpuHours": {
-        "title": "GPU use per hour",
+        "title": "GPU Use per Hour",
         "hint": "How full the GPUs were, per hour in local time: colour = share held by workspaces; red outline = someone waited. Sampled every minute, kept 365 days.",
         "hintProject": "Who in the project held or waited for a GPU, and when, in the chosen period.",
         "period": {
@@ -349,7 +349,7 @@
             "30": "30 days",
             "90": "90 days"
         },
-        "class": "GPU class {{name}}",
+        "class": "GPU Class {{name}}",
         "used": "Held by workspaces",
         "inference": "Gap filler (vLLM)",
         "peak": "Busiest hour",
@@ -376,9 +376,9 @@
         "classesHint": "Each class has its own queue and two resources in the budget tree. A class without nodes stays; its starts wait.",
         "class": "Class",
         "nodes": "Nodes",
-        "gpusNow": "GPUs ready",
-        "types": "GPU types",
-        "resources": "Resources in the tree",
+        "gpusNow": "GPUs Ready",
+        "types": "GPU Types",
+        "resources": "Resources in the Tree",
         "nodesTitle": "Nodes",
         "nodesHint": "New GPU nodes appear here as soon as they are in the cluster. Changes apply to new pods within a minute; running ones stay where they are. The gap filler is an LLM that uses the GPU while no workspace needs it.",
         "noNodes": "No GPU nodes in the cluster.",
@@ -388,7 +388,7 @@
         "notReady": "not ready",
         "pool": "Pool",
         "tier": "Tier",
-        "until": "Available until",
+        "until": "Available Until",
         "permanent": "permanent",
         "unassigned": "– not assigned –",
         "suggested": "(fits)",
@@ -402,13 +402,13 @@
         "poolIdHint": "e.g. mannheim-arm64",
         "poolIdInvalid": "Lowercase letters, digits and single hyphens, starting with a letter, 2–20 characters",
         "poolName": "Name",
-        "addPool": "Add pool",
-        "renamePool": "change",
+        "addPool": "Add Pool",
+        "renamePool": "Change",
         "renamePoolSave": "Rename",
         "renamePoolCancel": "Cancel",
         "renamePoolHint": "The pool's GPU classes get new ids; budgets, projects and booked GPU hours move along, the gap filler restarts once.",
         "deletePool": "Delete",
-        "gapModel": "Gap filler",
+        "gapModel": "Gap Filler",
         "gapDefault": "Tier default ({{model}})",
         "gapNone": "none",
         "weight": "Weight",
@@ -419,7 +419,7 @@
         "poolKeptClassesTip": "A GPU class comes into being as soon as a node is assigned to the pool. It is a resource of the budget tree and projects may hold budget for it; that is why classes and their pool stay, even without nodes."
     },
     "start": {
-        "title": "Start workspace",
+        "title": "Start Workspace",
         "intro": "Choose project and environment. The choice is in this page's address: a link with project and environment can go to all members of the project.",
         "introSingle": "Choose the environment; the project is set, as it is the only one a workspace can start in. The choice is in this page’s address: a link with project and environment can go to all members of the project.",
         "project": "Project",
@@ -441,7 +441,7 @@
         "gpuClass": "GPU class",
         "noGpuNow": "{{name}} – no GPU right now",
         "start": "Start",
-        "copyLink": "Copy link",
+        "copyLink": "Copy Link",
         "copied": "Copied",
         "linkHint": "The link opens this page with the current choice; nothing starts before “Start”.",
         "unknownProject": "The project “{{project}}” from the link is not one of your active projects with workspaces. The project's managers add members.",
@@ -451,7 +451,7 @@
         "splitNeedsBaseLink": "Guide “CPU + GPU kernel” on dhbw.cloud (German)",
         "unknownEnv": "The environment “{{env}}” from the link is not allowed in this project.",
         "unknownLlm": "The LLM project “{{project}}” from the link is not available; the default is chosen instead.",
-        "llm": "LLM in the workspace",
+        "llm": "LLM in the Workspace",
         "llmNone": "Without LLM",
         "llmOwn": "The workspace's LLM key (chat in VS Code, agents in the terminal, OPENAI_API_KEY) uses this project's LLM tokens.",
         "llmOther": "The workspace's LLM key (chat in VS Code, agents in the terminal, OPENAI_API_KEY) uses the LLM tokens of the project “{{project}}”, shared by all its members.",
@@ -462,14 +462,14 @@
         "llmPresetNone": "Project default: the workspace starts without an LLM key (no chat with DHBW models in VS Code, no DHBW models for the agents, no OPENAI_API_KEY).",
         "llmPresetUnavailable": "The project uses the LLM project “{{project}}” for its workspaces, which is not available here (no membership). The workspace therefore starts without an LLM key unless another LLM project is chosen.",
         "llmFallback": "The project has no LLM tokens of its own and no default; the LLM tokens of your project “{{project}}” are used. The project's managers can set this in the project settings.",
-        "startingTitle": "Workspace in “{{name}}” is starting",
+        "startingTitle": "Workspace in “{{name}}” Is Starting",
         "waiting": "The workspace is starting, usually in less than a minute. It opens here once it is ready.",
         "waitingGpu": "The workspace waits for a free GPU, then starts. It opens here once it is ready.",
         "gone": "The workspace could not start. The list of active workspaces shows what is running; starting again reports the reason.",
         "toServers": "To the active workspaces",
         "progressTitle": "Start log",
-        "showLog": "Show log",
-        "hideLog": "Hide log",
+        "showLog": "Show Log",
+        "hideLog": "Hide Log",
         "noEvents": "No messages yet.",
         "failedTitle": "The start failed",
         "noticeTitle": "About the last run",
@@ -492,12 +492,12 @@
             "more_one": "And {{count}} more budget under Projects.",
             "more_other": "And {{count}} more budgets under Projects.",
             "noBudget": "No budget in reach offers workspaces right now. Lecturers or administrators set up access to a budget; the people who administer an existing project can add you as a member.",
-            "create": "Create workspace project",
-            "toProjects": "To the workspace projects"
+            "create": "Create Workspace Project",
+            "toProjects": "To the Workspace Projects"
         }
     },
     "release": {
-        "title": "Release times",
+        "title": "Release Times",
         "hint": "Idle time counts, not runtime: as long as something computes (a cell, a background thread with CPU or GPU load, a program in the terminal), the workspace keeps running. Empty fields take the budget's value, without one there the default. Shortly before the release a warning appears in JupyterLab. Changed times apply to workspaces started afterwards.",
         "kinds": {
             "cpu": "CPU – CPU workspaces and the notebook of “CPU + GPU kernel”",
@@ -534,9 +534,9 @@
         "copied": "Copied"
     },
     "jobs": {
-        "title": "Batch jobs",
+        "title": "Batch Jobs",
         "intro": "GPU jobs without a workspace: a command or a notebook runs in the project's environment, waits in the queue for a GPU and ends by itself. Listed are the own jobs; filtered by project, the project's managers see all of its jobs.",
-        "submitJob": "Submit job",
+        "submitJob": "Submit Job",
         "project": "Project",
         "allOwn": "Own jobs of all projects",
         "allOfProject": "All jobs of the project",
@@ -545,7 +545,7 @@
         "none": "No jobs.",
         "name": "Job",
         "state": "State",
-        "gpuClass": "GPU class",
+        "gpuClass": "GPU Class",
         "gpuHours": "GPU h",
         "times": "Times",
         "outcome": "Result",
@@ -558,18 +558,18 @@
         "startedAt": "started {{at}}",
         "ranFor": "ran {{duration}}",
         "runningFor": "running for {{duration}}",
-        "back": "Back to the jobs",
+        "back": "Back to the Jobs",
         "cancel": "Cancel",
-        "cancelTitle": "Cancel job?",
-        "cancelConfirm": "Cancel job",
+        "cancelTitle": "Cancel Job?",
+        "cancelConfirm": "Cancel Job",
         "cancelMessage": "“{{name}}” is cancelled. What the job wrote until then stays in the home.",
         "delete": "Delete",
-        "deleteTitle": "Delete job?",
-        "deleteConfirm": "Delete job",
+        "deleteTitle": "Delete Job?",
+        "deleteConfirm": "Delete Job",
         "deleteMessage": "“{{name}}” is deleted from the list. The files in ~/jobs/{{name}} stay, the GPU hours used stay booked.",
-        "deleteEnded": "Delete all ended",
-        "deleteEndedTitle": "Delete ended jobs?",
-        "deleteEndedConfirm": "Delete {{count}} jobs",
+        "deleteEnded": "Delete All Ended",
+        "deleteEndedTitle": "Delete Ended Jobs?",
+        "deleteEndedConfirm": "Delete {{count}} Jobs",
         "deleteEndedMessage": "{{count}} ended jobs in this view are deleted from the list. Running and waiting jobs stay. The files in ~/jobs stay, the GPU hours used stay booked.",
         "actions": "Actions",
         "priority": "Priority",
@@ -594,9 +594,9 @@
             "cancelled": "cancelled"
         },
         "submit": {
-            "title": "Submit job",
+            "title": "Submit Job",
             "intro": "The job runs in the project's environment with the own home and the shared folders below ~/dhbw. Its output is also in ~/jobs/<name>/output-<attempt>.log. A preemptible job is ended when a workspace needs the GPU and starts again from the beginning afterwards.",
-            "cliTitle": "On the command line",
+            "cliTitle": "On the Command Line",
             "cliHint": "pip install dhbw-cloud, then dhbw-cloud login with an API token; inside a workspace of the DHBW Cloud no login is needed.",
             "cliCommand": "<command>",
             "cliNotebook": "<notebook>",
@@ -623,24 +623,24 @@
         "enable": "Enable",
         "noProjectAdmin": "None of your projects allows batch jobs. Choose a project above to enable them.",
         "settings": {
-            "title": "Batch jobs in {{project}}"
+            "title": "Batch Jobs in {{project}}"
         },
         "llm": "LLM in the job",
         "noLlm": "none",
         "files": {
             "title": "Files",
             "hint": "Results and checkpoints in the job's folder, also after it ended and without a workspace. The first load takes a few seconds; files up to 5 GB.",
-            "show": "Show files",
-            "up": "Folder above",
+            "show": "Show Files",
+            "up": "Folder Above",
             "empty": "Empty.",
             "download": "Download",
             "truncated": "The folder has more entries; the first ones are shown."
         },
         "upload": {
-            "open": "Upload files",
-            "title": "Upload a file for batch jobs",
+            "open": "Upload Files",
+            "title": "Upload a File for Batch Jobs",
             "intro": "Puts a script or data into your home in the project, where your jobs run, or into the project's shared folder, without a workspace. An existing file of the same name is replaced. The first upload takes a few seconds.",
-            "target": "Where to",
+            "target": "Where To",
             "home": "My home (~)",
             "shared": "Shared folder (~/{{dir}})",
             "readerHomeOnly": "Into your home only: the shared folders below ~/dhbw are read-only here.",
@@ -659,7 +659,7 @@
         }
     },
     "groupChoice": {
-        "title": "Choose a group: {{project}}",
+        "title": "Choose a Group: {{project}}",
         "intro": "In this project the members choose their group themselves. The choice is binding; the project’s managers make a change. The group’s folder ~/dhbw/groups/<name> appears from the next start of a workspace or job.",
         "places": "{{count}} of {{max}} places taken",
         "people_one": "{{count}} person",
@@ -669,7 +669,7 @@
         "join": "Join",
         "full": "full",
         "none": "No groups yet.",
-        "confirmTitle": "Join group {{name}}?",
+        "confirmTitle": "Join Group {{name}}?",
         "confirmText": "Afterwards only the project’s managers can change this.",
         "cancel": "Cancel"
     }

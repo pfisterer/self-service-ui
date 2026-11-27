@@ -231,7 +231,7 @@ describe('NavTree loading as it opens', () => {
         const [loaded, setLoaded] = useState({});
         const [extra, setExtra] = useState(0);
         const nodes = useMemo(() => [
-            { id: 'root', label: 'root', hasChildren: true, children: loaded.root && [...loaded.root.slice(0, 2 + extra).map(id => ({ id, label: id })), ...(2 + extra < loaded.root.length ? [{ id: 'root::more', label: 'Show more', more: { loaded: 2 + extra, total: loaded.root.length, onLoad: async () => setExtra(e => e + 1) } }] : [])] },
+            { id: 'root', label: 'root', hasChildren: true, children: loaded.root && [...loaded.root.slice(0, 2 + extra).map(id => ({ id, label: id })), ...(2 + extra < loaded.root.length ? [{ id: 'root::more', label: 'Show More', more: { loaded: 2 + extra, total: loaded.root.length, onLoad: async () => setExtra(e => e + 1) } }] : [])] },
         ], [loaded, extra]);
         const expansion = useTreeExpansion({ storageKey: 'test.lazy' });
         return <NavTree label="Lazy" nodes={nodes} expansion={expansion} withLines onLoadChildren={async (id) => { const kids = await load(id); setLoaded(p => ({ ...p, [id]: kids })); }} />;
@@ -243,9 +243,9 @@ describe('NavTree loading as it opens', () => {
         expect(labels()).toEqual(['root']);
         fireEvent.click(screen.getByRole('button', { name: i18n.t('projects.tree.expand') }));
         // The paging row says how much is shown of how many.
-        await waitFor(() => expect(labels()).toEqual(['root', 'a', 'b', 'Show more (2/3)']));
+        await waitFor(() => expect(labels()).toEqual(['root', 'a', 'b', 'Show More (2/3)']));
         expect(load).toHaveBeenCalledWith('root');
-        await act(async () => { fireEvent.click(item('Show more (2/3)').querySelector('p')); });
+        await act(async () => { fireEvent.click(item('Show More (2/3)').querySelector('p')); });
         expect(labels()).toEqual(['root', 'a', 'b', 'c']);
     });
 

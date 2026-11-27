@@ -5,12 +5,12 @@ import { useClient } from '/providers/client.jsx';
 // only wrong at runtime, while a missing named export fails the build — which
 // is the whole point of depending on the client by version (see d6).
 import {
-    addZoneOwner, createDelegation, createDnsRecord, createPolicyRule,
+    addZoneGroupShare, addZoneOwner, createDelegation, createDnsRecord, createPolicyRule,
     createToken, createZone, deleteDelegation, deleteDnsRecord,
     deleteOrphanedZone, deletePolicyRule, deleteToken, deleteZone, getMe, getZone,
     joinZone, listDelegations, listDnsRecords, listOrphanedZones,
-    listPolicyRules, listTokens, listZoneEvents, listZones, removeZoneOwner,
-    rotateZoneKeys, updateDelegation, updatePolicyRule,
+    listPolicyRules, listTokens, listZoneEvents, listZones, removeZoneGroupShare,
+    removeZoneOwner, rotateZoneKeys, updateDelegation, updatePolicyRule,
 } from '@dhbw-cloud/dynamic-zones-client';
 
 // useZonesApi is to the dyndns section what useNodesApi is to projects: the one
@@ -30,10 +30,6 @@ import {
 //
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
-
-// Sharing a zone with a group (dynamic-zones addZoneGroupShare, removeZoneGroupShare), written the way the generated client writes its operations, because the client this UI takes from npm predates them; once a client with them is taken, the named imports replace these.
-const addZoneGroupShare = (options) => options.client.post({ url: '/v1/zones/{zone}/groups', ...options });
-const removeZoneGroupShare = (options) => options.client.delete({ url: '/v1/zones/{zone}/groups/{group}', ...options });
 
 function unwrap(res) {
     const err = apiErrorMessage(res);

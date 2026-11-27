@@ -41,17 +41,17 @@ describe('deleting ended batch jobs', () => {
         fireEvent.click(deletes[0]);
         const dialog = await screen.findByRole('dialog');
         expect(within(dialog).getByText(/~\/jobs\/probe/)).toBeTruthy();
-        fireEvent.click(within(dialog).getByRole('button', { name: /^(Job löschen|Delete job)$/ }));
+        fireEvent.click(within(dialog).getByRole('button', { name: /^(Job löschen|Delete Job)$/ }));
         await waitFor(() => expect(globalThis.__gpuApi.deleteJob).toHaveBeenCalledWith('j-0000000002'));
     });
 
     it('deletes all ended jobs of the view after counting them', async () => {
         renderView(<GpuJobs />);
         await screen.findByText('probe');
-        fireEvent.click(screen.getByRole('button', { name: /^(Alle beendeten löschen|Delete all ended)$/ }));
+        fireEvent.click(screen.getByRole('button', { name: /^(Alle beendeten löschen|Delete All Ended)$/ }));
         const dialog = await screen.findByRole('dialog');
         expect(within(dialog).getByText(/^2 /)).toBeTruthy();
-        fireEvent.click(within(dialog).getByRole('button', { name: /^(2 Jobs löschen|Delete 2 jobs)$/ }));
+        fireEvent.click(within(dialog).getByRole('button', { name: /^(2 Jobs löschen|Delete 2 Jobs)$/ }));
         await waitFor(() => expect(globalThis.__gpuApi.deleteEndedJobs).toHaveBeenCalledWith(''));
         expect(globalThis.__gpuApi.deleteJob).not.toHaveBeenCalled();
     });
