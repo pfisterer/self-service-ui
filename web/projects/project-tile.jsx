@@ -19,7 +19,7 @@ import {
     liveAllocations, managesAllocation, measuredUse, nodeTitle, openstackProjectUrl, openstackSide, overageEntries, ownerEmail, projectActions, projectKinds,
     resourceName, resourceSummaryText, resourceUnitName,
 } from './util-project.jsx';
-import { LIMITS_TAB, panelActions, tileActions, tileBars, tileFlag, tileHasDetails, tileKind } from './util-tile.js';
+import { LIMITS_TAB, listBars, panelActions, rowButtons, tileActions, tileBars, tileFlag, tileHasDetails, tileKind } from './util-tile.js';
 
 // The unified project tile of the new layout (gate ui-v2) and what belongs to it: the list row, the "Mehr" menu and the side panel. One shape for every kind: the kind, a chip only where something differs, the name (opening the side panel), the purpose in two lines, at most three bars, one line of facts, and two buttons plus "Details" (the side panel; "Mehr" is only there). The decisions are in util-tile.js.
 
@@ -57,6 +57,8 @@ export function useTileModel(node, ctx) {
     const limit = node.limit || {};
     const inUse = measuredUse(node);
     const bars = tileBars(resources, limit, inUse);
+    // The list shows its bars in the catalogue's order, so the same resources stand one under the other from row to row; the chip still looks at the fullest one.
+    const rowBars = listBars(resources, limit, inUse, kind);
     const full = bars.find(b => b.high);
     const flag = tileFlag({
         status: node.status,
@@ -74,7 +76,7 @@ export function useTileModel(node, ctx) {
     // The purpose, unless it already is the title (a project without a name is called by its purpose).
     const description = node.reason && node.reason !== title ? node.reason : '';
     return {
-        node, kind, kinds, actions, flag, bars, inUse, limit, budgets, members, title, description, memberView, holder, decideOn, openstackUrl, start, jobsHref,
+        node, kind, kinds, actions, flag, bars, rowBars, inUse, limit, budgets, members, title, description, memberView, holder, decideOn, openstackUrl, start, jobsHref,
         owner: ownerEmail(node), allocations, summary: resourceSummaryText(t, resources, limit),
     };
 }
@@ -234,15 +236,34 @@ export function ProjectTile({ node, ctx, onAction, onOpen, marked = false }) {
     );
 }
 
+// RowButtons are the buttons of a row of the list: one under the other, each as wide as the column, always in the same order (primary, second, "Details"), so they stand at the same place from row to row whether a row has two or three.
+export function RowButtons({ actions, run }) {
+    const { t } = useTranslation();
+    const buttons = rowButtons(actions);
+    if (!buttons.length) return null;
+    return (
+        <Stack gap={4}>
+            {buttons.map(b => (
+                <Button key={b.id} size="xs" fullWidth variant={b.variant} color={b.id === 'decide' ? COLOR.attention : undefined} onClick={() => run(b.id)}>
+                    {t(`projects.v2.action.${b.id}`)}
+                </Button>
+            ))}
+        </Stack>
+    );
+}
+
+// LIST_COLS are the fixed widths of the list's columns (the project takes the rest), so end, who pays, usage and buttons begin at the same place in every row.
+const LIST_COLS = { end: 130, paidFrom: 170, usage: 230, actions: 180 };
+
 // ProjectRow is one project as a row of the list.
 function ProjectRow({ node, ctx, onAction, onOpen, marked }) {
     const { t } = useTranslation();
     const model = useTileModel(node, ctx);
     const acts = useTileActs(model, { onAction, onOpen });
-    // One row reads like a small tile: the kind above the name, the purpose in one line, the chip; then end, who pays, the same bars as the tile (up to three) and the buttons.
+    // One row reads like a small tile: the kind above the name, the purpose in one line, the chip; then end, who pays, up to three bars in the catalogue's order and the buttons one under the other.
     return (
         <Table.Tr id={`project-${model.node.id}`} style={marked ? { outline: `2px solid var(--mantine-color-${COLOR.attention}-5)` } : undefined}>
-            <Table.Td style={{ verticalAlign: 'top' }}>
+            <Table.Td style={{ verticalAlign: 'top', overflowWrap: 'anywhere' }}>
                 <Group gap="xs" wrap="wrap">
                     <Text size="10px" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.06em' }}>{kindLabel(t, model)}</Text>
                     <TileFlag flag={model.flag} />
@@ -250,16 +271,14 @@ function ProjectRow({ node, ctx, onAction, onOpen, marked }) {
                 <UnstyledButton onClick={() => onOpen(model.node, 'overview')}><Text fw={600} size="sm">{model.title}</Text></UnstyledButton>
                 {model.description && <Text size="xs" c="dimmed" lineClamp={1}>{model.description}</Text>}
             </Table.Td>
-            <Table.Td style={{ verticalAlign: 'top' }}><Text size="sm" style={{ whiteSpace: 'nowrap' }}>{endText(t, model.node)}</Text></Table.Td>
-            <Table.Td style={{ verticalAlign: 'top' }}><Text size="sm">{model.budgets.join(' + ') || '–'}</Text></Table.Td>
-            <Table.Td w={230} style={{ verticalAlign: 'top' }}>
-                {model.bars.length > 0
-                    ? <Stack gap={6}>{model.bars.map(b => <TileBar key={b.resource.id} bar={b} />)}</Stack>
+            <Table.Td style={{ verticalAlign: 'top' }}><Text size="sm">{endText(t, model.node)}</Text></Table.Td>
+            <Table.Td style={{ verticalAlign: 'top', overflowWrap: 'anywhere' }}><Text size="sm">{model.budgets.join(' + ') || '–'}</Text></Table.Td>
+            <Table.Td style={{ verticalAlign: 'top' }}>
+                {model.rowBars.length > 0
+                    ? <Stack gap={6}>{model.rowBars.map(b => <TileBar key={b.resource.id} bar={b} />)}</Stack>
                     : <Text size="xs" c="dimmed">{model.summary || '–'}</Text>}
             </Table.Td>
-            <Table.Td style={{ verticalAlign: 'top' }}>
-                <Group justify="flex-end"><TileButtons model={model} acts={acts} size="xs" grow={false} details /></Group>
-            </Table.Td>
+            <Table.Td style={{ verticalAlign: 'top' }}><RowButtons actions={model.actions} run={acts.run} /></Table.Td>
         </Table.Tr>
     );
 }
@@ -270,14 +289,14 @@ export function ProjectsBoard({ nodes, ctxOf, view, onAction, onOpen, marked }) 
     if (view === 'list') {
         return (
             <Table.ScrollContainer minWidth={900}>
-                <Table verticalSpacing="md" highlightOnHover>
+                <Table verticalSpacing="md" highlightOnHover style={{ tableLayout: 'fixed' }}>
                     <Table.Thead>
                         <Table.Tr>
                             <Table.Th>{t('projects.v2.col.project')}</Table.Th>
-                            <Table.Th>{t('projects.v2.col.end')}</Table.Th>
-                            <Table.Th>{t('projects.v2.col.paidFrom')}</Table.Th>
-                            <Table.Th>{t('projects.v2.col.usage')}</Table.Th>
-                            <Table.Th />
+                            <Table.Th w={LIST_COLS.end}>{t('projects.v2.col.end')}</Table.Th>
+                            <Table.Th w={LIST_COLS.paidFrom}>{t('projects.v2.col.paidFrom')}</Table.Th>
+                            <Table.Th w={LIST_COLS.usage}>{t('projects.v2.col.usage')}</Table.Th>
+                            <Table.Th w={LIST_COLS.actions} />
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>

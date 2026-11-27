@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { panelActions, tileActions, tileBars, tileFlag, tileHasDetails, tileKind } from './util-tile.js';
+import { listBars, panelActions, rowButtons, tileActions, tileBars, tileFlag, tileHasDetails, tileKind } from './util-tile.js';
 
 const OWNER = { details: true, change: true, release: true };
 
@@ -90,6 +90,40 @@ describe('tileBars', () => {
 
     it('keeps the catalogue order without a measurement', () => {
         expect(tileBars(R, { cores: 10, ram: 100 }, null).map(b => b.resource.id)).toEqual(['cores', 'ram']);
+    });
+});
+
+describe('listBars', () => {
+    const R = [{ id: 'cores' }, { id: 'ram' }, { id: 'disk' }, { id: 'vms' }, { id: 'net', kind: 'bool' }, { id: 'tokens', provider: 'llm', area: 'llm' }];
+    it('keeps the catalogue order however full, so rows line up', () => {
+        const a = listBars(R, { cores: 10, ram: 100, disk: 50, vms: 4 }, { cores: 1, ram: 95, disk: 49 }, 'cloud');
+        const b = listBars(R, { cores: 10, ram: 100, disk: 50, vms: 4 }, { cores: 9, ram: 5, disk: 1 }, 'cloud');
+        expect(a.map(x => x.resource.id)).toEqual(['cores', 'ram', 'disk']);
+        expect(b.map(x => x.resource.id)).toEqual(['cores', 'ram', 'disk']);
+        expect(a.map(x => x.high)).toEqual([false, true, true]);
+    });
+
+    it('shows only the resources of the row\'s kind, all granted ones without a kind', () => {
+        const limit = { cores: 10, tokens: 1000 };
+        expect(listBars(R, limit, null, 'llm').map(x => x.resource.id)).toEqual(['tokens']);
+        expect(listBars(R, limit, null, 'cloud').map(x => x.resource.id)).toEqual(['cores']);
+        expect(listBars(R, limit, null, null).map(x => x.resource.id)).toEqual(['cores', 'tokens']);
+    });
+
+    it('leaves the tile order alone', () => {
+        expect(tileBars(R, { cores: 10, ram: 100 }, { cores: 1, ram: 90 }).map(b => b.resource.id)).toEqual(['ram', 'cores']);
+    });
+});
+
+describe('rowButtons', () => {
+    it('stacks primary, second and "Details" in this order', () => {
+        expect(rowButtons({ primary: 'openstack', secondary: 'edit' })).toEqual([{ id: 'openstack', variant: 'filled' }, { id: 'edit', variant: 'outline' }, { id: 'details', variant: 'default' }]);
+    });
+
+    it('keeps the order when one is missing and has no second "Details"', () => {
+        expect(rowButtons({ primary: 'openstack', secondary: 'details' }).map(b => b.id)).toEqual(['openstack', 'details']);
+        expect(rowButtons({ primary: null, secondary: 'edit' }).map(b => b.id)).toEqual(['edit', 'details']);
+        expect(rowButtons({ primary: 'details', secondary: null }).map(b => b.id)).toEqual(['details']);
     });
 });
 

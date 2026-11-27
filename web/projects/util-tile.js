@@ -1,6 +1,6 @@
 // The decisions behind the unified project tile of the new layout (gate ui-v2), as plain functions so they can be tested without rendering: which kind a tile speaks for, its two visible actions and the rest in its "Mehr" menu, the one chip it may carry, and its at most three bars.
 
-import { USAGE_HIGH, UNLIMITED_QUOTA, isAvailability } from './util-project.jsx';
+import { USAGE_HIGH, UNLIMITED_QUOTA, isAvailability, resourcesOfKinds } from './util-project.jsx';
 
 // tileKind is the kind the tile speaks for: the filter of the page when the project is of that kind, else the first kind the project is (cloud, workspaces, llm), else null (a project that holds nothing yet).
 export function tileKind(kinds, filter) {
@@ -81,6 +81,12 @@ export function tileBars(resources, limit, inUse, max = 3) {
     return bars.slice(0, max);
 }
 
+// listBars picks the at most three quantities a row of the list shows: the granted ones of the row's kind (and those without a kind) in the catalogue's order, not by how full they are, so the same resources stand one under the other from row to row. Without a kind, all granted ones. Each bar as in tileBars.
+export function listBars(resources, limit, inUse, kind, max = 3) {
+    const inScope = kind ? resourcesOfKinds(resources, [kind]) : resources;
+    return tileBars(inScope, limit, inUse, Infinity).sort((a, b) => a.order - b.order).slice(0, max);
+}
+
 // PANEL_TAB_ACTIONS are the tile actions that only lead to a tab of the side panel; inside the panel the tabs are right there, so they are no buttons of their own.
 export const PANEL_TAB_ACTIONS = new Set(['details', 'usage', 'members', 'history']);
 
@@ -95,4 +101,13 @@ export function panelActions({ primary = null, secondary = null, menu = [] } = {
 // tileHasDetails says whether a tile or row needs its own "Details" button: it takes the place of the "Mehr" menu there, because everything in that menu is in the side panel (as a tab or in the panel's own "Mehr"). Not when one of the two visible actions already is "Details".
 export function tileHasDetails({ primary = null, secondary = null } = {}) {
     return primary !== 'details' && secondary !== 'details';
+}
+
+// rowButtons are the buttons of a row of the list, one under the other in a fixed order: the primary action, the second one, "Details" (where neither of the two already is it). Each { id, variant }; a missing one leaves the others in their order.
+export function rowButtons({ primary = null, secondary = null } = {}) {
+    return [
+        primary && { id: primary, variant: 'filled' },
+        secondary && { id: secondary, variant: 'outline' },
+        tileHasDetails({ primary, secondary }) && { id: 'details', variant: 'default' },
+    ].filter(Boolean);
 }
