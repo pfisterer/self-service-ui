@@ -6,6 +6,7 @@ import { Bell, ExternalLink } from 'lucide-react';
 import { Link } from 'wouter';
 import { notificationsApi, notificationsKeys } from '/notifications/api.js';
 import { formatDateTime } from '/format-date.js';
+import { portalPath } from '/notifications/bell.js';
 
 const CLASSES = ['action', 'disruption', 'info'];
 
@@ -132,16 +133,6 @@ function strip(p) {
     if (!p) return p;
     const { language, classes, digest, unsubscribed, types } = p;
     return { language, classes, digest, unsubscribed: [...(unsubscribed ?? [])].sort(), types: types ?? {} };
-}
-
-// portalPath is url as a path inside this app when it points here (so the link navigates without reloading the page), else null.
-export function portalPath(url) {
-    try {
-        const u = new URL(url, window.location.href);
-        return u.origin === window.location.origin ? u.pathname + u.search + u.hash : null;
-    } catch {
-        return null;
-    }
 }
 
 // The latest notifications, so a person can see what was sent and why nothing came. A click on one opens its text and the link to what it is about.

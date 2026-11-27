@@ -57,7 +57,7 @@ selfServiceUI:
   # provider's answer: whoever maintains a group.
   groupsBaseUrl: ""
   groupsUpstream: ""
-  # The notification service (notifications). Empty notificationsBaseUrl leaves the settings page out; normally "/api/notifications", which Caddy forwards to notificationsUpstream (host:port; empty -> the image default notifications:8087), only the person routes.
+  # The notification service (notifications). Empty notificationsBaseUrl leaves the settings page and the bell in the header out; normally "/api/notifications", which Caddy forwards to notificationsUpstream (host:port; empty -> the image default notifications:8087), only the person routes.
   notificationsBaseUrl: ""
   notificationsUpstream: ""
 
