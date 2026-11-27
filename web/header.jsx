@@ -8,6 +8,9 @@ import { useTranslation } from 'react-i18next';
 import { LANGUAGES } from '/i18n/index.js';
 import { HEADER_HEIGHT, NAV_BREAKPOINT, SUBNAV_HEIGHT, useNav } from '/nav.jsx';
 import { ActAsButton } from '/act-as-controls.jsx';
+import { actingAsAtLoad } from '/providers/acting-as.js';
+import { NotificationBell } from '/notifications/bell.jsx';
+import { bellEnabled } from '/notifications/bell.js';
 import { subNavRuns } from '/nav-v2.js';
 import { Burger, Group, Button, Menu, Image, Box, Divider, Stack, Text } from '@mantine/core';
 
@@ -244,6 +247,8 @@ export function Header() {
                         {/* Right before the account it acts for: one click to act
                             on behalf of somebody, and back (admins only). */}
                         {user && <ActAsButton />}
+                        {/* The bell sits in this one header, which both layouts share (classic and ui-v2 differ in their navigation only). */}
+                        {bellEnabled({ enabled: notificationsEnabled, user, actingAs: actingAsAtLoad }) && <NotificationBell person={user.profile?.email} />}
                         {user ? (
                             <Menu trigger="hover" openDelay={100} closeDelay={200}>
                                 <Menu.Target>

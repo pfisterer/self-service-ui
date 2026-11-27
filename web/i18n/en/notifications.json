@@ -52,5 +52,13 @@
             "failed": "failed"
         },
         "open": "Open"
+    },
+    "bell": {
+        "label": "Notifications",
+        "labelUnread": "Notifications, new: {{count}}",
+        "loading": "Loading …",
+        "unavailable": "Notifications cannot be reached right now.",
+        "open": "open",
+        "settings": "All notifications and settings"
     }
 }

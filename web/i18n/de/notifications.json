@@ -52,5 +52,13 @@
             "failed": "fehlgeschlagen"
         },
         "open": "Öffnen"
+    },
+    "bell": {
+        "label": "Benachrichtigungen",
+        "labelUnread": "Benachrichtigungen, neu: {{count}}",
+        "loading": "Wird geladen …",
+        "unavailable": "Die Benachrichtigungen sind gerade nicht erreichbar.",
+        "open": "offen",
+        "settings": "Alle Benachrichtigungen und Einstellungen"
     }
 }
