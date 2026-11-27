@@ -130,6 +130,22 @@ describe('node dialogs', () => {
         expect(fatal()).toEqual([]);
     });
 
+    // "Modelle und Grenzen" of the side panel opens the dialog on the LLM resources: their own tab where the project has one per kind, the only resources tab otherwise.
+    it('opened on the LLM resources it lands there, with one tab per kind and with one tab', async () => {
+        const mixed = [
+            { id: 'cores', name: 'Cores', default: 4, min: 1, max: 64, provider: 'openstack', area: 'cloud' },
+            { id: 'llm-mtokens', name: 'LLM tokens', unit: 'M tokens', kind: 'window', window: '30d', default: 0, min: 0, max: 1000, provider: 'aiaas', area: 'llm' },
+        ];
+        renderView(<ProjectFormModal opened onClose={() => {}} resources={mixed} roles={['member', 'reader']}
+            node={project({ limit: { cores: 2, 'llm-mtokens': 50 }, allocations: [] })} initialTab="resources-llm" />);
+        expect(screen.getByRole('tab', { name: /^LLM$/ }).getAttribute('aria-selected')).toBe('true');
+        cleanup();
+        renderView(<ProjectFormModal opened onClose={() => {}} resources={mixed.slice(1)} roles={['member', 'reader']}
+            node={project({ limit: { 'llm-mtokens': 50 }, allocations: [] })} initialTab="resources-llm" />);
+        expect(screen.getByRole('tab', { name: /^(Resources|Ressourcen)$/ }).getAttribute('aria-selected')).toBe('true');
+        expect(fatal()).toEqual([]);
+    });
+
     it('the project dialog groups its entries and jumps to the one with a failed field', async () => {
         const tree = fixtureTree();
         renderView(<ProjectFormModal opened onClose={() => {}} resources={RESOURCES} roles={['member', 'reader']} myBudgets={[tree.roots[0]]} />);

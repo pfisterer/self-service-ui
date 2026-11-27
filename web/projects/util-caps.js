@@ -233,6 +233,20 @@ export function capsSummary(t, caps, values) {
     return caps.map(c => `${capName(t, c)} ${formatCapValue(t, c, values?.[c.id])}`).join(' · ');
 }
 
+// projectCapLines is what applies to a project of its caps, one line per group in catalogue order, for reading: [{ group, label, value }]. values: the project's inherited_caps, what its paying budgets set (the server merges them over several, the most generous value); kinds: the project's kinds, so a cloud project is not told about release times of workspaces it has none of (a cap without an area counts where it is set). A grant block is a line also when off ("Batch-Jobs: aus" is an answer); any other cap only where a budget sets it, since otherwise the provider's default applies, which the UI does not know for every cap. Groups with nothing to say are left out.
+export function projectCapLines(t, catalog, values, kinds = []) {
+    const own = normalizeCaps(values);
+    const applies = (cap) => (cap.area ? kinds.includes(cap.area) : isSet(own[cap.id]));
+    const lines = [];
+    for (const g of capGroups((catalog || []).filter(applies))) {
+        const parts = g.blocks.flatMap(block => (isGrantBlock(block)
+            ? [capsSummary(t, block.caps, own)]
+            : block.caps.filter(c => isSet(own[c.id])).map(c => capsSummary(t, [c], own))));
+        if (parts.length) lines.push({ group: g.group, label: groupTitle(t, g.group), value: parts.join(' · ') });
+    }
+    return lines;
+}
+
 // capHistory is the change of the caps in a history entry, one line per id that changed: [{ id, label, from, to }] in catalogue order, unknown ids (gone from the catalogue) by their id after them.
 export function capHistory(t, catalog, from, to) {
     const ids = new Set([...Object.keys(from || {}), ...Object.keys(to || {})]);

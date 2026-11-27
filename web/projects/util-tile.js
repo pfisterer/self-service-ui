@@ -8,6 +8,9 @@ export function tileKind(kinds, filter) {
     return kinds[0] ?? null;
 }
 
+// LIMITS_TAB is the tab of the edit dialog "Modelle und Grenzen" opens: the LLM resources (modal-project-form.jsx lands on its only resources tab where it has no tab per kind).
+export const LIMITS_TAB = 'resources-llm';
+
 // tileActions decides the tile's buttons. facts:
 //   kind          tileKind
 //   can           projectActions (or { details: true } for a member)
@@ -15,13 +18,14 @@ export function tileKind(kinds, filter) {
 //   start         where a workspace of it starts, else null
 //   keys          whether the viewer has LLM keys to show (an LLM project they work in)
 //   jobs          whether the project allows batch jobs
+//   llm           whether the project has LLM resources (models, tokens, rate limits), whatever kind the tile speaks for
 //   decide        whether a decision of the viewer waits on it
 //   releasable    whether the viewer may give the whole project back (holders, or managers of every paying budget)
 //   usage         whether a consumption history exists (a cloud project)
 //   memberView    whether the viewer only works in it (no history, no members list)
-// It returns { primary, secondary, menu }: primary and secondary are action ids or null, menu a list of { id, danger }. The ids: openstack, start, keys, decide, adopt, edit, details, usage, jobs, members, history, link, release, delete-for-good.
+// It returns { primary, secondary, menu }: primary and secondary are action ids or null, menu a list of { id, danger }. The ids: openstack, start, keys, decide, adopt, edit, details, usage, jobs, limits, members, history, link, release, delete-for-good.
 export function tileActions(facts) {
-    const { kind, can = {}, openstackUrl = null, start = null, keys = false, jobs = false, decide = false, releasable = false, usage = false, memberView = false } = facts || {};
+    const { kind, can = {}, openstackUrl = null, start = null, keys = false, jobs = false, llm = false, decide = false, releasable = false, usage = false, memberView = false } = facts || {};
     const editOrDetails = can.change ? 'edit' : 'details';
     // What the project is for, by kind: the one thing most people come for.
     const own = kind === 'cloud' && openstackUrl ? 'openstack'
@@ -36,6 +40,8 @@ export function tileActions(facts) {
         own && !taken.has(own) && own,
         usage && !taken.has('usage') && 'usage',
         jobs && 'jobs',
+        // An LLM project's models and rate limits are resources of the project: changed or requested on the LLM resources tab of the edit dialog, which "Bearbeiten" opens on its first tab. Only for those who may change it; everyone else reads them in the side panel's overview.
+        llm && can.change && 'limits',
         'members',
         !memberView && 'history',
         'link',

@@ -595,6 +595,8 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
     })();
     const resourceTabValue = (kind) => (kind && resourceTabKinds.length > 1 ? `${TAB_RESOURCES}-${kind}` : TAB_RESOURCES);
     const firstResourceTab = resourceTabValue(resourceTabKinds[0]);
+    // A dialog opened on one kind's resources (resources-llm, "Modelle und Grenzen" of the side panel) lands on that kind's tab, and on the one resources tab where the project has no tab per kind: the caller cannot know how the dialog splits them.
+    const shownTab = activeTab.startsWith(`${TAB_RESOURCES}-`) && !resourceTabKinds.map(resourceTabValue).includes(activeTab) ? firstResourceTab : activeTab;
     const resourceById = Object.fromEntries((resources || []).map(r => [r.id, r]));
     const fieldsByTab = {
         [TAB_DETAILS]: (k) => ['name', 'reason', 'parentId', 'terminationDate'].includes(k),
@@ -1083,7 +1085,7 @@ export function ProjectFormModal({ opened, onClose, onDone, onBudgetChanged, res
                 : (outcome === 'approval' ? t('projects.forms.submitRequest') : t('projects.projectForm.submitNew'))}
         >
             <FormSections
-                value={activeTab}
+                value={shownTab}
                 onChange={setActiveTab}
                 header={header}
                 groups={[

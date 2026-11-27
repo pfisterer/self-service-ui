@@ -30,6 +30,17 @@ describe('tileActions', () => {
         expect(tileActions({ kind: 'llm', can: OWNER, keys: true }).primary).toBe('keys');
     });
 
+    it('offers the models and limits of an LLM project to those who may change it, in the menu and so in the side panel\'s "Mehr"', () => {
+        const a = tileActions({ kind: 'llm', can: OWNER, keys: true, llm: true, releasable: true });
+        expect([a.primary, a.secondary]).toEqual(['keys', 'edit']);
+        expect(a.menu.map(m => m.id)).toEqual(['limits', 'members', 'history', 'link', 'release']);
+        expect(panelActions(a).menu.map(m => m.id)).toEqual(['limits', 'release']);
+        // Also where the tile speaks for another kind of the project.
+        expect(tileActions({ kind: 'cloud', can: OWNER, llm: true }).menu.map(m => m.id)).toContain('limits');
+        expect(tileActions({ kind: 'llm', can: { details: true }, llm: true, memberView: true }).menu.map(m => m.id)).not.toContain('limits');
+        expect(tileActions({ kind: 'cloud', can: OWNER }).menu.map(m => m.id)).not.toContain('limits');
+    });
+
     it('puts a decision first and keeps what the project is for in the menu', () => {
         const a = tileActions({ kind: 'cloud', can: OWNER, openstackUrl: 'https://os', decide: true });
         expect([a.primary, a.secondary]).toEqual(['decide', 'edit']);

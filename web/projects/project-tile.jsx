@@ -11,6 +11,7 @@ import { useAiAreasVisible } from '/ai-areas.jsx';
 import { MemberSummary, PersonBadge } from './component-common.jsx';
 import { AttributesView, hasAttributes } from './component-node-attributes.jsx';
 import { AllocationList, allocationNode } from './component-allocations.jsx';
+import { ProjectCaps } from './component-caps.jsx';
 import { AccessTab, NodeFacts, NodeHistoryPanel, PendingChange, ProjectConsumption, ProjectResourcesNow } from './modal-inspect.jsx';
 import { SyncErrorDetails } from './component-project-resources.jsx';
 import {
@@ -18,7 +19,7 @@ import {
     liveAllocations, managesAllocation, measuredUse, nodeTitle, openstackProjectUrl, openstackSide, overageEntries, ownerEmail, projectActions, projectKinds,
     resourceName, resourceSummaryText, resourceUnitName,
 } from './util-project.jsx';
-import { panelActions, tileActions, tileBars, tileFlag, tileHasDetails, tileKind } from './util-tile.js';
+import { LIMITS_TAB, panelActions, tileActions, tileBars, tileFlag, tileHasDetails, tileKind } from './util-tile.js';
 
 // The unified project tile of the new layout (gate ui-v2) and what belongs to it: the list row, the "Mehr" menu and the side panel. One shape for every kind: the kind, a chip only where something differs, the name (opening the side panel), the purpose in two lines, at most three bars, one line of facts, and two buttons plus "Details" (the side panel; "Mehr" is only there). The decisions are in util-tile.js.
 
@@ -51,7 +52,7 @@ export function useTileModel(node, ctx) {
     const usage = !!openstackSide(node).external_id;
     const actions = tileActions({
         kind, can, openstackUrl, start, keys: kind === 'llm' && llmArea === 'member' && node.status === 'approved',
-        jobs: !!jobsHref, decide: !!decideOn, releasable, usage, memberView,
+        jobs: !!jobsHref, llm: kinds.includes('llm'), decide: !!decideOn, releasable, usage, memberView,
     });
     const limit = node.limit || {};
     const inUse = measuredUse(node);
@@ -91,6 +92,7 @@ export function useTileActs(model, { onAction, onOpen }) {
             case 'jobs': navigate(`~${jobsHref}`); break;
             case 'decide': onAction?.('decide', decideOn ? allocationNode(decideOn, node) : node); break;
             case 'edit': onAction?.('change', node); break;
+            case 'limits': onAction?.('change', node, LIMITS_TAB); break;
             case 'details': onOpen?.(node, 'overview'); break;
             case 'usage': onOpen?.(node, 'usage'); break;
             case 'members': onOpen?.(node, 'members'); break;
@@ -314,6 +316,7 @@ function PanelBody({ node, ctx, tab, onTab, onAction, onOpen }) {
     const model = useTileModel(node, ctx);
     const acts = useTileActs(model, { onAction, onOpen });
     const [extras, setExtras] = useState(false);
+    const capCatalog = useProjectConfig()?.caps ?? [];
     const { resources = [], managedIds = null, isRoot = false } = ctx;
     const tabs = PANEL_TABS.filter(id => id !== 'history' || !model.memberView);
     return (
@@ -347,6 +350,8 @@ function PanelBody({ node, ctx, tab, onTab, onAction, onOpen }) {
                                         {node.created_at && <Table.Tr><Table.Td><Text size="sm" c="dimmed">{t('projects.v2.fact.created')}</Text></Table.Td><Table.Td><Text size="sm">{formatDate(node.created_at)}</Text></Table.Td></Table.Tr>}
                                     </Table.Tbody>
                                 </Table>
+                                {/* The caps its budgets set (release times, local storage, batch jobs), read-only; models and rate limits are resources and stand above. Changed in the budget, not here. */}
+                                <ProjectCaps catalog={capCatalog} values={node.inherited_caps} kinds={model.kinds} title={t('projects.v2.limits')} />
                                 {/* Folded: the way to the batch jobs and what the project is booked to (its attributes, sent only to those who look after it). */}
                                 {(model.jobsHref || hasAttributes(node)) && (
                                     <Stack gap={6}>

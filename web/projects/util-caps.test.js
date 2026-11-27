@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { capErrors, capGroups, capHistory, capRangeOk, capsForCreate, capsPatch, effectiveCaps, formatCapValue, grantAvailable, grantStart, groupSlug, isLooser, normalizeCaps, stricterCap } from './util-caps.js';
+import { capErrors, capGroups, capHistory, capRangeOk, capsForCreate, capsPatch, effectiveCaps, formatCapValue, grantAvailable, grantStart, groupSlug, isLooser, normalizeCaps, projectCapLines, stricterCap } from './util-caps.js';
 
 // t as the tests need it: the key with its options, so a test sees which text was chosen and with what; defaultValue stands for a text the UI has none of.
 const t = (key, opts = {}) => (opts.defaultValue !== undefined ? opts.defaultValue : `${key}${Object.keys(opts).length ? JSON.stringify(opts) : ''}`);
@@ -119,5 +119,27 @@ describe('caps', () => {
             { id: 'gone', label: 'gone', from: '1', to: 'projects.caps.notSet' },
         ]);
         expect(capHistory(t, CATALOG, undefined, undefined)).toEqual([]);
+    });
+});
+
+// The side panel of a project (new layout) shows what of the caps applies to it: inherited_caps, read-only.
+describe('projectCapLines', () => {
+    const WS = (cap) => ({ ...cap, area: 'workspaces' });
+    const SIDE = [WS(MINUTES), WS(HOURS), WS(PRIORITY), WS(PER_PERSON), WS(RUN), { id: 'other', name: 'Other', provider: 'q', min: 1, max: 9 }];
+
+    it('says per group what the budgets set, a grant block also when off', () => {
+        expect(projectCapLines(t, SIDE, { idle: 30, hours: 0, prio: 1 }, ['workspaces'])).toEqual([
+            { group: 'Release', label: 'Release', value: 'Idle 30 min · Hours projects.caps.unbounded' },
+            { group: 'Jobs', label: 'Jobs', value: 'Priority guaranteed · projects.caps.off' },
+        ]);
+        expect(projectCapLines(t, SIDE, { per: 2, run: 4 }, ['workspaces'])).toEqual([
+            { group: 'Jobs', label: 'Jobs', value: 'Per person 2 · Run 4 h' },
+        ]);
+    });
+
+    it('leaves out the caps of kinds the project has none of, and one without an area unless it is set', () => {
+        expect(projectCapLines(t, SIDE, { idle: 30, per: 2, run: 4 }, ['cloud', 'llm'])).toEqual([]);
+        expect(projectCapLines(t, SIDE, { other: 3 }, ['cloud'])).toEqual([{ group: '', label: 'projects.caps.otherGroup', value: 'Other 3' }]);
+        expect(projectCapLines(t, SIDE, undefined, [])).toEqual([]);
     });
 });

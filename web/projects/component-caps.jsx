@@ -1,6 +1,28 @@
-import { Checkbox, NumberInput, Select, SimpleGrid, Stack, Switch, Text } from '@mantine/core';
+import { Checkbox, NumberInput, Select, SimpleGrid, Stack, Switch, Table, Text } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { capGroups, capHint, capName, capsSummary, capUnit, choiceLabel, formatCapValue, grantAvailable, grantStart, groupHint, groupTitle, isGrantBlock, isLooser, isSet } from './util-caps.js';
+import { capGroups, capHint, capName, capsSummary, capUnit, choiceLabel, formatCapValue, grantAvailable, grantStart, groupHint, groupTitle, isGrantBlock, isLooser, isSet, projectCapLines } from './util-caps.js';
+
+// ProjectCaps shows read-only what applies to a project of the caps its budgets set (release times, local storage, batch jobs), one compact row per group with the names, units and choices of the budget dialog (projectCapLines). Nothing, its title included, where nothing applies. catalog: /v1/config caps; values: the project's inherited_caps; kinds: the project's kinds.
+export function ProjectCaps({ catalog, values, kinds, title, labelWidth = 150 }) {
+    const { t } = useTranslation();
+    const lines = projectCapLines(t, catalog, values, kinds);
+    if (!lines.length) return null;
+    return (
+        <Stack gap={4}>
+            {title && <Text size="sm" fw={600}>{title}</Text>}
+            <Table withRowBorders={false} verticalSpacing={4}>
+                <Table.Tbody>
+                    {lines.map(l => (
+                        <Table.Tr key={l.group || '-'}>
+                            <Table.Td w={labelWidth} style={{ verticalAlign: 'top' }}><Text size="sm" c="dimmed">{l.label}</Text></Table.Td>
+                            <Table.Td><Text size="sm">{l.value}</Text></Table.Td>
+                        </Table.Tr>
+                    ))}
+                </Table.Tbody>
+            </Table>
+        </Stack>
+    );
+}
 
 // CapsInputs edits a budget's own caps (caps in os-mgt, see util-caps.js) from the providers' catalogue, one section per group; groups: the groups to show (capGroups of the catalogue), all where left out. value: the budget's own caps by id; inherited: what the budgets above allow (inherited_caps, for a new budget what applies at the one it draws from); defaults: the provider's values that apply where no budget sets one, by id, shown as placeholder where known (the AI service's release times); a grant block switched on starts from each cap's default (/v1/config caps); errors: by form path (caps.<id>); isRoot: nothing above, grant caps are set here; inheritsLimit: the budget passes on the grant caps above, shown, not edited. onChange(id, value) with null to clear.
 export function CapsInputs({ catalog, groups, ...props }) {
