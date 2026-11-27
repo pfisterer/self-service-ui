@@ -95,7 +95,7 @@ describe('node dialogs', () => {
         renderView(<ProjectFormModal opened onClose={() => {}} resources={mixed} roles={['member', 'reader']}
             myBudgets={[cloudOnly, both]} initialKind="llm" />);
 
-        expect(await screen.findByText(/New LLM project|Neues LLM-Projekt/)).toBeTruthy();
+        expect(await screen.findByText(/New LLM Project|Neues LLM-Projekt/)).toBeTruthy();
         fireEvent.click(screen.getByRole('tab', { name: /Resources|Ressourcen/ }));
         expect(await screen.findByText(/LLM tokens \(M tokens/)).toBeTruthy();
         expect(screen.queryByText(/^Cores/)).toBeNull();
@@ -164,8 +164,8 @@ describe('node dialogs', () => {
     it('new project: one button per kind, a kind without a budget disabled', async () => {
         const picked = [];
         renderView(<NewProjectButton kinds={['cloud', 'llm']} available={['llm']} onPick={k => picked.push(k)} />);
-        const cloud = await screen.findByRole('button', { name: /cloud project|Cloud-Projekt/ });
-        const llm = screen.getByRole('button', { name: /LLM project|LLM-Projekt/ });
+        const cloud = await screen.findByRole('button', { name: /Cloud Project|Cloud-Projekt/ });
+        const llm = screen.getByRole('button', { name: /LLM Project|LLM-Projekt/ });
         expect(cloud.disabled).toBe(true);
         fireEvent.click(llm);
         expect(picked).toEqual(['llm']);

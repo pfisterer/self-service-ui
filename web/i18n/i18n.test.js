@@ -78,3 +78,40 @@ describe('translation keys used in the code', () => {
         expect(missing).toEqual([]);
     });
 });
+
+// English labels of the navigation and the tabs are in title case (Chicago style): every word capitalised except articles, short prepositions and conjunctions inside the label; names such as vCPU or DNS keep their own spelling. Sentences elsewhere stay in sentence case, so only these labels are checked; nav.pendingDot and nav.v2.adminNothing are a screen-reader sentence and a hint, not labels.
+const SMALL_WORDS = new Set(['a', 'an', 'the', 'and', 'but', 'or', 'nor', 'for', 'as', 'at', 'by', 'from', 'in', 'into', 'of', 'on', 'per', 'to', 'via', 'with', 'without', 'outside', 'under', 'over']);
+
+function notTitleCase(value) {
+    const words = String(value).replace(/\{\{\w+\}\}/g, 'X').split(/\s+/).filter(Boolean);
+    return words.filter((word, i) => word.split('-').some((part, j) => {
+        const bare = part.replace(/^[^\p{L}\d]+|[^\p{L}\d]+$/gu, '');
+        if (!/^\p{Ll}/u.test(bare) || /\p{Lu}|\d/u.test(bare)) return false;
+        const inside = (i > 0 || j > 0) && i < words.length - 1;
+        return !(inside && SMALL_WORDS.has(bare));
+    }));
+}
+
+describe('English labels of navigation and tabs', () => {
+    const NOT_LABELS = new Set(['nav.pendingDot', 'nav.v2.adminNothing']);
+    const TABS = ['groups.tabs', 'dyndns.zoneDetail.tabs', 'projects.v2.tab', 'llm.fleet.page', 'gpu.projects.sub'];
+    const TAB_KEYS = ['dyndns.policy.tabRules', 'dyndns.policy.tabDelegations', 'dyndns.policy.tabOrphaned', 'dyndns.policy.tabEvents', 'projects.budgetForm.tabAccess', 'projects.budgetForm.tabAutoApprove', 'projects.inspect.tabHistory', 'projects.consumption.tab', 'projects.attributes.tab', 'llm.vscode.tab'];
+
+    it('are in title case', () => {
+        const labels = [
+            ...keys(en.nav, 'nav.').filter(key => !NOT_LABELS.has(key)),
+            ...TABS.flatMap(prefix => keys(at(en, prefix), `${prefix}.`)),
+            ...TAB_KEYS,
+        ];
+        expect(labels.length).toBeGreaterThan(40);
+        const wrong = labels.map(key => [key, at(en, key)]).filter(([, value]) => typeof value !== 'string' || notTitleCase(value).length > 0);
+        expect(wrong).toEqual([]);
+    });
+
+    it('recognise sentence case as wrong', () => {
+        expect(notTitleCase('DNS and certificates')).toEqual(['certificates']);
+        expect(notTitleCase('DNS and Certificates')).toEqual([]);
+        expect(notTitleCase('Projects in This Budget and Below ({{count}})')).toEqual([]);
+        expect(notTitleCase('Sign in')).toEqual(['in']);
+    });
+});

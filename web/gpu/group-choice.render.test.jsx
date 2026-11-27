@@ -50,7 +50,7 @@ describe('the group choice for members', () => {
         // In the other project, nothing is chosen yet: join, after confirming; cancelling joins nothing.
         fireEvent.click(joins[2]);
         let dialog = await screen.findByRole('dialog');
-        expect(within(dialog).getByText(/(Gruppe team-a beitreten|Join group team-a)/)).toBeTruthy();
+        expect(within(dialog).getByText(/(Gruppe team-a beitreten|Join Group team-a)/)).toBeTruthy();
         fireEvent.click(within(dialog).getByRole('button', { name: /^(Abbrechen|Cancel)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         expect(globalThis.__gpuApi.joinGroup).not.toHaveBeenCalled();

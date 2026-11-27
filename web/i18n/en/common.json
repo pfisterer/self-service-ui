@@ -16,14 +16,14 @@
         "pendingDot": "Requests are waiting for your decision",
         "llm": "LLM",
         "llmOverview": "Overview",
-        "llmAvailable": "Available models",
-        "llmKeys": "API keys",
+        "llmAvailable": "Available Models",
+        "llmKeys": "API Keys",
         "llmUsage": "Usage",
         "llmFleet": "Fleet",
         "llmModels": "Models",
         "gpu": "GPU",
-        "gpuServers": "Active workspaces",
-        "gpuJobs": "Batch jobs",
+        "gpuServers": "Active Workspaces",
+        "gpuJobs": "Batch Jobs",
         "gpuUsage": "Usage",
         "gpuFleet": "GPUs",
         "workspaces": "Workspaces",
@@ -35,22 +35,22 @@
             "filter_all": "All",
             "filter_cloud": "Cloud",
             "filter_workspaces": "Workspaces",
-            "filter_llm": "Language models",
-            "offers": "My resources",
-            "dns": "DNS and certificates",
-            "tls": "TLS certificates",
+            "filter_llm": "Language Models",
+            "offers": "My Resources",
+            "dns": "DNS and Certificates",
+            "tls": "TLS Certificates",
             "admin": "Administration",
             "adminNothing": "There is nothing for you to administer here.",
-            "dnsAdmin": "DNS administration"
+            "dnsAdmin": "DNS Administration"
         }
     },
     "account": {
-        "signIn": "Sign in",
-        "signOut": "Sign out",
+        "signIn": "Sign In",
+        "signOut": "Sign Out",
         "greeting": "Hello, {{name}}!",
-        "signOutTitle": "Sign out?",
+        "signOutTitle": "Sign Out?",
         "signOutMessage": "This ends your DHBW Cloud session and takes you back to the sign-in page. Your bwIDM single sign-on session stays active, so signing in again may not ask for a password. To end that session as well, close your browser.",
-        "developer": "API & tokens",
+        "developer": "API & Tokens",
         "notifications": "Notifications"
     },
     "footer": {
@@ -73,12 +73,12 @@
         "errorBoundary": {
             "title": "Something went wrong",
             "message": "This part of the app failed to render. You can try again or reload the page.",
-            "tryAgain": "Try again",
-            "reload": "Reload page"
+            "tryAgain": "Try Again",
+            "reload": "Reload Page"
         },
         "queryState": {
             "loadErrorTitle": "Could not load",
-            "tryAgain": "Try again",
+            "tryAgain": "Try Again",
             "conflict": "{{error}} — the view has been refreshed."
         },
         "dnsValidation": {
@@ -118,7 +118,7 @@
     },
     "providers": {
         "confirm": {
-            "title": "Are you sure?",
+            "title": "Are You Sure?",
             "message": "This action cannot be undone.",
             "cancel": "Cancel",
             "confirm": "Delete",
@@ -129,10 +129,10 @@
             "close": "Close"
         },
         "session": {
-            "title": "Your session has expired",
+            "title": "Your Session Has Expired",
             "message": "You have been signed out, so nothing on this page can be saved or reloaded until you sign in again. Signing in reloads the page and brings you back here — copy anything you have typed before you do.",
-            "notNow": "Not now",
-            "signIn": "Sign in again"
+            "notNow": "Not Now",
+            "signIn": "Sign In Again"
         },
         "remoteConfig": {
             "invalidBaseUrl": "Invalid API base URL: {{url}}"
@@ -147,9 +147,9 @@
     "app": {
         "loading": "Loading…",
         "notFound": "404: Page not found",
-        "signInTitle": "Sign in required",
+        "signInTitle": "Sign In Required",
         "signInMessage": "Please sign in to access and manage your DNS zones and cloud resources.",
-        "logIn": "Log in",
+        "logIn": "Log In",
         "signInOutage": {
             "title": "Signing in is currently unavailable",
             "message": "The university's sign-in service is not responding. If you are signed in, you can keep working. A new sign-in will only work again once the service is back — nothing needs to be done on your side."
@@ -157,13 +157,13 @@
     },
     "actAs": {
         "button": "Act on behalf",
-        "title": "Act on behalf of a person",
+        "title": "Act on Behalf of a Person",
         "explain": "Every service (cloud, DNS, AI) then shows and does what this person sees and does. The project history also names you. Applies to this tab only.",
         "searchPlaceholder": "Search a person, or type any email…",
         "noMatch": "No match — a full email address works anyway.",
         "moreMatches": "More matches — keep typing.",
         "start": "Switch",
-        "stop": "Back to myself",
+        "stop": "Back to Myself",
         "actingAs": "On behalf of {{name}}",
         "bannerExplain": "Everything on these pages happens in this person's name and with their rights. Chat and JupyterHub still open with your own sign-in.",
         "refused": "Not in effect at: {{services}} (no admin rights there).",
@@ -174,18 +174,18 @@
         }
     },
     "developer": {
-        "title": "API & tokens",
+        "title": "API & Tokens",
         "intro": "For scripts and your own applications: API tokens and the documentation of the interfaces. The API keys for the language models are in the LLM area.",
         "cloud": {
-            "title": "Cloud projects",
+            "title": "Cloud Projects",
             "text": "Projects, budgets and quotas of the DHBW cloud."
         },
         "dns": {
-            "title": "DNS zones",
+            "title": "DNS Zones",
             "text": "Zones and records, e.g. for dynamic DNS or ACME."
         },
         "llm": {
-            "title": "LLM and workspaces",
+            "title": "LLM and Workspaces",
             "text": "Management of workspaces, GPU servers and models. The API tokens only work for this management API; the keys for the language models are under LLM → API Keys."
         }
     },

@@ -150,7 +150,7 @@ describe('the GPU views render', () => {
 
     it('the workspace settings tab lets an admin add budgets', async () => {
         renderView(<SettingsTab nodeId="p_ml" />);
-        expect(await screen.findByText(/Grenze hinzufügen|Add a limit/)).toBeTruthy();
+        expect(await screen.findByText(/Grenze hinzufügen|Add a Limit/)).toBeTruthy();
         expect(screen.queryByText(/legen Admins fest|set by admins/)).toBeNull();
     });
 
@@ -158,7 +158,7 @@ describe('the GPU views render', () => {
         globalThis.__llmIsAdmin = false;
         renderView(<SettingsTab nodeId="p_ml" />);
         expect((await screen.findAllByText(/legen Admins fest|set by admins/)).length).toBe(2);
-        expect(screen.queryByText(/Grenze hinzufügen|Add a limit/)).toBeNull();
+        expect(screen.queryByText(/Grenze hinzufügen|Add a Limit/)).toBeNull();
         // The environment stays editable.
         expect(screen.getByText('89abcdef0123 (main)')).toBeTruthy();
         expectNoRenderFailure();
@@ -172,7 +172,7 @@ describe('the GPU views render', () => {
         renderView(<SettingsTab nodeId="p_ml" />);
         fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
         expect(screen.getByText(/(Noch keine Gruppen|No groups yet)/)).toBeTruthy();
-        fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal out …)$/ }));
+        fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal Out …)$/ }));
         let dialog = await screen.findByRole('dialog');
         expect(within(dialog).getByText(/^4 (Personen sind noch in keiner Gruppe|people are in no group yet)/)).toBeTruthy();
         // No places per group: only new groups are offered. Four of size 4 make one group; of size 2, two.
@@ -184,10 +184,10 @@ describe('the GPU views render', () => {
         fireEvent.click(within(dialog).getByRole('button', { name: /^(Abbrechen|Cancel)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         expect(screen.queryByDisplayValue('gruppe-1')).toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal out …)$/ }));
+        fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal Out …)$/ }));
         dialog = await screen.findByRole('dialog');
         fireEvent.change(within(dialog).getByLabelText(/(Personen je neuer Gruppe|People per new group)/), { target: { value: '2' } });
-        fireEvent.click(within(dialog).getByRole('button', { name: /^(Verteilen|Deal out)$/ }));
+        fireEvent.click(within(dialog).getByRole('button', { name: /^(Verteilen|Deal Out)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         expect(screen.getByDisplayValue('gruppe-1')).toBeTruthy();
         expect(screen.getByDisplayValue('gruppe-2')).toBeTruthy();
@@ -195,7 +195,7 @@ describe('the GPU views render', () => {
         expect(screen.getAllByText('a@dhbw.de').length).toBeGreaterThan(0);
         expect(screen.queryByText('m@dhbw.de')).toBeNull();
         // Everyone placed: the button rests, with the reason beside it.
-        expect(screen.getByRole('button', { name: /^(Verteilen …|Deal out …)$/ }).disabled).toBe(true);
+        expect(screen.getByRole('button', { name: /^(Verteilen …|Deal Out …)$/ }).disabled).toBe(true);
         expect(screen.getAllByText(/(Alle sind bereits in einer Gruppe|Everyone is in a group already)/).length).toBeGreaterThan(0);
         fireEvent.change(screen.getByDisplayValue('gruppe-2'), { target: { value: 'gruppe-1' } });
         expect(screen.getAllByText(/(gibt es schon|is taken)/).length).toBe(2);
@@ -210,12 +210,12 @@ describe('the GPU views render', () => {
         globalThis.__gpuApi.listProjects = async () => [project, PROJECTS[1]];
         renderView(<SettingsTab nodeId="p_ml" />);
         fireEvent.click(await screen.findByRole('tab', { name: /^(Gruppen|Groups)$/ }));
-        fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal out …)$/ }));
+        fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal Out …)$/ }));
         const dialog = await screen.findByRole('dialog');
         fireEvent.click(within(dialog).getByRole('radio', { name: /(Freie Plätze|free places)/ }));
         // Three free places for five people: g1 one, g2 two, two left; the archived group gets none.
         expect(within(dialog).getByText(/→ g1 \+1, g2 \+2.*2 (Personen bleiben ohne Gruppe|people stay without a group)/)).toBeTruthy();
-        fireEvent.click(within(dialog).getByRole('button', { name: /^(Verteilen|Deal out)$/ }));
+        fireEvent.click(within(dialog).getByRole('button', { name: /^(Verteilen|Deal Out)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         expect(screen.getByText(/(Noch in keiner Gruppe|Not in a group yet) \(2\): e@dhbw.de, f@dhbw.de$/)).toBeTruthy();
         expectNoRenderFailure();
@@ -238,10 +238,10 @@ describe('the GPU views render', () => {
         expect(await screen.findByText(/^2 (Personen|people)/)).toBeTruthy();
         expect(await screen.findByText(/(Mitglieder von wwi25 sind hier nicht einsehbar|members of wwi25 are not visible)/)).toBeTruthy();
         expect(screen.queryByText('s1@dhbw.de')).toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal out …)$/ }));
+        fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal Out …)$/ }));
         const dialog = await screen.findByRole('dialog');
         fireEvent.change(within(dialog).getByLabelText(/(Personen je neuer Gruppe|People per new group)/), { target: { value: '1' } });
-        fireEvent.click(within(dialog).getByRole('button', { name: /^(Verteilen|Deal out)$/ }));
+        fireEvent.click(within(dialog).getByRole('button', { name: /^(Verteilen|Deal Out)$/ }));
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         // a, s1 and s2 dealt into new groups; not the lecturer, who holds another relation, nor the manager.
         expect(screen.getAllByText('s1@dhbw.de').length).toBeGreaterThan(0);
@@ -292,7 +292,7 @@ describe('the GPU views render', () => {
                 const raw = /gpu\.projects\.|gpu\.groupChoice\./;
                 expect(document.body.textContent).not.toMatch(raw);
                 // Everything all assigned, and the dialogs and the menu, too.
-                fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal out …)$/ }));
+                fireEvent.click(screen.getByRole('button', { name: /^(Verteilen …|Deal Out …)$/ }));
                 const dialog = await screen.findByRole('dialog');
                 fireEvent.click(within(dialog).getByRole('radio', { name: /(Freie Plätze|free places)/ }));
                 expect(document.body.textContent).not.toMatch(raw);
@@ -357,7 +357,7 @@ describe('the GPU views render', () => {
         await waitFor(() => expect(screen.queryByDisplayValue('g3')).toBeNull());
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
         // A group not saved yet has no folder: it goes without asking.
-        fireEvent.click(screen.getByRole('button', { name: /(Gruppe hinzufügen|Add group)/ }));
+        fireEvent.click(screen.getByRole('button', { name: /(Gruppe hinzufügen|Add Group)/ }));
         const added = screen.getAllByRole('textbox', { name: /^(Name \(Ordner\)|Name \(folder\))$/ }).at(-1).value;
         await remove(added);
         expect(screen.queryByRole('dialog')).toBeNull();
@@ -419,7 +419,7 @@ describe('the GPU views render', () => {
     it('the workspace settings tab lets a manager choose the release times within the budget', async () => {
         globalThis.__llmIsAdmin = false;
         renderView(<SettingsTab nodeId="p_ml" />);
-        fireEvent.click(await screen.findByRole('tab', { name: /^(Rückgabezeiten|Release times)$/ }));
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Rückgabezeiten|Release Times)$/ }));
         // The budget's value as placeholder, the ceiling below, no upper bound offered where the budget allows it (own GPUs).
         expect(screen.getByPlaceholderText(/(wie Budget|as budget): 60/)).toBeTruthy();
         expect(screen.getAllByText(/(höchstens|at most) 120/).length).toBeGreaterThan(0);
@@ -430,7 +430,7 @@ describe('the GPU views render', () => {
 
     it('the workspace settings tab shows admins what is in effect, the budget maximums only in the budget', async () => {
         renderView(<SettingsTab nodeId="p_ml" />);
-        fireEvent.click(await screen.findByRole('tab', { name: /^(Rückgabezeiten|Release times)$/ }));
+        fireEvent.click(await screen.findByRole('tab', { name: /^(Rückgabezeiten|Release Times)$/ }));
         expect(await screen.findByText(/(Zurzeit gilt|Currently in effect)/)).toBeTruthy();
         expect(screen.queryByText(/(Höchstwerte des Budgets|Budget maximums)/)).toBeNull();
         expectNoRenderFailure();
@@ -501,7 +501,7 @@ describe('the GPU views render', () => {
         try {
             renderView(<GpuJobs />);
             expect(await screen.findByText('training-1')).toBeTruthy();
-            fireEvent.click(screen.getByRole('button', { name: /^(Dateien hochladen|Upload files)$/ }));
+            fireEvent.click(screen.getByRole('button', { name: /^(Dateien hochladen|Upload Files)$/ }));
             const submit = await screen.findByRole('button', { name: /^(Hochladen|Upload)$/ });
             expect(submit.disabled).toBe(true);
             const input = document.querySelector('input[type=file]');
@@ -533,7 +533,7 @@ describe('the GPU views render', () => {
         });
         renderView(<GpuJobs />);
         expect(await screen.findByText('training-1')).toBeTruthy();
-        fireEvent.click(screen.getByRole('button', { name: /^(Dateien hochladen|Upload files)$/ }));
+        fireEvent.click(screen.getByRole('button', { name: /^(Dateien hochladen|Upload Files)$/ }));
         await screen.findByRole('button', { name: /^(Hochladen|Upload)$/ });
         fireEvent.change(document.querySelector('input[type=file]'), { target: { files: [new File(['print(1)'], 'train.py')] } });
         await waitFor(() => expect(screen.getByRole('button', { name: /^(Hochladen|Upload)$/ }).disabled).toBe(false));
@@ -553,7 +553,7 @@ describe('the GPU views render', () => {
         globalThis.__gpuApi.listProjects = async () => JOB_PROJECTS.map(p => ({ ...p, role: 'reader', areas: [{ mount: 'dhbw/project', dir: 'project-shared', read_only: true }] }));
         renderView(<GpuJobs />);
         expect(await screen.findByText('training-1')).toBeTruthy();
-        fireEvent.click(await screen.findByRole('button', { name: /^(Dateien hochladen|Upload files)$/ }));
+        fireEvent.click(await screen.findByRole('button', { name: /^(Dateien hochladen|Upload Files)$/ }));
         expect(await screen.findByText(/(Nur ins eigene Home|Into your home only)/)).toBeTruthy();
         expect(screen.queryByText(/(Gemeinsamer Ordner|Shared folder) \(/)).toBeNull();
         expectNoRenderFailure();
@@ -582,7 +582,7 @@ describe('the GPU views render', () => {
         expect(screen.getByText(/(höchstens|at most) 8 h/)).toBeTruthy();
         expect(screen.getByDisplayValue('4')).toBeTruthy();
         // The same job on the command line, following the form: two GPU classes, so the chosen one is named; the run time is below the project's maximum.
-        expect(screen.getByText(/^(Per Kommandozeile|On the command line)$/)).toBeTruthy();
+        expect(screen.getByText(/^(Per Kommandozeile|On the Command Line)$/)).toBeTruthy();
         const code = () => document.querySelector('code.hljs').textContent;
         expect(code()).toMatch(/^dhbw-cloud job submit --project wwi23seb-ml --gpu-class l4-3q --max-hours 4 -- <(Befehl|command)>$/);
         fireEvent.change(screen.getByPlaceholderText('python train.py --epochs 10'), { target: { value: 'python train.py --epochs 10' } });

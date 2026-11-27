@@ -82,7 +82,7 @@ describe('AI service token scope', () => {
         const { ApiTokens, scopeLifetimes } = await withConfig({ llmBaseUrl: '/api/llm/' });
         renderView(<ApiTokens scope="ai" />);
         expect(await screen.findByText(/student@dhbw\.de/)).toBeTruthy();
-        const button = screen.getByRole('button', { name: /Token erstellen|Create token/ });
+        const button = screen.getByRole('button', { name: /Token erstellen|Create Token/ });
         expect(button.disabled).toBe(false);
 
         // An admin role (the person's, as /me answers while acting) does not unlock "never" on behalf; read-only does.

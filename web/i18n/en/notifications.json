@@ -33,7 +33,7 @@
         "weekly": "Weekly (Mondays)"
     },
     "language": {
-        "title": "Language of the mails"
+        "title": "Language of the Mails"
     },
     "types": {
         "title": "Kinds",
@@ -42,7 +42,7 @@
     "save": "Save",
     "saved": "Saved",
     "recent": {
-        "title": "Recent notifications",
+        "title": "Recent Notifications",
         "none": "None so far.",
         "status": {
             "pending": "waiting",

@@ -10,7 +10,7 @@
             "a": "Small requests are often approved instantly",
             "b": "Add others to work on it together",
             "c": "Runs until the end date you choose, and can be extended",
-            "open": "Manage projects"
+            "open": "Manage Projects"
         },
         "workspaces": {
             "title": "Workspaces",
@@ -18,23 +18,23 @@
             "a": "Notebook on the CPU, a GPU kernel only while it computes",
             "b": "Files stay with the project, with a shared folder for all members",
             "c": "Your own environment from a container image or a Git repository",
-            "open": "Open workspaces"
+            "open": "Open Workspaces"
         },
         "dns": {
-            "title": "DNS names & certificates",
+            "title": "DNS Names & Certificates",
             "lead": "Your own hostnames for your services, with TLS certificates.",
             "a": "Activate your personal zone, e.g. myapp.you.users.dhbw.site",
             "b": "Records by hand or automated with ddclient, nsupdate or external-dns",
             "c": "Ready-made cert-manager manifests in the \"TLS Certificates\" tab",
-            "open": "Manage DNS zones"
+            "open": "Manage DNS Zones"
         },
         "llm": {
-            "title": "Language models",
+            "title": "Language Models",
             "lead": "Private language models on DHBW hardware — in the browser and via API.",
             "a": "The DHBW chat right in the browser",
             "b": "OpenAI-compatible endpoint for VS Code and your own programs",
             "c": "Prompts are neither logged nor passed on",
-            "open": "Open the LLM service"
+            "open": "Open the LLM Service"
         }
     },
     "acme": "Certificates for the names handed out here come <1>only from the DHBW ACME server</1> (<2>{{host}}</2>); public CAs such as Let's Encrypt do not work for them. The server is free, has no rate limits and also issues certificates for services reachable only inside the DHBW network."

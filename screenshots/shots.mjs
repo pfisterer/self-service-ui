@@ -70,7 +70,7 @@ const README_ROOT = { ...README_CLOUD,
 
 // The sub-budget dialog of the lecturer's budget, filled in: a name, a purpose, a colleague who manages it and the course that may request from it; open on the Access tab.
 const subBudget = async (page) => {
-    await page.getByRole('button', { name: 'Sub-budget', exact: true }).first().click();
+    await page.getByRole('button', { name: 'Sub-Budget', exact: true }).first().click();
     await page.locator('.mantine-Modal-content').waitFor();
     const modal = page.locator('.mantine-Modal-content');
     await modal.getByRole('textbox', { name: 'Name', exact: true }).fill('Kurs WI24A Datenbanken');
@@ -88,7 +88,7 @@ export const README_SHOTS = [
     {
         name: '02-request-project', lang: 'en', viewport: README_VIEW, path: '/cloud/projects', fixtures: README_CLOUD, clip: '.mantine-Modal-content',
         act: async (page) => {
-            await offer(page, 'WI Studierende (kleine VM)').getByRole('button', { name: 'New project' }).click();
+            await offer(page, 'WI Studierende (kleine VM)').getByRole('button', { name: 'New Project' }).click();
             await page.locator('.mantine-Modal-content').waitFor();
             await page.getByRole('textbox', { name: 'Name' }).fill('Webshop Prototyp');
             await page.getByRole('textbox', { name: 'Purpose' }).fill('Prototype of a web shop for the e-commerce course');
@@ -109,7 +109,7 @@ export const README_SHOTS = [
             await offer(page, 'IoT-Labor').getByRole('button', { name: 'Edit' }).click();
             await page.locator('.mantine-Modal-content').waitFor();
             await page.getByRole('tab', { name: 'Members' }).click();
-            await page.getByRole('button', { name: 'Import list…' }).first().click();
+            await page.getByRole('button', { name: 'Import List…' }).first().click();
             await page.getByRole('textbox', { name: 'Or paste a list' }).fill('email;role\nmia.beispiel@dhbw.example;member\njan.beispiel@dhbw.example;member\ntom.beispiel@dhbw.example;member\ngroup:kurs-wi24a;member\nnot-an-address;member');
             await page.getByRole('button', { name: 'Preview' }).click();
         },
@@ -117,7 +117,7 @@ export const README_SHOTS = [
     {
         name: '07-request-budget', lang: 'en', viewport: README_VIEW, path: '/cloud/projects', fixtures: README_CLOUD, clip: '.mantine-Modal-content',
         act: async (page) => {
-            await offer(page, 'Forschungslabor WI').getByRole('button', { name: 'Request sub-budget' }).click();
+            await offer(page, 'Forschungslabor WI').getByRole('button', { name: 'Request Sub-Budget' }).click();
             const modal = page.locator('.mantine-Modal-content');
             await modal.waitFor();
             await modal.getByRole('textbox', { name: 'Name', exact: true }).fill('Projekt Smart Campus');
@@ -135,7 +135,7 @@ export const README_SHOTS = [
         name: '06-auto-approve', lang: 'en', viewport: { width: 1280, height: 1500 }, path: '/budgets', fixtures: README_CLOUD, clip: '.mantine-Modal-content',
         act: async (page) => {
             await subBudget(page);
-            await page.getByRole('tab', { name: 'Auto-approve' }).click();
+            await page.getByRole('tab', { name: 'Auto-Approve' }).click();
             await page.getByRole('switch', { name: 'Auto-approve requests' }).click({ force: true });
             await page.getByRole('switch', { name: 'Apply individual limits' }).click({ force: true });
         },
@@ -154,7 +154,7 @@ export const README_SHOTS = [
     {
         name: '10-subzones', lang: 'en', viewport: README_VIEW, path: OWN_ZONE, fixtures: README_ZONES, clip: '.mantine-Modal-content',
         act: async (page) => {
-            await page.getByRole('button', { name: 'Create subzone' }).first().click();
+            await page.getByRole('button', { name: 'Create Subzone' }).first().click();
             await page.locator('.mantine-Modal-content').waitFor();
             await page.getByRole('textbox', { name: 'Subzone label' }).fill('monitoring');
         },

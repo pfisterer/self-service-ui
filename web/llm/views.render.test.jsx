@@ -171,7 +171,7 @@ describe('the LLM views render', () => {
     it('Available models lists the usable names with kind, context, state and project', async () => {
         renderView(<LlmAvailableModels />);
         expect(await screen.findByText('chat-large')).toBeTruthy();
-        expect(screen.getByRole('button', { name: /(Werkzeuge einrichten|Set up tools)/ })).toBeTruthy();
+        expect(screen.getByRole('button', { name: /(Werkzeuge einrichten|Set Up Tools)/ })).toBeTruthy();
         expect(screen.getByText('24k–96k / 8k–32k')).toBeTruthy();
         expect(screen.getAllByText('KI-Labor')).toHaveLength(2);
         // The short description is the first paragraph, as plain text.
@@ -190,7 +190,7 @@ describe('the LLM views render', () => {
         expect(within(dialog).getByText('Apache-2.0')).toBeTruthy();
         expect(within(dialog).getByRole('link', { name: /(Modellseite|Model page)/ }).getAttribute('href')).toBe('https://huggingface.co/x/y');
         expect(within(dialog).getByText('24k–96k / 8k–32k')).toBeTruthy();
-        expect(within(dialog).getByText(/(Kontext \(Eingabe \/ Antwort\)|Context \(input \/ answer\))/)).toBeTruthy();
+        expect(within(dialog).getByText(/(Kontext \(Eingabe \/ Antwort\)|Context \(Input \/ Answer\))/)).toBeTruthy();
         // No device classes any more.
         expect(within(dialog).queryByText('GB10')).toBeNull();
         // The longer description behind the toggle, sanitised.
@@ -224,12 +224,12 @@ describe('the LLM views render', () => {
         globalThis.__llmApi.createKey = async () => ({ key: 'sk-fresh-123' });
         renderView(<LlmKeys />);
         fireEvent.change(await screen.findByPlaceholderText(/(Name \(Pflicht\)|Name \(required\))/), { target: { value: 'laptop' } });
-        fireEvent.click(screen.getByRole('button', { name: /(API Key erstellen|Create API key)/ }));
+        fireEvent.click(screen.getByRole('button', { name: /(API Key erstellen|Create API Key)/ }));
         const dialog = await screen.findByRole('dialog');
         expect(within(dialog).getAllByText(/sk-fresh-123/).length).toBeGreaterThan(0);
         expect(within(dialog).queryByRole('tab')).toBeNull();
-        fireEvent.click(within(dialog).getByRole('button', { name: /(Werkzeuge einrichten|Set up tools)/ }));
-        const tools = await screen.findByRole('dialog', { name: /(Werkzeuge einrichten|Set up tools)/ });
+        fireEvent.click(within(dialog).getByRole('button', { name: /(Werkzeuge einrichten|Set Up Tools)/ }));
+        const tools = await screen.findByRole('dialog', { name: /(Werkzeuge einrichten|Set Up Tools)/ });
         fireEvent.click(await within(tools).findByRole('tab', { name: 'Cline' }));
         expect(await within(tools).findByText('sk-fresh-123')).toBeTruthy();
         expect(within(tools).queryByText('$DHBW_API_KEY')).toBeNull();
